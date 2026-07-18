@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pharmagotchi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f4f2ec;      /* blanc cassé e-ink */
+    --paper-2:#eae7df;
+    --ink:#1c1b19;        /* encre */
+    --ink-soft:#4a4842;
+    --ink-faint:#9a968c;
+    --line:#c9c5ba;
+    --line-soft:#dcd8ce;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{font-family:'Newsreader',Georgia,serif;background:#d8d5cc;color:var(--ink);
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;}
+  .shell{max-width:400px;margin:0 auto;min-height:100dvh;background:var(--paper);position:relative;overflow:hidden;
+    box-shadow:0 0 0 1px var(--line) inset;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  /* faint paper grain */
+  .shell::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.5;
+    background-image:radial-gradient(circle at 25% 15%, rgba(0,0,0,.015) 0 1px, transparent 1px),
+                     radial-gradient(circle at 75% 65%, rgba(0,0,0,.012) 0 1px, transparent 1px);
+    background-size:7px 7px,9px 9px;}
+
+  /* HEADER */
+  header{padding:22px 24px 10px;display:flex;align-items:baseline;justify-content:space-between;
+    border-bottom:1px solid var(--line);position:relative;z-index:2;}
+  .title{font-size:19px;font-weight:600;letter-spacing:.01em;}
+  .title .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ink);margin-right:8px;vertical-align:middle;}
+  .meta{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);}
+
+  /* STATUS LINE */
+  .statusline{display:flex;justify-content:space-between;align-items:center;padding:11px 24px;
+    border-bottom:1px solid var(--line);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);position:relative;z-index:2;}
+  .statusline .s{display:flex;gap:6px;align-items:center;}
+  .statusline b{color:var(--ink);font-weight:600;}
+
+  /* STAGE */
+  .stage{position:relative;height:340px;border-bottom:1px solid var(--line);overflow:hidden;z-index:2;}
+  /* horizon line */
+  .horizon{position:absolute;left:0;right:0;bottom:40px;height:1px;background:var(--line-soft);z-index:0;}
+  /* celestial body (sun/moon) drawn as thin ring */
+  #celest{position:absolute;z-index:2;}
+  #celestRing{width:46px;height:46px;border:1.4px solid var(--ink-soft);border-radius:50%;position:relative;}
+  #celestFill{position:absolute;inset:0;border-radius:50%;background:var(--ink);clip-path:inset(0 0 0 0);opacity:0;}
+  /* star dots */
+  .starDot{position:absolute;width:2px;height:2px;border-radius:50%;background:var(--ink-soft);opacity:0;transition:opacity 1s;}
+
+  /* game banner */
+  #banner{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:8;display:none;
+    border:1px solid var(--ink);border-radius:2px;padding:5px 12px;font-family:'IBM Plex Mono',monospace;
+    font-size:11px;letter-spacing:.05em;background:var(--paper);}
+  #banner.on{display:block;}
+
+  /* Pilu affaibli : encre pâlie, respiration lente */
+  .weak #piluSvg{opacity:.55;animation:weakbreath 5s ease-in-out infinite;}
+  @keyframes weakbreath{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(2px) scale(.99)}}
+  #weakWarn{position:absolute;left:50%;transform:translateX(-50%);bottom:6px;z-index:9;display:none;
+    border:1px solid var(--ink);border-radius:2px;padding:5px 11px;background:var(--paper);
+    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;}
+  .weak #weakWarn{display:block;}
+  /* Pilu éteint : encre très pâle, immobile */
+  .gone #piluSvg{opacity:.3;animation:none;filter:grayscale(1);}
+
+  /* ---------- ACTIVITÉS AUTONOMES ---------- */
+  #actBack,#actFront{pointer-events:none;}
+  #actBack .stroke,#actFront .stroke{fill:none;stroke:var(--ink);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  #actBack .fillink,#actFront .fillink{fill:var(--ink);stroke:none;}
+  #actBack .soft,#actFront .soft{fill:none;stroke:var(--ink-faint);stroke-width:1.4;stroke-linecap:round;}
+  .act-fade{animation:actIn .5s ease;}
+  @keyframes actIn{from{opacity:0}to{opacity:1}}
+  /* lecture : la page tourne */
+  .pageflip{animation:pageflip 2.4s ease-in-out infinite;transform-origin:52px 108px;}
+  @keyframes pageflip{0%,45%{transform:rotateY(0)}55%,100%{transform:rotateY(-38deg)}}
+  /* pêche : le bouchon flotte */
+  .bobber{animation:bobber 1.8s ease-in-out infinite;}
+  @keyframes bobber{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
+  /* café : la vapeur monte */
+  .steam{animation:steam 2.2s ease-in-out infinite;}
+  @keyframes steam{0%{opacity:0;transform:translateY(2px)}40%{opacity:.7}100%{opacity:0;transform:translateY(-9px)}}
+  /* ballon/yoyo qui monte-descend */
+  .yoyo{animation:yoyo 1.6s ease-in-out infinite;}
+  @keyframes yoyo{0%,100%{transform:translateY(0)}50%{transform:translateY(12px)}}
+  /* arrosoir : gouttes */
+  .drop{animation:drop 1.4s linear infinite;}
+  @keyframes drop{0%{opacity:0;transform:translateY(0)}30%{opacity:1}100%{opacity:0;transform:translateY(10px)}}
+  /* halt\u00e8re : petit mouvement */
+  .lift{animation:lift 1.6s ease-in-out infinite;}
+  @keyframes lift{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+  #dirtLayer{position:absolute;inset:0;z-index:4;pointer-events:none;}
+  #dirtLayer.scrubbing{pointer-events:auto;}
+  #playArea{position:absolute;inset:0;z-index:6;pointer-events:none;}
+  .item{position:absolute;font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;
+    width:30px;height:30px;border:1.3px solid var(--ink);border-radius:50%;display:grid;place-items:center;
+    background:var(--paper);will-change:transform;}
+  .item.bad{border-style:dashed;}
+  .item.ball{border-width:1.4px;font-size:0;}
+  .germ{position:absolute;pointer-events:auto;cursor:pointer;transition:opacity .3s,transform .3s;
+    width:26px;height:26px;border:1.2px solid var(--ink-soft);border-radius:50%;display:grid;place-items:center;font-size:13px;}
+  .germ::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--ink-soft);}
+  .germ.gone{opacity:0;transform:scale(0);}
+  #sponge{position:absolute;z-index:9;display:none;pointer-events:none;transform:translate(-50%,-50%);
+    width:38px;height:28px;border:1.4px solid var(--ink);border-radius:5px;background:var(--paper);}
+
+  /* SPEECH */
+  #bubble{position:absolute;left:50%;bottom:230px;transform:translateX(-50%) translateY(6px);opacity:0;
+    z-index:10;max-width:240px;text-align:center;font-size:15px;line-height:1.4;color:var(--ink);
+    transition:opacity .3s,transform .3s;pointer-events:none;padding:0 8px;font-style:italic;}
+  #bubble.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  #bubble::before,#bubble::after{content:'"';font-style:normal;}
+
+  /* PILU — trait simple, e-ink */
+  #piluHolder{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);z-index:5;cursor:pointer;
+    transition:transform .12s ease-out;}
+  #piluSvg{display:block;overflow:visible;animation:bob 3.4s ease-in-out infinite;transform-origin:50% 90%;}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .pilu-pop{animation:pop .5s ease;}
+  @keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.06,.95)}100%{transform:scale(1)}}
+  .pilu-nudge{animation:nudge .5s ease;}
+  @keyframes nudge{0%,100%{transform:translateX(0)}30%{transform:translateX(-4px)}70%{transform:translateX(4px)}}
+  #piluSvg .stroke{fill:none;stroke:var(--ink);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+  #piluSvg .fillink{fill:var(--ink);stroke:none;}
+  /* bouche ouverte pendant le repas */
+  #mouthOpen{display:none;}
+  .eating #mouthOpen{display:block;}
+  .eating #mouth{display:none;}
+  .chomp{animation:chomp .18s ease;}
+  @keyframes chomp{0%{transform:scaleY(1)}50%{transform:scaleY(.45)}100%{transform:scaleY(1)}}
+  #piluSvg .capfill{fill:var(--ink);opacity:.10;}
+  .sleeping #piluSvg{animation:snooze 4.5s ease-in-out infinite;}
+  @keyframes snooze{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-2px) rotate(-2deg)}}
+
+  #zzz{position:absolute;top:-6px;right:-14px;font-family:'IBM Plex Mono',monospace;font-size:15px;opacity:0;color:var(--ink-soft);}
+  .sleeping #zzz{animation:zf 3.4s ease-in-out infinite;}
+  @keyframes zf{0%{opacity:0;transform:translate(0,0)}40%{opacity:.9}100%{opacity:0;transform:translate(12px,-24px)}}
+
+  .float{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);z-index:11;pointer-events:none;
+    font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--ink);animation:fup 1.3s ease-out forwards;}
+  @keyframes fup{0%{opacity:0;transform:translate(-50%,0)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-56px)}}
+
+  #hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:9;display:none;
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;color:var(--ink-soft);
+    border:1px solid var(--line);border-radius:2px;padding:5px 10px;background:var(--paper);}
+
+  #gameEnd{position:absolute;inset:0;z-index:12;display:none;align-items:center;justify-content:center;background:rgba(244,242,236,.9);}
+  #gameEnd .card{text-align:center;padding:26px 20px;}
+  #gameEnd .glyph{font-family:'IBM Plex Mono',monospace;font-size:30px;margin-bottom:6px;}
+  #gameEnd h3{font-size:22px;font-weight:600;margin-bottom:3px;}
+  #gameEnd .sub{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:18px;text-transform:uppercase;}
+  #gameEnd .row{display:flex;gap:10px;justify-content:center;}
+
+  /* IDENTITY BLOCK */
+  .identity{padding:20px 24px 6px;text-align:center;position:relative;z-index:2;}
+  .identity .nm{font-size:26px;font-weight:600;}
+  .identity .role{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);margin-top:3px;}
+
+  /* GAUGES as thin labelled rules */
+  .gauges{padding:14px 24px 96px;position:relative;z-index:2;}
+  .grow{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line-soft);}
+  .grow:last-child{border-bottom:none;}
+  .glabel{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);width:74px;flex-shrink:0;}
+  .gtrack{flex:1;height:9px;position:relative;}
+  .gticks{position:absolute;inset:0;display:flex;gap:3px;}
+  .gtick{flex:1;border:1px solid var(--line);border-radius:1px;background:transparent;transition:background .4s;}
+  .gtick.f{background:var(--ink);border-color:var(--ink);}
+  .gpct{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-faint);width:30px;text-align:right;flex-shrink:0;}
+
+  /* XP inline */
+  .xpline{display:flex;align-items:center;gap:12px;padding:12px 24px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);position:relative;z-index:2;margin-top:6px;}
+  .xpline .lv{font-size:15px;font-weight:600;}
+  .xpbar{flex:1;height:1px;background:var(--line);position:relative;}
+  .xpbar>span{position:absolute;left:0;top:-1px;height:3px;background:var(--ink);transition:width .5s;}
+  .xpline .xpn{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-faint);}
+
+  /* TAB BAR — text labels, no color */
+  nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:400px;background:var(--paper);
+    border-top:1px solid var(--ink);display:grid;grid-template-columns:repeat(6,1fr);z-index:40;}
+  nav button{border:none;border-right:1px solid var(--line);background:transparent;font-family:'IBM Plex Mono',monospace;
+    padding:13px 2px 18px;cursor:pointer;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:5px;transition:background .15s;}
+  nav button:last-child{border-right:none;}
+  nav button:active{background:var(--paper-2);}
+  nav .ni{width:22px;height:22px;}
+  nav .nl{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);}
+  nav .ni .stroke{fill:none;stroke:var(--ink);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+
+  /* SHEETS */
+  .overlay{position:fixed;inset:0;background:rgba(28,27,25,.28);z-index:60;display:none;align-items:flex-end;justify-content:center;}
+  .overlay.open{display:flex;}
+  .sheet{background:var(--paper);width:100%;max-width:400px;max-height:88dvh;overflow:auto;
+    border-top:1px solid var(--ink);padding:22px 24px 30px;position:relative;animation:su .25s ease;}
+  @keyframes su{from{transform:translateY(30px)}to{transform:translateY(0)}}
+  .sheet h2{font-size:22px;font-weight:600;margin-bottom:2px;}
+  .sheet .subh{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:18px;}
+  .close{position:absolute;top:20px;right:22px;border:1px solid var(--line);background:transparent;width:30px;height:30px;border-radius:50%;
+    font-family:'IBM Plex Mono',monospace;font-size:15px;cursor:pointer;color:var(--ink-soft);}
+  .btn{border:1px solid var(--ink);background:transparent;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    letter-spacing:.06em;text-transform:uppercase;cursor:pointer;padding:13px 16px;width:100%;color:var(--ink);transition:background .15s;border-radius:2px;}
+  .btn:active{background:var(--paper-2);}
+  .btn.solid{background:var(--ink);color:var(--paper);}
+
+  /* QCM */
+  .qq{font-size:19px;font-weight:500;line-height:1.4;margin-bottom:16px;font-family:'Newsreader',serif;}
+  .choice{display:block;width:100%;text-align:left;border:1px solid var(--line);background:transparent;
+    padding:14px 16px;margin-bottom:9px;font-family:'Newsreader',serif;font-size:16px;cursor:pointer;color:var(--ink);
+    border-radius:2px;transition:background .12s,border-color .12s;position:relative;}
+  .choice:active{background:var(--paper-2);}
+  .choice .k{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-faint);margin-right:10px;}
+  .choice.correct{border-color:var(--ink);border-width:1.5px;}
+  .choice.correct::after{content:"\2713";position:absolute;right:16px;font-family:'IBM Plex Mono',monospace;}
+  .choice.wrong{color:var(--ink-faint);border-style:dashed;}
+  .choice.wrong::after{content:"\2715";position:absolute;right:16px;font-family:'IBM Plex Mono',monospace;color:var(--ink-faint);}
+  .expl{display:none;border-left:2px solid var(--ink);padding:10px 0 10px 14px;margin-top:14px;font-size:15px;line-height:1.5;color:var(--ink-soft);}
+  .expl.show{display:block;}
+
+  /* SHOP */
+  .shop-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line-soft);}
+  .shop-row:last-child{border-bottom:none;}
+  .swatch{width:40px;height:40px;border:1px solid var(--ink);border-radius:50%;flex-shrink:0;position:relative;background:var(--paper);}
+  .shop-meta{flex:1;} .shop-meta .n{font-size:17px;} .shop-meta .p{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-faint);}
+  .shop-btn{border:1px solid var(--ink);background:transparent;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    letter-spacing:.06em;text-transform:uppercase;padding:8px 12px;cursor:pointer;color:var(--ink);border-radius:2px;white-space:nowrap;}
+  .shop-btn.on{background:var(--ink);color:var(--paper);}
+  .shop-btn:disabled{border-color:var(--line);color:var(--line);cursor:not-allowed;}
+
+  /* EGG */
+  .eggwrap{text-align:center;padding:6px 0;}
+  .eggmono{font-family:'IBM Plex Mono',monospace;font-size:40px;}
+  .stepbar{height:1px;background:var(--line);position:relative;margin:14px 0;}
+  .stepbar>span{position:absolute;left:0;top:-1px;height:3px;background:var(--ink);transition:width .4s;}
+
+  #toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--ink);color:var(--paper);
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;padding:10px 16px;border-radius:2px;z-index:70;opacity:0;
+    transition:.3s;pointer-events:none;white-space:nowrap;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* CONSENT */
+  #consent{position:fixed;inset:0;z-index:90;background:var(--paper);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:36px 30px;text-align:center;}
+  #consent .big{margin-bottom:10px;}
+  #consent h1{font-size:34px;font-weight:600;}
+  #consent .tag{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin-top:6px;}
+  #consent .box{border:1px solid var(--line);padding:18px;margin:24px 0;text-align:left;max-width:330px;width:100%;}
+  #consent label{display:flex;gap:11px;align-items:flex-start;margin:12px 0;font-size:14px;line-height:1.4;cursor:pointer;}
+  #consent label:first-of-type{margin-top:0;} #consent label:last-of-type{margin-bottom:0;}
+  #consent input{margin-top:3px;width:15px;height:15px;accent-color:var(--ink);flex-shrink:0;}
+  #consent .note{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.06em;color:var(--ink-faint);max-width:320px;margin-top:14px;line-height:1.6;}
+  .divider{width:40px;height:1px;background:var(--ink);margin:6px auto 0;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div id="consent">
+    <div class="big">
+      <svg width="72" height="96" viewBox="0 0 72 96" fill="none">
+        <rect x="14" y="8" width="44" height="80" rx="22" stroke="#1c1b19" stroke-width="2.4"/>
+        <path d="M14 48 h44" stroke="#1c1b19" stroke-width="2.4"/>
+        <rect x="14" y="8" width="44" height="40" rx="22" fill="#1c1b19" opacity="0.10"/>
+        <circle cx="29" cy="60" r="2.6" fill="#1c1b19"/><circle cx="43" cy="60" r="2.6" fill="#1c1b19"/>
+        <path d="M30 70 q6 5 12 0" stroke="#1c1b19" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+      </svg>
+    </div>
+    <h1>Pharmagotchi</h1>
+    <div class="tag">Compagnon d'officine</div>
+    <div class="box">
+      <div class="mono" style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:12px;">Autorisations</div>
+      <label><input type="checkbox" id="cTime" checked><span><b>Heure &amp; saison</b> &mdash; cycle jour / nuit et d&eacute;cor. Rien ne quitte l'appareil.</span></label>
+      <label><input type="checkbox" id="cSteps"><span><b>Pas</b> &mdash; pour faire &eacute;clore les &oelig;ufs.</span></label>
+      <label><input type="checkbox" id="cMotion" checked><span><b>Mouvement</b> &mdash; incliner pour d&eacute;placer Pilu, secouer pour r&eacute;veiller.</span></label>
+    </div>
+    <button class="btn solid" style="max-width:330px" id="startBtn">Commencer</button>
+    <div class="note">Prototype p&eacute;dagogique. Donn&eacute;es locales uniquement.</div>
+  </div>
+
+  <header>
+    <div class="title"><span class="dot"></span>Pharmagotchi</div>
+    <div class="meta"><span id="coins">0</span> gc &middot; <span id="streak">1</span>j</div>
+  </header>
+
+  <div class="statusline">
+    <div class="s" id="clockChip">00:00</div>
+    <div class="s" id="seasonChip">Printemps</div>
+  </div>
+
+  <div class="stage" id="scene">
+    <div class="horizon"></div>
+    <div id="stars"></div>
+    <div id="celest"><div id="celestRing"><div id="celestFill"></div></div></div>
+
+    <div id="banner"></div>
+    <div id="dirtLayer"></div>
+    <div id="playArea"></div>
+    <div id="sponge"></div>
+    <div id="bubble"></div>
+
+    <div id="piluHolder">
+      <svg id="piluSvg" width="170" height="150" viewBox="-33 0 170 150">
+        <!-- décor d'activité derrière Pilu -->
+        <g id="actBack"></g>
+        <!-- arms -->
+        <path class="stroke" id="armL" d="M26 92 q-12 4 -14 16"/>
+        <path class="stroke" id="armR" d="M78 92 q12 4 14 16"/>
+        <!-- capsule body -->
+        <rect class="stroke" x="22" y="14" width="60" height="112" rx="30"/>
+        <!-- cap tint (upper half) -->
+        <path class="capfill" d="M52 14 h0 a30 30 0 0 1 30 30 v20 h-60 v-20 a30 30 0 0 1 30 -30 z"/>
+        <!-- seam -->
+        <path class="stroke" d="M22 64 h60" stroke-width="1.6"/>
+        <!-- shine -->
+        <path class="stroke" d="M34 30 q-4 10 0 22" stroke-width="1.4" opacity="0.5"/>
+        <!-- face -->
+        <g id="face">
+          <circle class="fillink eye" cx="42" cy="88" r="3.2"/>
+          <circle class="fillink eye" cx="62" cy="88" r="3.2"/>
+          <path class="stroke" id="mouth" d="M44 98 q8 6 16 0"/>
+          <ellipse id="mouthOpen" cx="52" cy="100" rx="9" ry="7" fill="var(--ink)" style="transform-origin:52px 100px"/>
+        </g>
+        <!-- objets d'activité devant Pilu -->
+        <g id="actFront"></g>
+      </svg>
+      <div id="zzz">z z</div>
+    </div>
+    <div id="weakWarn">Pilu s'affaiblit — occupe-toi de lui</div>
+
+    <div id="hint"></div>
+    <div id="gameEnd"><div class="card" id="gameEndCard"></div></div>
+  </div>
+
+  <div class="identity">
+    <div class="nm">Pilu</div>
+    <div class="role" id="roleLabel">G&eacute;lule &middot; Niveau 1</div>
+  </div>
+
+  <div class="xpline">
+    <div class="lv" id="lvLabel">Niv. 1</div>
+    <div class="xpbar"><span id="xpSpan"></span></div>
+    <div class="xpn" id="xpNum">0 xp</div>
+  </div>
+
+  <div class="gauges">
+    <div class="grow"><div class="glabel">Faim</div><div class="gtrack"><div class="gticks" id="tkFaim"></div></div><div class="gpct" id="pcFaim">0</div></div>
+    <div class="grow"><div class="glabel">Humeur</div><div class="gtrack"><div class="gticks" id="tkJeu"></div></div><div class="gpct" id="pcJeu">0</div></div>
+    <div class="grow"><div class="glabel">Hygi&egrave;ne</div><div class="gtrack"><div class="gticks" id="tkHyg"></div></div><div class="gpct" id="pcHyg">0</div></div>
+    <div class="grow"><div class="glabel">&Eacute;nergie</div><div class="gtrack"><div class="gticks" id="tkEner"></div></div><div class="gpct" id="pcEner">0</div></div>
+  </div>
+
+  <nav>
+    <button data-act="feed"><svg class="ni" viewBox="0 0 24 24"><path class="stroke" d="M12 4 v16 M8 4 v6 a2 2 0 0 0 4 0 M16 4 v16"/></svg><span class="nl">Nourrir</span></button>
+    <button data-act="play"><svg class="ni" viewBox="0 0 24 24"><circle class="stroke" cx="12" cy="12" r="7"/><path class="stroke" d="M12 5 v14 M5 12 h14"/></svg><span class="nl">Jouer</span></button>
+    <button data-act="clean"><svg class="ni" viewBox="0 0 24 24"><path class="stroke" d="M6 13 h12 v5 a2 2 0 0 1 -2 2 H8 a2 2 0 0 1 -2 -2 z M9 13 V6 a3 3 0 0 1 6 0"/></svg><span class="nl">Laver</span></button>
+    <button data-act="quiz"><svg class="ni" viewBox="0 0 24 24"><path class="stroke" d="M9 9 a3 3 0 1 1 4 2.5 c-1 .7 -1 1.3 -1 2.5 M12 18 h.01"/></svg><span class="nl">R&eacute;viser</span></button>
+    <button data-act="egg"><svg class="ni" viewBox="0 0 24 24"><path class="stroke" d="M12 4 c-4 4 -6 8 -6 11 a6 6 0 0 0 12 0 c0 -3 -2 -7 -6 -11 z"/></svg><span class="nl">&OElig;uf</span></button>
+    <button data-act="shop"><svg class="ni" viewBox="0 0 24 24"><path class="stroke" d="M6 8 h12 l-1 12 H7 z M9 8 a3 3 0 0 1 6 0"/></svg><span class="nl">Skins</span></button>
+  </nav>
+
+  <div class="overlay" id="ovQuiz"><div class="sheet">
+    <button class="close" data-close>&times;</button>
+    <h2>R&eacute;vision</h2><div class="subh">Bonne r&eacute;ponse &rarr; +7 gc</div>
+    <div id="quizBox"></div>
+    <button class="btn" id="quizNext" style="display:none;margin-top:14px">Question suivante</button>
+  </div></div>
+
+  <div class="overlay" id="ovEgg"><div class="sheet">
+    <button class="close" data-close>&times;</button>
+    <h2>Incubateur</h2><div class="subh">Marche pour faire &eacute;clore</div>
+    <div id="eggBox"></div>
+  </div></div>
+
+  <div class="overlay" id="ovShop"><div class="sheet">
+    <button class="close" data-close>&times;</button>
+    <h2>Vestiaire</h2><div class="subh">Accessoires &middot; Galen-Coins</div>
+    <div id="shopBox"></div>
+  </div></div>
+
+  <div id="toast"></div>
+</div>
+
+<script src="scorm.js"></script>
+<script>
+/* Initialise la connexion SCORM le plus tôt possible (avant load()). */
+try { SCORM.init(); } catch (e) {}
+const DEF={
+  faim:75,jeu:70,hyg:78,ener:88,
+  coins:0,xp:0,level:1,streak:1,lastDay:null,
+  lastSeen:Date.now(),asleep:false,
+  skin:'none',owned:['none'],
+  eggProg:0,eggGoal:1500,hatched:0,steps:0,neglect:0,gone:false,
+  consent:{time:true,steps:false,motion:true}
+};
+let S=load();
+function load(){try{const j=SCORM.load();return j?Object.assign({},DEF,j):Object.assign({},DEF);}catch(e){return Object.assign({},DEF);}}
+function save(){try{SCORM.save(S);}catch(e){}}
+const clamp=v=>Math.max(0,Math.min(100,v));
+const $=id=>document.getElementById(id);
+
+/* build gauge ticks (10 segments each) */
+['tkFaim','tkJeu','tkHyg','tkEner'].forEach(id=>{const c=$(id);for(let i=0;i<10;i++){const t=document.createElement('div');t.className='gtick';c.appendChild(t);}});
+
+/* ============================================================
+   SANTÉ / ABANDON
+   Pilu ne "meurt" pas brutalement. Il s'affaiblit, prévient, puis
+   s'éteint doucement après 3 jours de négligence totale (comme on
+   ne tient pas 3 jours sans eau). Rien n'est perdu : on peut le
+   ranimer, il garde ses souvenirs (niveau, pièces, skins).
+   ============================================================ */
+const NEGLECT_WARN_H = 24;   // seuil d'affaiblissement
+const NEGLECT_GONE_H = 72;   // 3 jours -> extinction
+function vitals(){ return (S.faim + S.jeu + S.hyg) / 3; }
+/* Met à jour le compteur d'abandon : temps cumulé avec des jauges au plus bas */
+function updateNeglect(hrs){
+  if(vitals() <= 8){                 // Pilu est au bout du rouleau
+    S.neglect = (S.neglect||0) + hrs;
+  }else if(vitals() > 25){           // il va mieux : le compteur repart
+    S.neglect = 0;
+  }
+  if(S.neglect >= NEGLECT_GONE_H && !S.gone){
+    S.gone = true;                   // extinction douce
+    S.asleep = true;
+  }
+}
+function isWeak(){ return !S.gone && (S.neglect||0) >= NEGLECT_WARN_H; }
+
+/* Écran d'extinction : tendre, jamais culpabilisant, réversible */
+function showGoneScreen(){
+  if(!S.gone) return;
+  const days=Math.floor((S.neglect||0)/24);
+  $('gameEndCard').innerHTML=
+    '<div class="glyph">( \u2014 \u203f \u2014 )</div>'+
+    '<h3>Pilu s\'est endormi profond\u00e9ment</h3>'+
+    '<div class="sub" style="text-transform:none;letter-spacing:0;font-size:13.5px;line-height:1.6">'
+      +'Il t\'a attendu '+days+' jours. Il ne t\'en veut pas :<br>les g\u00e9lules sont patientes.<br><br>'
+      +'Ton niveau, tes pi\u00e8ces et tes tenues sont intacts.</div>'
+    +'<div class="row"><button class="btn solid" style="width:auto" onclick="revivePilu()">Le r\u00e9veiller en douceur</button></div>';
+  $('gameEnd').style.display='flex';
+}
+function revivePilu(){
+  S.gone=false; S.neglect=0; S.asleep=false;
+  S.faim=60; S.jeu=60; S.hyg=60; S.ener=70;
+  save(); syncDirt(); render();
+  $('gameEnd').style.display='none';
+  react(true); say("Te revoil\u00e0 ! J'ai fait un tr\u00e8s long r\u00eave.");
+  toast('PILU EST DE RETOUR');
+}
+
+function offlineDecay(){
+  const now=Date.now(),hrs=(now-S.lastSeen)/3600000;
+  if(hrs>0){const r=9;S.faim=clamp(S.faim-hrs*r);S.jeu=clamp(S.jeu-hrs*r*.8);S.hyg=clamp(S.hyg-hrs*r*.6);S.ener=clamp(S.ener+(S.asleep?hrs*8:-hrs*4));if(hrs>6)S.asleep=true;
+    updateNeglect(hrs);}
+  const today=new Date().toDateString();
+  if(S.lastDay!==today){if(S.lastDay){const diff=(new Date(today)-new Date(S.lastDay))/86400000;S.streak=diff===1?S.streak+1:1;}S.lastDay=today;}
+  S.lastSeen=now;save();
+}
+
+function fillTicks(id,v){const ticks=$(id).children;const n=Math.round(v/10);for(let i=0;i<10;i++)ticks[i].classList.toggle('f',i<n);}
+function render(){
+  fillTicks('tkFaim',S.faim);fillTicks('tkJeu',S.jeu);fillTicks('tkHyg',S.hyg);fillTicks('tkEner',S.ener);
+  $('pcFaim').textContent=Math.round(S.faim);$('pcJeu').textContent=Math.round(S.jeu);$('pcHyg').textContent=Math.round(S.hyg);$('pcEner').textContent=Math.round(S.ener);
+  $('coins').textContent=S.coins;$('streak').textContent=S.streak;
+  const need=S.level*50;$('xpSpan').style.width=Math.min(100,(S.xp/need)*100)+'%';
+  $('lvLabel').textContent='Niv. '+S.level;$('xpNum').textContent=S.xp+' / '+need+' xp';
+  $('roleLabel').textContent=(S.level<3?'G\u00e9lule':S.level<6?'Comprim\u00e9':'Flacon')+' \u00b7 Niveau '+S.level;
+  updateFace();
+}
+function updateFace(){
+  const holder=$('piluHolder'),mouth=$('mouth'),eyes=document.querySelectorAll('.eye');
+  holder.classList.toggle('sleeping',S.asleep);
+  const scene=$('scene');
+  scene.classList.toggle('weak', isWeak());
+  scene.classList.toggle('gone', !!S.gone);
+  $('hint').style.display=(S.asleep&&!gameOn)?'block':'none';
+  if(S.asleep){$('hint').textContent='SECOUER POUR R\u00c9VEILLER';mouth.setAttribute('d','M46 98 q6 3 12 0');eyes.forEach(e=>e.setAttribute('r','1.2'));return;}
+  eyes.forEach(e=>e.setAttribute('r','3.2'));
+  const avg=(S.faim+S.jeu+S.hyg)/3;
+  if(avg>60)mouth.setAttribute('d','M44 97 q8 7 16 0');
+  else if(avg>35)mouth.setAttribute('d','M45 99 h14');
+  else mouth.setAttribute('d','M44 101 q8 -6 16 0');
+}
+function addXP(n){S.xp+=n;const need=S.level*50;if(S.xp>=need){S.xp-=need;S.level++;S.coins+=10;toast('NIVEAU '+S.level+' \u00b7 +10 GC');react(true);}render();}
+function earn(n){S.coins+=n;render();}
+
+const LINES=[
+  "Posologie du bonheur : trois c\u00e2lins par jour.","Biodisponible \u00e0 cent pour cent, pour toi.",
+  "\u00c0 prendre de pr\u00e9f\u00e9rence au moment des repas.","Effet ind\u00e9sirable : une envie de jouer.",
+  "Ma demi-vie de joie est particuli\u00e8rement longue.","DCI : Doudounum c\u00e2linus.",
+  "Ne pas d\u00e9passer la dose de fous rires.","G\u00e9n\u00e9rique, mais d'une affection de marque.",
+  "Conserver \u00e0 l'abri de la lumi\u00e8re\u2026 et de la d\u00e9prime.","Excipient \u00e0 effet notoire : la tendresse.",
+  "Mon principe actif ? La bonne humeur.","Voie d'administration : par les yeux.",
+  "Attention : peut provoquer une accoutumance.","Je suis en rupture de stock\u2026 de c\u00e2lins.",
+  "Mon AMM ? Autorisation de Mignonnerie Maximale.","Interaction m\u00e9dicamenteuse : toi + moi = amiti\u00e9.",
+  "Pharmacovigilance : signale-moi si je souris trop.","Je fonds dans la bouche, pas dans la main.",
+  "Mon Vd est immense : je diffuse partout dans ton coeur.","Prendre avec un grand verre de motivation.",
+  "Sans ordonnance, mais pas sans affection.","Ma clairance est nulle : je ne pars jamais.",
+  "Effet placebo garanti sur ton moral.","Comprim\u00e9 s\u00e9cable en deux moiti\u00e9s de bonheur.",
+  "Ne pas croquer\u2026 sauf si tu insistes.","J'ai fait mes preuves en essai clinique de tendresse.",
+  "Contre-indication : m'oublier trop longtemps.","Ma Cmax est atteinte quand tu reviens.",
+  "Je suis stable \u00e0 temp\u00e9rature ambiante et affectueuse.","R\u00e9serv\u00e9 \u00e0 l'usage des \u00e9tudiants courageux.",
+  "Effet de premier passage\u2026 direct au coeur.","Notice : lire attentivement avant de r\u00e9viser.",
+  "Ma marge th\u00e9rapeutique ? Tr\u00e8s large en c\u00e2lins.","Je passe la barri\u00e8re h\u00e9mato-sympathique.",
+  "Lot n\u00b0 1 : \u00e9dition limit\u00e9e, exemplaire unique.","P\u00e9remption : jamais, tant que tu reviens.",
+  "Mon m\u00e9tabolisme transforme les r\u00e9visions en joie.","Prescription : une pause toutes les heures.",
+  "Je suis un traitement de fond contre l'ennui.","Observance parfaite : tu es venu me voir !",
+  "Demi-vie longue, effets ind\u00e9sirables : z\u00e9ro.","Ma gal\u00e9nique ? Cent pour cent c\u00e2line.",
+  "Surdosage en r\u00e9visions ? Fais une pause avec moi.","Je suis rembours\u00e9 \u00e0 100% par la S\u00e9cu du bonheur.",
+];
+/* ============================================================
+   VIE AUTONOME : de temps en temps, Pilu s'occupe tout seul.
+   Chaque activité = un décor SVG au trait + une réplique.
+   Elle s'interrompt dès qu'on touche à Pilu ou qu'un jeu démarre.
+   ============================================================ */
+const ACTS=[
+  { id:'lire', line:"Chapitre 4 : les b\u00eata-lactamines. Passionnant.",
+    front:'<g class="act-fade"><g class="pageflip">'
+        + '<path class="stroke" d="M34 104 h18 v18 h-18 z"/>'
+        + '</g><path class="stroke" d="M52 104 h18 v18 h-18 z"/>'
+        + '<path class="stroke" d="M52 104 v18"/>'
+        + '<path class="soft" d="M56 109 h10 M56 113 h10 M56 117 h7"/></g>',
+    arms:{l:'M26 92 q-6 8 4 12',r:'M78 92 q6 8 -4 12'} },
+
+  { id:'peche', line:"Chut\u2026 \u00e7a mord peut-\u00eatre.",
+    back:'<g class="act-fade"><path class="stroke" d="M86 96 L112 62"/>'
+       + '<path class="soft" d="M112 62 q6 20 2 44"/>'
+       + '<g class="bobber"><ellipse class="stroke" cx="114" cy="112" rx="4" ry="3"/></g>'
+       + '<path class="soft" d="M96 118 q10 -3 22 0 M100 124 q9 -3 18 0"/></g>',
+    arms:{l:'M26 92 q-12 4 -14 16',r:'M78 92 q10 2 8 6'} },
+
+  { id:'cafe', line:"Pause caf\u00e9ine. Demi-vie : 5 heures.",
+    front:'<g class="act-fade"><path class="stroke" d="M40 106 h16 v12 a8 8 0 0 1 -16 0 z"/>'
+        + '<path class="stroke" d="M56 109 q7 3 0 7"/>'
+        + '<g class="steam"><path class="soft" d="M45 102 q3 -4 0 -8 M51 102 q3 -4 0 -8"/></g></g>',
+    arms:{l:'M26 92 q-4 8 8 13',r:'M78 92 q12 4 14 16'} },
+
+  { id:'arrose', line:"Un peu d'eau pour ma plante m\u00e9dicinale.",
+    back:'<g class="act-fade"><path class="stroke" d="M96 118 q0 -12 6 -16 q6 4 6 16 z"/>'
+       + '<path class="soft" d="M102 118 v6"/>'
+       + '<path class="stroke" d="M92 106 h-8"/></g>',
+    front:'<g class="act-fade"><path class="stroke" d="M74 96 h12 v9 h-12 z"/>'
+        + '<path class="stroke" d="M86 98 l8 -4"/>'
+        + '<g class="drop"><circle class="fillink" cx="95" cy="96" r="1.6"/></g></g>',
+    arms:{l:'M26 92 q-12 4 -14 16',r:'M78 92 q8 0 6 4'} },
+
+  { id:'yoyo', line:"Mon coefficient de rebond est excellent.",
+    front:'<g class="act-fade"><path class="soft" d="M88 100 v14"/>'
+        + '<g class="yoyo"><circle class="stroke" cx="88" cy="118" r="6"/><circle class="fillink" cx="88" cy="118" r="1.5"/></g></g>',
+    arms:{l:'M26 92 q-12 4 -14 16',r:'M78 92 q10 2 10 8'} },
+
+  { id:'sport', line:"Il faut bien \u00e9liminer les excipients.",
+    front:'<g class="act-fade"><g class="lift">'
+        + '<path class="stroke" d="M24 84 h56"/>'
+        + '<path class="stroke" d="M20 79 v10 M28 79 v10 M76 79 v10 M84 79 v10"/>'
+        + '</g></g>',
+    arms:{l:'M26 92 q-8 -4 -4 -10',r:'M78 92 q8 -4 4 -10'} },
+
+  { id:'etoiles', line:"\u00c0 cette heure-ci, m\u00eame les astres r\u00e9visent.",
+    back:'<g class="act-fade"><path class="soft" d="M100 40 l0 8 M96 44 l8 0"/>'
+       + '<path class="soft" d="M14 56 l0 6 M11 59 l6 0"/>'
+       + '<circle class="fillink" cx="112" cy="70" r="1.4"/>'
+       + '<circle class="fillink" cx="6" cy="40" r="1.4"/></g>',
+    arms:{l:'M26 92 q-10 -2 -12 -12',r:'M78 92 q10 -2 12 -12'} },
+];
+let actTimer=null, actActive=null, actArmsSaved=null;
+function startActivity(){
+  if(gameOn||S.asleep||actActive) return;
+  const a=ACTS[Math.floor(Math.random()*ACTS.length)];
+  // l'activité "étoiles" n'a de sens que la nuit
+  const h=new Date().getHours();
+  if(a.id==='etoiles' && h>6 && h<20) return;
+  actActive=a;
+  if(!actArmsSaved) actArmsSaved={l:$('armL').getAttribute('d'),r:$('armR').getAttribute('d')};
+  $('actBack').innerHTML=a.back||'';
+  $('actFront').innerHTML=a.front||'';
+  if(a.arms){$('armL').setAttribute('d',a.arms.l);$('armR').setAttribute('d',a.arms.r);}
+  say(a.line);
+  // l'activité dure 8 à 14 s
+  actTimer=setTimeout(stopActivity, 8000+Math.random()*6000);
+}
+function stopActivity(){
+  if(actTimer){clearTimeout(actTimer);actTimer=null;}
+  if(!actActive) return;
+  actActive=null;
+  $('actBack').innerHTML='';$('actFront').innerHTML='';
+  if(actArmsSaved){$('armL').setAttribute('d',actArmsSaved.l);$('armR').setAttribute('d',actArmsSaved.r);}
+}
+let linePool=[];
+function nextLine(){
+  if(!linePool.length){
+    linePool=LINES.map((_,i)=>i);
+    for(let i=linePool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[linePool[i],linePool[j]]=[linePool[j],linePool[i]];}
+  }
+  return LINES[linePool.pop()];
+}
+let bubT;
+function say(t){const b=$('bubble');b.textContent=t||nextLine();b.classList.add('show');clearTimeout(bubT);bubT=setTimeout(()=>b.classList.remove('show'),2800);}
+function react(happy){const s=$('piluSvg');s.classList.remove('pilu-pop','pilu-nudge');void s.offsetWidth;s.classList.add(happy?'pilu-pop':'pilu-nudge');}
+function floaty(sym){const f=document.createElement('div');f.className='float';f.textContent=sym;$('scene').appendChild(f);setTimeout(()=>f.remove(),1300);}
+
+/* ENVIRONMENT — minimal ink */
+function seasonOf(m){if(m<=1||m===11)return{k:'Hiver',p:'\u2022'};if(m<=4)return{k:'Printemps',p:'\u2218'};if(m<=7)return{k:'\u00c9t\u00e9',p:null};return{k:'Automne',p:'\u2044'};}
+let partTimer=null;
+function updateEnv(){
+  const d=new Date(),h=d.getHours()+d.getMinutes()/60;
+  $('clockChip').textContent=d.toTimeString().slice(0,5);
+  const sea=seasonOf(d.getMonth());$('seasonChip').textContent=sea.k;
+  const night=h<6.5||h>19.5;
+  const scene=$('scene');const w=scene.clientWidth||380;
+  // celestial arc
+  const t=night?Math.min(1,Math.max(0,((h>=20?h-20:h+4))/14)):Math.min(1,Math.max(0,(h-6)/14));
+  const cx=20+t*(w-86),cy=210-Math.sin(t*Math.PI)*150;
+  $('celest').style.left=cx+'px';$('celest').style.top=cy+'px';
+  // moon = filled crescent via clip; sun = empty ring
+  const fill=$('celestFill');
+  if(night){fill.style.opacity='1';fill.style.clipPath='inset(0 0 0 45%)';}   // crescent
+  else{fill.style.opacity='0';}
+  // stars
+  const st=$('stars');
+  if(!st.childNodes.length){for(let i=0;i<22;i++){const s=document.createElement('div');s.className='starDot';s.style.left=(Math.random()*100)+'%';s.style.top=(Math.random()*55)+'%';st.appendChild(s);}}
+  [].forEach.call(st.children,s=>s.style.opacity=night?(0.4+Math.random()*0.5):0);
+  startParticles(sea.p);
+}
+function startParticles(glyph){
+  if(partTimer){clearInterval(partTimer);partTimer=null;}
+  document.querySelectorAll('.particle').forEach(p=>p.remove());
+  if(!glyph)return;const scene=$('scene');
+  partTimer=setInterval(()=>{
+    if(gameOn)return;if(scene.querySelectorAll('.particle').length>8)return;
+    const el=document.createElement('div');el.className='particle';el.textContent=glyph;
+    el.style.cssText='position:absolute;top:-14px;z-index:3;pointer-events:none;color:var(--ink-soft);font-family:IBM Plex Mono,monospace;left:'+(Math.random()*100)+'%;font-size:'+(11+Math.random()*6)+'px;opacity:.55;';
+    scene.appendChild(el);const dur=6+Math.random()*3;
+    el.style.transition='transform '+dur+'s linear,opacity '+dur+'s';
+    requestAnimationFrame(()=>{el.style.transform='translateY(360px)';el.style.opacity=0;});
+    setTimeout(()=>el.remove(),dur*1000);
+  },1400);
+}
+
+/* PILU POSITION */
+let piluX=0.5,tiltActive=false;
+function placePilu(){const scene=$('scene');const w=scene.clientWidth;$('piluHolder').style.left=(52+piluX*(w-104))+'px';$('piluHolder').style.transform='translateX(-50%)';}
+function piluCenterPx(){const scene=$('scene');return 52+piluX*(scene.clientWidth-104);}
+let dragging=false;
+function dStart(e){if(!tiltActive)return;dragging=true;dMove(e);}
+function dMove(e){if(!tiltActive||!dragging)return;const r=$('scene').getBoundingClientRect();const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left;piluX=Math.max(0,Math.min(1,(x-52)/(r.width-104)));placePilu();}
+function dEnd(){dragging=false;}
+$('scene').addEventListener('pointerdown',dStart);$('scene').addEventListener('pointermove',dMove);window.addEventListener('pointerup',dEnd);
+
+let gameOn=false;
+function guard(){if(S.gone){showGoneScreen();return true;}if(S.asleep){say("Chhht\u2026 je dors. Secoue-moi.");return true;}if(gameOn)return true;return false;}
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  const a=b.dataset.act;
+  if(a==='egg')return openEgg();if(a==='shop')return openShop();
+  if(a==='quiz'){if(S.asleep){say("R\u00e9veille-moi d'abord.");return;}return openQuiz();}
+  if(guard())return;
+  if(a==='feed')startFeed();else if(a==='play')startPlay();else if(a==='clean')startClean();
+});
+$('piluHolder').addEventListener('click',()=>{if(gameOn)return;if(S.asleep){say("Zzz\u2026 secoue-moi.");return;}stopActivity();say();react(true);});
+
+let rafId=null,gameTimer=null,gameItems=[],gameEnded=false;
+/* Arrête TOUT ce qui tourne (boucles, timers, listeners, items) */
+function killGame(){
+  stopActivity();
+  gameOn=false;tiltActive=false;
+  if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+  if(gameTimer){clearInterval(gameTimer);gameTimer=null;}
+  cleanCleanup();
+  clearArea();
+  $('sponge').style.display='none';
+  $('banner').classList.remove('on');
+  const ps=document.getElementById('piluSvg'); if(ps) ps.classList.remove('eating');
+}
+/* Relance propre depuis le bouton "Rejouer" */
+function restart(which){
+  killGame();
+  $('gameEnd').style.display='none';
+  setTimeout(()=>{ if(which==='feed')startFeed(); else if(which==='play')startPlay(); else startClean(); },30);
+}
+function startGameUI(){killGame();gameOn=true;tiltActive=true;gameEnded=false;$('banner').classList.add('on');$('bubble').classList.remove('show');
+  $('hint').textContent='INCLINER POUR D\u00c9PLACER';$('hint').style.display='block';setTimeout(()=>{if(gameOn)$('hint').style.display='none';},2000);clearArea();}
+function clearArea(){$('playArea').innerHTML='';gameItems=[];}
+function endGame(html){killGame();$('gameEndCard').innerHTML=html;$('gameEnd').style.display='flex';}
+function closeEnd(){killGame();$('gameEnd').style.display='none';piluX=0.5;placePilu();render();}
+
+/* FEED */
+let feedScore=0,feedTime=0;
+/* hauteur écran de la bouche de Pilu : holder bottom:40px, svg 140px, bouche y≈100 du viewBox */
+function mouthY(){ return $('scene').clientHeight - 40 - 140 + 100; }
+function startFeed(){startGameUI();feedScore=0;feedTime=22;const start=Date.now();
+  $('banner').textContent='NOURRIR  0/8  22.0s';
+  $('piluSvg').classList.add('eating');           // Pilu ouvre la bouche
+  gameTimer=setInterval(()=>{feedTime=Math.max(0,22-(Date.now()-start)/1000);$('banner').textContent='NOURRIR  '+feedScore+'/8  '+feedTime.toFixed(1)+'s';if(feedTime<=0)finishFeed();},100);
+  let acc=0;const loop=()=>{if(!gameOn||gameEnded)return;acc++;if(acc>24){acc=0;spawnFeed();}stepItems();rafId=requestAnimationFrame(loop);};loop();}
+function spawnFeed(){const good=Math.random()>0.26;const el=document.createElement('div');el.className='item'+(good?'':' bad');el.textContent=good?'+':'\u00d7';
+  const scene=$('scene');const x=20+Math.random()*(scene.clientWidth-56);el.style.left=x+'px';el.style.top='-34px';$('playArea').appendChild(el);
+  gameItems.push({el,x:x+15,y:-19,vy:1.6+Math.random()*1.1,good,kind:'feed'});}
+function stepItems(){const scene=$('scene');const H=scene.clientHeight;
+  const pcx=piluCenterPx(),my=mouthY();
+  for(let i=gameItems.length-1;i>=0;i--){const it=gameItems[i];if(!it||it.kind!=='feed'||it.caught)continue;
+    it.y+=it.vy;it.el.style.top=(it.y-15)+'px';
+    /* avalé : l'item atteint la bouche et est aligné dessus */
+    if(it.y>=my-8 && it.y<=my+26 && Math.abs(it.x-pcx)<30){
+      it.caught=true;
+      const mo=$('mouthOpen'); mo.classList.remove('chomp'); void mo.offsetWidth; mo.classList.add('chomp');
+      if(it.good){feedScore++;floaty('+');react(true);}
+      else{feedScore=Math.max(0,feedScore-1);floaty('\u00d7');react(false);}
+      it.el.remove();gameItems.splice(i,1);
+      if(feedScore>=8)finishFeed();
+      continue;
+    }
+    if(it.y>H+20){it.el.remove();gameItems.splice(i,1);}}}
+function finishFeed(){if(gameEnded)return;gameEnded=true;const win=feedScore>=8;S.faim=clamp(S.faim+(win?30:16));S.ener=clamp(S.ener+4);const c=win?8:4;earn(c);addXP(win?12:6);react(true);save();say("Miam. Merci.");
+  endGame('<div class="glyph">'+(win?'\u2295':'\u2295')+'</div><h3>'+(win?'Bien nourri':'Petit encas')+'</h3><div class="sub">Faim +'+(win?30:16)+' \u00b7 +'+c+' gc</div><div class="row"><button class="btn solid" style="width:auto" onclick="restart(&#39;feed&#39;)">Rejouer</button><button class="btn" style="width:auto" onclick="closeEnd()">Fermer</button></div>');}
+
+/* PLAY — keep ring bouncing on Pilu */
+let playScore=0,playTime=0;
+function startPlay(){if(S.ener<15){say("Trop fatigu\u00e9 pour jouer.");return;}startGameUI();playScore=0;playTime=25;const start=Date.now();
+  $('banner').textContent='JOUER  0  25.0s';const scene=$('scene');
+  const el=document.createElement('div');el.className='item ball';el.style.left=(scene.clientWidth/2-15)+'px';el.style.top='40px';$('playArea').appendChild(el);
+  const ball={el,x:scene.clientWidth/2,y:55,vx:(Math.random()*2-1)*2,vy:1.2,kind:'ball'};gameItems=[ball];
+  gameTimer=setInterval(()=>{playTime=Math.max(0,25-(Date.now()-start)/1000);$('banner').textContent='JOUER  '+playScore+'  '+playTime.toFixed(1)+'s';if(playTime<=0)finishPlay();},100);
+  const loop=()=>{if(!gameOn||gameEnded)return;stepBall(ball);rafId=requestAnimationFrame(loop);};loop();}
+function stepBall(b){if(!b||!b.el||!b.el.isConnected||gameEnded)return;const scene=$('scene');const W=scene.clientWidth,H=scene.clientHeight;b.vy+=0.05;b.x+=b.vx;b.y+=b.vy;
+  if(b.x<16){b.x=16;b.vx*=-1;}if(b.x>W-16){b.x=W-16;b.vx*=-1;}if(b.y<20){b.y=20;b.vy*=-1;}
+  const pcx=piluCenterPx(),pcy=H-72;
+  if(b.y>pcy-28&&b.y<pcy+8&&Math.abs(b.x-pcx)<46&&b.vy>0){b.vy=-(3.1+Math.random()*1.1);b.vx=(b.x-pcx)/12;playScore++;floaty('\u2295');react(true);}
+  if(b.y>H-8){finishPlay();return;}b.el.style.left=(b.x-15)+'px';b.el.style.top=(b.y-15)+'px';}
+function finishPlay(){if(gameEnded)return;gameEnded=true;const gain=Math.min(30,10+playScore*2),co=Math.min(12,4+playScore);S.jeu=clamp(S.jeu+gain);S.ener=clamp(S.ener-12);S.faim=clamp(S.faim-6);earn(co);addXP(12);react(true);save();say("On rejoue quand tu veux.");
+  endGame('<div class="glyph">\u25ce</div><h3>'+playScore+' rebonds</h3><div class="sub">Humeur +'+gain+' \u00b7 +'+co+' gc</div><div class="row"><button class="btn solid" style="width:auto" onclick="restart(&#39;play&#39;)">Rejouer</button><button class="btn" style="width:auto" onclick="closeEnd()">Fermer</button></div>');}
+
+/* CLEAN — scrub germs, count from hygiene */
+/* ---------- SALETÉ PERMANENTE (façon Tamagotchi) ----------
+   Les microbes sont TOUJOURS visibles autour de Pilu, en nombre
+   proportionnel à la saleté (100 - hygiène). Cliquer sur "Laver"
+   ne les fait pas apparaître : ça sort l'éponge pour les enlever. */
+function dirtCount(){ return Math.round((100-S.hyg)/9); }   // 0 (propre) -> 11 (crasseux)
+function syncDirt(){
+  const layer=$('dirtLayer'); if(!layer) return;
+  const want=dirtCount();
+  const have=layer.querySelectorAll('.germ').length;
+  if(want>have){
+    for(let i=have;i<want;i++){
+      const g=document.createElement('div');g.className='germ';
+      g.style.left=(8+Math.random()*80)+'%';
+      g.style.top=(14+Math.random()*62)+'%';
+      layer.appendChild(g);
+    }
+  }else if(want<have){
+    const list=layer.querySelectorAll('.germ');
+    for(let i=want;i<have;i++) list[i].remove();
+  }
+}
+function startClean(){
+  if(dirtCount()===0){ say("Je suis d\u00e9j\u00e0 tout propre !"); return; }
+  startGameUI();tiltActive=false;$('hint').style.display='none';
+  const scene=$('scene'), layer=$('dirtLayer');
+  layer.classList.add('scrubbing');
+  let left=layer.querySelectorAll('.germ:not(.gone)').length;
+  const start=left;
+  $('banner').textContent='LAVER  \u00b7  '+left+' restants';
+  const sponge=$('sponge');sponge.style.display='block';
+  function scrub(e){
+    const r=scene.getBoundingClientRect();
+    const px=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    const py=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+    sponge.style.left=px+'px';sponge.style.top=py+'px';
+    layer.querySelectorAll('.germ:not(.gone)').forEach(g=>{
+      const gr=g.getBoundingClientRect();
+      const gx=gr.left+gr.width/2-r.left,gy=gr.top+gr.height/2-r.top;
+      if(Math.hypot(gx-px,gy-py)<30){
+        g.classList.add('gone');setTimeout(()=>g.remove(),300);
+        left--;floaty('\u2218');
+        const gain=(100-S.hyg)/Math.max(1,start);
+        S.hyg=clamp(S.hyg+gain);
+        $('banner').textContent='LAVER  \u00b7  '+left+' restants';
+        render();
+        if(left<=0)finishClean();
+      }
+    });
+  }
+  scene.__scrub=scrub;scene.addEventListener('pointermove',scrub);scene.addEventListener('touchmove',cleanTouch,{passive:false});
+}
+function cleanTouch(e){e.preventDefault();if($('scene').__scrub)$('scene').__scrub(e);}
+function cleanCleanup(){const scene=$('scene');const layer=$('dirtLayer');
+  if(layer)layer.classList.remove('scrubbing');
+  if(scene.__scrub){scene.removeEventListener('pointermove',scene.__scrub);scene.removeEventListener('touchmove',cleanTouch);scene.__scrub=null;}}
+function finishClean(){if(gameEnded)return;gameEnded=true;cleanCleanup();S.hyg=100;earn(7);addXP(10);react(true);save();syncDirt();say("Asepsie parfaite.");
+  endGame('<div class="glyph">\u2218</div><h3>Tout propre</h3><div class="sub">Hygi\u00e8ne au max \u00b7 +7 gc</div><div class="row"><button class="btn" style="width:auto" onclick="closeEnd()">Fermer</button></div>');}
+
+/* QCM */
+const QCM=[
+  {q:"Le parac\u00e9tamol appartient \u00e0 quelle classe ?",c:["Antalgique / antipyr\u00e9tique","Anti-inflammatoire st\u00e9ro\u00efdien","Antibiotique","Anticoagulant"],a:0,e:"Antalgique-antipyr\u00e9tique, sans effet anti-inflammatoire notable."},
+  {q:"Quelle voie offre une biodisponibilit\u00e9 de 100% ?",c:["Orale","Intraveineuse","Sous-cutan\u00e9e","Rectale"],a:1,e:"Par voie IV, tout le principe actif atteint la circulation."},
+  {q:"L'amoxicilline est un\u2026",c:["Antiviral","Antifongique","Antibiotique \u03b2-lactamine","Antihistaminique"],a:2,e:"Une p\u00e9nicilline, donc une \u03b2-lactamine."},
+  {q:"Le suffixe \u00ab -pril \u00bb d\u00e9signe souvent\u2026",c:["Un IEC","Un b\u00eatabloquant","Une statine","Un IPP"],a:0,e:"\u00ab -pril \u00bb : inhibiteurs de l'enzyme de conversion."},
+  {q:"Un IPP comme l'om\u00e9prazole agit sur\u2026",c:["La tension","L'acidit\u00e9 gastrique","La glyc\u00e9mie","La coagulation"],a:1,e:"Les IPP bloquent la pompe \u00e0 protons."},
+  {q:"Les \u00ab -statines \u00bb traitent\u2026",c:["L'hypertension","L'hypercholest\u00e9rol\u00e9mie","Le diab\u00e8te","L'asthme"],a:1,e:"Inhibition de l'HMG-CoA r\u00e9ductase."},
+  {q:"Antidote du parac\u00e9tamol en surdosage ?",c:["Naloxone","N-ac\u00e9tylcyst\u00e9ine","Vitamine K","Flumaz\u00e9nil"],a:1,e:"La N-ac\u00e9tylcyst\u00e9ine r\u00e9g\u00e9n\u00e8re le glutathion."},
+  {q:"Le suffixe \u00ab -az\u00e9pam \u00bb \u00e9voque\u2026",c:["Les benzodiaz\u00e9pines","Les macrolides","Les sartans","Les fibrates"],a:0,e:"Diaz\u00e9pam, loraz\u00e9pam\u2026 : benzodiaz\u00e9pines."},
+  {q:"La warfarine est un\u2026",c:["Antiagr\u00e9gant","Anticoagulant oral","Thrombolytique","Antifibrinolytique"],a:1,e:"Un AVK, antagoniste de la vitamine K."},
+  {q:"\u00ab -sartan \u00bb correspond aux\u2026",c:["ARA II","Diur\u00e9tiques","IEC","B\u00eatabloquants"],a:0,e:"Antagonistes des r\u00e9cepteurs de l'angiotensine II."},
+  {q:"Le suffixe \u00ab -olol \u00bb d\u00e9signe\u2026",c:["Les b\u00eatabloquants","Les IEC","Les statines","Les IPP"],a:0,e:"Ac\u00e9butolol, propranolol, aten\u00e9lol\u2026 : b\u00eatabloquants."},
+  {q:"L'ibuprof\u00e8ne appartient aux\u2026",c:["AINS","Antibiotiques","Cortico\u00efdes","Antihistaminiques"],a:0,e:"Anti-inflammatoire non st\u00e9ro\u00efdien, inhibiteur des COX."},
+  {q:"L'insuline est s\u00e9cr\u00e9t\u00e9e par\u2026",c:["Le foie","Les cellules \u03b2 du pancr\u00e9as","Les surr\u00e9nales","La thyro\u00efde"],a:1,e:"Les \u00eelots de Langerhans, cellules \u03b2."},
+  {q:"L'antidote des morphiniques est\u2026",c:["Flumaz\u00e9nil","Naloxone","Atropine","Vitamine K"],a:1,e:"La naloxone, antagoniste des r\u00e9cepteurs opio\u00efdes."},
+  {q:"L'antidote des benzodiaz\u00e9pines est\u2026",c:["Naloxone","Flumaz\u00e9nil","N-ac\u00e9tylcyst\u00e9ine","Charbon activ\u00e9"],a:1,e:"Le flumaz\u00e9nil, antagoniste des r\u00e9cepteurs GABA-A."},
+  {q:"La demi-vie d'\u00e9limination correspond au temps pour\u2026",c:["Absorber la moiti\u00e9 de la dose","Diminuer de moiti\u00e9 la concentration plasmatique","Atteindre le pic","\u00c9liminer toute la dose"],a:1,e:"C'est le temps pour que la concentration plasmatique soit divis\u00e9e par deux."},
+  {q:"L'effet de premier passage h\u00e9patique concerne surtout la voie\u2026",c:["Intraveineuse","Orale","Sublinguale","Transdermique"],a:1,e:"La voie orale passe par le foie via la veine porte avant la circulation g\u00e9n\u00e9rale."},
+  {q:"Le CYP450 est impliqu\u00e9 dans\u2026",c:["L'absorption","Le m\u00e9tabolisme","L'excr\u00e9tion r\u00e9nale","La distribution"],a:1,e:"Les cytochromes P450 h\u00e9patiques m\u00e9tabolisent de nombreux m\u00e9dicaments."},
+  {q:"Le millepertuis est un puissant\u2026",c:["Inhibiteur enzymatique","Inducteur enzymatique","Antalgique","Antibiotique"],a:1,e:"Inducteur du CYP3A4 : il diminue l'efficacit\u00e9 de nombreux traitements."},
+  {q:"La colchicine est utilis\u00e9e dans\u2026",c:["La goutte","L'asthme","Le diab\u00e8te","L'\u00e9pilepsie"],a:0,e:"Traitement de la crise de goutte ; marge th\u00e9rapeutique \u00e9troite."},
+  {q:"\u00ab -mycine \u00bb / \u00ab -thromycine \u00bb \u00e9voque\u2026",c:["Les macrolides","Les quinolones","Les sartans","Les IPP"],a:0,e:"\u00c9rythromycine, clarithromycine, azithromycine : macrolides."},
+  {q:"\u00ab -floxacine \u00bb d\u00e9signe\u2026",c:["Les fluoroquinolones","Les p\u00e9nicillines","Les c\u00e9phalosporines","Les aminosides"],a:0,e:"Ciprofloxacine, l\u00e9vofloxacine\u2026 : fluoroquinolones."},
+  {q:"Les cortico\u00efdes au long cours exposent \u00e0\u2026",c:["Une hypoglyc\u00e9mie","Une ost\u00e9oporose","Une bradycardie","Une hyperkali\u00e9mie"],a:1,e:"Ost\u00e9oporose, hyperglyc\u00e9mie, HTA, fonte musculaire\u2026"},
+  {q:"Le pamplemousse interagit en\u2026",c:["Induisant le CYP3A4","Inhibant le CYP3A4","Chelatant le fer","Acidifiant l'urine"],a:1,e:"Inhibiteur du CYP3A4 : il augmente les concentrations de certains m\u00e9dicaments."},
+  {q:"La vitamine K est l'antidote\u2026",c:["Des h\u00e9parines","Des AVK","Du paract\u00e9amol","Des digitaliques"],a:1,e:"Elle antagonise l'effet des anti-vitamines K."},
+  {q:"Le sulfate de protamine neutralise\u2026",c:["L'h\u00e9parine","La warfarine","L'aspirine","Le clopidogrel"],a:0,e:"C'est l'antidote de l'h\u00e9parine."},
+  {q:"L'aspirine \u00e0 faible dose agit comme\u2026",c:["Antiagr\u00e9gant plaquettaire","Anticoagulant","Thrombolytique","Antalgique pur"],a:0,e:"Inhibition irr\u00e9versible de la COX-1 plaquettaire."},
+  {q:"\u00ab -prazole \u00bb correspond aux\u2026",c:["IPP","Antihistaminiques H2","AINS","Laxatifs"],a:0,e:"Om\u00e9prazole, pantoprazole\u2026 : inhibiteurs de la pompe \u00e0 protons."},
+  {q:"Le salbutamol est un\u2026",c:["\u03b22-mim\u00e9tique","B\u00eatabloquant","Cortico\u00efde","Anticholinergique"],a:0,e:"Bronchodilatateur \u03b22-agoniste de courte dur\u00e9e."},
+  {q:"La metformine traite\u2026",c:["Le diab\u00e8te de type 2","L'HTA","L'asthme","L'ost\u00e9oporose"],a:0,e:"Biguanide, traitement de premi\u00e8re intention du diab\u00e8te de type 2."},
+  {q:"La biodisponibilit\u00e9 se note\u2026",c:["Cmax","F","Tmax","Vd"],a:1,e:"F = fraction de la dose atteignant la circulation g\u00e9n\u00e9rale."},
+  {q:"Un m\u00e9dicament \u00e0 marge th\u00e9rapeutique \u00e9troite est\u2026",c:["La vitamine C","La digoxine","Le parac\u00e9tamol","Le s\u00e9rum physiologique"],a:1,e:"Digoxine, lithium, AVK\u2026 n\u00e9cessitent une surveillance des taux."},
+  {q:"Les IEC provoquent classiquement\u2026",c:["Une toux s\u00e8che","Une somnolence","Une prise de poids","Une mydriase"],a:0,e:"Toux s\u00e8che par accumulation de bradykinine."},
+  {q:"La voie sublinguale \u00e9vite\u2026",c:["Le premier passage h\u00e9patique","L'absorption","La distribution","L'excr\u00e9tion"],a:0,e:"Absorption directe dans la circulation syst\u00e9mique."},
+  {q:"Les aminosides sont surtout\u2026",c:["Nephrotoxiques et ototoxiques","H\u00e9patotoxiques","Cardiotoxiques","Neurotoxiques centraux"],a:0,e:"Toxicit\u00e9 r\u00e9nale et auditive : surveillance indispensable."},
+  {q:"Le charbon activ\u00e9 sert \u00e0\u2026",c:["Neutraliser l'acidit\u00e9","Adsorber un toxique ing\u00e9r\u00e9","Acc\u00e9l\u00e9rer le transit","Antagoniser les opio\u00efdes"],a:1,e:"Il adsorbe le toxique dans le tube digestif s'il est donn\u00e9 t\u00f4t."},
+  {q:"Un g\u00e9n\u00e9rique doit d\u00e9montrer\u2026",c:["Une bio\u00e9quivalence","Une sup\u00e9riorit\u00e9","Une nouvelle indication","Une meilleure tol\u00e9rance"],a:0,e:"M\u00eame principe actif, m\u00eame dose, bio\u00e9quivalence prouv\u00e9e."},
+  {q:"Les AINS sont contre-indiqu\u00e9s\u2026",c:["Au 3e trimestre de grossesse","Chez l'enfant uniquement","Le matin","Avec de l'eau"],a:0,e:"Risque de fermeture du canal art\u00e9riel et de toxicit\u00e9 r\u00e9nale f\u0153tale."},
+  {q:"Le volume de distribution (Vd) \u00e9lev\u00e9 signifie\u2026",c:["Forte diffusion tissulaire","Forte \u00e9limination r\u00e9nale","Faible absorption","Longue conservation"],a:0,e:"Le m\u00e9dicament quitte le plasma pour se fixer dans les tissus."},
+];
+let qc=null,qa=false;const KEYS=['A','B','C','D'];
+/* File anti-répétition : on épuise toutes les questions avant d'en revoir une. */
+let qPool=[];
+function nextQuestion(){
+  if(!qPool.length){
+    qPool = QCM.map((_,i)=>i);
+    // mélange de Fisher-Yates
+    for(let i=qPool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[qPool[i],qPool[j]]=[qPool[j],qPool[i]];}
+    // éviter d'enchaîner deux fois la même à la jonction de deux cycles
+    if(qc && QCM[qPool[qPool.length-1]]===qc && qPool.length>1){
+      [qPool[0],qPool[qPool.length-1]]=[qPool[qPool.length-1],qPool[0]];
+    }
+  }
+  return QCM[qPool.pop()];
+}
+function openQuiz(){openOv('ovQuiz');loadQcm();}
+function loadQcm(){qa=false;$('quizNext').style.display='none';qc=nextQuestion();
+  const box=$('quizBox');box.innerHTML='';const q=document.createElement('div');q.className='qq';q.textContent=qc.q;box.appendChild(q);
+  qc.c.forEach((txt,i)=>{const b=document.createElement('button');b.className='choice';b.innerHTML='<span class="k">'+KEYS[i]+'</span>'+txt;b.onclick=()=>ansQcm(i);box.appendChild(b);});
+  const e=document.createElement('div');e.className='expl';e.id='qcmExpl';box.appendChild(e);}
+function ansQcm(i){if(qa)return;qa=true;const ch=$('quizBox').querySelectorAll('.choice');ch.forEach((c,idx)=>{c.disabled=true;if(idx===qc.a)c.classList.add('correct');else if(idx===i)c.classList.add('wrong');});
+  const ex=$('qcmExpl');ex.textContent=qc.e;ex.classList.add('show');
+  if(i===qc.a){S.faim=clamp(S.faim+8);S.jeu=clamp(S.jeu+4);earn(7);addXP(15);toast('CORRECT \u00b7 +7 GC');react(true);say("J'apprends gr\u00e2ce \u00e0 toi.");}else{earn(2);toast('+2 GC');react(false);}
+  save();render();$('quizNext').style.display='block';}
+$('quizNext').onclick=loadQcm;
+
+/* SHOP — accessories drawn on Pilu via SVG overlay group */
+const SKINS=[
+  {id:'none',name:'Aucun',price:0},
+  {id:'bar',name:'Barrette',price:20},
+  {id:'cap',name:'Casquette',price:30},
+  {id:'glass',name:'Lunettes',price:35},
+  {id:'charl',name:'Charlotte',price:40},
+  {id:'mask',name:'Masque',price:45},
+  {id:'bow',name:'N\u0153ud pap',price:50},
+  {id:'beanie',name:'Bonnet',price:60},
+  {id:'scarf',name:'\u00c9charpe',price:65},
+  {id:'beret',name:'B\u00e9ret',price:75},
+  {id:'phones',name:'Casque audio',price:85},
+  {id:'flower',name:'Fleur',price:95},
+  {id:'tophat',name:'Haut-de-forme',price:120},
+  {id:'crown',name:'Couronne',price:160},
+  {id:'halo',name:'Aur\u00e9ole',price:200},
+];
+/* ---- Accessoires dessinés au trait, posés sur la tête (y 14→64) ----
+   Le corps : rect x=22..82, sommet y=14, coiffe arrondie rx=30.       */
+const ACC_SVG={
+  /* casquette : calotte épousant le crâne + visière */
+  cap:'<path class="stroke" d="M24 34 a28 26 0 0 1 56 0 z" fill="var(--paper)"/>'
+     +'<path class="stroke" d="M24 34 h56"/>'
+     +'<path class="stroke" d="M80 34 q14 1 15 7 q-8 3 -15 -1 z" fill="var(--paper)"/>'
+     +'<circle class="fillink" cx="52" cy="9" r="2.2"/>',
+  /* barrette : clip posé de biais sur le haut du crâne */
+  bar:'<path class="stroke" d="M60 20 l16 -7" stroke-width="3"/>'
+     +'<path class="stroke" d="M64 15 l3 7 M70 12 l3 7" stroke-width="1.6"/>',
+  /* charlotte de labo : bord froncé */
+  charl:'<path class="stroke" d="M22 36 q30 -30 60 0 q-30 10 -60 0 z" fill="var(--paper)"/>'
+       +'<path class="soft" d="M28 33 q24 -20 48 0"/>',
+  /* lunettes rondes */
+  glass:'<circle class="stroke" cx="42" cy="88" r="9" fill="var(--paper)"/>'
+       +'<circle class="stroke" cx="62" cy="88" r="9" fill="var(--paper)"/>'
+       +'<path class="stroke" d="M51 88 h2 M33 86 l-6 -2 M71 86 l6 -2"/>'
+       +'<circle class="fillink" cx="42" cy="88" r="3.2"/><circle class="fillink" cx="62" cy="88" r="3.2"/>',
+  /* nœud papillon sous le "menton" */
+  bow:'<path class="stroke" d="M44 122 l9 5 l-9 5 z" fill="var(--paper)"/>'
+     +'<path class="stroke" d="M62 122 l-9 5 l9 5 z" fill="var(--paper)"/>'
+     +'<circle class="fillink" cx="53" cy="127" r="2.4"/>',
+  /* bonnet d'hiver + pompon */
+  beanie:'<path class="stroke" d="M24 36 a28 26 0 0 1 56 0 z" fill="var(--paper)"/>'
+        +'<path class="stroke" d="M22 36 h60 v6 h-60 z" fill="var(--paper)"/>'
+        +'<circle class="stroke" cx="52" cy="6" r="4" fill="var(--paper)"/>',
+  /* couronne */
+  crown:'<path class="stroke" d="M28 34 l0 -16 l10 9 l14 -14 l14 14 l10 -9 l0 16 z" fill="var(--paper)"/>'
+       +'<circle class="fillink" cx="38" cy="27" r="1.6"/><circle class="fillink" cx="52" cy="24" r="1.6"/><circle class="fillink" cx="66" cy="27" r="1.6"/>',
+  /* béret */
+  beret:'<path class="stroke" d="M26 32 q26 -22 52 -4 q-24 12 -52 4 z" fill="var(--paper)"/>'
+       +'<path class="stroke" d="M76 27 l7 -6"/>',
+  /* écharpe */
+  scarf:'<path class="stroke" d="M28 112 q24 10 48 0" fill="none" stroke-width="3"/>'
+       +'<path class="stroke" d="M74 112 l6 16 l-8 -2 z" fill="var(--paper)"/>',
+  /* casque audio */
+  phones:'<path class="stroke" d="M26 40 a26 26 0 0 1 52 0"/>'
+        +'<rect class="stroke" x="18" y="38" width="10" height="16" rx="4" fill="var(--paper)"/>'
+        +'<rect class="stroke" x="76" y="38" width="10" height="16" rx="4" fill="var(--paper)"/>',
+  /* chapeau haut-de-forme */
+  tophat:'<path class="stroke" d="M34 30 h36 v-24 h-36 z" fill="var(--paper)"/>'
+        +'<path class="stroke" d="M22 30 h60" stroke-width="2.4"/>'
+        +'<path class="soft" d="M34 24 h36"/>',
+  /* masque chirurgical */
+  mask:'<path class="stroke" d="M34 84 h36 v18 q-18 8 -36 0 z" fill="var(--paper)"/>'
+      +'<path class="soft" d="M34 90 h36 M34 96 h36"/>'
+      +'<path class="stroke" d="M34 86 l-8 -4 M70 86 l8 -4"/>',
+  /* fleur sur le côté */
+  flower:'<circle class="stroke" cx="76" cy="24" r="3.4" fill="var(--paper)"/>'
+        +'<circle class="stroke" cx="70" cy="19" r="3.4" fill="var(--paper)"/>'
+        +'<circle class="stroke" cx="82" cy="19" r="3.4" fill="var(--paper)"/>'
+        +'<circle class="stroke" cx="76" cy="14" r="3.4" fill="var(--paper)"/>'
+        +'<circle class="fillink" cx="76" cy="19" r="2.2"/>',
+  /* auréole */
+  halo:'<ellipse class="stroke" cx="52" cy="6" rx="16" ry="4.5" fill="none"/>',
+};
+function applySkin(id){let g=$('accGroup');if(g)g.remove();if(id==='none'||!ACC_SVG[id]){S.skin=id;return;}
+  const svg=$('piluSvg');const ng=document.createElementNS('http://www.w3.org/2000/svg','g');ng.id='accGroup';ng.innerHTML=ACC_SVG[id];svg.appendChild(ng);S.skin=id;}
+function openShop(){openOv('ovShop');renderShop();}
+function renderShop(){const box=$('shopBox');box.innerHTML='';SKINS.forEach(sk=>{const owned=S.owned.includes(sk.id),active=S.skin===sk.id;
+  const row=document.createElement('div');row.className='shop-row';
+  const sw=document.createElement('div');sw.className='swatch';if(sk.id!=='none'){sw.innerHTML='<svg width="40" height="40" viewBox="20 6 66 66" style="position:absolute;top:-4px;left:-2px">'+(ACC_SVG[sk.id]||'')+'</svg>';}else{sw.innerHTML='<svg width="40" height="40" viewBox="0 0 40 40"><line x1="10" y1="20" x2="30" y2="20" stroke="#9a968c" stroke-width="1.4"/></svg>';}
+  const meta=document.createElement('div');meta.className='shop-meta';meta.innerHTML='<div class="n">'+sk.name+'</div><div class="p">'+(sk.price===0?'D\u00e9faut':sk.price+' gc')+'</div>';
+  const btn=document.createElement('button');btn.className='shop-btn';
+  if(active){btn.textContent='Port\u00e9';btn.classList.add('on');btn.disabled=true;}
+  else if(owned){btn.textContent='Porter';btn.onclick=()=>{applySkin(sk.id);save();renderShop();toast(sk.name.toUpperCase());};}
+  else if(S.coins>=sk.price){btn.textContent='Acheter';btn.onclick=()=>{S.coins-=sk.price;S.owned.push(sk.id);applySkin(sk.id);save();render();renderShop();toast(sk.name.toUpperCase()+' \u00b7 OK');};}
+  else{btn.textContent=sk.price+' gc';btn.disabled=true;}
+  row.append(sw,meta,btn);box.appendChild(row);});}
+
+/* EGG */
+function openEgg(){openOv('ovEgg');renderEgg();}
+function renderEgg(){const pct=Math.min(100,Math.round(S.eggProg/S.eggGoal*100));
+  const ready=S.eggProg>=S.eggGoal;
+  $('eggBox').innerHTML='<div class="eggwrap"><div class="eggmono">(\u25e1)</div></div>'+
+    '<div class="mono" style="text-align:center;font-size:12px;margin-top:8px">'+S.eggProg+' / '+S.eggGoal+' pas</div>'+
+    '<div class="stepbar"><span style="width:'+pct+'%"></span></div>'+
+    '<div class="mono" style="font-size:10px;color:var(--ink-faint);text-align:center;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.06em">'+
+      (S.consent.steps?'Podom\u00e8tre actif \u00b7 marche pour avancer':'Podom\u00e8tre non autoris\u00e9')+'</div>'+
+    (S.consent.steps?'':'<div style="font-size:13px;color:var(--ink-soft);text-align:center;line-height:1.5;margin-bottom:10px">Autorise le mouvement au d\u00e9marrage pour que tes pas comptent.</div>')+
+    '<div id="hatchArea" style="margin-top:14px"></div>'+
+    '<div class="mono" style="text-align:center;margin-top:14px;font-size:11px;color:var(--ink-faint)">\u00c9clos : '+S.hatched+'</div>';
+  if(ready){$('hatchArea').innerHTML='<button class="btn solid" id="hatchBtn">Faire \u00e9clore</button>';$('hatchBtn').onclick=hatch;}}
+function addSteps(n){S.eggProg=Math.min(S.eggGoal,S.eggProg+n);save();renderEgg();toast('+'+n+' PAS');}
+function hatch(){S.hatched++;S.eggProg=0;S.eggGoal=Math.round(S.eggGoal*1.4);S.coins+=25;save();render();$('hatchArea').innerHTML='<div class="mono" style="text-align:center;font-size:24px">( \u2727 )</div><div style="text-align:center;font-size:15px">Un nouveau compagnon. +25 gc</div>';react(true);say("Un petit nouveau.");setTimeout(renderEgg,1600);}
+
+/* MODAL */
+function openOv(id){$(id).classList.add('open');}
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.overlay').classList.remove('open'));
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+
+/* SENSORS */
+let lastShake=0;
+/* ---------- PODOMÈTRE : comptage de pas par détection de pics ----------
+   Le web n'a pas d'API podomètre standard : on analyse l'accéléromètre.
+   Un pas = un pic d'accélération au-dessus d'un seuil, espacé d'au moins
+   250 ms (cadence de marche max ~4 pas/s). Ne compte que page ouverte. */
+let stepLastPeak=0, stepEnvelope=0, stepArmed=true;
+function feedPedometer(a){
+  if(!S.consent.steps) return;
+  const mag=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2); // ~9.8 au repos
+  // moyenne glissante lente = ligne de base (gravité + posture)
+  if(stepEnvelope===0) stepEnvelope=mag;
+  stepEnvelope = stepEnvelope*0.97 + mag*0.03;
+  const dyn = mag - stepEnvelope;          // composante dynamique du mouvement
+  const now = Date.now();
+  if(stepArmed && dyn > 1.6 && now-stepLastPeak > 250){
+    stepArmed=false; stepLastPeak=now;
+    countStep();
+  }
+  if(dyn < 0.8) stepArmed=true;            // réarmement entre deux pas
+}
+function countStep(){
+  S.eggProg = Math.min(S.eggGoal, S.eggProg + 1);
+  S.steps = (S.steps||0) + 1;
+  if(S.steps % 25 === 0) save();           // sauvegarde périodique, pas à chaque pas
+  if($('ovEgg') && $('ovEgg').classList.contains('open')) renderEgg();
+  if(S.eggProg>=S.eggGoal && !S._eggReady){ S._eggReady=true; toast('\u0152UF PR\u00caT \u00c0 \u00c9CLORE'); }
+}
+function enableMotion(){
+  window.addEventListener('devicemotion',e=>{
+    const a=e.accelerationIncludingGravity||e.acceleration;if(!a)return;
+    feedPedometer(a);
+    const mag=Math.abs(a.x||0)+Math.abs(a.y||0)+Math.abs(a.z||0);
+    if(mag>32&&Date.now()-lastShake>800){lastShake=Date.now();
+      if(S.asleep){S.asleep=false;S.ener=clamp(S.ener+20);save();render();floaty('\u2295');say("R\u00e9veill\u00e9. Merci.");toast('R\u00c9VEILL\u00c9');}}
+  });
+  /* ---------- INCLINAISON : sensibilité réduite + lissage ---------- */
+  window.addEventListener('deviceorientation',e=>{
+    if(!tiltActive)return;
+    const g=e.gamma||0;                       // -90..90
+    const dead=3;                             // zone morte : ignore les micro-tremblements
+    const gg=Math.abs(g)<dead?0:g;
+    const target=Math.max(0,Math.min(1,0.5+gg/110));   // 45 -> 110 : bien moins sensible
+    piluX += (target-piluX)*0.18;             // lissage : glisse au lieu de sauter
+    placePilu();
+  });
+}
+async function requestSensors(){if(!S.consent.motion)return;try{if(typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission){const r=await DeviceMotionEvent.requestPermission();if(r==='granted')enableMotion();}else enableMotion();}catch(e){enableMotion();}}
+
+let tT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('show'),2000);}
+
+function tick(){if(gameOn)return;if(!S.asleep){S.faim=clamp(S.faim-0.05);S.jeu=clamp(S.jeu-0.04);S.hyg=clamp(S.hyg-0.03);S.ener=clamp(S.ener-0.03);if(S.ener<=0){S.asleep=true;say("Je m'endors\u2026");}}else S.ener=clamp(S.ener+0.1);
+  updateNeglect(1/3600);
+  if(S.gone && $('gameEnd').style.display!=='flex'){showGoneScreen();}
+  render();updateEnv();syncDirt();save();}
+
+$('startBtn').onclick=()=>{S.consent={time:$('cTime').checked,steps:$('cSteps').checked,motion:$('cMotion').checked};save();$('consent').style.display='none';boot();};
+function boot(){offlineDecay();applySkin(S.skin);placePilu();render();updateEnv();syncDirt();requestSensors();
+  if(S.gone){showGoneScreen();return;}
+  const h=new Date().getHours();say(h<11?"Bonjour. Bien dormi ?":h<17?"Une pause de midi ?":"Bonsoir. On r\u00e9vise ?");
+  setInterval(tick,1000);setInterval(()=>{
+    if(S.asleep||gameOn||actActive) return;
+    const r=Math.random();
+    if(r<0.32) startActivity();          /* Pilu s'occupe tout seul */
+    else if(r<0.7) say();                /* ou lâche une réplique */
+  },14000);window.addEventListener('resize',placePilu);}
+</script>
+</body>
+</html>

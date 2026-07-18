@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PharmaDuel — Prototype</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#131a24; --panel2:#0f151d; --line:#232c3a;
+    --ink:#e6edf3; --mut:#8b98a8; --dim:#5b6675;
+    --snc:#a855f7; --cardio:#ef4444; --infect:#14b8a6; --immuno:#f59e0b; --pk:#38bdf8; --tox:#84cc16;
+    --good:#34d399; --bad:#f87171;
+    --mono:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(56,189,248,.06), transparent 60%),
+      radial-gradient(900px 500px at 10% 110%, rgba(168,85,247,.06), transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans);
+    display:flex; flex-direction:column; height:100vh; overflow:hidden;
+  }
+  /* ---- top bar ---- */
+  header{
+    display:flex; align-items:center; gap:14px; padding:10px 16px;
+    border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0f151d,#0b0e14);
+    flex-wrap:wrap;
+  }
+  .logo{font-weight:800; letter-spacing:.14em; font-size:14px; text-transform:uppercase}
+  .logo b{color:var(--pk)}
+  .tag{font-family:var(--mono); font-size:11px; color:var(--dim); letter-spacing:.05em}
+  header .spacer{flex:1}
+  .hpwrap{display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12px}
+  .hp{
+    min-width:52px; text-align:center; font-weight:700; font-size:15px;
+    padding:4px 10px; border-radius:8px; border:1px solid var(--line); background:var(--panel2);
+  }
+  .hp.you{color:var(--good); border-color:rgba(52,211,153,.35)}
+  .hp.foe{color:var(--bad); border-color:rgba(248,113,113,.35)}
+  .energy{color:#fde68a}
+  button.ctl{
+    font-family:var(--sans); font-weight:600; font-size:13px; color:#04121a;
+    background:var(--pk); border:0; padding:9px 16px; border-radius:9px; cursor:pointer;
+    transition:transform .08s ease, filter .15s ease;
+  }
+  button.ctl:hover{filter:brightness(1.08)}
+  button.ctl:active{transform:translateY(1px)}
+  button.ctl:disabled{background:#2a3442; color:var(--dim); cursor:not-allowed}
+
+  main{flex:1; display:flex; flex-direction:column; min-height:0}
+  .zone{padding:8px 14px; display:flex; flex-direction:column; gap:6px; min-height:0}
+  .zlabel{
+    font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--dim); display:flex; align-items:center; gap:8px;
+  }
+  .zlabel .rule{flex:1; height:1px; background:var(--line)}
+  .board{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; gap:8px}
+  .row{
+    display:flex; gap:10px; align-items:center; min-height:132px; overflow-x:auto; padding:4px 2px;
+    scrollbar-width:thin;
+  }
+  .row.foe{background:linear-gradient(180deg,rgba(248,113,113,.04),transparent)}
+  .row.you{background:linear-gradient(0deg,rgba(52,211,153,.04),transparent)}
+  .empty{
+    color:var(--dim); font-family:var(--mono); font-size:11px; padding:12px;
+    border:1px dashed var(--line); border-radius:10px; width:100%; text-align:center;
+  }
+  .hand{border-top:1px solid var(--line); background:var(--panel2)}
+  .handrow{display:flex; gap:10px; padding:10px 14px; overflow-x:auto; scrollbar-width:thin}
+
+  /* ---- CARD : the signature element ---- */
+  .card{
+    --acc:var(--pk);
+    position:relative; flex:0 0 auto; width:126px; height:180px;
+    border-radius:12px; padding:8px; cursor:pointer;
+    background:linear-gradient(180deg,#151c27,#0e141c);
+    border:1px solid var(--line);
+    box-shadow:0 6px 18px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02);
+    display:flex; flex-direction:column; gap:5px;
+    transition:transform .1s ease, box-shadow .15s ease, border-color .15s ease;
+    user-select:none;
+  }
+  .card::before{ /* faction spine */
+    content:""; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:3px;
+    background:var(--acc); box-shadow:0 0 12px var(--acc);
+  }
+  .card.playable:hover{transform:translateY(-6px); border-color:var(--acc); box-shadow:0 12px 26px rgba(0,0,0,.5), 0 0 0 1px var(--acc)}
+  .card.onboard{width:118px; height:168px; cursor:default}
+  .card.onboard.targetable{cursor:crosshair; border-color:var(--acc); animation:pulse 1s infinite}
+  @keyframes pulse{50%{box-shadow:0 0 0 2px var(--acc), 0 0 18px var(--acc)}}
+  .card.sick{filter:saturate(.6) brightness(.82)}
+  .chead{display:flex; align-items:flex-start; gap:6px}
+  .pip{
+    flex:0 0 auto; width:20px; height:20px; border-radius:50%;
+    background:radial-gradient(circle at 32% 30%, #fff5, transparent 45%), var(--acc);
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:#08101a;
+    box-shadow:0 0 10px var(--acc);
+  }
+  .cname{font-size:12px; font-weight:700; line-height:1.12; letter-spacing:.01em}
+  .cfaction{font-family:var(--mono); font-size:8px; letter-spacing:.1em; text-transform:uppercase; color:var(--acc)}
+  .ghs{
+    position:absolute; top:6px; right:6px; width:16px; height:16px; transform:rotate(45deg);
+    border:1.4px solid var(--bad); border-radius:2px; display:flex; align-items:center; justify-content:center;
+  }
+  .ghs span{transform:rotate(-45deg); font-size:9px}
+  .atc{
+    display:flex; gap:2px; height:12px; align-items:stretch; margin-top:1px; opacity:.8;
+  }
+  .atc i{display:block; background:var(--acc); border-radius:1px}
+  .ctext{
+    font-size:9.5px; line-height:1.28; color:var(--mut); flex:1; overflow:hidden;
+  }
+  .ctext b{color:var(--ink)}
+  .cdata{
+    font-family:var(--mono); font-size:7.6px; color:var(--dim); line-height:1.35;
+    border-top:1px solid var(--line); padding-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .cfoot{display:flex; justify-content:space-between; align-items:center}
+  .stat{font-family:var(--mono); font-weight:700; font-size:14px; display:flex; align-items:center; gap:3px}
+  .stat.cost{color:#fde68a}
+  .stat.atk{color:#fca5a5}
+  .stat small{font-size:8px; color:var(--dim); font-weight:400}
+
+  /* faction accent binding */
+  .f-snc{--acc:var(--snc)} .f-cardio{--acc:var(--cardio)} .f-infect{--acc:var(--infect)}
+  .f-immuno{--acc:var(--immuno)} .f-pk{--acc:var(--pk)} .f-tox{--acc:var(--tox)}
+
+  /* ---- log ---- */
+  .log{
+    position:fixed; right:12px; bottom:12px; width:270px; max-height:180px; overflow-y:auto;
+    background:rgba(10,14,20,.92); border:1px solid var(--line); border-radius:10px;
+    padding:8px 10px; font-family:var(--mono); font-size:10.5px; line-height:1.5; color:var(--mut);
+    backdrop-filter:blur(6px); scrollbar-width:thin;
+  }
+  .log .ev{padding:1px 0}
+  .log .ev.hl{color:var(--pk)} .log .ev.dmg{color:var(--bad)} .log .ev.buff{color:var(--good)}
+  .log .lt{color:var(--dim); text-transform:uppercase; letter-spacing:.12em; font-size:9px; margin-bottom:4px}
+
+  /* ---- overlay ---- */
+  .over{
+    position:fixed; inset:0; background:rgba(6,9,14,.86); display:none;
+    align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(3px);
+  }
+  .over.show{display:flex}
+  .modal{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:30px 34px;
+    max-width:440px; text-align:center;
+  }
+  .modal h2{margin:0 0 8px; font-size:22px; letter-spacing:.02em}
+  .modal p{color:var(--mut); font-size:13px; line-height:1.6; margin:0 0 18px}
+  .hint{font-family:var(--mono); font-size:11px; color:var(--dim); margin-top:10px}
+  .foehint{font-size:11px; color:var(--dim); font-family:var(--mono)}
+  #toast{
+    position:fixed; top:64px; left:50%; transform:translateX(-50%) translateY(-12px);
+    background:rgba(10,14,20,.95); border:1px solid var(--line); color:var(--ink);
+    font-family:var(--mono); font-size:11.5px; padding:8px 14px; border-radius:9px;
+    opacity:0; pointer-events:none; transition:opacity .18s ease, transform .18s ease; z-index:60;
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  @keyframes shake{10%,90%{transform:translateX(-2px)}30%,70%{transform:translateX(4px)}50%{transform:translateX(-5px)}}
+  .card.shake{animation:shake .35s}
+  @media (max-width:560px){
+    .log{display:none}
+    .card{width:104px; height:160px}
+    .card.onboard{width:98px; height:150px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">Pharma<b>Duel</b></div>
+    <div class="tag">prototype · données PharmAtlas</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="hpwrap">
+    <span class="foehint">Adversaire (IA)</span>
+    <div class="hp foe" id="foeHp">20</div>
+  </div>
+  <div class="hpwrap">
+    <span>Tour <b id="turnNo">1</b> · Énergie <b class="energy" id="energy">1/1</b></span>
+  </div>
+  <div class="hpwrap">
+    <div class="hp you" id="youHp">20</div>
+    <span class="foehint">Toi</span>
+  </div>
+  <button class="ctl" id="endBtn">Terminer le tour</button>
+</header>
+
+<main>
+  <div class="zone" style="flex:1">
+    <div class="zlabel"><span class="rule"></span>Champ adverse<span class="rule"></span></div>
+    <div class="row foe" id="foeBoard"></div>
+  </div>
+  <div class="zone" style="flex:1">
+    <div class="zlabel"><span class="rule"></span>Ton champ<span class="rule"></span></div>
+    <div class="row you" id="youBoard"></div>
+  </div>
+</main>
+
+<div class="hand">
+  <div class="zlabel" style="padding:6px 14px 0">Ta main — clique pour jouer</div>
+  <div class="handrow" id="hand"></div>
+</div>
+
+<div class="log" id="log"><div class="lt">Journal</div></div>
+
+<div class="over show" id="over">
+  <div class="modal">
+    <h2 id="mTitle">PharmaDuel</h2>
+    <p id="mBody"></p>
+    <button class="ctl" id="mBtn">Commencer la partie</button>
+    <div class="hint">Objectif : ramener l'homéostasie adverse à 0.</div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════ DONNÉES : cartes dérivées de PharmAtlas ═══════════════
+   Chaque carte porte ses stats de jeu (cost/atk) ET la donnée réelle
+   qui les justifie (champ `data`). Les mots-clés pilotent les mécaniques.
+   Les stats sont volontairement dans une petite échelle (1-6) — un
+   générateur normalisera plus tard depuis les vraies valeurs (DL50,
+   demi-vie, Lipinski…) avec un override manuel pour l'équilibrage.        */
+
+const DB = {
+  morphine:{name:"Morphine", faction:"snc", fLabel:"SNC · Opioïde", cost:3, atk:4,
+    kw:["agoniste_mu"], atc:"N02AA01",
+    text:"<b>Agoniste μ.</b> Analgésique puissant.",
+    data:"C17H19NO3 · agoniste MOR · t½ 2-4 h · DL50 modérée"},
+  naloxone:{name:"Naloxone", faction:"snc", fLabel:"SNC · Antidote", cost:2, atk:0, spell:true,
+    kw:["antagoniste_mu"], atc:"V03AB15",
+    text:"<b>Antagoniste μ.</b> Détruit un agoniste opioïde ciblé.",
+    data:"antagoniste compétitif MOR · antidote surdosage"},
+  diazepam:{name:"Diazépam", faction:"snc", fLabel:"SNC · Benzo", cost:3, atk:3,
+    kw:["sub_cyp3a4","sedation"], atc:"N05BA01", ghs:"!",
+    text:"<b>Sédation.</b> À l'entrée : −1 ATK à une molécule adverse.",
+    data:"modulateur GABA-A · substrat CYP3A4 · t½ 20-50 h"},
+  midazolam:{name:"Midazolam", faction:"snc", fLabel:"SNC · Benzo", cost:2, atk:2,
+    kw:["sub_cyp3a4"], atc:"N05CD08",
+    text:"<b>Substrat CYP3A4.</b> Sensible aux inhibiteurs/inducteurs.",
+    data:"modulateur GABA-A · substrat CYP3A4 (fort) · t½ 1,5-2,5 h"},
+  ketoconazole:{name:"Kétoconazole", faction:"pk", fLabel:"PK · Inhibiteur", cost:3, atk:1, spell:true,
+    kw:["inhib_cyp3a4"], atc:"J02AB02",
+    text:"<b>Inhibe CYP3A4.</b> +2 ATK à tes substrats CYP3A4 (accumulation).",
+    data:"inhibiteur CYP3A4 puissant · ↑ AUC des substrats"},
+  rifampicine:{name:"Rifampicine", faction:"infect", fLabel:"Anti-inf · Inducteur", cost:2, atk:2,
+    kw:["induc_cyp3a4"], atc:"J04AB02",
+    text:"<b>Induit CYP3A4.</b> À l'entrée : −2 ATK aux substrats adverses.",
+    data:"antituberculeux · inducteur PXR puissant · ↓ AUC substrats"},
+  propranolol:{name:"Propranolol", faction:"cardio", fLabel:"Cardio · β-bloq", cost:2, atk:2,
+    kw:["sub_cyp2d6","brady"], atc:"C07AA05",
+    text:"<b>Bradycardie.</b> À l'entrée : −1 ATK à une molécule adverse.",
+    data:"antagoniste β1/β2 · substrat CYP2D6 · t½ 3-6 h"},
+  amoxicilline:{name:"Amoxicilline", faction:"infect", fLabel:"Anti-inf · β-lactam", cost:2, atk:3,
+    kw:[], atc:"J01CA04",
+    text:"<b>Spectre large.</b> β-lactamine bactéricide fiable.",
+    data:"inhibiteur PLP · bactéricide · t½ 1 h · faible toxicité"},
+  aciclovir:{name:"Aciclovir", faction:"infect", fLabel:"Anti-inf · Antiviral", cost:3, atk:3,
+    kw:[], atc:"J05AB01",
+    text:"<b>Antiviral.</b> Analogue nucléosidique sélectif.",
+    data:"inhibe l'ADN-pol virale · activé par la thymidine kinase"},
+  adalimumab:{name:"Adalimumab", faction:"immuno", fLabel:"Immuno · AcM", cost:5, atk:6,
+    kw:[], atc:"L04AB04",
+    text:"<b>Biothérapie.</b> Anticorps anti-TNFα, frappe fort.",
+    data:"AcM IgG1 humain · anti-TNFα · t½ ~14 j · IV/SC"},
+  doxorubicine:{name:"Doxorubicine", faction:"immuno", fLabel:"Onco · Chimio", cost:4, atk:5,
+    kw:["cardiotox"], atc:"L01DB01", ghs:"☠",
+    text:"<b>Cardiotoxicité.</b> À l'entrée : tu perds 2 homéostasie.",
+    data:"anthracycline · intercalant ADN · dose cumulée limitante"},
+  coniine:{name:"Coniine", faction:"tox", fLabel:"Toxine · Plante", cost:2, atk:5,
+    kw:["surdosage"], ghs:"☠",
+    text:"<b>Surdosage.</b> À l'entrée : inflige 2 à l'adversaire, tu perds 1.",
+    data:"antagoniste nAChR · DL50 ~12 mg/kg · poison de Socrate"},
+  warfarine:{name:"Warfarine", faction:"cardio", fLabel:"Cardio · AVK", cost:3, atk:2,
+    kw:["sub_cyp2d6"], atc:"B01AA03", ghs:"!",
+    text:"<b>Marge étroite.</b> Anticoagulant, à surveiller de près.",
+    data:"inhibe VKORC1 · substrat CYP2C9 · pharmacogénétique"},
+  paracetamol:{name:"Paracétamol", faction:"snc", fLabel:"Antalgique · P1", cost:1, atk:1,
+    kw:[], atc:"N02BE01",
+    text:"<b>Antalgique.</b> Petit coût, effet modeste.",
+    data:"NAPQI via CYP2E1 si surdosage · t½ 2 h · antidote NAC"}
+};
+
+const STARTER = ["morphine","naloxone","diazepam","midazolam","ketoconazole","rifampicine",
+                 "propranolol","amoxicilline","aciclovir","adalimumab","doxorubicine",
+                 "coniine","warfarine","paracetamol"];
+
+/* ═══════════════ ÉTAT ═══════════════ */
+let S;
+function freshState(){
+  return {
+    turn:1, energyMax:3, energy:3, active:"you",
+    you:{hp:20, deck:shuffle(buildDeck()), hand:[], board:[]},
+    foe:{hp:20, deck:shuffle(buildDeck()), hand:[], board:[]},
+    pending:null, // {type:'antagonist'|'brady'|'sedation', card}
+    over:false
+  };
+}
+function buildDeck(){ // 2x chaque carte starter = 28
+  let d=[]; STARTER.forEach(id=>{d.push(id); d.push(id);}); return d;
+}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
+let uid=0;
+function mkInst(id){return {inst:++uid, id, ...structuredClone(DB[id]), sick:true, atkMod:0};}
+function curAtk(c){return Math.max(0, c.atk + c.atkMod);}
+
+/* ═══════════════ RENDU ═══════════════ */
+function atcBars(atc){
+  if(!atc) return "";
+  let bars="";
+  for(let i=0;i<12;i++){ bars+=`<i style="width:${(atc.charCodeAt(i%atc.length)%3)+1}px"></i>`; }
+  return `<div class="atc">${bars}</div>`;
+}
+function cardHTML(c, ctx){
+  const stat = c.spell
+    ? `<span class="stat"></span>`
+    : `<span class="stat atk">${curAtk(c)}<small>ATK</small></span>`;
+  const ghs = c.ghs ? `<div class="ghs"><span>${c.ghs}</span></div>` : "";
+  const cls = ["card","f-"+c.faction, ctx];
+  if(ctx==="onboard" && c.sick && S.active==="you") cls.push("sick");
+  return `
+    <div class="${cls.join(' ')}" data-inst="${c.inst||''}" data-hid="${c._hid??''}">
+      ${ghs}
+      <div class="chead">
+        <div class="pip">${c.cost}</div>
+        <div>
+          <div class="cname">${c.name}</div>
+          <div class="cfaction">${c.fLabel}</div>
+        </div>
+      </div>
+      ${atcBars(c.atc)}
+      <div class="ctext">${c.text}</div>
+      <div class="cdata" title="${c.data}">${c.data}</div>
+      <div class="cfoot">
+        <span class="stat cost">${c.cost}<small>É</small></span>
+        ${stat}
+      </div>
+    </div>`;
+}
+
+function render(){
+  document.getElementById("youHp").textContent=S.you.hp;
+  document.getElementById("foeHp").textContent=S.foe.hp;
+  document.getElementById("turnNo").textContent=S.turn;
+  document.getElementById("energy").textContent=`${S.energy}/${S.energyMax}`;
+
+  // hand
+  const hand=document.getElementById("hand");
+  hand.innerHTML="";
+  S.you.hand.forEach((c,i)=>{c._hid=i;});
+  S.you.hand.forEach((c)=>{
+    const playable = S.active==="you" && !S.pending && S.energy>=c.cost;
+    hand.insertAdjacentHTML("beforeend", cardHTML(c, playable?"playable":"hand-un"));
+  });
+
+  // boards
+  const yb=document.getElementById("youBoard"), fb=document.getElementById("foeBoard");
+  yb.innerHTML = S.you.board.length? "" : `<div class="empty">Aucune molécule en jeu</div>`;
+  fb.innerHTML = S.foe.board.length? "" : `<div class="empty">Aucune molécule adverse</div>`;
+  S.you.board.forEach(c=>yb.insertAdjacentHTML("beforeend", cardHTML(c,"onboard")));
+  S.foe.board.forEach(c=>{
+    let ctx="onboard";
+    // targeting highlight
+    if(S.pending){
+      if(S.pending.type==="antagonist" && (c.kw.includes("agoniste_mu"))) ctx="onboard targetable";
+      if((S.pending.type==="brady"||S.pending.type==="sedation")) ctx="onboard targetable";
+    }
+    fb.insertAdjacentHTML("beforeend", cardHTML(c,ctx));
+  });
+
+  // wire clicks
+  hand.querySelectorAll(".card").forEach(el=>{
+    el.onclick=()=>playFromHand(+el.dataset.hid, el);
+  });
+  fb.querySelectorAll(".card.targetable").forEach(el=>{
+    el.onclick=()=>resolvePendingOn(+el.dataset.inst);
+  });
+
+  const eb=document.getElementById("endBtn");
+  eb.disabled = S.active!=="you" || S.over;
+  eb.textContent = S.pending ? "Choisis une cible…" : "Terminer le tour";
+}
+
+/* ═══════════════ JOURNAL ═══════════════ */
+function log(msg, cls=""){
+  const l=document.getElementById("log");
+  l.insertAdjacentHTML("beforeend",`<div class="ev ${cls}">› ${msg}</div>`);
+  l.scrollTop=l.scrollHeight;
+}
+
+function toast(msg){
+  let t=document.getElementById("toast");
+  if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),1500);
+}
+
+/* ═══════════════ ACTIONS JOUEUR ═══════════════ */
+function playFromHand(hid, el){
+  const c=S.you.hand[hid];
+  if(!c) return;
+  if(S.pending){ toast("Choisis d'abord une cible sur le champ adverse"); return; }
+  if(S.active!=="you"){ toast("Ce n'est pas ton tour"); return; }
+  if(S.energy<c.cost){ toast(`Énergie insuffisante : ${c.name} coûte ${c.cost}É (tu as ${S.energy})`); if(el){el.classList.remove("shake");void el.offsetWidth;el.classList.add("shake");} return; }
+  S.energy-=c.cost;
+  S.you.hand.splice(hid,1);
+  log(`Tu joues <b style="color:var(--ink)">${c.name}</b> (−${c.cost}É)`);
+  playCard(c,"you");
+  if(!S.pending) render();
+  checkWin();
+}
+
+// résout l'effet d'entrée d'une carte ; pose un `pending` si ciblage requis
+function playCard(c, side){
+  const me = S[side], opp = S[side==="you"?"foe":"you"];
+
+  // effets globaux / immédiats
+  if(c.kw.includes("inhib_cyp3a4")){
+    let n=0;
+    me.board.forEach(m=>{ if(m.kw.includes("sub_cyp3a4")){ m.atkMod+=2; n++; }});
+    log(`${c.name} inhibe CYP3A4 → +2 ATK à ${n} substrat(s)`,"buff");
+  }
+  if(c.kw.includes("induc_cyp3a4")){
+    let n=0;
+    opp.board.forEach(m=>{ if(m.kw.includes("sub_cyp3a4")){ m.atkMod-=2; n++; }});
+    log(`${c.name} induit CYP3A4 → −2 ATK à ${n} substrat(s) adverse(s)`,"buff");
+  }
+  if(c.kw.includes("cardiotox")){ me.hp-=2; log(`${c.name} : cardiotoxicité, ${side==="you"?"tu perds":"l'IA perd"} 2 PV`,"dmg"); }
+  if(c.kw.includes("surdosage")){ opp.hp-=2; me.hp-=1; log(`${c.name} : surdosage → 2 à l'adversaire, 1 à soi`,"dmg"); }
+
+  // effets ciblés
+  if(c.kw.includes("antagoniste_mu")){
+    if(side==="you"){
+      const targets=S.foe.board.filter(m=>m.kw.includes("agoniste_mu"));
+      if(targets.length){ S.pending={type:"antagonist"}; return; }
+      log(`${c.name} : aucun agoniste opioïde à neutraliser`);
+    } else { aiAntagonist(); }
+  }
+  if(c.kw.includes("brady")||c.kw.includes("sedation")){
+    const amt = c.kw.includes("sedation")?1:1;
+    if(side==="you"){
+      if(S.foe.board.length){ S.pending={type:c.kw.includes("sedation")?"sedation":"brady", amt}; if(!c.spell){/*creature also enters*/ me.board.push(c);} return; }
+      else { log(`${c.name} : pas de cible adverse`); }
+    } else {
+      const t=opp.board.slice().sort((a,b)=>curAtk(b)-curAtk(a))[0];
+      if(t){ t.atkMod-=amt; log(`${c.name} affaiblit ${t.name} (−${amt} ATK)`,"buff"); }
+    }
+  }
+
+  // la carte entre en jeu si ce n'est pas un sort pur
+  if(!c.spell) me.board.push(c);
+  else log(`${c.name} : effet résolu (sort)`);
+}
+
+function resolvePendingOn(inst){
+  const t=S.foe.board.find(m=>m.inst===inst);
+  if(!t||!S.pending) return;
+  if(S.pending.type==="antagonist"){
+    S.foe.board=S.foe.board.filter(m=>m.inst!==inst);
+    log(`Naloxone neutralise <b>${t.name}</b> → détruit`,"dmg");
+  } else {
+    const amt=S.pending.amt||1;
+    t.atkMod-=amt;
+    log(`${S.pending.type==="sedation"?"Sédation":"Bradycardie"} : −${amt} ATK à ${t.name}`,"buff");
+  }
+  S.pending=null;
+  render(); checkWin();
+}
+
+/* ═══════════════ FIN DE TOUR + ATTAQUE ═══════════════ */
+function endTurn(){
+  if(S.active!=="you"||S.pending||S.over) return;
+  // attaques : molécules prêtes frappent l'IA
+  let dmg=0;
+  S.you.board.forEach(c=>{ if(!c.sick){ dmg+=curAtk(c); }});
+  if(dmg>0){ S.foe.hp-=dmg; log(`Tes molécules infligent <b>${dmg}</b> à l'IA`,"dmg"); }
+  S.you.board.forEach(c=>c.sick=false);
+  render(); if(checkWin()) return;
+  S.active="foe";
+  render();
+  setTimeout(aiTurn, 750);
+}
+
+/* ═══════════════ IA (gloutonne + priorise le removal) ═══════════════ */
+function aiTurn(){
+  if(S.over) return;
+  // ramp
+  S.foe._energy = S.energyMax;
+  draw("foe",1);
+
+  // 1) removal prioritaire : si le joueur a un gros agoniste μ et l'IA tient Naloxone
+  let acted=true, guard=0;
+  while(acted && guard++<12){
+    acted=false;
+    // trie la main par coût décroissant, joue ce qui rentre
+    const affordable=S.foe.hand
+      .map((c,i)=>({c,i}))
+      .filter(o=>o.c.cost<=S.foe._energy)
+      .sort((a,b)=>priorityAI(b.c)-priorityAI(a.c));
+    if(affordable.length){
+      const {c,i}=affordable[0];
+      S.foe._energy-=c.cost;
+      S.foe.hand.splice(i,1);
+      log(`L'IA joue <b style="color:var(--ink)">${c.name}</b>`,"hl");
+      playCard(c,"foe");
+      acted=true;
+    }
+  }
+  render();
+  if(checkWin()) return;
+
+  // attaque de l'IA
+  setTimeout(()=>{
+    let dmg=0;
+    S.foe.board.forEach(c=>{ if(!c.sick) dmg+=curAtk(c); });
+    if(dmg>0){ S.you.hp-=dmg; log(`L'IA inflige <b>${dmg}</b> à ton homéostasie`,"dmg"); }
+    S.foe.board.forEach(c=>c.sick=false);
+    render(); if(checkWin()) return;
+    // nouveau tour joueur
+    S.active="you"; S.turn++;
+    S.energyMax=Math.min(8,S.energyMax+1); S.energy=S.energyMax;
+    draw("you",1);
+    render();
+  }, 700);
+}
+function priorityAI(c){
+  let p=c.atk||0;
+  if(c.kw.includes("antagoniste_mu") && S.you.board.some(m=>m.kw.includes("agoniste_mu"))) p+=10;
+  if(c.kw.includes("inhib_cyp3a4") && S.foe.board.some(m=>m.kw.includes("sub_cyp3a4"))) p+=5;
+  if(c.kw.includes("induc_cyp3a4") && S.you.board.some(m=>m.kw.includes("sub_cyp3a4"))) p+=5;
+  if(c.kw.includes("cardiotox")&&S.foe.hp<8) p-=8;
+  if(c.kw.includes("surdosage")&&S.foe.hp<4) p-=8;
+  return p;
+}
+function aiAntagonist(){
+  const targets=S.you.board.filter(m=>m.kw.includes("agoniste_mu"))
+    .sort((a,b)=>curAtk(b)-curAtk(a));
+  if(targets.length){
+    const t=targets[0];
+    S.you.board=S.you.board.filter(m=>m.inst!==t.inst);
+    log(`L'IA neutralise ton <b>${t.name}</b> (Naloxone)`,"dmg");
+  }
+}
+
+/* ═══════════════ PIOCHE / VICTOIRE ═══════════════ */
+function draw(side,n){
+  for(let k=0;k<n;k++){
+    const p=S[side];
+    if(!p.deck.length) p.deck=shuffle(buildDeck()); // recyclage simple pour le proto
+    p.hand.push(mkInst(p.deck.pop()));
+    if(p.hand.length>8) p.hand.shift(); // limite de main
+  }
+}
+function checkWin(){
+  if(S.foe.hp<=0){ endGame("Victoire","L'homéostasie adverse est à zéro. Traitement décisif."); return true; }
+  if(S.you.hp<=0){ endGame("Défaite","Ton homéostasie est tombée à zéro."); return true; }
+  return false;
+}
+function endGame(t,b){
+  S.over=true;
+  document.getElementById("mTitle").textContent=t;
+  document.getElementById("mBody").textContent=b;
+  document.getElementById("mBtn").textContent="Rejouer";
+  document.getElementById("over").classList.add("show");
+}
+
+/* ═══════════════ INIT ═══════════════ */
+function newGame(){
+  S=freshState();
+  draw("you",4); draw("foe",4);
+  document.getElementById("over").classList.remove("show");
+  document.getElementById("log").innerHTML='<div class="lt">Journal</div>';
+  log("Partie lancée. À toi de jouer.");
+  render();
+}
+document.getElementById("endBtn").onclick=endTurn;
+document.getElementById("mBtn").onclick=newGame;
+
+// écran d'accueil
+document.getElementById("mBody").innerHTML =
+  "Duel de pharmacologie. Joue des molécules réelles sur ton champ ; elles frappent l'homéostasie adverse. "+
+  "Naloxone neutralise les opioïdes, Kétoconazole booste tes substrats CYP3A4, Rifampicine affaiblit ceux de l'adversaire.";
+</script>
+</body>
+</html>

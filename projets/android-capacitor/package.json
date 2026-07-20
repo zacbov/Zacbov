@@ -1,0 +1,20 @@
+{
+  "name": "pharmatlas-capacitor-template",
+  "version": "1.0.0",
+  "description": "Template Capacitor pour convertir une page HTML PharmAtlas en APK Android",
+  "private": true,
+  "scripts": {
+    "sync": "cap sync android",
+    "open:android": "cap open android",
+    "run:android": "cap run android",
+    "add:android": "cap add android",
+    "build:apk": "cd android && gradlew.bat assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}

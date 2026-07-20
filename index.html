@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZACBOV — Atelier de projets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E7E2D9; --card:#F1EDE4; --ink:#20201D; --mut:#736C5E;
+  --jeux:#B23A2E; --pedago:#1F6E4E; --fac:#1F4E8C; --perso:#B5760F; --sites:#5B3B8C;
+  --shadow-out:8px 8px 20px rgba(32,32,29,.14), -8px -8px 20px rgba(255,255,255,.75);
+  --shadow-in: inset 4px 4px 10px rgba(32,32,29,.12), inset -4px -4px 10px rgba(255,255,255,.65);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.6 'Poppins',sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:32px 0}
+.logo{font:700 20px 'Poppins';display:flex;align-items:center;gap:10px}
+.blob{width:34px;height:34px;border-radius:38% 62% 63% 37% / 41% 44% 56% 59%;background:linear-gradient(135deg,var(--jeux),var(--sites));box-shadow:var(--shadow-out)}
+.count{font:600 12px 'JetBrains Mono';background:var(--card);box-shadow:var(--shadow-in);border-radius:20px;padding:9px 16px;color:var(--mut)}
+
+.hero{padding:30px 0 46px}
+.hero h1{font:800 clamp(38px,7vw,76px)/1.05 'Poppins';letter-spacing:-.02em}
+.hero .grad{background:linear-gradient(120deg,var(--jeux),var(--sites) 60%,var(--fac));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{margin-top:16px;max-width:520px;color:var(--mut);font-size:16px}
+
+.filters{display:flex;flex-wrap:wrap;gap:10px;padding-bottom:34px}
+.chip{--c:var(--sites);cursor:pointer;font:500 13px 'Poppins';color:var(--ink);background:var(--card);border:none;border-radius:24px;padding:11px 20px;box-shadow:var(--shadow-out);transition:.2s}
+.chip:hover{transform:translateY(-2px)}
+.chip.on{background:var(--c);color:#fff;box-shadow:var(--shadow-in)}
+.chip[data-f="Jeux"]{--c:var(--jeux)}.chip[data-f="Pédago"]{--c:var(--pedago)}
+.chip[data-f="Fac"]{--c:var(--fac)}.chip[data-f="Perso"]{--c:var(--perso)}.chip[data-f="Sites"]{--c:var(--sites)}
+.card[data-c="Jeux"]{--c:var(--jeux)}.card[data-c="Pédago"]{--c:var(--pedago)}
+.card[data-c="Fac"]{--c:var(--fac)}.card[data-c="Perso"]{--c:var(--perso)}.card[data-c="Sites"]{--c:var(--sites)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:22px;padding-bottom:80px}
+.card{--c:var(--sites);position:relative;display:flex;flex-direction:column;gap:14px;background:var(--card);border-radius:28px;box-shadow:var(--shadow-out);padding:26px;text-decoration:none;color:var(--ink);transition:.25s}
+.card:hover{transform:translateY(-5px)}
+.tag{align-self:flex-start;font:600 11px 'JetBrains Mono';text-transform:uppercase;letter-spacing:.04em;color:#fff;background:var(--c);border-radius:20px;padding:5px 12px}
+.card h2{font:700 21px 'Poppins';letter-spacing:-.01em}
+.card p{font-size:14px;color:var(--mut);flex:1}
+.meta{display:flex;align-items:center;gap:10px}
+.bar{flex:1;height:8px;border-radius:8px;background:rgba(46,42,61,.08);box-shadow:var(--shadow-in);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--c);border-radius:8px}
+.pct{font:600 11px 'JetBrains Mono';color:var(--c)}
+.open{position:absolute;top:20px;right:20px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--bg);box-shadow:var(--shadow-in);color:var(--mut)}
+.card:hover .open{background:var(--c);color:#fff;box-shadow:none}
+.card.hide{display:none}
+
+footer{padding:26px 0 50px;color:var(--mut);font:500 12px 'JetBrains Mono';display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+footer code{background:var(--card);box-shadow:var(--shadow-in);padding:3px 8px;border-radius:8px;color:var(--ink)}
+@media(max-width:480px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="logo"><span class="blob"></span>zacbov</div>
+  <div class="count" id="count"></div>
+</header>
+
+<section class="hero">
+  <h1>L'atelier des<br><span class="grad">projets doux</span></h1>
+  <p>Jeux, outils pédagogiques, applis perso et expérimentations — tout ce qu'on construit ensemble, réuni au même endroit.</p>
+</section>
+
+<nav class="filters" id="filters">
+  <button class="chip on" data-f="*">Tous</button>
+  <button class="chip" data-f="Jeux">Jeux</button>
+  <button class="chip" data-f="Pédago">Pédago</button>
+  <button class="chip" data-f="Fac">Fac</button>
+  <button class="chip" data-f="Perso">Perso</button>
+  <button class="chip" data-f="Sites">Sites</button>
+</nav>
+
+<main class="grid" id="grid"></main>
+
+<footer>
+  <span>Pour ajouter un projet : dépose ton fichier dans <code>projets/&lt;nom&gt;/index.html</code></span>
+  <span>ZACBOV · 2026</span>
+</footer>
+</div>
+
+<script>
+const P=[
+["POTD","Jeux","potd","Extraction shooter inspiré du court-métrage",2],
+["Tarkov","Jeux","tarkov","Livre dont vous êtes le héros",2],
+["Warhammer LDVELH","Jeux","warhammer-ldvelh","Livre dont vous êtes le héros",2],
+["Labyrinthe","Jeux","labyrinthe","Livre dont vous êtes le héros",2],
+["Épreuves","Jeux","epreuves","Livre dont vous êtes le héros",2],
+["Warhammer Plateau","Jeux","warhammer-plateau","Jeu de plateau interactif",2],
+["Mordheim","Jeux","mordheim","Jeu de plateau interactif",2],
+["Pharma : The Gathering","Jeux","pharma-the-gathering","Jeu de cartes pharmaceutique",2],
+["Corpo Atlas","Pédago","corpo-atlas","Atlas interactif du corps",2],
+["Pharmagotchi","Jeux","pharmagotchi","Compagnon virtuel à faire pousser",3],
+["Affichages Salles","Fac","affichages-salles","Planning des salles",3],
+["Assistant Perso","Perso","assistant-perso","Dashboard lanceur d'applications",3],
+["Bird IA","Pédago","bird-ia","Cadre e-ink ornithologique",3],
+["Herbier Maudit","Jeux","herbier-maudit","Roguelike façon Isaac, version botanique",3],
+["Pharmaville","Jeux","pharmaville","Ville pharmaceutique à explorer",3],
+["Lames","Fac","lames","Banque de lames histologiques",3],
+["Rallye","Fac","rallye","Rallye pédagogique modernisé",3],
+["Garde-Manger","Perso","garde-manger","Gestion des stocks de la maison",4],
+["Pilulier","Perso","pilulier","Pilulier mobile",4],
+["PaintHammer","Perso","painthammer","Suivi de peinture de figurines",4],
+["Plant Voxel","Pédago","plant-voxel","Codex botanique en voxels 3D",4],
+["Jobov","Sites","jobov","Site vitrine",4],
+["Plantes Tox","Pédago","plantes-tox","Répertoire des plantes toxiques",5],
+["Reco Plantes","Pédago","reco-plantes","Reconnaissance des plantes",5],
+["Stock Inventaire","Fac","stock-inventaire","Inventaire des produits",1],
+["Android Capacitor","Perso","android-capacitor","Portage Android des applis",5],
+["Réducteur 3D","Perso","reducteur-3d","Optimisation de modèles 3D",1],
+["3D vers Code","Perso","3d-vers-code","Sculpteur d'objets Three.js",1],
+["Plan 3D","Fac","plan-3d","Plans 3D des locaux",1],
+];
+const grid=document.getElementById('grid');
+grid.innerHTML=P.map(([n,c,slug,d,s])=>{
+  const pct=s*20;
+  return `<a class="card" data-c="${c}" href="projets/${slug}/index.html">
+    <span class="tag">${c}</span>
+    <h2>${n}</h2>
+    <p>${d}</p>
+    <div class="meta"><div class="bar"><i style="width:${pct}%"></i></div><span class="pct">${pct}%</span></div>
+    <span class="open" aria-hidden="true">↗</span>
+  </a>`;
+}).join('');
+const count=document.getElementById('count');
+const update=f=>{
+  let v=0;
+  document.querySelectorAll('.card').forEach(c=>{
+    const show=f==='*'||c.dataset.c===f;
+    c.classList.toggle('hide',!show); if(show)v++;
+  });
+  count.textContent=v+' projet'+(v>1?'s':'');
+};
+update('*');
+document.getElementById('filters').addEventListener('click',e=>{
+  const b=e.target.closest('.chip'); if(!b)return;
+  document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); update(b.dataset.f);
+});
+</script>
+</body>
+</html>

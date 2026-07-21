@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZACBOV — Photographie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E7E2D9; --card:#F1EDE4; --ink:#20201D; --mut:#736C5E;
+  --jeux:#B23A2E; --pedago:#1F6E4E; --fac:#1F4E8C; --perso:#B5760F; --sites:#5B3B8C;
+  --shadow-out:8px 8px 20px rgba(32,32,29,.14), -8px -8px 20px rgba(255,255,255,.75);
+  --shadow-in: inset 4px 4px 10px rgba(32,32,29,.12), inset -4px -4px 10px rgba(255,255,255,.65);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.6 'Poppins',sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:32px 0}
+.logo{font:700 20px 'Poppins';display:flex;align-items:center;gap:10px}
+.blob{width:34px;height:34px;border-radius:38% 62% 63% 37% / 41% 44% 56% 59%;background:linear-gradient(135deg,var(--jeux),var(--sites));box-shadow:var(--shadow-out)}
+nav.top{display:flex;gap:18px;font:600 13px 'JetBrains Mono';align-items:center}
+nav.top a{color:var(--ink);text-decoration:none;opacity:.55}
+nav.top a.on{opacity:1}
+
+.bio{display:grid;grid-template-columns:1fr 1.3fr;gap:26px;padding:20px 0 36px}
+.bio .card2,.bio .text{background:var(--card);border-radius:28px;box-shadow:var(--shadow-out);padding:26px}
+.bio .facts div{font:500 14px/2 'JetBrains Mono';color:var(--mut)}
+.bio .facts b{color:var(--ink);font-weight:600}
+.bio .text p{color:var(--mut);margin-bottom:10px}
+.bio .text p:first-child{color:var(--ink);font-size:18px;font-weight:600;font-family:'Poppins'}
+
+.filters{display:flex;flex-wrap:wrap;gap:10px;padding-bottom:30px}
+.chip{--c:var(--sites);cursor:pointer;font:500 13px 'Poppins';color:var(--ink);background:var(--card);border:none;border-radius:24px;padding:11px 20px;box-shadow:var(--shadow-out);transition:.2s}
+.chip:hover{transform:translateY(-2px)}
+.chip.on{background:var(--c);color:#fff;box-shadow:var(--shadow-in)}
+
+.pgrid{columns:4 260px;column-gap:14px;padding-bottom:60px}
+.pgrid figure{break-inside:avoid;margin:0 0 14px;position:relative;overflow:hidden;border-radius:22px;box-shadow:var(--shadow-out);cursor:zoom-in}
+.pgrid img{width:100%;display:block;transition:transform .5s ease}
+.pgrid figure:hover img{transform:scale(1.05)}
+.pgrid figcaption{position:absolute;left:0;right:0;bottom:0;padding:10px 14px;font:600 11px 'JetBrains Mono';letter-spacing:.03em;color:#fff;background:linear-gradient(0deg,rgba(20,18,15,.6),transparent);opacity:0;transition:.25s;text-transform:uppercase}
+.pgrid figure:hover figcaption{opacity:1}
+.pgrid figure.hide{display:none}
+
+.lightbox{position:fixed;inset:0;background:rgba(20,18,15,.92);z-index:100;display:none;align-items:center;justify-content:center;padding:40px;flex-direction:column;gap:16px}
+.lightbox.on{display:flex}
+.lightbox img{max-width:min(90vw,1100px);max-height:78vh;object-fit:contain;border-radius:18px}
+.lightbox figcaption{color:#fff;font:600 12px 'JetBrains Mono';letter-spacing:.04em;text-transform:uppercase;opacity:.75}
+.lightbox .close{position:absolute;top:26px;right:32px;color:#fff;font:700 32px 'Poppins';cursor:pointer;line-height:1}
+
+footer{padding:26px 0 50px;color:var(--mut);font:500 12px 'JetBrains Mono';display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media(max-width:480px){.pgrid{columns:2 160px}.bio{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="logo"><span class="blob"></span>zacbov</div>
+  <nav class="top">
+    <a href="index.html">Projets</a>
+    <a href="photo.html" class="on">Photo</a>
+  </nav>
+</header>
+
+<section class="bio">
+  <div class="card2 facts">
+    <div><b>Nom</b> — Zachary</div>
+    <div><b>Appareil</b> — Sony DSC‑R1</div>
+    <div><b>Sujets</b> — Concerts métal, paysages HDR, panoramiques</div>
+  </div>
+  <div class="text">
+    <p>Bienvenue dans mon univers déphasé.</p>
+    <p>Avant l'audiovisuel pédagogique, il y avait les salles de concert et les longues poses. Une sélection de photos tirées de mon ancien site.</p>
+  </div>
+</section>
+
+<nav class="filters" id="pfilters">
+  <button class="chip on" data-p="*">Tout</button>
+  <button class="chip" data-p="concert">Concerts</button>
+  <button class="chip" data-p="hdr">HDR</button>
+  <button class="chip" data-p="pano">Panoramiques</button>
+  <button class="chip" data-p="illu">Illustration</button>
+</nav>
+
+<div class="pgrid" id="pgrid"></div>
+
+<footer>
+  <span>Photos issues de l'ancien site zacbov</span>
+  <span>ZACBOV · 2026</span>
+</footer>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <span class="close" id="lbclose">&times;</span>
+  <img id="lbimg" src="" alt="">
+  <figcaption id="lbcap"></figcaption>
+</div>
+
+<script>
+const PH=[
+["concert","photos/concert-blaklodge.jpg","BlaKlodge — concert"],
+["concert","photos/concert-heol.jpg","Heol — concert"],
+["concert","photos/concert-inkisitorb.jpg","Inkisitor — concert"],
+["concert","photos/concert-inkisitorg.jpg","Inkisitor — concert"],
+["concert","photos/concert-merri-nb.jpg","Merri — concert (N&B)"],
+["concert","photos/concert-merric.jpg","Merri — concert"],
+["concert","photos/concert-tobb.jpg","TOBB — concert"],
+["concert","photos/concert-v1.jpg","V1 — concert"],
+["hdr","photos/hdr-arbremort.jpg","Arbre mort — HDR"],
+["hdr","photos/hdr-coupdefoudre.jpg","Coup de foudre — HDR"],
+["hdr","photos/hdr-coupole.jpg","Coupole — HDR"],
+["hdr","photos/hdr-mireille.jpg","Mireille — HDR"],
+["hdr","photos/hdr-pleinelune.jpg","Pleine lune — HDR"],
+["hdr","photos/hdr-reverie.jpg","Rêverie — HDR"],
+["hdr","photos/hdr-vielhomme.jpg","Vieil homme — HDR"],
+["hdr","photos/hdr-nenuphar.jpg","Nénuphar — HDR"],
+["pano","photos/pano-bambou.jpg","Bambou — panoramique"],
+["pano","photos/pano-paris.jpg","Paris — panoramique"],
+["pano","photos/pano-sacrecoeur.jpg","Sacré-Cœur — panoramique"],
+["pano","photos/pano-ruebonaparte.jpg","Rue Bonaparte — panoramique"],
+["pano","photos/pano-seillant.jpg","Seillant — panoramique"],
+["pano","photos/pano-boisseillant.jpg","Bois de Seillant — panoramique"],
+["pano","photos/pano-tourelle.jpg","Tourelle — panoramique"],
+["pano","photos/pano-truyes.jpg","Truyes — panoramique HDR"],
+["illu","photos/illu-darkofthemoon.jpg","Dark of the Moon — illustration"],
+["illu","photos/illu-lunehybrid.jpg","Lune hybride — illustration"],
+["illu","photos/illu-overvirtualized.jpg","Over Virtualized — illustration"],
+["illu","photos/illu-progressisme.jpg","Progressisme — illustration"],
+["illu","photos/illu-smile.jpg","Smile — illustration"],
+["illu","photos/illu-williamtag.jpg","William Tag — illustration"],
+];
+const pgrid=document.getElementById('pgrid');
+pgrid.innerHTML=PH.map(([cat,src,cap])=>`<figure data-p="${cat}" data-src="${src}" data-cap="${cap}"><img src="${src}" alt="${cap}" loading="lazy"><figcaption>${cap}</figcaption></figure>`).join('');
+document.getElementById('pfilters').addEventListener('click',e=>{
+  const b=e.target.closest('.chip'); if(!b)return;
+  document.querySelectorAll('#pfilters .chip').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  const f=b.dataset.p;
+  document.querySelectorAll('#pgrid figure').forEach(fig=>fig.classList.toggle('hide',f!=='*'&&fig.dataset.p!==f));
+});
+const lb=document.getElementById('lightbox'),lbimg=document.getElementById('lbimg'),lbcap=document.getElementById('lbcap');
+pgrid.addEventListener('click',e=>{
+  const fig=e.target.closest('figure'); if(!fig)return;
+  lbimg.src=fig.dataset.src; lbcap.textContent=fig.dataset.cap; lb.classList.add('on');
+});
+document.getElementById('lbclose').addEventListener('click',()=>lb.classList.remove('on'));
+lb.addEventListener('click',e=>{if(e.target===lb)lb.classList.remove('on');});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')lb.classList.remove('on');});
+</script>
+</body>
+</html>

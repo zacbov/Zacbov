@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: pharmaville
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LTI_KEY
+        value: pharmaville
+      - key: LTI_SECRET
+        generateValue: true        # Render génère automatiquement
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: PUBLIC_URL
+        fromService:
+          type: web
+          name: pharmaville
+          property: host

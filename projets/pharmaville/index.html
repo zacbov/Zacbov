@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PharmaVille</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0a0e1a; font-family: 'Exo 2', sans-serif; }
+    #root { min-height: 100vh; }
+
+    /* ── Écran de connexion / matchmaking ── */
+    .connect-screen {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 60% 20%, #120a1f 0%, #0a0e1a 60%);
+      color: #e0e8ff;
+    }
+    .connect-box {
+      background: rgba(17,24,39,0.9);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 36px;
+      max-width: 420px; width: 100%; text-align: center;
+    }
+    .connect-title {
+      font-size: 42px; font-weight: 700; letter-spacing: 4px;
+      background: linear-gradient(135deg,#c084fc,#818cf8,#38bdf8);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .connect-sub { color: #475569; font-size: 13px; margin-bottom: 28px; }
+    .btn-find {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg,#7c3aed,#4f46e5);
+      border: 1px solid rgba(167,139,250,0.3);
+      border-radius: 12px; color: white; font-weight: 700;
+      font-size: 16px; letter-spacing: 1px; text-transform: uppercase;
+      cursor: pointer; transition: all 0.2s;
+      box-shadow: 0 8px 28px rgba(124,58,237,0.4);
+    }
+    .btn-find:hover { transform: translateY(-2px); }
+    .btn-find:disabled { background: #374151; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-cancel {
+      margin-top: 10px; width: 100%; padding: 10px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px; color: #64748b; font-size: 13px; cursor: pointer;
+    }
+
+    /* ── Matchmaking ── */
+    .waiting-indicator {
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      padding: 20px 0;
+    }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid rgba(167,139,250,0.2);
+      border-top-color: #a855f7;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .opponent-banner {
+      background: linear-gradient(135deg,#14532d,#15803d);
+      border: 1px solid rgba(34,197,94,0.3);
+      border-radius: 12px; padding: 14px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .my-banner {
+      background: linear-gradient(135deg,#312e81,#4c1d95);
+      border: 1px solid rgba(167,139,250,0.3);
+      border-radius: 12px; padding: 14px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    /* ── Déconnexion ── */
+    .disconnect-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 500;
+    }
+    .disconnect-box {
+      background: #111827; border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 16px; padding: 28px; text-align: center; max-width: 340px;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Exo+2:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ── Lecture du token depuis l'URL ──────────────────────────────────────────
+function getToken() {
+  return new URLSearchParams(window.location.search).get('token');
+}
+
+// ── WebSocket hook ─────────────────────────────────────────────────────────
+function useGameSocket(token) {
+  const wsRef      = useRef(null);
+  const [status, setStatus]       = useState('connecting'); // connecting|authenticated|waiting|matched|playing|disconnected
+  const [myIndex, setMyIndex]     = useState(null);
+  const [myName, setMyName]       = useState('');
+  const [roomState, setRoomState] = useState(null);
+  const [error, setError]         = useState(null);
+  const [oppDisconnected, setOppDisconnected] = useState(false);
+  const [lastEvents, setLastEvents] = useState([]);
+
+  const send = useCallback((msg) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(msg));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!token) { setStatus('no_token'); return; }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(`${protocol}://${window.location.host}`);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      send({ type: 'AUTH', token });
+    };
+
+    ws.onmessage = (evt) => {
+      const msg = JSON.parse(evt.data);
+
+      switch (msg.type) {
+        case 'AUTHENTICATED':
+          setMyName(msg.displayName);
+          setStatus('authenticated');
+          break;
+
+        case 'RECONNECTED':
+          setStatus('playing');
+          break;
+
+        case 'MATCHMAKING':
+          setStatus('waiting');
+          break;
+
+        case 'MATCH_FOUND':
+          setStatus('matched');
+          break;
+
+        case 'STATE':
+          setMyIndex(msg.myIndex);
+          setRoomState(msg.room);
+          if (msg.room.status === 'playing') setStatus('playing');
+          if (msg.room.status === 'finished') setStatus('finished');
+          break;
+
+        case 'DICE_EVENTS':
+          setLastEvents(msg.events || []);
+          break;
+
+        case 'NEW_TURN':
+          setLastEvents([]);
+          break;
+
+        case 'VICTORY':
+          setStatus('finished');
+          break;
+
+        case 'OPPONENT_DISCONNECTED':
+          setOppDisconnected(true);
+          break;
+
+        case 'ERROR':
+          setError(msg.message);
+          setTimeout(() => setError(null), 3000);
+          break;
+      }
+    };
+
+    ws.onclose = () => setStatus('disconnected');
+    ws.onerror = () => setStatus('disconnected');
+
+    return () => ws.close();
+  }, [token]);
+
+  const findMatch  = () => send({ type: 'FIND_MATCH' });
+  const cancelMatch = () => send({ type: 'CANCEL_MATCH' });
+  const action     = (act) => send({ type: 'ACTION', action: act });
+
+  return { status, myIndex, myName, roomState, error, oppDisconnected, lastEvents, findMatch, cancelMatch, action };
+}
+
+// ── Écrans ─────────────────────────────────────────────────────────────────
+
+function ConnectScreen({ myName, onFind }) {
+  return (
+    <div className="connect-screen">
+      <div className="connect-box">
+        <div style={{fontSize:44,marginBottom:8}}>💊⚗️</div>
+        <div className="connect-title">PHARMAVILLE</div>
+        <div className="connect-sub">Connecté en tant que <strong style={{color:'#c4b5fd'}}>{myName}</strong></div>
+        <button className="btn-find" onClick={onFind}>
+          🔍 TROUVER UN ADVERSAIRE
+        </button>
+        <p style={{marginTop:16,fontSize:11,color:'#334155',lineHeight:1.6}}>
+          Le matchmaking vous apparie automatiquement avec un autre étudiant de votre cours.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function WaitingScreen({ myName, onCancel }) {
+  const [dots, setDots] = useState('');
+  useEffect(() => {
+    const t = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 500);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="connect-screen">
+      <div className="connect-box">
+        <div className="my-banner">
+          <span>👤 {myName}</span>
+          <span style={{fontSize:11,color:'rgba(255,255,255,0.5)'}}>Vous</span>
+        </div>
+        <div className="waiting-indicator">
+          <div className="spinner"/>
+          <div style={{color:'#c4b5fd',fontWeight:600,fontSize:15}}>
+            Recherche d'un adversaire{dots}
+          </div>
+          <div style={{color:'#334155',fontSize:12}}>
+            En attente d'un autre étudiant de votre cours
+          </div>
+        </div>
+        <button className="btn-cancel" onClick={onCancel}>Annuler</button>
+      </div>
+    </div>
+  );
+}
+
+function MatchFoundScreen({ myName, roomState, myIndex }) {
+  const opp = roomState?.players?.[1 - myIndex];
+  return (
+    <div className="connect-screen">
+      <div className="connect-box">
+        <div style={{fontSize:36,marginBottom:12}}>⚔️</div>
+        <div style={{fontSize:20,fontWeight:700,color:'white',marginBottom:20,fontFamily:'Rajdhani,sans-serif',letterSpacing:2}}>
+          ADVERSAIRE TROUVÉ !
+        </div>
+        <div className="my-banner">
+          <span>👤 {myName}</span>
+          <span style={{fontSize:11,color:'rgba(255,255,255,0.5)'}}>Vous</span>
+        </div>
+        <div style={{color:'#475569',fontSize:20,marginBottom:8}}>VS</div>
+        <div className="opponent-banner">
+          <span>🤝 {opp?.displayName || '...'}</span>
+          <span style={{fontSize:11,color:'rgba(255,255,255,0.5)'}}>Adversaire</span>
+        </div>
+        <div style={{color:'#475569',fontSize:12,animation:'pulse 1s infinite'}}>
+          ⏳ La partie démarre…
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DisconnectOverlay({ onReload }) {
+  return (
+    <div className="disconnect-overlay">
+      <div className="disconnect-box">
+        <div style={{fontSize:40,marginBottom:12}}>📡</div>
+        <div style={{fontFamily:'Rajdhani,sans-serif',fontSize:20,fontWeight:700,color:'#fca5a5',marginBottom:8}}>
+          ADVERSAIRE DÉCONNECTÉ
+        </div>
+        <div style={{color:'#64748b',fontSize:13,marginBottom:20,lineHeight:1.6}}>
+          Votre adversaire a perdu la connexion. La partie est suspendue.
+        </div>
+        <button className="btn-find" onClick={onReload}>
+          RETOUR AU MENU
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ErrorToast({ message }) {
+  if (!message) return null;
+  return (
+    <div style={{position:'fixed',top:16,left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,#7f1d1d,#dc2626)',border:'1px solid rgba(239,68,68,0.4)',color:'white',padding:'10px 20px',borderRadius:10,fontWeight:600,fontSize:13,zIndex:400,boxShadow:'0 4px 20px rgba(239,68,68,0.4)'}}>
+      ⚠️ {message}
+    </div>
+  );
+}
+
+// ── App principale ──────────────────────────────────────────────────────────
+
+function App() {
+  const token = getToken();
+  const { status, myIndex, myName, roomState, error, oppDisconnected, lastEvents, findMatch, cancelMatch, action } = useGameSocket(token);
+
+  if (!token || status === 'no_token') {
+    return (
+      <div className="connect-screen">
+        <div className="connect-box">
+          <div style={{fontSize:40,marginBottom:12}}>🔒</div>
+          <div style={{color:'#fca5a5',fontWeight:700,fontSize:18,marginBottom:8}}>Accès non autorisé</div>
+          <div style={{color:'#64748b',fontSize:13,lineHeight:1.6}}>
+            Accédez à PharmaVille depuis l'activité dans votre cours Moodle.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'connecting') {
+    return (
+      <div className="connect-screen">
+        <div className="connect-box">
+          <div className="spinner" style={{margin:'0 auto 16px'}}/>
+          <div style={{color:'#64748b',fontSize:13}}>Connexion au serveur…</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'disconnected') {
+    return (
+      <div className="connect-screen">
+        <div className="connect-box">
+          <div style={{fontSize:40,marginBottom:12}}>📡</div>
+          <div style={{color:'#fca5a5',fontWeight:700,fontSize:18,marginBottom:8}}>Connexion perdue</div>
+          <div style={{color:'#64748b',fontSize:13,marginBottom:20}}>Le serveur est inaccessible.</div>
+          <button className="btn-find" onClick={() => window.location.reload()}>Réessayer</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'authenticated') {
+    return (
+      <>
+        <ErrorToast message={error}/>
+        <ConnectScreen myName={myName} onFind={findMatch}/>
+      </>
+    );
+  }
+
+  if (status === 'waiting') {
+    return <WaitingScreen myName={myName} onCancel={cancelMatch}/>;
+  }
+
+  if (status === 'matched' && roomState) {
+    return <MatchFoundScreen myName={myName} roomState={roomState} myIndex={myIndex}/>;
+  }
+
+  if ((status === 'playing' || status === 'finished') && roomState) {
+    return (
+      <>
+        <ErrorToast message={error}/>
+        {oppDisconnected && <DisconnectOverlay onReload={() => window.location.href = window.location.pathname}/>}
+        {/* Le jeu est chargé depuis game.js */}
+        <PharmaVilleGame
+          roomState={roomState}
+          myIndex={myIndex}
+          myName={myName}
+          lastEvents={lastEvents}
+          onAction={action}
+          isFinished={status === 'finished'}
+        />
+      </>
+    );
+  }
+
+  return null;
+}
+
+ReactDOM.render(<App/>, document.getElementById('root'));
+</script>
+
+<!-- Le jeu complet est chargé ici via game.js (généré depuis PharmaVille.jsx) -->
+<script type="text/babel" src="/game.js"></script>
+
+</body>
+</html>

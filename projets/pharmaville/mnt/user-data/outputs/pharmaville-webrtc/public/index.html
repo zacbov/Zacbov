@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PharmaVille</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Exo+2:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0e1a;font-family:'Exo 2',sans-serif;color:#e0e8ff;min-height:100vh}
+    #root{min-height:100vh}
+
+    /* ── Écrans connexion ── */
+    .fullscreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 60% 20%,#120a1f 0%,#0a0e1a 60%)}
+    .box{background:rgba(17,24,39,0.9);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:36px;max-width:430px;width:100%;text-align:center}
+    .logo{font-family:'Rajdhani',sans-serif;font-size:44px;font-weight:700;letter-spacing:4px;background:linear-gradient(135deg,#c084fc,#818cf8,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
+    .sub{color:#334155;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:28px}
+    .btn{width:100%;padding:14px;border-radius:12px;border:1px solid rgba(167,139,250,0.3);background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;font-weight:800;font-family:'Rajdhani',sans-serif;font-size:16px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 8px 28px rgba(124,58,237,0.4);transition:all 0.2s}
+    .btn:hover{transform:translateY(-2px)}
+    .btn:disabled{background:#374151;cursor:not-allowed;transform:none;box-shadow:none;border-color:transparent}
+    .btn-ghost{width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#475569;font-size:13px;cursor:pointer}
+
+    /* ── Spinner ── */
+    .spinner{width:48px;height:48px;border:3px solid rgba(167,139,250,0.2);border-top-color:#a855f7;border-radius:50%;animation:spin 0.9s linear infinite;margin:0 auto 16px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}
+    @keyframes slideIn{from{transform:translateX(80px);opacity:0}to{transform:translateX(0);opacity:1}}
+    @keyframes spinDie{0%{transform:rotate(0)scale(0.72)}55%{transform:rotate(195deg)scale(1.18)}100%{transform:rotate(360deg)scale(1)}}
+    @keyframes glow{0%,100%{box-shadow:0 0 10px var(--glow,transparent)}50%{box-shadow:0 0 26px var(--glow,transparent),0 0 45px var(--glow,transparent)}}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes summaryIn{from{transform:scale(0.9) translateY(12px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+    ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:2px}
+
+    /* ── Banners matchmaking ── */
+    .banner-me{background:linear-gradient(135deg,#312e81,#4c1d95);border:1px solid rgba(167,139,250,0.3);border-radius:12px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .banner-opp{background:linear-gradient(135deg,#14532d,#15803d);border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+
+    /* ── Toasts ── */
+    #toasts{position:fixed;top:14px;right:14px;display:flex;flex-direction:column;gap:8px;z-index:300}
+    .toast{background:linear-gradient(135deg,#312e81,#4c1d95);border:1px solid rgba(167,139,250,0.4);color:white;padding:9px 14px;border-radius:10px;font-weight:600;font-size:12px;box-shadow:0 4px 18px rgba(124,58,237,0.4);animation:slideIn 0.3s ease;white-space:nowrap}
+
+    /* ── Overlay déconnexion ── */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.82);display:flex;align-items:center;justify-content:center;z-index:500;padding:20px}
+    .overlay-box{background:#111827;border:1px solid rgba(239,68,68,0.3);border-radius:16px;padding:28px;text-align:center;max-width:340px;width:100%}
+
+    /* ── Popup résumé ── */
+    .summary-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
+    .summary-box{background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid rgba(167,139,250,0.3);border-radius:20px;padding:26px;max-width:390px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.6);animation:summaryIn 0.25s ease}
+
+    /* ── Jeu ── */
+    .game-root{min-height:100vh;background:#0a0e1a;padding:13px}
+    .glass{background:rgba(17,24,39,0.88);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:15px}
+    .sec-title{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#475569;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+    .sec-title::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.05)}
+    .dice-face{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);background:white;border-radius:13px;box-shadow:0 4px 20px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.9);padding:8px;gap:2px}
+    .dice-dot{display:flex;align-items:center;justify-content:center}
+    .dice-dot span{background:#1e293b;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.4)}
+    .chip{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+    .chip-blue{background:rgba(59,130,246,.2);color:#93c5fd;border:1px solid rgba(59,130,246,.35)}
+    .chip-green{background:rgba(34,197,94,.2);color:#86efac;border:1px solid rgba(34,197,94,.35)}
+    .chip-red{background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.35)}
+    .chip-purple{background:rgba(168,85,247,.2);color:#d8b4fe;border:1px solid rgba(168,85,247,.35)}
+    .card-blue{background:linear-gradient(135deg,#1e3a5f,#1d4ed8);border:1px solid rgba(59,130,246,.45)}
+    .card-green{background:linear-gradient(135deg,#14532d,#15803d);border:1px solid rgba(34,197,94,.45)}
+    .card-red{background:linear-gradient(135deg,#7f1d1d,#dc2626);border:1px solid rgba(239,68,68,.45)}
+    .card-purple{background:linear-gradient(135deg,#3b0764,#7e22ce);border:1px solid rgba(168,85,247,.45)}
+    .gbtn{width:100%;padding:10px 14px;border-radius:10px;font-weight:700;font-family:'Rajdhani',sans-serif;font-size:13px;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .15s;border:1px solid transparent}
+    .gbtn-green{background:linear-gradient(135deg,#166534,#15803d);border-color:rgba(34,197,94,.3);color:white;box-shadow:0 4px 14px rgba(34,197,94,.3)}
+    .gbtn-red{background:linear-gradient(135deg,#7f1d1d,#dc2626);border-color:rgba(239,68,68,.3);color:white;box-shadow:0 4px 14px rgba(239,68,68,.3)}
+    .gbtn-gold{background:linear-gradient(135deg,#78350f,#b45309);border-color:rgba(245,158,11,.3);color:white;box-shadow:0 4px 14px rgba(245,158,11,.3)}
+    .gbtn-purple{background:linear-gradient(135deg,#7c3aed,#4f46e5);border-color:rgba(167,139,250,.3);color:white;box-shadow:0 4px 14px rgba(124,58,237,.4)}
+    .gbtn:disabled{background:rgba(55,65,81,.5)!important;color:#4b5563!important;cursor:not-allowed!important;box-shadow:none!important;border-color:transparent!important}
+  </style>
+</head>
+<body>
+<div id="toasts"></div>
+<div id="root"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// DONNÉES DU JEU
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const CARD_DEF = {
+  pharmacie_base:  {name:"Pharmacie",                 emoji:"🏬",activation:[1,2],  income:1,cost:0, color:'green', maxOwned:1,starter:true, desc:"Gagnez 1€ à votre tour pour 1–2"},
+  labo_base:       {name:"Laboratoire",               emoji:"🔭",activation:[3],    income:1,cost:0, color:'blue',  maxOwned:1,starter:true, desc:"Gagnez 1€ quel que soit le joueur qui fait 3"},
+  hopital:         {name:"Hôpital Cochin",            emoji:"🏥",activation:[9,10], income:3,cost:6, color:'blue',  maxOwned:3,              desc:"Gagnez 3€ quel que soit le joueur qui fait 9–10"},
+  clinique:        {name:"Clinique privée",           emoji:"🩺",activation:[5],    income:2,cost:4, color:'blue',  maxOwned:3,              desc:"Gagnez 2€ quel que soit le joueur qui fait 5"},
+  fabrication:     {name:"Dolpharm",                  emoji:"⚗️",activation:[4],    income:3,cost:3, color:'green', maxOwned:3,              desc:"Gagnez 3€ à votre tour pour 4"},
+  recherche:       {name:"Sanophi",                   emoji:"🔬",activation:[6],    income:5,cost:6, color:'green', maxOwned:3,              desc:"Gagnez 5€ à votre tour pour 6"},
+  biotech:         {name:"Bo2pharm",                  emoji:"✨",activation:[11,12],income:8,cost:12,color:'green', maxOwned:3,              desc:"Gagnez 8€ à votre tour pour 11–12"},
+  startup:         {name:"Startup Biotech",           emoji:"🚀",activation:[8],    income:4,cost:7, color:'green', maxOwned:3,              desc:"Gagnez 4€ à votre tour pour 8"},
+  labo_innovation: {name:"Labo d'innovation",         emoji:"🧪",activation:[5],    income:3,cost:5, color:'green', maxOwned:3,              desc:"Gagnez 3€ à votre tour pour 5"},
+  centre_essais:   {name:"Centre d'essais cliniques", emoji:"🌡️",activation:[7],    income:4,cost:6, color:'green', maxOwned:3,              desc:"Gagnez 4€ à votre tour pour 7"},
+  pharma_premium:  {name:"Pharmacie Val de Grâce",    emoji:"💊",activation:[3],    income:2,cost:4, color:'green', maxOwned:3,              desc:"Gagnez 2€ à votre tour pour 3"},
+  usine_production:{name:"Usine Gerbet",              emoji:"🏭",activation:[9],    income:5,cost:8, color:'green', maxOwned:3,              desc:"Gagnez 5€ à votre tour pour 9"},
+  grossiste:       {name:"Tidis",                     emoji:"📦",activation:[7],    income:2,cost:4, color:'red',   maxOwned:3,              desc:"Au tour des autres, volez 2€ pour 7"},
+  importateur:     {name:"Ceropharm",                 emoji:"🚢",activation:[9],    income:3,cost:6, color:'red',   maxOwned:3,              desc:"Au tour des autres, volez 3€ pour 9"},
+  distributeur:    {name:"Distributeur Allance",      emoji:"🚚",activation:[5],    income:2,cost:5, color:'red',   maxOwned:3,              desc:"Au tour des autres, volez 2€ pour 5"},
+  courtier:        {name:"Courtier médicaments",      emoji:"💹",activation:[8],    income:3,cost:5, color:'red',   maxOwned:3,              desc:"Au tour des autres, volez 3€ pour 8"},
+  centrale_achat:  {name:"Centrale d'achat",          emoji:"🏪",activation:[6],    income:2,cost:5, color:'red',   maxOwned:3,              desc:"Au tour des autres, volez 2€ pour 6"},
+  rachat:          {name:"Rachat d'entreprise",       emoji:"💰",activation:[8],    income:5,cost:8, color:'purple',maxOwned:3,              desc:"À votre tour, volez 5€ pour 8"},
+  fusion:          {name:"Fusion-acquisition",        emoji:"🤝",activation:[10],   income:6,cost:10,color:'purple',maxOwned:3,              desc:"À votre tour, volez 6€ pour 10"},
+  opa:             {name:"OPA hostile",               emoji:"⚡",activation:[7],    income:4,cost:7, color:'purple',maxOwned:3,              desc:"À votre tour, volez 4€ pour 7"},
+  lobbying:        {name:"Lobbying pharmaceutique",   emoji:"🎯",activation:[9],    income:5,cost:9, color:'purple',maxOwned:3,              desc:"À votre tour, volez 5€ pour 9"},
+  brevet_vol:      {name:"Vol de brevet",             emoji:"📋",activation:[6],    income:4,cost:6, color:'purple',maxOwned:3,              desc:"À votre tour, volez 4€ pour 6"},
+  espionnage:      {name:"Espionnage industriel",     emoji:"🕵️",activation:[11],   income:7,cost:11,color:'purple',maxOwned:3,              desc:"À votre tour, volez 7€ pour 11"},
+};
+
+const MONUMENTS = [
+  {id:'fda',    name:"Autorisation FDA",     emoji:"🏅",cost:16, benefit:"Relancez les dés une fois par tour", cf:'#78350f',ct:'#b45309',border:'#f59e0b'},
+  {id:'patent', name:"Brevet exclusif",      emoji:"📜",cost:22, benefit:"+10€ si vous ne gagnez rien",        cf:'#1e3a5f',ct:'#1d4ed8',border:'#3b82f6'},
+  {id:'usine',  name:"NOVORTIS",             emoji:"🏗️",cost:30, benefit:"Cartes vertes rapportent +2€",       cf:'#14532d',ct:'#15803d',border:'#22c55e'},
+  {id:'campus', name:"Faculté de Pharmacie", emoji:"🎓",cost:60, benefit:"Achetez 2 cartes par tour",          cf:'#3b0764',ct:'#7e22ce',border:'#a855f7'},
+];
+
+const ALL_BY_COLOR = {
+  blue:  ['hopital','clinique'],
+  green: ['fabrication','recherche','biotech','startup','labo_innovation','centre_essais','pharma_premium','usine_production'],
+  red:   ['grossiste','importateur','distributeur','courtier','centrale_achat'],
+  purple:['rachat','fusion','opa','lobbying','brevet_vol','espionnage'],
+};
+
+const DOTS = {1:[[1,1]],2:[[0,0],[2,2]],3:[[0,0],[1,1],[2,2]],4:[[0,0],[0,2],[2,0],[2,2]],5:[[0,0],[0,2],[1,1],[2,0],[2,2]],6:[[0,0],[0,1],[0,2],[2,0],[2,1],[2,2]]};
+const PROB2D = {2:1,3:2,4:3,5:4,6:5,7:6,8:5,9:4,10:3,11:2,12:1};
+const GLOW = {blue:'rgba(59,130,246,.55)',green:'rgba(34,197,94,.55)',red:'rgba(239,68,68,.55)',purple:'rgba(168,85,247,.55)'};
+
+const shuffle = a => [...a].sort(()=>Math.random()-.5);
+const rollD6  = () => Math.floor(Math.random()*6)+1;
+
+function initShop() {
+  return [
+    ...shuffle(ALL_BY_COLOR.blue).slice(0,2),
+    ...shuffle(ALL_BY_COLOR.green).slice(0,3),
+    ...shuffle(ALL_BY_COLOR.red).slice(0,2),
+    ...shuffle(ALL_BY_COLOR.purple).slice(0,2),
+  ];
+}
+
+function initPlayer(name) {
+  return { name, money:3, cards:{pharmacie_base:1,labo_base:1}, monuments:[], diceCount:1 };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LOGIQUE DE JEU (partagée entre les deux pairs — déterministe)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function resolveEffects(rollValue, players, cp) {
+  const np = players.map(p=>({...p,cards:{...p.cards},monuments:[...p.monuments]}));
+  const hasNovortis = np[cp].monuments.includes('usine');
+  let anyGained = false;
+  const events = [];
+
+  // BLUE — possesseurs gagnent quel que soit le tour
+  Object.entries(CARD_DEF).forEach(([id,card])=>{
+    if (card.color!=='blue'||!card.activation.includes(rollValue)) return;
+    np.forEach((p,i)=>{
+      const cnt=p.cards[id]||0; if(!cnt) return;
+      const earned=card.income*cnt; p.money+=earned; anyGained=true;
+      events.push({type:'gain',player:i,cardId:id,amount:earned});
+    });
+  });
+  // RED — adversaires volent le joueur actif
+  Object.entries(CARD_DEF).forEach(([id,card])=>{
+    if (card.color!=='red'||!card.activation.includes(rollValue)) return;
+    np.forEach((p,i)=>{
+      if(i===cp) return;
+      const cnt=p.cards[id]||0; if(!cnt) return;
+      const stolen=Math.min(card.income*cnt,np[cp].money); if(!stolen) return;
+      np[cp].money-=stolen; p.money+=stolen;
+      events.push({type:'steal',from:cp,to:i,cardId:id,amount:stolen});
+    });
+  });
+  // GREEN — joueur actif seulement
+  Object.entries(CARD_DEF).forEach(([id,card])=>{
+    if (card.color!=='green'||!card.activation.includes(rollValue)) return;
+    const cnt=np[cp].cards[id]||0; if(!cnt) return;
+    const bonus=hasNovortis?2:0;
+    const earned=(card.income+bonus)*cnt; np[cp].money+=earned; anyGained=true;
+    events.push({type:'gain',player:cp,cardId:id,amount:earned,bonus});
+  });
+  // PURPLE — joueur actif vole le plus riche
+  Object.entries(CARD_DEF).forEach(([id,card])=>{
+    if (card.color!=='purple'||!card.activation.includes(rollValue)) return;
+    const cnt=np[cp].cards[id]||0; if(!cnt) return;
+    const targets=np.map((p,i)=>({p,i})).filter(({i})=>i!==cp&&np[i].money>0).sort((a,b)=>b.p.money-a.p.money);
+    if(!targets.length) return;
+    const {p:tgt,i:ti}=targets[0];
+    const stolen=Math.min(card.income*cnt,tgt.money);
+    tgt.money-=stolen; np[cp].money+=stolen;
+    events.push({type:'steal',from:ti,to:cp,cardId:id,amount:stolen});
+  });
+  // Patent
+  if(!anyGained&&np[cp].monuments.includes('patent')){
+    np[cp].money+=10;
+    events.push({type:'patent',player:cp,amount:10});
+  }
+  return {players:np, events};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SOUND ENGINE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let _ctx=null;
+const getCtx=()=>{ if(!_ctx)_ctx=new(window.AudioContext||window.webkitAudioContext)(); return _ctx; };
+const SFX={
+  _p(fn){try{fn(getCtx());}catch(e){}},
+  dice(){this._p(c=>{for(let i=0;i<3;i++)setTimeout(()=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='square';o.frequency.setValueAtTime(150+Math.random()*300,c.currentTime);o.frequency.exponentialRampToValueAtTime(60,c.currentTime+.09);g.gain.setValueAtTime(.1,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.09);o.start();o.stop(c.currentTime+.09);},i*55);})},
+  coin(n){this._p(c=>{for(let i=0;i<Math.min(n,5);i++)setTimeout(()=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';const f=880+i*120;o.frequency.setValueAtTime(f,c.currentTime);o.frequency.exponentialRampToValueAtTime(f*1.4,c.currentTime+.06);g.gain.setValueAtTime(.15,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.2);o.start();o.stop(c.currentTime+.2);},i*90);})},
+  steal(){this._p(c=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sawtooth';o.frequency.setValueAtTime(380,c.currentTime);o.frequency.exponentialRampToValueAtTime(90,c.currentTime+.28);g.gain.setValueAtTime(.09,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.28);o.start();o.stop(c.currentTime+.28);})},
+  buy(){this._p(c=>{[523,659,784].forEach((f,i)=>setTimeout(()=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.1,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.14);o.start();o.stop(c.currentTime+.14);},i*80));})},
+  monument(){this._p(c=>{[523,659,784,1047].forEach((f,i)=>setTimeout(()=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.18,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.32);o.start();o.stop(c.currentTime+.32);},i*100));})},
+  victory(){this._p(c=>{[523,659,784,1047,784,1047,1319].forEach((f,i)=>setTimeout(()=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.18,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.22);o.start();o.stop(c.currentTime+.22);},i*115));})},
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ÉTAT GLOBAL DE L'APPLICATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const State = {
+  // Signaling
+  token:       new URLSearchParams(window.location.search).get('token'),
+  sigWs:       null,
+  myUserId:    null,
+  myName:      '',
+  iceServers:  [],
+
+  // WebRTC
+  pc:          null,   // RTCPeerConnection
+  dc:          null,   // RTCDataChannel
+  isInitiator: false,
+  myIndex:     null,   // 0 ou 1
+  oppName:     '',
+
+  // Jeu
+  players:     [],
+  shop:        [],
+  currentPlayer: 0,
+  diceResult:  null,
+  hasRolled:   false,
+  hasBought:   0,
+  canReroll:   false,
+  turnNum:     1,
+  activatedCards: [],
+  events:      [],
+  summary:     null,   // popup résumé
+  winner:      null,
+  soundOn:     true,
+
+  // UI
+  screen: 'connecting', // connecting|lobby|waiting|matched|playing|victory|error|disconnected
+  errorMsg: '',
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// UTILITAIRES UI
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function toast(msg, duration=2800) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+function pushEvent(msg, type='info') {
+  State.events = [...State.events.slice(-60), {turn:`T${State.turnNum}`, msg, type}];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WEBRTC — PEER CONNECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function createPeerConnection() {
+  const pc = new RTCPeerConnection({ iceServers: State.iceServers });
+
+  pc.onicecandidate = e => {
+    if (e.candidate) {
+      sigSend({ type:'SIGNAL', payload:{ type:'candidate', candidate:e.candidate } });
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    console.log('WebRTC state:', pc.connectionState);
+    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+      State.screen = 'disconnected';
+      render();
+    }
+    if (pc.connectionState === 'connected') {
+      toast('🔗 Connexion P2P établie');
+    }
+  };
+
+  pc.ondatachannel = e => {
+    setupDataChannel(e.channel);
+  };
+
+  return pc;
+}
+
+function setupDataChannel(dc) {
+  State.dc = dc;
+  dc.onopen = () => {
+    console.log('DataChannel ouvert');
+    if (State.isInitiator) {
+      // J0 initialise l'état du jeu et l'envoie à J1
+      State.players = [
+        initPlayer(State.myName),
+        initPlayer(State.oppName),
+      ];
+      State.shop = initShop();
+      State.currentPlayer = 0;
+      State.turnNum = 1;
+      dcSend({ type:'GAME_INIT', players:State.players, shop:State.shop });
+      State.screen = 'playing';
+      render();
+    }
+  };
+
+  dc.onmessage = e => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    handlePeerMessage(msg);
+  };
+
+  dc.onclose = () => {
+    if (State.screen === 'playing') {
+      State.screen = 'disconnected';
+      render();
+    }
+  };
+}
+
+function dcSend(msg) {
+  if (State.dc?.readyState === 'open') {
+    State.dc.send(JSON.stringify(msg));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MESSAGES PEER-TO-PEER (DataChannel)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function handlePeerMessage(msg) {
+  switch(msg.type) {
+
+    case 'GAME_INIT':
+      // Reçu par J1 — l'état initial vient de J0
+      State.players = msg.players;
+      State.shop    = msg.shop;
+      State.currentPlayer = 0;
+      State.turnNum = 1;
+      State.screen  = 'playing';
+      render();
+      break;
+
+    case 'ROLL_RESULT':
+      // Le joueur actif nous envoie le résultat de son lancer
+      State.diceResult = msg.diceResult;
+      State.hasRolled  = true;
+      const {players: np, events} = resolveEffects(msg.diceResult.total, State.players, State.currentPlayer);
+      State.players = np;
+      State.activatedCards = events.map(e=>e.cardId).filter(Boolean);
+      events.forEach(e => {
+        if (e.type==='gain') pushEvent(`${CARD_DEF[e.cardId]?.emoji||'📜'} +${e.amount}€`,'gain');
+        else pushEvent(`${CARD_DEF[e.cardId]?.emoji||''} vol ${e.amount}€`,'steal');
+      });
+      const gained = events.filter(e=>e.type==='gain').reduce((s,e)=>s+e.amount,0);
+      const lost   = events.filter(e=>e.type==='steal'&&e.from===State.myIndex).reduce((s,e)=>s+e.amount,0);
+      if (State.soundOn) { if(lost>0) SFX.steal(); else if(gained>0) SFX.coin(gained); }
+      if (msg.canReroll) {
+        State.canReroll = true;
+        if (State.currentPlayer === State.myIndex) toast('🏅 FDA : vous pouvez relancer !');
+      }
+      render();
+      break;
+
+    case 'BUY_ACTION':
+      applyBuy(msg.action, false);
+      break;
+
+    case 'END_TURN':
+      State.currentPlayer = (State.currentPlayer + 1) % 2;
+      State.hasRolled   = false;
+      State.hasBought   = 0;
+      State.canReroll   = false;
+      State.diceResult  = null;
+      State.activatedCards = [];
+      State.turnNum++;
+      render();
+      break;
+
+    case 'SHOP_SWAP':
+      swapShopSlot(msg.cardId, msg.newCardId);
+      render();
+      break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ACTIONS DE JEU (appelées par le joueur local)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function isMyTurn() {
+  return State.currentPlayer === State.myIndex;
+}
+
+function buyLimit() {
+  return State.players[State.currentPlayer]?.monuments.includes('campus') ? 2 : 1;
+}
+
+function doRoll(isReroll=false) {
+  if (!isMyTurn()) return;
+  if (State.hasRolled && !State.canReroll) return;
+  const numDice = State.players[State.myIndex].diceCount;
+  const d1 = rollD6();
+  const d2 = numDice===2 ? rollD6() : null;
+  const total = d1+(d2||0);
+  const diceResult = {d1,d2,total};
+  if (State.soundOn) SFX.dice();
+
+  State.activatedCards = [];
+  State.hasRolled = true;
+  if (isReroll) State.canReroll = false;
+
+  // Calculer si FDA permet de relancer
+  const canReroll = !isReroll && State.players[State.myIndex].monuments.includes('fda');
+
+  // Appliquer localement
+  const {players:np, events} = resolveEffects(total, State.players, State.currentPlayer);
+  State.players = np;
+  State.diceResult = diceResult;
+  State.activatedCards = events.map(e=>e.cardId).filter(Boolean);
+  events.forEach(e=>{
+    if(e.type==='gain') pushEvent(`${CARD_DEF[e.cardId]?.emoji||'📜'} +${e.amount}€`,'gain');
+    else pushEvent(`${CARD_DEF[e.cardId]?.emoji||''} vol ${e.amount}€`,'steal');
+  });
+  const gained=events.filter(e=>e.type==='gain').reduce((s,e)=>s+e.amount,0);
+  const lost=events.filter(e=>e.type==='steal'&&e.from===State.myIndex).reduce((s,e)=>s+e.amount,0);
+  if(State.soundOn){if(lost>0)SFX.steal();else if(gained>0)SFX.coin(gained);}
+  if(canReroll){State.canReroll=true;toast('🏅 FDA : vous pouvez relancer !');}
+
+  // Envoyer à l'adversaire
+  dcSend({ type:'ROLL_RESULT', diceResult, canReroll });
+  render();
+}
+
+function applyBuy(action, isLocal) {
+  const p = State.players[State.currentPlayer];
+
+  if (action.kind === 'card') {
+    const card = CARD_DEF[action.cardId];
+    if (!card) return;
+    p.money -= card.cost;
+    p.cards[action.cardId] = (p.cards[action.cardId]||0)+1;
+    State.hasBought++;
+    // Remplacer dans la boutique
+    const pool = ALL_BY_COLOR[card.color].filter(id=>id!==action.cardId);
+    const newCardId = pool.length ? shuffle(pool)[0] : null;
+    swapShopSlot(action.cardId, newCardId);
+    if (isLocal) {
+      if(State.soundOn) SFX.buy();
+      toast(`✅ ${card.emoji} ${card.name} acheté`);
+      pushEvent(`🛒 Achat : ${card.name}`,'buy');
+      dcSend({ type:'BUY_ACTION', action });
+      if (newCardId) dcSend({ type:'SHOP_SWAP', cardId:action.cardId, newCardId });
+    }
+  }
+  else if (action.kind === 'monument') {
+    const m = MONUMENTS.find(m=>m.id===action.monumentId);
+    if (!m) return;
+    p.money -= m.cost;
+    p.monuments.push(action.monumentId);
+    State.hasBought++;
+    if (isLocal) {
+      if(State.soundOn) SFX.monument();
+      toast(`🏆 ${m.emoji} ${m.name} construit !`);
+      pushEvent(`🏗️ Monument : ${m.name}`,'buy');
+      dcSend({ type:'BUY_ACTION', action });
+    }
+    // Vérification victoire
+    if (p.monuments.length===4) {
+      State.winner = State.currentPlayer;
+      State.screen = 'victory';
+      if(State.soundOn) SFX.victory();
+    }
+  }
+  else if (action.kind === 'dice') {
+    p.money -= 20;
+    p.diceCount = 2;
+    State.hasBought++;
+    if (isLocal) {
+      if(State.soundOn) SFX.buy();
+      toast('🎲🎲 Deuxième dé acheté !');
+      pushEvent(`🎲 2ème dé acheté`,'buy');
+      dcSend({ type:'BUY_ACTION', action });
+    }
+  }
+
+  render();
+}
+
+function swapShopSlot(oldId, newId) {
+  const idx = State.shop.indexOf(oldId);
+  if (idx !== -1 && newId) State.shop[idx] = newId;
+}
+
+function doEndTurn() {
+  if (!isMyTurn()) return;
+  // Afficher le résumé
+  const evs = State.events.filter(e=>e.turn===`T${State.turnNum}`&&(e.type==='gain'||e.type==='steal'));
+  State.summary = { turn:State.turnNum, roll:State.diceResult?.total, events:evs };
+  render();
+}
+
+function confirmEndTurn() {
+  State.summary = null;
+  const next = (State.currentPlayer+1)%2;
+  State.currentPlayer = next;
+  State.hasRolled = false;
+  State.hasBought = 0;
+  State.canReroll = false;
+  State.diceResult = null;
+  State.activatedCards = [];
+  State.turnNum++;
+  dcSend({ type:'END_TURN' });
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SIGNALING (WebSocket vers le serveur)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function sigSend(msg) {
+  if (State.sigWs?.readyState === WebSocket.OPEN) {
+    State.sigWs.send(JSON.stringify(msg));
+  }
+}
+
+async function handleSignal(payload) {
+  if (!State.pc) return;
+  try {
+    if (payload.type === 'offer') {
+      await State.pc.setRemoteDescription(new RTCSessionDescription(payload));
+      const answer = await State.pc.createAnswer();
+      await State.pc.setLocalDescription(answer);
+      sigSend({ type:'SIGNAL', payload: answer });
+    } else if (payload.type === 'answer') {
+      await State.pc.setRemoteDescription(new RTCSessionDescription(payload));
+    } else if (payload.type === 'candidate') {
+      await State.pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+    }
+  } catch(e) {
+    console.error('Signal error:', e);
+  }
+}
+
+function initSignaling() {
+  const protocol = location.protocol==='https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${protocol}://${location.host}`);
+  State.sigWs = ws;
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type:'AUTH', token:State.token }));
+  };
+
+  ws.onmessage = async e => {
+    const msg = JSON.parse(e.data);
+
+    switch(msg.type) {
+      case 'AUTHENTICATED':
+        State.myUserId  = msg.userId;
+        State.myName    = msg.displayName;
+        State.iceServers = msg.iceServers || [];
+        State.screen    = 'lobby';
+        if (msg.reconnecting) {
+          // Reconnecter WebRTC si possible
+          toast('🔄 Reconnexion en cours…');
+        }
+        render();
+        break;
+
+      case 'MATCHMAKING':
+        State.screen = 'waiting';
+        render();
+        break;
+
+      case 'MATCH_FOUND':
+        State.myIndex    = msg.myIndex;
+        State.oppName    = msg.opponentName;
+        State.isInitiator = msg.isInitiator;
+        State.screen     = 'matched';
+        render();
+
+        // Créer la peer connection
+        State.pc = createPeerConnection();
+
+        if (State.isInitiator) {
+          // J0 crée le DataChannel et l'offre
+          const dc = State.pc.createDataChannel('game', { ordered:true });
+          setupDataChannel(dc);
+          const offer = await State.pc.createOffer();
+          await State.pc.setLocalDescription(offer);
+          sigSend({ type:'SIGNAL', payload: offer });
+        }
+        break;
+
+      case 'SIGNAL':
+        await handleSignal(msg.payload);
+        break;
+
+      case 'OPPONENT_DISCONNECTED':
+        if (State.screen === 'playing') {
+          State.screen = 'disconnected';
+          render();
+        }
+        break;
+
+      case 'OPPONENT_FORFEIT':
+        toast('🏳️ Adversaire a abandonné — vous gagnez !');
+        State.winner = State.myIndex;
+        State.screen = 'victory';
+        if(State.soundOn) SFX.victory();
+        render();
+        break;
+
+      case 'ERROR':
+        State.screen   = 'error';
+        State.errorMsg = msg.message;
+        render();
+        break;
+    }
+  };
+
+  ws.onclose = () => {
+    if (!['playing','victory'].includes(State.screen)) {
+      State.screen = 'disconnected';
+      render();
+    }
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RENDU HTML (vanilla, pas de React pour garder le fichier autonome)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function render() {
+  const root = document.getElementById('root');
+
+  switch(State.screen) {
+    case 'connecting': root.innerHTML = renderConnecting(); break;
+    case 'lobby':      root.innerHTML = renderLobby();      break;
+    case 'waiting':    root.innerHTML = renderWaiting();    break;
+    case 'matched':    root.innerHTML = renderMatched();    break;
+    case 'playing':    root.innerHTML = renderGame();       attachGameListeners(); break;
+    case 'victory':    root.innerHTML = renderVictory();    break;
+    case 'error':      root.innerHTML = renderError();      break;
+    case 'disconnected': root.innerHTML = renderDisconnected(); break;
+  }
+
+  // Popup résumé (par-dessus le jeu)
+  if (State.summary && State.screen === 'playing') {
+    root.innerHTML += renderSummary();
+    document.getElementById('btn-continue')?.addEventListener('click', confirmEndTurn);
+  }
+}
+
+// ─── Écrans de connexion ──────────────────────────────────────────────────────
+
+function renderConnecting() { return `<div class="fullscreen"><div class="box"><div class="spinner"></div><div style="color:#475569;font-size:13px">Connexion au serveur…</div></div></div>`; }
+
+function renderError() { return `<div class="fullscreen"><div class="box"><div style="font-size:40px;margin-bottom:12px">🔒</div><div style="color:#fca5a5;font-weight:700;font-size:18px;margin-bottom:8px">Erreur</div><div style="color:#64748b;font-size:13px;margin-bottom:20px">${State.errorMsg}</div><p style="color:#334155;font-size:11px">Rechargez la page depuis Moodle.</p></div></div>`; }
+
+function renderDisconnected() { return `<div class="fullscreen"><div class="box"><div style="font-size:40px;margin-bottom:12px">📡</div><div style="color:#fca5a5;font-weight:700;font-size:18px;margin-bottom:8px">Connexion perdue</div><div style="color:#64748b;font-size:13px;margin-bottom:20px">La connexion avec votre adversaire a été interrompue.</div><button class="btn" onclick="location.reload()">RETOUR AU MENU</button></div></div>`; }
+
+function renderLobby() { return `<div class="fullscreen"><div class="box"><div style="font-size:44px;margin-bottom:8px">💊⚗️</div><div class="logo">PHARMAVILLE</div><div class="sub">Connecté · <strong style="color:#c4b5fd">${State.myName}</strong></div><div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px"><span style="font-size:11px;color:#334155">Sons</span><button onclick="State.soundOn=!State.soundOn;render()" style="background:${State.soundOn?'rgba(34,197,94,.13)':'rgba(255,255,255,.04)'};border:1px solid ${State.soundOn?'rgba(34,197,94,.3)':'rgba(255,255,255,.09)'};border-radius:7px;padding:5px 12px;color:${State.soundOn?'#86efac':'#334155'};cursor:pointer;font-size:13px;font-weight:600">${State.soundOn?'🔊 ON':'🔇 OFF'}</button></div><button class="btn" onclick="sigSend({type:'FIND_MATCH'})">🔍 TROUVER UN ADVERSAIRE</button><p style="margin-top:14px;font-size:11px;color:#334155;line-height:1.6">Appariement automatique avec un étudiant de votre cours.<br>Les données de jeu transitent directement entre navigateurs (WebRTC).</p></div></div>`; }
+
+function renderWaiting() { return `<div class="fullscreen"><div class="box"><div class="banner-me"><span>👤 ${State.myName}</span><span style="font-size:11px;color:rgba(255,255,255,.5)">Vous</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px 0"><div class="spinner"></div><div style="color:#c4b5fd;font-weight:600;font-size:15px">Recherche d'un adversaire…</div><div style="color:#334155;font-size:12px">En attente d'un autre étudiant de votre cours</div></div><button class="btn-ghost" onclick="sigSend({type:'CANCEL_MATCH'});State.screen='lobby';render()">Annuler</button></div></div>`; }
+
+function renderMatched() { return `<div class="fullscreen"><div class="box"><div style="font-size:36px;margin-bottom:12px">⚔️</div><div style="font-family:Rajdhani,sans-serif;font-size:20px;font-weight:700;color:white;letter-spacing:2px;margin-bottom:20px">ADVERSAIRE TROUVÉ !</div><div class="banner-me"><span>👤 ${State.myName}</span><span style="font-size:11px;color:rgba(255,255,255,.5)">Vous — J${State.myIndex+1}</span></div><div style="color:#475569;font-size:20px;margin:8px 0">VS</div><div class="banner-opp"><span>🤝 ${State.oppName}</span><span style="font-size:11px;color:rgba(255,255,255,.5)">Adversaire — J${2-State.myIndex}</span></div><div style="color:#475569;font-size:12px;animation:pulse 1s infinite">⏳ Établissement de la connexion P2P…</div></div></div>`; }
+
+// ─── Jeu ──────────────────────────────────────────────────────────────────────
+
+function renderDiceFace(value, size=70, rolling=false) {
+  const cells = Array.from({length:9}).map((_,idx)=>{
+    const row=Math.floor(idx/3),col=idx%3;
+    const hasDot=DOTS[value]?.some(([r,c])=>r===row&&c===col);
+    const ds=size*.155;
+    return `<div class="dice-dot">${hasDot?`<span style="width:${ds}px;height:${ds}px"></span>`:''}</div>`;
+  }).join('');
+  return `<div class="dice-face" style="width:${size}px;height:${size}px;border-radius:${size*.19}px;padding:${size*.11}px;animation:${rolling?'spinDie .38s ease':'none'}">${cells}</div>`;
+}
+
+function renderCardSmall(id, cnt, showActive) {
+  const card=CARD_DEF[id]; if(!card) return '';
+  const isLit=State.activatedCards.includes(id);
+  const g=GLOW[card.color];
+  return `<div style="background:${isLit?`var(--cbg-${card.color})`:'rgba(255,255,255,.04)'};border:1px solid ${isLit?`var(--cborder-${card.color})`:'rgba(255,255,255,.06)'};border-radius:9px;padding:7px 9px;display:flex;align-items:center;gap:7px;transition:all .35s;box-shadow:${isLit?`0 0 16px ${g}`:'none'}">
+    <span style="font-size:15px">${card.emoji}</span>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px;overflow:hidden">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${card.name}</span>
+        ${card.starter?`<span style="font-size:9px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:3px;padding:1px 4px;color:#334155;flex-shrink:0">DÉPART</span>`:''}
+        ${isLit?`<span style="font-size:9px;background:rgba(255,255,255,.14);border-radius:3px;padding:1px 5px;color:white;font-weight:700;flex-shrink:0">✓ ACTIF</span>`:''}
+      </div>
+      <div style="display:flex;gap:4px;margin-top:2px;flex-wrap:wrap">
+        <span class="chip chip-${card.color}">${card.color==='blue'?'TOUT TOUR':card.color==='green'?'ACTIF':card.color==='red'?'VOL/ADV':'VOL/TOI'}</span>
+        <span style="background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.09);border-radius:4px;padding:1px 5px;font-size:10px;font-family:Rajdhani,sans-serif;font-weight:600">🎲${card.activation.join(',')}</span>
+        <span style="color:#86efac;font-weight:700;font-size:11px;font-family:Rajdhani,sans-serif">+${card.income}€</span>
+      </div>
+    </div>
+    ${cnt>1?`<div style="background:rgba(255,255,255,.14);border-radius:18px;padding:2px 8px;font-size:12px;font-weight:700">×${cnt}</div>`:''}
+  </div>`;
+}
+
+function renderGame() {
+  const me  = State.players[State.myIndex];
+  const opp = State.players[1-State.myIndex];
+  if (!me||!opp) return '<div class="fullscreen"><div class="spinner"></div></div>';
+
+  const myTurn     = isMyTurn();
+  const lim        = buyLimit();
+  const canBuyMore = State.hasRolled && State.hasBought<lim && myTurn;
+
+  // CSS variables pour les couleurs de cartes
+  const cssVars = `--cbg-blue:linear-gradient(135deg,#1e3a5f,#1d4ed8);--cbg-green:linear-gradient(135deg,#14532d,#15803d);--cbg-red:linear-gradient(135deg,#7f1d1d,#dc2626);--cbg-purple:linear-gradient(135deg,#3b0764,#7e22ce);--cborder-blue:rgba(59,130,246,.45);--cborder-green:rgba(34,197,94,.45);--cborder-red:rgba(239,68,68,.45);--cborder-purple:rgba(168,85,247,.45);`;
+
+  // ── Header
+  const header = `<div class="glass" style="margin-bottom:11px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:9px">
+    <div>
+      <div style="font-family:Rajdhani,sans-serif;font-size:19px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,#c084fc,#818cf8,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">PHARMAVILLE</div>
+      <div style="font-size:11px;color:#334155;margin-top:1px">
+        Tour ${State.turnNum} · ${myTurn
+          ? '<span style="color:#86efac">🎮 Votre tour</span>'
+          : `<span style="color:#f59e0b;animation:pulse 1.2s infinite">⏳ Tour de ${State.oppName}…</span>`}
+      </div>
+    </div>
+    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+      <button onclick="State.soundOn=!State.soundOn;render()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:7px;padding:5px 9px;color:#475569;cursor:pointer;font-size:15px">${State.soundOn?'🔊':'🔇'}</button>
+      <div style="padding:7px 14px;border-radius:10px;border:2px solid rgba(168,85,247,.4);background:rgba(124,58,237,.14)">
+        <div style="font-size:10px;color:#334155;margin-bottom:2px">👤 Vous</div>
+        <div style="font-family:Rajdhani,sans-serif;font-size:19px;font-weight:800;color:#fef3c7">💰 ${me.money}€</div>
+        <div style="font-size:10px;color:#1e293b;margin-top:2px">🏆${me.monuments.length}/4 · ${me.diceCount===1?'🎲':'🎲🎲'}</div>
+      </div>
+      <div style="padding:7px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03)">
+        <div style="font-size:10px;color:#334155;margin-bottom:2px">🤝 ${State.oppName}</div>
+        <div style="font-family:Rajdhani,sans-serif;font-size:19px;font-weight:800;color:#94a3b8">💰 ${opp.money}€</div>
+        <div style="font-size:10px;color:#1e293b;margin-top:2px">🏆${opp.monuments.length}/4 · ${opp.diceCount===1?'🎲':'🎲🎲'}</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Colonne gauche
+  const dicePanel = `<div class="glass" style="margin-bottom:11px">
+    <div class="sec-title">🎲 Dés</div>
+    ${!State.hasRolled||State.canReroll
+      ? (myTurn
+          ? `<button class="gbtn gbtn-green" id="btn-roll">🎲 ${State.canReroll?'RELANCER (FDA)':`LANCER ${me.diceCount===1?'1 DÉ':'2 DÉS'}`}</button>
+             ${State.canReroll?'<div style="font-size:10px;color:#fbbf24;text-align:center;margin-top:6px">Gardez le résultat ou relancez</div>':''}`
+          : `<div style="text-align:center;padding:15px 0;color:#334155;font-family:Rajdhani,sans-serif;animation:pulse 1.2s infinite">⏳ EN ATTENTE…</div>`)
+      : `<div style="display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;margin-bottom:11px">
+           ${renderDiceFace(State.diceResult.d1,68)}
+           ${State.diceResult.d2!==null?`<span style="color:#1e293b;font-family:Rajdhani,sans-serif;font-size:19px;font-weight:700">+</span>${renderDiceFace(State.diceResult.d2,68)}`:''}
+           <div style="width:50px;height:50px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;font-family:Rajdhani,sans-serif;color:white;box-shadow:0 4px 18px rgba(124,58,237,.5)">${State.diceResult.total}</div>
+         </div>
+         ${myTurn?`<button class="gbtn gbtn-red" id="btn-end">📊 FIN DU TOUR</button>`:''}`
+    }
+  </div>`;
+
+  const diceShopPanel = me.diceCount===1&&myTurn ? `<div class="glass" style="margin-bottom:11px;border:1px solid rgba(245,158,11,.18)">
+    <div class="sec-title">🎲🎲 Deuxième dé</div>
+    <div style="text-align:center;margin-bottom:7px;font-family:Rajdhani,sans-serif;font-size:22px;font-weight:800;color:#f59e0b">20€</div>
+    <button class="gbtn gbtn-gold" id="btn-dice" ${(!canBuyMore||me.money<20)?'disabled':''}>
+      ${me.money<20?'💸 FONDS INSUFF':!canBuyMore?'✓ DÉJÀ ACHETÉ':'ACHETER LE 2E DÉ'}
+    </button>
+  </div>` : '';
+
+  const myCardsPanel = `<div class="glass" style="flex:1">
+    <div class="sec-title">📂 Vos cartes</div>
+    <div style="display:flex;flex-direction:column;gap:5px;max-height:300px;overflow-y:auto">
+      ${Object.entries(me.cards).filter(([,c])=>c>0).map(([id,cnt])=>renderCardSmall(id,cnt,true)).join('')}
+    </div>
+  </div>`;
+
+  const logPanel = `<div class="glass" style="margin-top:11px">
+    <div class="sec-title">📋 Journal</div>
+    <div id="event-log" style="height:130px;overflow-y:auto;background:rgba(0,0,0,.28);border-radius:10px;padding:7px 10px;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent">
+      ${State.events.length===0?'<div style="color:#334155;font-size:11px;text-align:center;margin-top:14px">Aucun événement</div>'
+        :State.events.map((e,i)=>`<div style="font-size:11px;color:${e.type==='gain'?'#86efac':e.type==='steal'?'#fca5a5':e.type==='buy'?'#c4b5fd':'#475569'};line-height:1.5${i===State.events.length-1?';animation:fadeIn .3s ease':''}"><span style="color:#1e293b;margin-right:5px">${e.turn}</span>${e.msg}</div>`).join('')}
+    </div>
+  </div>`;
+
+  // ── Boutique
+  const shopCards = State.shop.map((cardId,idx)=>{
+    const card=CARD_DEF[cardId]; if(!card) return '';
+    const owned=me.cards[cardId]||0;
+    const canAfford=me.money>=card.cost;
+    const canBuy=canAfford&&owned<card.maxOwned&&canBuyMore;
+    const isLit=State.diceResult&&card.activation.includes(State.diceResult.total);
+    const prob=me.diceCount===2?Math.round((card.activation.reduce((s,v)=>s+(PROB2D[v]||0),0)/36)*100):null;
+    const g=GLOW[card.color];
+    return `<div class="card-${card.color}" style="border-radius:12px;padding:12px;transition:all .3s;border-width:${isLit?2:1}px;box-shadow:${isLit?`0 0 22px ${g}`:'none'};position:relative">
+      ${isLit?`<div style="position:absolute;top:7px;right:7px;background:rgba(255,255,255,.18);border-radius:5px;padding:2px 6px;font-size:9px;font-weight:700;color:white">⚡ ACTIVÉ</div>`:''}
+      <div style="display:flex;gap:9px;align-items:flex-start;margin-bottom:9px">
+        <span style="font-size:24px;line-height:1">${card.emoji}</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;margin-bottom:2px">${card.name}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.58);margin-bottom:6px;line-height:1.4">${card.desc}</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+            <span style="font-family:Rajdhani,sans-serif;font-size:17px;font-weight:800;color:#fde68a">💰${card.cost}€</span>
+            <span style="background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.13);border-radius:5px;padding:2px 6px;font-size:10px;font-family:Rajdhani,sans-serif;font-weight:600">🎲 ${card.activation.join(', ')}</span>
+            <span style="color:#86efac;font-weight:700;font-family:Rajdhani,sans-serif;font-size:12px">+${card.income}€</span>
+            ${prob!==null?`<span style="font-size:9px;color:rgba(255,255,255,.45);background:rgba(0,0,0,.18);border-radius:4px;padding:2px 5px">~${prob}%/tour</span>`:''}
+            ${owned>0?`<span style="background:rgba(255,255,255,.17);border-radius:18px;padding:2px 7px;font-size:10px;font-weight:700">Pos:${owned}/${card.maxOwned}</span>`:''}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="gbtn gbtn-buy" data-card="${cardId}" style="flex:1;background:${canBuy?'white':'rgba(0,0,0,.32)'};color:${canBuy?'#1e1b4b':'rgba(255,255,255,.28)'};border:none;padding:8px;border-radius:8px;font-weight:700;font-family:Rajdhani,sans-serif;font-size:12px;text-transform:uppercase;cursor:${canBuy?'pointer':'not-allowed'}" ${!canBuy?'disabled':''}>
+          ${owned>=card.maxOwned?'🔒 MAX':!canAfford?'💸 CHER':!State.hasRolled?'— LANCEZ D\'ABORD':State.hasBought>=lim?'✓ LIMITE':!myTurn?'⏳ PAS VOTRE TOUR':`🛒 ${card.cost}€`}
+        </button>
+        ${myTurn&&canBuyMore?`<button class="gbtn-swap" data-card="${cardId}" style="padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.06);color:#475569;cursor:pointer;font-size:12px" title="Remplacer">🔄</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── Monuments
+  const monumentCards = MONUMENTS.map(m=>{
+    const built=me.monuments.includes(m.id);
+    const canAfford=me.money>=m.cost;
+    const canBuy=canAfford&&!built&&canBuyMore;
+    return `<div style="background:linear-gradient(135deg,${m.cf},${m.ct});border:2px solid ${built?m.border:'rgba(255,255,255,.07)'};border-radius:12px;padding:12px;transition:all .3s;box-shadow:${built?`0 0 18px ${m.border}50`:'none'}">
+      <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">
+        <span style="font-size:19px">${m.emoji}</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px">${m.name}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.62);margin-top:2px;line-height:1.4">${m.benefit}</div>
+        </div>
+        <span style="font-family:Rajdhani,sans-serif;font-size:14px;font-weight:800;color:#fde68a;white-space:nowrap">${m.cost}€</span>
+      </div>
+      ${built
+        ? `<div style="background:rgba(0,0,0,.2);border:1px solid ${m.border};border-radius:7px;padding:6px;text-align:center;font-weight:700;font-family:Rajdhani,sans-serif;color:#fde68a;font-size:12px">✓ CONSTRUIT</div>`
+        : `<button class="gbtn-monument" data-monument="${m.id}" style="width:100%;padding:7px;border-radius:7px;border:none;font-weight:700;font-family:Rajdhani,sans-serif;font-size:11px;cursor:${canBuy?'pointer':'not-allowed'};background:${canBuy?'white':'rgba(0,0,0,.28)'};color:${canBuy?'#1e1b4b':'rgba(255,255,255,.28)'};text-transform:uppercase" ${!canBuy?'disabled':''}>
+            ${!canAfford?'💸 MANQUE DE FONDS':!State.hasRolled?'— LANCEZ D\'ABORD':State.hasBought>=lim?'✓ LIMITE':!myTurn?'⏳ PAS VOTRE TOUR':`ACHETER ${m.cost}€`}
+          </button>`
+      }
+    </div>`;
+  }).join('');
+
+  // ── Adversaire
+  const oppPanel = `<div class="glass" style="margin-top:11px">
+    <div class="sec-title">👁 ${State.oppName}</div>
+    <div style="font-size:10px;color:#1e293b;margin-bottom:7px">Monuments : ${opp.monuments.length}/4 · ${opp.diceCount===1?'1 dé':'2 dés'}</div>
+    <div style="display:flex;gap:7px;margin-bottom:9px">
+      ${MONUMENTS.map(m=>`<span style="font-size:18px;opacity:${opp.monuments.includes(m.id)?1:.18};transition:opacity .3s" title="${m.name}">${m.emoji}</span>`).join('')}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:3px;max-height:110px;overflow-y:auto">
+      ${Object.entries(opp.cards).filter(([id,c])=>c>0&&!CARD_DEF[id]?.starter).map(([id,cnt])=>{
+        const card=CARD_DEF[id]; if(!card) return '';
+        const isLit=State.activatedCards.includes(id);
+        return `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:${isLit?'#e2e8f0':'#475569'};background:${isLit?'rgba(255,255,255,.07)':'transparent'};border-radius:6px;padding:3px 5px">
+          <span>${card.emoji}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${card.name}</span>
+          ${isLit?'<span style="font-size:9px;color:#86efac;font-weight:700">ACTIF</span>':''}
+          <span style="font-weight:700">×${cnt}</span>
+        </div>`;
+      }).join('')||'<div style="color:#1e293b;font-size:11px">Aucune carte achetée</div>'}
+    </div>
+  </div>`;
+
+  return `<div class="game-root" style="${cssVars}">
+    ${header}
+    <div style="display:grid;grid-template-columns:252px 1fr 258px;gap:11px;max-width:1100px;margin:0 auto">
+      <div style="display:flex;flex-direction:column;gap:0">
+        ${dicePanel}${diceShopPanel}${myCardsPanel}${logPanel}
+      </div>
+      <div class="glass">
+        <div class="sec-title">🛒 Boutique</div>
+        <div style="display:flex;gap:5px;margin-bottom:11px;flex-wrap:wrap">
+          <span class="chip chip-blue">🔵 TOUT TOUR</span>
+          <span class="chip chip-green">🟢 ACTIF</span>
+          <span class="chip chip-red">🔴 ADV VOLE</span>
+          <span class="chip chip-purple">🟣 VOUS VOLEZ</span>
+        </div>
+        ${lim===2?`<div style="margin-bottom:9px;padding:5px 9px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.22);border-radius:7px;font-size:11px;color:#d8b4fe">🎓 Faculté : ${State.hasBought}/${lim} achats</div>`:''}
+        <div style="display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 185px);overflow-y:auto">
+          ${shopCards}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0">
+        <div class="glass">
+          <div class="sec-title">🏆 Monuments</div>
+          <div style="display:flex;flex-direction:column;gap:9px">${monumentCards}</div>
+        </div>
+        ${oppPanel}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderSummary() {
+  const s = State.summary;
+  const gained = s.events.filter(e=>e.type==='gain').reduce((t,e)=>t+(parseInt(e.msg.match(/\d+/)?.[0])||0),0);
+  const lost   = s.events.filter(e=>e.type==='steal').reduce((t,e)=>t+(parseInt(e.msg.match(/\d+/)?.[0])||0),0);
+  const net = gained-lost;
+  return `<div class="summary-overlay">
+    <div class="summary-box">
+      <div style="font-family:Rajdhani,sans-serif;font-size:20px;font-weight:700;letter-spacing:2px;margin-bottom:14px">📊 RÉSUMÉ — TOUR ${s.turn}</div>
+      <div style="background:rgba(255,255,255,.05);border-radius:9px;padding:9px 13px;margin-bottom:11px;display:flex;align-items:center;gap:9px">
+        <span style="font-size:18px">🎲</span>
+        <span style="color:#64748b;font-size:12px">Résultat</span>
+        <span style="font-family:Rajdhani,sans-serif;font-size:22px;font-weight:800;color:white;margin-left:auto">${s.roll||'—'}</span>
+      </div>
+      ${s.events.length===0
+        ? '<div style="color:#475569;font-size:12px;text-align:center;padding:10px 0">Aucun effet ce tour.</div>'
+        : `<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:11px">
+            ${s.events.map(e=>`<div style="display:flex;align-items:center;gap:9px;background:${e.type==='gain'?'rgba(34,197,94,.1)':'rgba(239,68,68,.1)'};border:1px solid ${e.type==='gain'?'rgba(34,197,94,.2)':'rgba(239,68,68,.2)'};border-radius:8px;padding:7px 11px;font-size:12px">
+              <span style="flex:1;color:#94a3b8">${e.msg}</span>
+            </div>`).join('')}
+           </div>`}
+      ${(gained>0||lost>0)?`<div style="border-top:1px solid rgba(255,255,255,.07);padding-top:10px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+        <span style="color:#475569;font-size:12px">Bilan net</span>
+        <span style="font-family:Rajdhani,sans-serif;font-size:19px;font-weight:800;color:${net>=0?'#86efac':'#fca5a5'}">${net>=0?'+':''}${net}€</span>
+      </div>`:''}
+      <button id="btn-continue" class="btn">CONTINUER →</button>
+    </div>
+  </div>`;
+}
+
+function renderVictory() {
+  const iWon = State.winner === State.myIndex;
+  const me   = State.players[State.myIndex];
+  const opp  = State.players[1-State.myIndex];
+  return `<div class="fullscreen" style="background:radial-gradient(ellipse at center,#1c1410 0%,#0a0e1a 100%)">
+    <div class="box" style="max-width:500px">
+      <div style="font-size:72px;margin-bottom:12px;animation:pulse 1.8s infinite">${iWon?'🏆':'😔'}</div>
+      <div style="font-family:Rajdhani,sans-serif;font-size:50px;font-weight:700;letter-spacing:4px;background:linear-gradient(135deg,${iWon?'#f59e0b,#ef4444':'#64748b,#475569'});-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px">${iWon?'VICTOIRE !':'DÉFAITE'}</div>
+      <div style="color:#64748b;font-size:15px;margin-bottom:20px">${iWon?'Vous avez construit les 4 monuments !':'Votre adversaire a construit les 4 monuments.'}</div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-bottom:24px">
+        ${[{p:me,label:'Vous'},{p:opp,label:State.oppName}].map(({p,label})=>`<div style="padding:10px 20px;background:rgba(255,255,255,.04);border-radius:12px">
+          <div style="font-size:10px;color:#334155">${label}</div>
+          <div style="font-family:Rajdhani,sans-serif;font-size:18px;font-weight:800">${p.money}€ · 🏆${p.monuments.length}/4</div>
+        </div>`).join('')}
+      </div>
+      <button class="btn" onclick="sigSend({type:'FORFEIT'});location.reload()">🔄 RETOUR AU MENU</button>
+    </div>
+  </div>`;
+}
+
+// ─── Listeners ────────────────────────────────────────────────────────────────
+
+function attachGameListeners() {
+  document.getElementById('btn-roll')?.addEventListener('click', ()=>doRoll(State.canReroll));
+  document.getElementById('btn-end')?.addEventListener('click',  doEndTurn);
+  document.getElementById('btn-dice')?.addEventListener('click', ()=>applyBuy({kind:'dice'}, true));
+
+  document.querySelectorAll('.gbtn-buy[data-card]').forEach(btn=>{
+    btn.addEventListener('click', ()=>applyBuy({kind:'card', cardId:btn.dataset.card}, true));
+  });
+  document.querySelectorAll('.gbtn-swap[data-card]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const card=CARD_DEF[btn.dataset.card]; if(!card) return;
+      const pool=ALL_BY_COLOR[card.color].filter(id=>id!==btn.dataset.card);
+      const newId=pool.length?shuffle(pool)[0]:null;
+      swapShopSlot(btn.dataset.card, newId);
+      if(newId) dcSend({type:'SHOP_SWAP',cardId:btn.dataset.card,newCardId:newId});
+      render();
+    });
+  });
+  document.querySelectorAll('.gbtn-monument[data-monument]').forEach(btn=>{
+    btn.addEventListener('click', ()=>applyBuy({kind:'monument', monumentId:btn.dataset.monument}, true));
+  });
+
+  // Auto-scroll du journal
+  const log=document.getElementById('event-log');
+  if(log) log.scrollTop=log.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BOOTSTRAP
+// ═══════════════════════════════════════════════════════════════════════════════
+
+if (!State.token) {
+  State.screen   = 'error';
+  State.errorMsg = 'Accédez à PharmaVille depuis l\'activité dans votre cours Moodle.';
+  render();
+} else {
+  render();
+  initSignaling();
+}
+</script>
+</body>
+</html>

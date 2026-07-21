@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: pharmaville-webrtc
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LTI_KEY
+        value: pharmaville
+      - key: LTI_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: TURN_URL
+        value: turns:openrelay.metered.ca:443
+      - key: TURN_USERNAME
+        value: openrelayproject
+      - key: TURN_CREDENTIAL
+        value: openrelayproject
+      - key: PUBLIC_URL
+        fromService:
+          type: web
+          name: pharmaville-webrtc
+          property: host

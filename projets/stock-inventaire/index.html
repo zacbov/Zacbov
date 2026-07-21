@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PharmaStock — Faculté de Pharmacie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1B3A5C;--navy2:#254d7a;--navy3:#0d2340;
+  --blue:#2563EB;--blue-l:#EEF3FC;
+  --bg:#F0F4F9;--surface:#fff;--border:#DDE3ED;--border2:#C8D3E0;
+  --text:#1A2332;--text2:#4A5568;--muted:#8899A6;
+  --green:#10B981;--green-l:#D1FAE5;--green-t:#065f46;
+  --amber:#F59E0B;--amber-l:#FEF3C7;--amber-t:#92400e;
+  --orange:#F97316;--orange-l:#FFEDD5;--orange-t:#9a3412;
+  --red:#EF4444;--red-l:#FEE2E2;--red-t:#991b1b;
+  --cryo:#0EA5E9;--cryo-l:#E0F2FE;
+  --r:8px;--shadow:0 1px 3px rgba(0,0,0,.07),0 4px 14px rgba(0,0,0,.06);
+}
+html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--text);background:var(--bg);overflow:hidden}
+button{cursor:pointer;font-family:inherit}
+input,select,textarea{font-family:inherit}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ── App shell ── */
+#app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* ── Header ── */
+.hdr{
+  background:var(--navy);color:#fff;
+  display:flex;align-items:center;gap:16px;
+  padding:0 16px;height:58px;flex-shrink:0;
+  box-shadow:0 2px 10px rgba(0,0,0,.25);position:relative;z-index:50
+}
+.hdr-brand{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.hdr-logo{font-size:22px}
+.hdr-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;display:block;line-height:1.2}
+.hdr-sub{font-size:10px;color:rgba(255,255,255,.45);display:block}
+.hdr-scan-wrap{flex:1;max-width:500px;display:flex;align-items:center;gap:0}
+.hdr-scan{
+  flex:1;display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.18);
+  border-radius:7px 0 0 7px;padding:0 10px;height:36px;
+  transition:border-color .2s,background .2s
+}
+.hdr-scan:focus-within{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.5)}
+.scan-icon{font-size:15px;color:rgba(255,255,255,.45);flex-shrink:0;transition:color .2s}
+.scan-icon.blink{color:var(--amber);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+#scanInput{flex:1;background:transparent;border:none;outline:none;color:#fff;font-family:'JetBrains Mono',monospace;font-size:12px}
+#scanInput::placeholder{color:rgba(255,255,255,.38);font-family:'Inter',sans-serif}
+.scan-go{background:var(--blue);border:none;color:#fff;padding:0 14px;height:36px;font-size:12px;font-weight:600;border-radius:0}
+.scan-go:hover{background:#1d4ed8}
+.scan-cam{background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.18);border-left:none;color:#fff;padding:0 11px;height:36px;font-size:14px;border-radius:0 7px 7px 0}
+.scan-cam:hover{background:rgba(255,255,255,.2)}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.alert-globe{background:var(--red);color:#fff;font-size:10px;font-weight:700;border-radius:20px;padding:3px 9px;cursor:pointer;display:none}
+.alert-globe.visible{display:block}
+
+/* ── Feedback toast ── */
+.toast{
+  position:fixed;top:68px;left:50%;transform:translateX(-50%);
+  background:var(--surface);border-radius:8px;padding:9px 16px;
+  box-shadow:0 6px 24px rgba(0,0,0,.18);
+  display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;
+  z-index:1000;border-left:4px solid;opacity:0;pointer-events:none;
+  transition:opacity .2s;white-space:nowrap
+}
+.toast.show{opacity:1;pointer-events:auto}
+.toast.ok{border-color:var(--green);color:var(--green-t)}
+.toast.warn{border-color:var(--amber);color:var(--amber-t)}
+.toast.err{border-color:var(--red);color:var(--red-t)}
+.toast-create{background:var(--navy);color:#fff;border:none;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:600}
+
+/* ── Layout ── */
+.layout{display:flex;flex:1;overflow:hidden}
+
+/* ── Sidebar ── */
+.sidebar{
+  width:210px;flex-shrink:0;background:var(--surface);
+  border-right:1px solid var(--border);overflow-y:auto;
+  display:flex;flex-direction:column;padding:10px 6px;gap:2px
+}
+.sb-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:6px 8px 4px}
+.lab-btn{
+  width:100%;display:flex;align-items:center;gap:8px;
+  padding:7px 8px;border:none;background:transparent;border-radius:6px;
+  text-align:left;transition:background .15s;position:relative
+}
+.lab-btn:hover{background:var(--bg)}
+.lab-btn.active{background:#EEF3F8}
+.lab-dot{width:8px;height:8px;border-radius:50%;background:var(--lc);flex-shrink:0}
+.lab-info{flex:1;min-width:0}
+.lab-short{font-size:11px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--text);display:block}
+.lab-count{font-size:10px;color:var(--muted)}
+.lab-badge{background:var(--red);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;flex-shrink:0}
+.sb-divider{height:1px;background:var(--border);margin:8px 4px}
+.cat-btn{
+  width:100%;display:flex;align-items:center;gap:6px;
+  padding:5px 8px;border:none;background:transparent;border-radius:6px;
+  font-size:12px;color:var(--text2);text-align:left;transition:background .12s,color .12s
+}
+.cat-btn:hover{background:var(--bg);color:var(--text)}
+.cat-btn.active{background:#EEF3F8;color:var(--navy);font-weight:600}
+.cat-icon{font-size:13px;flex-shrink:0}
+/* Alerts panel */
+.sb-alerts{background:#FFF8F0;border:1px solid #FDDCBA;border-radius:8px;margin:6px 2px;padding:8px}
+.sb-alerts-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--orange-t);margin-bottom:6px}
+.al-item{display:flex;align-items:center;gap:5px;padding:2px 0}
+.al-lab{font-size:9px;font-weight:700;color:#fff;border-radius:3px;padding:1px 4px;white-space:nowrap}
+.al-name{font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px}
+.al-more{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* ── Main ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:14px 16px;gap:12px}
+.main-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0}
+.lab-heading{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;border-left:3px solid var(--lc,#2563EB);padding-left:10px;line-height:1.3}
+.lab-stats{font-size:12px;color:var(--muted);padding-left:13px;margin-top:3px}
+.stat-sep{margin:0 5px}
+.s-warn{color:var(--orange);font-weight:600}
+.s-err{color:var(--red);font-weight:600}
+.main-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.search-box{border:1.5px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;outline:none;width:170px;transition:border-color .15s}
+.search-box:focus{border-color:var(--blue)}
+.view-toggle{border:1.5px solid var(--border);background:var(--surface);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text2)}
+.view-toggle:hover{background:var(--bg)}
+.btn-add{background:var(--navy);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:600;transition:background .15s}
+.btn-add:hover{background:var(--navy2)}
+
+/* ── Table ── */
+.tbl-wrap{flex:1;overflow:auto;background:var(--surface);border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse}
+thead th{
+  padding:9px 12px;background:#F7F9FC;border-bottom:1px solid var(--border);
+  text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none;
+  position:sticky;top:0;z-index:2
+}
+thead th:hover{color:var(--text)}
+thead th.sorted{color:var(--navy)}
+tbody tr{border-bottom:1px solid #EEF2F7;transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#F7FAFC}
+tbody tr.row-low{background:#FFFBF0}
+tbody tr.row-exp{background:#FFF5F5}
+td{padding:9px 12px;vertical-align:middle}
+.td-name .pname{font-weight:600;font-size:13px}
+.td-name .pbc{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:1px}
+.td-name .pnote{font-size:11px;color:var(--orange);margin-top:2px}
+.cat-pill{font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:2px 8px;white-space:nowrap}
+.qty-ctl{display:flex;align-items:center;gap:5px}
+.qbtn{background:var(--bg);border:1px solid var(--border);border-radius:4px;width:22px;height:22px;font-size:14px;display:flex;align-items:center;justify-content:center;transition:background .1s}
+.qbtn:hover{background:var(--border2)}
+.qval{font-size:13px;font-weight:600;min-width:70px;text-align:center}
+.exp-date{font-size:10px;color:var(--muted);margin-top:2px}
+.loc-text{font-size:12px;color:var(--muted)}
+.row-acts{display:flex;gap:4px}
+.ibtn{border:1px solid var(--border);background:transparent;border-radius:5px;padding:4px 8px;font-size:12px;transition:all .15s}
+.ibtn.edit:hover{background:#EEF3F8;border-color:var(--navy);color:var(--navy)}
+.ibtn.del{color:var(--red)}
+.ibtn.del:hover{background:var(--red-l);border-color:var(--red)}
+
+/* Badges */
+.badge{display:inline-block;font-size:10px;font-weight:700;border-radius:10px;padding:2px 7px;margin-left:4px;vertical-align:middle}
+.b-green{background:var(--green-l);color:var(--green-t)}
+.b-amber{background:var(--amber-l);color:var(--amber-t)}
+.b-orange{background:var(--orange-l);color:var(--orange-t)}
+.b-red{background:var(--red-l);color:var(--red-t)}
+.b-blue{background:var(--cryo-l);color:#0369a1}
+
+/* ── Cards ── */
+.cards{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:10px;align-content:start}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px;box-shadow:var(--shadow)}
+.card.c-low{border-color:var(--amber);background:#FFFBF0}
+.card.c-exp{border-color:var(--red);background:#FFF5F5}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.card-badges{display:flex;flex-wrap:wrap;gap:3px}
+.card-name{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;margin-bottom:3px}
+.card-bc{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px}
+.card-qty-row{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:7px}
+.card-meta{font-size:11px;color:var(--muted);margin-bottom:3px}
+.card-note{font-size:11px;color:var(--orange);margin-top:4px}
+.card-actions{display:flex;gap:6px;padding-top:9px;border-top:1px solid var(--border);margin-top:8px}
+.card-actions .ibtn.edit{flex:1;text-align:center}
+
+/* ── Empty ── */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted)}
+.empty-icon{font-size:44px}
+.empty-txt{font-size:14px}
+
+/* ── Overlay & Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:500;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:auto}
+.modal{background:var(--surface);border-radius:12px;width:min(580px,96vw);max-height:92vh;overflow-y:auto;box-shadow:0 24px 70px rgba(0,0,0,.28)}
+.modal-hdr{display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid var(--border)}
+.modal-hdr-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px}
+.modal-x{background:none;border:none;font-size:18px;color:var(--muted);width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:4px}
+.modal-x:hover{background:var(--bg)}
+.modal-body{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f-label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.f-label.full{grid-column:1/-1}
+.f-inp{border:1.5px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none;transition:border-color .15s;color:var(--text);background:var(--surface)}
+.f-inp:focus{border-color:var(--blue)}
+.f-inp.mono{font-family:'JetBrains Mono',monospace}
+.f-qty-row{display:flex;gap:6px}
+.f-qty-row .f-inp{flex:1}
+.f-qty-row select.f-inp{width:110px}
+.modal-ftr{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid var(--border)}
+.btn-primary{background:var(--navy);color:#fff;border:none;border-radius:6px;padding:7px 20px;font-size:13px;font-weight:600}
+.btn-primary:hover{background:var(--navy2)}
+.btn-secondary{background:transparent;color:var(--text);border:1.5px solid var(--border);border-radius:6px;padding:7px 16px;font-size:13px}
+.btn-secondary:hover{background:var(--bg)}
+.btn-danger{background:var(--red);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:600}
+.btn-danger:hover{background:#dc2626}
+
+/* Confirm */
+.confirm-box{background:var(--surface);border-radius:10px;padding:28px 24px;width:320px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.confirm-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;margin-bottom:6px}
+.confirm-sub{color:var(--muted);font-size:12px;margin-bottom:22px}
+.confirm-acts{display:flex;gap:8px;justify-content:center}
+
+/* Camera modal */
+.cam-modal{background:var(--surface);border-radius:12px;padding:20px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
+.cam-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;margin-bottom:12px}
+#camVideo{width:100%;border-radius:8px;background:#000;aspect-ratio:4/3}
+.cam-hint{font-size:12px;color:var(--muted);margin-top:8px;margin-bottom:12px}
+.cam-unsupported{font-size:13px;color:var(--red-t);background:var(--red-l);border-radius:6px;padding:10px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ── -->
+  <header class="hdr">
+    <div class="hdr-brand">
+      <span class="hdr-logo">⚗</span>
+      <div>
+        <span class="hdr-title">PharmaStock</span>
+        <span class="hdr-sub">Faculté de Pharmacie · Gestion des Stocks</span>
+      </div>
+    </div>
+    <div class="hdr-scan-wrap">
+      <div class="hdr-scan">
+        <span class="scan-icon" id="scanIcon">▣</span>
+        <input id="scanInput" placeholder="Scannez ou entrez un code-barres…" autocomplete="off" spellcheck="false">
+      </div>
+      <button class="scan-go" onclick="handleScan()">Valider</button>
+      <button class="scan-cam" title="Scanner avec la caméra" onclick="openCamera()">📷</button>
+    </div>
+    <div class="hdr-right">
+      <button class="alert-globe" id="alertGlobe" onclick="showAlertPanel()">⚠ <span id="alertCount">0</span> alertes</button>
+    </div>
+  </header>
+
+  <!-- ── Toast ── -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ── Layout ── -->
+  <div class="layout">
+
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <!-- ── Main ── -->
+    <main class="main">
+      <div class="main-top">
+        <div>
+          <div class="lab-heading" id="labHeading" style="--lc:#2563EB">…</div>
+          <div class="lab-stats" id="labStats"></div>
+        </div>
+        <div class="main-actions">
+          <input class="search-box" id="searchBox" placeholder="Rechercher…" oninput="render()">
+          <button class="view-toggle" onclick="toggleView()">⊞ Cartes</button>
+          <button class="btn-add" onclick="openModal('add',{})">+ Ajouter</button>
+        </div>
+      </div>
+      <div id="contentArea" style="flex:1;display:flex;flex-direction:column;overflow:hidden"></div>
+    </main>
+  </div>
+</div>
+
+<!-- ── Product Modal ── -->
+<div class="overlay" id="productOverlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-hdr-title" id="modalTitle">Ajouter un produit</span>
+      <button class="modal-x" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="fId">
+      <div class="f-row">
+        <label class="f-label">Code-barres / NNE *
+          <input class="f-inp mono" id="fBarcode" required>
+        </label>
+        <label class="f-label">Nom du produit *
+          <input class="f-inp" id="fName" required>
+        </label>
+      </div>
+      <div class="f-row">
+        <label class="f-label">Catégorie
+          <select class="f-inp" id="fCat"></select>
+        </label>
+        <label class="f-label">Fournisseur
+          <input class="f-inp" id="fSupplier" placeholder="Ex: Sigma-Aldrich, Air Liquide…">
+        </label>
+      </div>
+      <div class="f-row">
+        <label class="f-label">Quantité en stock
+          <div class="f-qty-row">
+            <input class="f-inp" type="number" min="0" id="fQty" value="0">
+            <select class="f-inp" id="fUnit"></select>
+          </div>
+        </label>
+        <label class="f-label">Stock minimum (seuil d'alerte)
+          <input class="f-inp" type="number" min="0" id="fMin" value="1">
+        </label>
+      </div>
+      <div class="f-row">
+        <label class="f-label">Date de péremption
+          <input class="f-inp" type="date" id="fExpiry">
+        </label>
+        <label class="f-label">Localisation
+          <input class="f-inp" id="fLoc" placeholder="Ex: Frigo 4°C, Armoire S2, −80°C…">
+        </label>
+      </div>
+      <label class="f-label full">Remarques / précautions
+        <textarea class="f-inp" id="fNote" rows="2" style="resize:vertical" placeholder="Ex: Stupéfiant — double clé, CMR, protéger de la lumière…"></textarea>
+      </label>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-secondary" onclick="closeModal()">Annuler</button>
+      <button class="btn-primary" onclick="saveItem()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete Confirm ── -->
+<div class="overlay" id="deleteOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title">Supprimer ce produit ?</div>
+    <div class="confirm-sub">Cette action est irréversible.</div>
+    <div class="confirm-acts">
+      <button class="btn-secondary" onclick="closeDelete()">Annuler</button>
+      <button class="btn-danger" onclick="confirmDelete()">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Camera Modal ── -->
+<div class="overlay" id="cameraOverlay">
+  <div class="cam-modal">
+    <div class="cam-title">📷 Scanner un code-barres</div>
+    <div id="camUnsupported" class="cam-unsupported" style="display:none">BarcodeDetector non disponible sur ce navigateur. Utilisez Chrome ou Edge.</div>
+    <video id="camVideo" autoplay playsinline muted></video>
+    <div class="cam-hint">Pointez la caméra vers le code-barres</div>
+    <button class="btn-secondary" onclick="closeCamera()" style="width:100%">Fermer</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  DONNÉES & CONFIG
+// ═══════════════════════════════════════════════════════════════════
+
+const LABS = [
+  { id:'citcom',   short:'CITCOM',      name:'Cibles Thérapeutiques & Conception de Médicaments', color:'#2563EB' },
+  { id:'utcbs',    short:'UTCBS',        name:'Technologies Chimiques et Biologiques pour la Santé', color:'#7C3AED' },
+  { id:'umrs1144', short:'UMR S1144',    name:'Optimisation Thérapeutique en Neuropharmacologie',   color:'#0891B2' },
+  { id:'merit',    short:'MERIT',        name:'Mère et Enfant en Milieu Tropical',                  color:'#059669' },
+];
+
+const CATS = [
+  { id:'cryo',        label:'Cryogènes',        icon:'❄️' },
+  { id:'reactifs',    label:'Réactifs chimiques',icon:'⚗️' },
+  { id:'solvants',    label:'Solvants',          icon:'🧪' },
+  { id:'milieux',     label:'Milieux de culture',icon:'🔬' },
+  { id:'biologique',  label:'Biologique',        icon:'🧬' },
+  { id:'consommables',label:'Consommables',      icon:'📦' },
+  { id:'stupefiant',  label:'Stupéfiant / CMR',  icon:'🔐' },
+];
+
+const UNITS = ['kg','g','mg','µg','L','mL','µL','unité(s)','flacon(s)','boîte(s)','carton(s)','ampoule(s)','kit(s)'];
+
+// Données de départ — produits réalistes par labo
+const SEED = {
+  citcom: [
+    // ── Cryogènes ──
+    { id:'c01', barcode:'NNE-CITCOM-001', name:'Neige carbonique (CO₂ solide)', category:'cryo',
+      qty:12, unit:'kg', minQty:5, expiry:'', supplier:'Air Liquide', location:'Sas entrée', note:'Renouvellement fréquent — commander dès < 5 kg' },
+    { id:'c02', barcode:'NNE-CITCOM-002', name:'Azote liquide (LN₂)', category:'cryo',
+      qty:35, unit:'L', minQty:15, expiry:'', supplier:'Air Liquide', location:'Couloir N', note:'Cuve Dewar 50 L' },
+    // ── Solvants ──
+    { id:'c03', barcode:'8002640037826', name:'DMSO anhydre 99.9%', category:'solvants',
+      qty:500, unit:'mL', minQty:100, expiry:'2027-03-01', supplier:'Sigma-Aldrich', location:'Armoire S2', note:'Conserver à TA, hygroscopique' },
+    { id:'c04', barcode:'5051594009812', name:'Acétonitrile grade HPLC', category:'solvants',
+      qty:2, unit:'L', minQty:1, expiry:'2026-12-01', supplier:'VWR', location:'Armoire solvants', note:'CMR cat. 1B' },
+    { id:'c05', barcode:'5061294009134', name:'Méthanol LC-MS grade', category:'solvants',
+      qty:1, unit:'L', minQty:1, expiry:'2026-11-01', supplier:'Fisher Scientific', location:'Armoire solvants', note:'Inflammable — pas de flamme nue' },
+    // ── Réactifs ──
+    { id:'c06', barcode:'3401051000018', name:'PBS 10× stérile (sans Ca/Mg)', category:'reactifs',
+      qty:8, unit:'flacon(s)', minQty:4, expiry:'2025-10-30', supplier:'Thermo Fisher', location:'Frigo 4°C', note:'' },
+    { id:'c07', barcode:'3401099000022', name:'Tris-HCl 1 M pH 8.0', category:'reactifs',
+      qty:500, unit:'mL', minQty:100, expiry:'2026-06-01', supplier:'Sigma-Aldrich', location:'Paillasse A', note:'' },
+    { id:'c08', barcode:'5010260037012', name:'SDS (dodécylsulfate) 10%', category:'reactifs',
+      qty:250, unit:'mL', minQty:50, expiry:'2026-08-01', supplier:'Eurobio', location:'Paillasse A', note:'Ne pas inhaler' },
+    { id:'c09', barcode:'4260180021101', name:'Acrylamide/Bis 30% solution', category:'reactifs',
+      qty:500, unit:'mL', minQty:100, expiry:'2026-09-01', supplier:'Bio-Rad', location:'Armoire réactifs', note:'⚠ Neurotoxique — gants obligatoires' },
+    { id:'c10', barcode:'5053801101001', name:'Kit BCA dosage protéines (Pierce)', category:'reactifs',
+      qty:3, unit:'kit(s)', minQty:1, expiry:'2026-05-01', supplier:'Thermo Fisher', location:'Frigo 4°C', note:'' },
+    { id:'c11', barcode:'5055983407201', name:'DTT (dithiothréitol) poudre', category:'reactifs',
+      qty:5, unit:'g', minQty:2, expiry:'2026-10-01', supplier:'Sigma-Aldrich', location:'Congélateur −20°C', note:'Aliquoter — instable en solution' },
+    { id:'c12', barcode:'5015260114001', name:'Gel d\'agarose type II', category:'reactifs',
+      qty:100, unit:'g', minQty:25, expiry:'2028-01-01', supplier:'Sigma-Aldrich', location:'Tiroir réactifs', note:'' },
+    { id:'c13', barcode:'5015260114002', name:'GelRed (intercalant ADN, remplacement BrEt)', category:'reactifs',
+      qty:2, unit:'flacon(s)', minQty:1, expiry:'2026-12-01', supplier:'Biotium', location:'Congélateur −20°C, lumière', note:'Protéger de la lumière' },
+    { id:'c14', barcode:'5015260114003', name:'Cocktail inhibiteurs de protéases (cOmplete)', category:'reactifs',
+      qty:3, unit:'boîte(s)', minQty:2, expiry:'2026-07-01', supplier:'Roche', location:'Congélateur −20°C', note:'1 cp / 50 mL lysat' },
+    // ── Consommables ──
+    { id:'c15', barcode:'5015260200001', name:'Pointes 200 µL (filtre, stérile)', category:'consommables',
+      qty:4, unit:'boîte(s)', minQty:3, expiry:'', supplier:'Sarstedt', location:'Tiroir P', note:'' },
+    { id:'c16', barcode:'5015260200002', name:'Tubes Eppendorf 1.5 mL LoBind', category:'consommables',
+      qty:1, unit:'boîte(s)', minQty:2, expiry:'', supplier:'Eppendorf', location:'Tiroir T', note:'' },
+  ],
+
+  utcbs: [
+    // ── Cryogènes ──
+    { id:'u01', barcode:'NNE-UTCBS-001', name:'Neige carbonique (CO₂ solide)', category:'cryo',
+      qty:8, unit:'kg', minQty:5, expiry:'', supplier:'Air Liquide', location:'Sas entrée', note:'Usage quotidien — contrôler chaque matin' },
+    { id:'u02', barcode:'NNE-UTCBS-002', name:'Azote liquide (LN₂)', category:'cryo',
+      qty:20, unit:'L', minQty:10, expiry:'', supplier:'Air Liquide', location:'Cuve hall', note:'' },
+    // ── Solvants ──
+    { id:'u03', barcode:'3701396820011', name:'Chloroforme stabilisé (AmylOH 1%)', category:'solvants',
+      qty:500, unit:'mL', minQty:100, expiry:'2026-06-01', supplier:'VWR', location:'Armoire solvants CMR', note:'CMR cat. 2 — hotte obligatoire' },
+    { id:'u04', barcode:'3701396820012', name:'Dichlorométhane (DCM)', category:'solvants',
+      qty:1, unit:'L', minQty:0.5, expiry:'2026-09-01', supplier:'Sigma-Aldrich', location:'Armoire solvants CMR', note:'CMR — cancérigène suspecté' },
+    { id:'u05', barcode:'3401070002016', name:'Éthanol absolu 99.8%', category:'solvants',
+      qty:2, unit:'L', minQty:1, expiry:'2027-06-01', supplier:'Merck', location:'Armoire solvants', note:'' },
+    // ── Réactifs — nanoformulation ──
+    { id:'u06', barcode:'5055983107301', name:'PLGA 50:50 (Resomer RG 504 H)', category:'reactifs',
+      qty:5, unit:'g', minQty:2, expiry:'2026-12-01', supplier:'Evonik', location:'Congélateur −20°C', note:'Conserver sous argon, hygroscopique' },
+    { id:'u07', barcode:'5055983107302', name:'PEG 2000-PLGA (co-polymère)', category:'reactifs',
+      qty:2, unit:'g', minQty:1, expiry:'2026-12-01', supplier:'Evonik', location:'Congélateur −20°C', note:'' },
+    { id:'u08', barcode:'5055983107303', name:'Pluronic F-127 (Poloxamer 407)', category:'reactifs',
+      qty:50, unit:'g', minQty:10, expiry:'2028-01-01', supplier:'Sigma-Aldrich', location:'Armoire TA', note:'Surfactant — excipient nanoparticules' },
+    // ── Milieux & biologie cellulaire ──
+    { id:'u09', barcode:'3760001830013', name:'DMEM (Dulbecco\'s MEM, HG, sans pyruvate)', category:'milieux',
+      qty:6, unit:'flacon(s)', minQty:4, expiry:'2025-11-15', supplier:'Gibco', location:'Frigo 4°C', note:'' },
+    { id:'u10', barcode:'3760001830014', name:'RPMI-1640 (sans L-glutamine)', category:'milieux',
+      qty:4, unit:'flacon(s)', minQty:3, expiry:'2025-12-01', supplier:'Gibco', location:'Frigo 4°C', note:'' },
+    { id:'u11', barcode:'3760001830015', name:'SVF (Sérum de Veau Fœtal, décomplémenté)', category:'biologique',
+      qty:500, unit:'mL', minQty:200, expiry:'2026-03-01', supplier:'Eurobio', location:'Congélateur −20°C', note:'Aliquoter 50 mL avant utilisation' },
+    { id:'u12', barcode:'3760001830016', name:'Pénicilline / Streptomycine 100×', category:'biologique',
+      qty:5, unit:'flacon(s)', minQty:3, expiry:'2026-01-01', supplier:'Gibco', location:'Congélateur −20°C', note:'' },
+    { id:'u13', barcode:'3760001830017', name:'Trypsine 0.25% EDTA', category:'biologique',
+      qty:4, unit:'flacon(s)', minQty:2, expiry:'2025-10-01', supplier:'Gibco', location:'Frigo 4°C', note:'Usage unique après décon.' },
+    { id:'u14', barcode:'5015260140004', name:'MTT (viabilité cellulaire)', category:'reactifs',
+      qty:1, unit:'g', minQty:0.5, expiry:'2026-08-01', supplier:'Sigma-Aldrich', location:'Congélateur −20°C, lumière', note:'Protéger de la lumière absolument' },
+    { id:'u15', barcode:'5015260140005', name:'L-Glutamine 200 mM', category:'biologique',
+      qty:3, unit:'flacon(s)', minQty:2, expiry:'2026-02-01', supplier:'Gibco', location:'Congélateur −20°C', note:'' },
+    // ── Consommables ──
+    { id:'u16', barcode:'5015260300001', name:'Flasques T-75 stériles', category:'consommables',
+      qty:2, unit:'carton(s)', minQty:1, expiry:'', supplier:'Corning', location:'Paillasse B', note:'' },
+  ],
+
+  umrs1144: [
+    // ── Cryogènes ──
+    { id:'n01', barcode:'NNE-UMR-001', name:'Neige carbonique (CO₂ solide)', category:'cryo',
+      qty:6, unit:'kg', minQty:5, expiry:'', supplier:'Air Liquide', location:'Sas entrée', note:'Stockage cerveaux post-dissection — usage immédiat' },
+    { id:'n02', barcode:'NNE-UMR-002', name:'Azote liquide (LN₂)', category:'cryo',
+      qty:25, unit:'L', minQty:10, expiry:'', supplier:'Air Liquide', location:'Couloir O', note:'' },
+    // ── Stupéfiants / CMR ──
+    { id:'n03', barcode:'4260180021151', name:'Morphine chlorhydrate 10 mg/mL injectable', category:'stupefiant',
+      qty:10, unit:'ampoule(s)', minQty:5, expiry:'2025-09-01', supplier:'Renaudin', location:'Armoire stupéfiants — double clé', note:'Registre obligatoire — ordonnance sécurisée' },
+    { id:'n04', barcode:'4260180021152', name:'Kétamine 500 mg/10 mL (Imalgène 1000)', category:'stupefiant',
+      qty:5, unit:'flacon(s)', minQty:3, expiry:'2025-08-01', supplier:'Virbac', location:'Armoire stupéfiants — double clé', note:'Anesthésique dissociatif — association Xylazine' },
+    { id:'n05', barcode:'4260180021153', name:'Xylazine 20 mg/mL (Rompun 2%)', category:'stupefiant',
+      qty:4, unit:'flacon(s)', minQty:2, expiry:'2026-04-01', supplier:'Bayer', location:'Armoire stupéfiants — double clé', note:'Antagoniste : Atipamézole' },
+    { id:'n06', barcode:'4260180021154', name:'Isoflurane (Vetflurane 1000 mg/g)', category:'stupefiant',
+      qty:3, unit:'flacon(s)', minQty:2, expiry:'2026-06-01', supplier:'Virbac', location:'Animalerie — armoire fermée', note:'Anesthésie gazeuse — extracteur obligatoire' },
+    // ── Réactifs histologie / immunomarquage ──
+    { id:'n07', barcode:'5015260037101', name:'Paraformaldéhyde 4% en PBS (PFA)', category:'reactifs',
+      qty:500, unit:'mL', minQty:200, expiry:'2025-12-01', supplier:'Sigma-Aldrich', location:'Frigo 4°C — hotte', note:'Fixateur — CMR cat. 1B — hotte chimique obligatoire' },
+    { id:'n08', barcode:'5015260037102', name:'Saccharose 30% en PBS', category:'reactifs',
+      qty:200, unit:'mL', minQty:100, expiry:'2025-10-15', supplier:'Préparation interne', location:'Frigo 4°C', note:'Cryoprotection coupes histologiques' },
+    { id:'n09', barcode:'5015260037103', name:'Anticorps 1° anti-Tyrosine Hydroxylase (lapin)', category:'biologique',
+      qty:50, unit:'µL', minQty:20, expiry:'2026-05-01', supplier:'Millipore (AB152)', location:'Congélateur −20°C', note:'Dilution 1:1000 — marqueur neurones dopaminergiques' },
+    { id:'n10', barcode:'5015260037104', name:'Ac 2° anti-lapin IgG Alexa Fluor 488', category:'biologique',
+      qty:50, unit:'µL', minQty:20, expiry:'2026-06-01', supplier:'Invitrogen', location:'Congélateur −20°C, lumière', note:'Protéger de la lumière +++' },
+    { id:'n11', barcode:'5015260037105', name:'DAPI (solution 5 mg/mL)', category:'reactifs',
+      qty:1, unit:'flacon(s)', minQty:1, expiry:'2027-01-01', supplier:'Sigma-Aldrich', location:'Congélateur −20°C, lumière', note:'Marqueur noyaux — dilution 1:5000' },
+    { id:'n12', barcode:'5015260037106', name:'Normal Goat Serum (NGS) 10%', category:'biologique',
+      qty:5, unit:'mL', minQty:2, expiry:'2026-08-01', supplier:'Jackson ImmunoResearch', location:'Congélateur −20°C', note:'Blocage pour IHC' },
+    // ── HPLC — dosage neurotransmetteurs ──
+    { id:'n13', barcode:'5051594009834', name:'Acétonitrile gradient grade HPLC', category:'solvants',
+      qty:2, unit:'L', minQty:1, expiry:'2026-10-01', supplier:'VWR', location:'Armoire solvants HPLC', note:'Phase mobile HPLC — dopamine/5-HT' },
+    { id:'n14', barcode:'5015260037107', name:'Acide o-phosphorique 85% (HPLC grade)', category:'reactifs',
+      qty:250, unit:'mL', minQty:50, expiry:'2027-06-01', supplier:'Sigma-Aldrich', location:'Armoire réactifs HPLC', note:'Préparation tampon phosphate pH 3.0' },
+    // ── Consommables ──
+    { id:'n15', barcode:'5015260300101', name:'Lames Superfrost Plus (adhesion)', category:'consommables',
+      qty:3, unit:'boîte(s)', minQty:2, expiry:'', supplier:'Menzel-Gläser', location:'Armoire histologie', note:'' },
+  ],
+
+  merit: [
+    // ── Cryogènes ──
+    { id:'m01', barcode:'NNE-MERIT-001', name:'Neige carbonique (CO₂ solide)', category:'cryo',
+      qty:10, unit:'kg', minQty:5, expiry:'', supplier:'Air Liquide', location:'Sas entrée', note:'Conservation échantillons et parasites en transit' },
+    { id:'m02', barcode:'NNE-MERIT-002', name:'Azote liquide (LN₂)', category:'cryo',
+      qty:40, unit:'L', minQty:15, expiry:'', supplier:'Air Liquide', location:'Cuve cryoconservation', note:'Cryoconservation stocks Plasmodium — cuve 100 L' },
+    // ── Colorants / parasitologie ──
+    { id:'m03', barcode:'3560070197601', name:'Giemsa (solution stock, non dilué)', category:'reactifs',
+      qty:500, unit:'mL', minQty:100, expiry:'2026-05-01', supplier:'Merck', location:'Paillasse B', note:'Diluer au 1/10 ex tempore dans tampon Sörensen' },
+    { id:'m04', barcode:'3560070197602', name:'May-Grünwald (solution prête)', category:'reactifs',
+      qty:300, unit:'mL', minQty:100, expiry:'2026-04-01', supplier:'Merck', location:'Paillasse B', note:'Coloration MGG — associé Giemsa' },
+    // ── Culture Plasmodium falciparum ──
+    { id:'m05', barcode:'3760001830021', name:'RPMI-1640 (sans L-glutamine ni NaHCO₃)', category:'milieux',
+      qty:5, unit:'flacon(s)', minQty:3, expiry:'2025-11-01', supplier:'Gibco', location:'Frigo 4°C', note:'Base milieu culture P. falciparum' },
+    { id:'m06', barcode:'5015260140101', name:'HEPES 1 M pH 7.4 (solution filtrée)', category:'reactifs',
+      qty:100, unit:'mL', minQty:50, expiry:'2026-08-01', supplier:'Sigma-Aldrich', location:'Frigo 4°C', note:'Tampon indispensable milieu paludisme' },
+    { id:'m07', barcode:'5015260140102', name:'Albumax II (BSA enrichie en lipides)', category:'biologique',
+      qty:5, unit:'g', minQty:2, expiry:'2026-03-01', supplier:'Gibco', location:'Congélateur −20°C', note:'Substitut SVF pour P. falciparum — aliquoter' },
+    { id:'m08', barcode:'5015260140103', name:'Sorbitol 5% stérile (synchronisation)', category:'reactifs',
+      qty:50, unit:'mL', minQty:20, expiry:'2025-12-01', supplier:'Sigma-Aldrich', location:'Frigo 4°C', note:'Lyse trophozoïtes pour synchronisation parasites' },
+    { id:'m09', barcode:'5015260140104', name:'Bicarbonate de sodium 5% stérile', category:'reactifs',
+      qty:50, unit:'mL', minQty:20, expiry:'2026-01-01', supplier:'Gibco', location:'Frigo 4°C', note:'Tamponnage milieu de culture' },
+    // ── Antiparasitaires de référence ──
+    { id:'m10', barcode:'3760001220001', name:'Artémisinine poudre (≥ 98%)', category:'reactifs',
+      qty:5, unit:'g', minQty:2, expiry:'2027-01-01', supplier:'TCI Europe', location:'Armoire S1, TA, obscurité', note:'Antipaludique de référence — contrôle sensibilité' },
+    { id:'m11', barcode:'3760001220002', name:'Chloroquine diphosphate (sel)', category:'reactifs',
+      qty:2, unit:'g', minQty:1, expiry:'2027-06-01', supplier:'Sigma-Aldrich', location:'Armoire S1', note:'Témoin de résistance souche CQ-résistante' },
+    { id:'m12', barcode:'3760001220003', name:'Dihydroartémisinine (DHA) 97%', category:'reactifs',
+      qty:500, unit:'mg', minQty:200, expiry:'2026-11-01', supplier:'Sigma-Aldrich', location:'Congélateur −20°C', note:'Métabolite actif de l\'artémisinine' },
+    // ── Biologie moléculaire ──
+    { id:'m13', barcode:'5053801234501', name:'Kit DNeasy Blood & Tissue (Qiagen)', category:'reactifs',
+      qty:2, unit:'kit(s)', minQty:1, expiry:'2026-08-01', supplier:'Qiagen', location:'TA, armoire réactifs', note:'Extraction ADN de Plasmodium — PCR diagnostic' },
+    // ── Consommables ──
+    { id:'m14', barcode:'5015260300201', name:'Lames porte-objet 76×26mm (frosted)', category:'consommables',
+      qty:2, unit:'boîte(s)', minQty:3, expiry:'', supplier:'Menzel-Gläser', location:'Tiroir L', note:'⚠ Niveau bas' },
+    { id:'m15', barcode:'5015260300202', name:'Lamelles 22×22 mm n°1.5', category:'consommables',
+      qty:3, unit:'boîte(s)', minQty:2, expiry:'', supplier:'Marienfeld', location:'Tiroir L', note:'' },
+  ],
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════
+let stock = {};
+let activeLab = 'citcom';
+let catFilter = 'all';
+let viewMode = 'table';     // 'table' | 'cards'
+let sortKey = 'name';
+let sortDir = 1;
+let deleteTarget = null;
+let camStream = null;
+let camDetector = null;
+let camAnimId = null;
+
+// ═══════════════════════════════════════════════════════════════════
+//  PERSISTANCE
+// ═══════════════════════════════════════════════════════════════════
+function loadStock() {
+  try {
+    const raw = localStorage.getItem('pharmastock-v3');
+    stock = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(SEED));
+  } catch { stock = JSON.parse(JSON.stringify(SEED)); }
+}
+function saveStock() {
+  try { localStorage.setItem('pharmastock-v3', JSON.stringify(stock)); } catch {}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  UTILITAIRES
+// ═══════════════════════════════════════════════════════════════════
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function daysUntil(d) {
+  if (!d) return null;
+  return Math.ceil((new Date(d) - new Date()) / 86400000);
+}
+function stockBadge(qty, min) {
+  if (qty <= 0)     return { label:'Rupture', cls:'b-red' };
+  if (qty < min)    return { label:'Stock bas', cls:'b-orange' };
+  return { label:'OK', cls:'b-green' };
+}
+function expiryBadge(expiry) {
+  const d = daysUntil(expiry);
+  if (d === null) return null;
+  if (d < 0)      return { label:'Périmé', cls:'b-red' };
+  if (d <= 14)    return { label:d+'j', cls:'b-red' };
+  if (d <= 60)    return { label:d+'j', cls:'b-orange' };
+  if (d <= 90)    return { label:d+'j', cls:'b-amber' };
+  return { label:d+'j', cls:'b-green' };
+}
+function catOf(id) { return CATS.find(c=>c.id===id) || {icon:'?',label:id}; }
+function labOf(id) { return LABS.find(l=>l.id===id); }
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function allAlerts() {
+  const arr = [];
+  LABS.forEach(l => {
+    (stock[l.id]||[]).forEach(p => {
+      const d = daysUntil(p.expiry);
+      if (p.qty < p.minQty || (d!==null && d<=60)) arr.push({...p, labId:l.id, labShort:l.short, labColor:l.color});
+    });
+  });
+  return arr;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SIDEBAR
+// ═══════════════════════════════════════════════════════════════════
+function renderSidebar() {
+  const alerts = allAlerts();
+  // update globe
+  const globe = document.getElementById('alertGlobe');
+  document.getElementById('alertCount').textContent = alerts.length;
+  globe.className = 'alert-globe' + (alerts.length ? ' visible' : '');
+
+  let html = `<div class="sb-label">Laboratoires</div>`;
+  LABS.forEach(l => {
+    const ls = stock[l.id]||[];
+    const labAlerts = ls.filter(p => {
+      const d=daysUntil(p.expiry);
+      return p.qty<p.minQty||(d!==null&&d<=60);
+    }).length;
+    const active = l.id===activeLab ? ' active':'';
+    html += `<button class="lab-btn${active}" style="--lc:${l.color}" onclick="setLab('${l.id}')">
+      <span class="lab-dot"></span>
+      <span class="lab-info">
+        <span class="lab-short">${esc(l.short)}</span>
+        <span class="lab-count">${ls.length} produits</span>
+      </span>
+      ${labAlerts ? `<span class="lab-badge">${labAlerts}</span>` : ''}
+    </button>`;
+  });
+
+  html += `<div class="sb-divider"></div><div class="sb-label">Catégories</div>`;
+  html += `<button class="cat-btn${catFilter==='all'?' active':''}" onclick="setCat('all')"><span class="cat-icon">🗂</span> Toutes</button>`;
+  CATS.forEach(c => {
+    html += `<button class="cat-btn${catFilter===c.id?' active':''}" onclick="setCat('${c.id}')">
+      <span class="cat-icon">${c.icon}</span> ${esc(c.label)}
+    </button>`;
+  });
+
+  if (alerts.length) {
+    html += `<div class="sb-divider"></div>
+    <div class="sb-alerts">
+      <div class="sb-alerts-title">⚠ Alertes — ${alerts.length}</div>`;
+    alerts.slice(0,7).forEach(p => {
+      html += `<div class="al-item">
+        <span class="al-lab" style="background:${p.labColor}">${esc(p.labShort)}</span>
+        <span class="al-name">${esc(p.name)}</span>
+      </div>`;
+    });
+    if (alerts.length>7) html+=`<div class="al-more">+${alerts.length-7} autres</div>`;
+    html += `</div>`;
+  }
+
+  document.getElementById('sidebar').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MAIN CONTENT
+// ═══════════════════════════════════════════════════════════════════
+function render() {
+  const lab = labOf(activeLab);
+  const labStock = stock[activeLab]||[];
+  const search = document.getElementById('searchBox').value.toLowerCase();
+  const cat = catFilter;
+
+  // heading
+  document.getElementById('labHeading').textContent = lab.name;
+  document.getElementById('labHeading').style.setProperty('--lc', lab.color);
+
+  // filter
+  let items = labStock.filter(p =>
+    (cat==='all'||p.category===cat) &&
+    (!search || p.name.toLowerCase().includes(search)||p.barcode.toLowerCase().includes(search)||(p.supplier||'').toLowerCase().includes(search))
+  );
+
+  // sort
+  items = items.slice().sort((a,b)=>{
+    let va=a[sortKey]??'', vb=b[sortKey]??'';
+    if(sortKey==='qty') return (Number(va)-Number(vb))*sortDir;
+    return String(va).localeCompare(String(vb))*sortDir;
+  });
+
+  // stats
+  const lowN = labStock.filter(p=>p.qty<p.minQty).length;
+  const expN = labStock.filter(p=>{const d=daysUntil(p.expiry);return d!==null&&d<0;}).length;
+  document.getElementById('labStats').innerHTML =
+    `${labStock.length} produits <span class="stat-sep">·</span> `+
+    `<span class="s-warn">${lowN} stock bas</span> <span class="stat-sep">·</span> `+
+    `<span class="s-err">${expN} périmés</span>`;
+
+  const area = document.getElementById('contentArea');
+
+  if (!items.length) {
+    area.innerHTML = `<div class="empty">
+      <div class="empty-icon">📦</div>
+      <div class="empty-txt">Aucun produit correspondant</div>
+      <button class="btn-add" onclick="openModal('add',{})">+ Ajouter un produit</button>
+    </div>`;
+    return;
+  }
+
+  if (viewMode==='table') {
+    function th(label,key) {
+      const a = sortKey===key ? ' sorted':'';
+      const arrow = sortKey===key ? (sortDir===1?' ↑':' ↓'):'';
+      return `<th class="${a}" onclick="handleSort('${key}')">${label}${arrow}</th>`;
+    }
+    let rows = items.map(p => {
+      const sb = stockBadge(p.qty,p.minQty);
+      const eb = expiryBadge(p.expiry);
+      const c = catOf(p.category);
+      const d = daysUntil(p.expiry);
+      const rowCls = p.qty<p.minQty ? ' class="row-low"' : (d!==null&&d<0?' class="row-exp"':'');
+      return `<tr${rowCls}>
+        <td class="td-name">
+          <div class="pname">${esc(p.name)}</div>
+          <div class="pbc">${esc(p.barcode)}</div>
+          ${p.note?`<div class="pnote">${esc(p.note)}</div>`:''}
+        </td>
+        <td><span class="cat-pill">${c.icon} ${esc(c.label)}</span></td>
+        <td>
+          <div class="qty-ctl">
+            <button class="qbtn" onclick="adjQty('${p.id}',-1)">−</button>
+            <span class="qval">${p.qty} ${esc(p.unit)}</span>
+            <button class="qbtn" onclick="adjQty('${p.id}',+1)">+</button>
+          </div>
+          <span class="badge ${sb.cls}">${sb.label}</span>
+        </td>
+        <td>
+          ${eb ? `<span class="badge ${eb.cls}">${eb.label}</span>` : '<span style="color:var(--muted)">—</span>'}
+          ${p.expiry?`<div class="exp-date">${p.expiry}</div>`:''}
+        </td>
+        <td class="loc-text">${esc(p.location||'—')}</td>
+        <td>${esc(p.supplier||'—')}</td>
+        <td><div class="row-acts">
+          <button class="ibtn edit" onclick="openModal('edit',${JSON.stringify(JSON.stringify(p))})">✎</button>
+          <button class="ibtn del" onclick="askDelete('${p.id}')">✕</button>
+        </div></td>
+      </tr>`;
+    }).join('');
+
+    area.innerHTML = `<div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          ${th('Produit','name')}${th('Catégorie','category')}${th('Stock','qty')}
+          ${th('Péremption','expiry')}${th('Localisation','location')}${th('Fournisseur','supplier')}
+          <th>Actions</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  } else {
+    let cards = items.map(p => {
+      const sb = stockBadge(p.qty,p.minQty);
+      const eb = expiryBadge(p.expiry);
+      const c = catOf(p.category);
+      const d=daysUntil(p.expiry);
+      const cls = p.qty<p.minQty?' c-low':(d!==null&&d<0?' c-exp':'');
+      return `<div class="card${cls}">
+        <div class="card-top">
+          <span class="cat-pill">${c.icon} ${esc(c.label)}</span>
+          <div class="card-badges">
+            <span class="badge ${sb.cls}">${sb.label}</span>
+            ${eb?`<span class="badge ${eb.cls}">${eb.label}`+`</span>`:''}
+          </div>
+        </div>
+        <div class="card-name">${esc(p.name)}</div>
+        <div class="card-bc">${esc(p.barcode)}</div>
+        <div class="card-qty-row">
+          <button class="qbtn" onclick="adjQty('${p.id}',-1)">−</button>
+          ${p.qty} ${esc(p.unit)}
+          <button class="qbtn" onclick="adjQty('${p.id}',+1)">+</button>
+        </div>
+        ${p.location?`<div class="card-meta">📍 ${esc(p.location)}</div>`:''}
+        ${p.supplier?`<div class="card-meta">🏭 ${esc(p.supplier)}</div>`:''}
+        ${p.note?`<div class="card-note">${esc(p.note)}</div>`:''}
+        <div class="card-actions">
+          <button class="ibtn edit" onclick="openModal('edit',${JSON.stringify(JSON.stringify(p))})">✎ Modifier</button>
+          <button class="ibtn del" onclick="askDelete('${p.id}')">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+    area.innerHTML = `<div class="cards">${cards}</div>`;
+  }
+}
+
+function fullRender() { renderSidebar(); render(); }
+
+// ═══════════════════════════════════════════════════════════════════
+//  ACTIONS
+// ═══════════════════════════════════════════════════════════════════
+function setLab(id) { activeLab=id; catFilter='all'; document.getElementById('searchBox').value=''; fullRender(); }
+function setCat(id) { catFilter=id; render(); }
+function toggleView() {
+  viewMode = viewMode==='table'?'cards':'table';
+  document.querySelector('.view-toggle').textContent = viewMode==='table'?'⊞ Cartes':'☰ Tableau';
+  render();
+}
+function handleSort(key) {
+  if(sortKey===key) sortDir*=-1; else { sortKey=key; sortDir=1; }
+  render();
+}
+function adjQty(id, delta) {
+  const list = stock[activeLab];
+  const p = list.find(x=>x.id===id);
+  if(p){ p.qty = Math.max(0, p.qty+delta); saveStock(); fullRender(); }
+}
+function askDelete(id) { deleteTarget=id; document.getElementById('deleteOverlay').classList.add('open'); }
+function closeDelete() { deleteTarget=null; document.getElementById('deleteOverlay').classList.remove('open'); }
+function confirmDelete() {
+  if(!deleteTarget) return;
+  stock[activeLab] = (stock[activeLab]||[]).filter(p=>p.id!==deleteTarget);
+  saveStock(); closeDelete(); fullRender();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SCAN
+// ═══════════════════════════════════════════════════════════════════
+let scanIconInterval = null;
+document.getElementById('scanInput').addEventListener('input', function(){
+  const icon = document.getElementById('scanIcon');
+  if(this.value){ icon.classList.add('blink'); } else { icon.classList.remove('blink'); }
+});
+document.getElementById('scanInput').addEventListener('keydown', e => { if(e.key==='Enter') handleScan(); });
+
+function handleScan() {
+  const code = document.getElementById('scanInput').value.trim();
+  if(!code) return;
+  document.getElementById('scanIcon').classList.remove('blink');
+
+  // Cherche dans tous les labos
+  for(const l of LABS){
+    const found = (stock[l.id]||[]).find(p=>p.barcode===code);
+    if(found){
+      activeLab = l.id;
+      document.getElementById('scanInput').value='';
+      showToast('ok', `✓ ${found.name} — ${l.short}`);
+      fullRender();
+      return;
+    }
+  }
+  // Introuvable
+  showToast('warn', `Code inconnu : "${code}"`, () => openModal('add',{barcode:code}));
+  // Ne pas vider pour laisser le code visible
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════════
+let toastTimer = null;
+function showToast(type, msg, createCb) {
+  const t = document.getElementById('toast');
+  t.className = `toast ${type} show`;
+  t.innerHTML = esc(msg) + (createCb ? ` <button class="toast-create" id="toastCreate">+ Créer</button>` : '');
+  if(createCb) document.getElementById('toastCreate').onclick = () => { hideToast(); createCb(); };
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, type==='warn'?6000:3000);
+}
+function hideToast() {
+  document.getElementById('toast').classList.remove('show');
+  clearTimeout(toastTimer);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MODAL PRODUIT
+// ═══════════════════════════════════════════════════════════════════
+function openModal(mode, itemOrJson) {
+  const item = typeof itemOrJson === 'string' ? JSON.parse(itemOrJson) : itemOrJson;
+  document.getElementById('modalTitle').textContent = mode==='add' ? 'Ajouter un produit' : 'Modifier le produit';
+  document.getElementById('fId').value       = item.id||'';
+  document.getElementById('fBarcode').value  = item.barcode||'';
+  document.getElementById('fName').value     = item.name||'';
+  document.getElementById('fSupplier').value = item.supplier||'';
+  document.getElementById('fQty').value      = item.qty??0;
+  document.getElementById('fMin').value      = item.minQty??1;
+  document.getElementById('fExpiry').value   = item.expiry||'';
+  document.getElementById('fLoc').value      = item.location||'';
+  document.getElementById('fNote').value     = item.note||'';
+
+  // Populate selects
+  const catSel = document.getElementById('fCat');
+  catSel.innerHTML = CATS.map(c=>`<option value="${c.id}" ${item.category===c.id?'selected':''}>${c.icon} ${c.label}</option>`).join('');
+
+  const unitSel = document.getElementById('fUnit');
+  unitSel.innerHTML = UNITS.map(u=>`<option ${item.unit===u?'selected':''}>${u}</option>`).join('');
+
+  document.getElementById('productOverlay').classList.add('open');
+}
+function closeModal() { document.getElementById('productOverlay').classList.remove('open'); }
+function saveItem() {
+  const barcode = document.getElementById('fBarcode').value.trim();
+  const name    = document.getElementById('fName').value.trim();
+  if(!barcode||!name){ alert('Code-barres et nom obligatoires.'); return; }
+
+  const item = {
+    id:       document.getElementById('fId').value || uid(),
+    barcode,  name,
+    category: document.getElementById('fCat').value,
+    qty:      Number(document.getElementById('fQty').value)||0,
+    unit:     document.getElementById('fUnit').value,
+    minQty:   Number(document.getElementById('fMin').value)||1,
+    expiry:   document.getElementById('fExpiry').value,
+    supplier: document.getElementById('fSupplier').value.trim(),
+    location: document.getElementById('fLoc').value.trim(),
+    note:     document.getElementById('fNote').value.trim(),
+  };
+
+  const list = stock[activeLab]||[];
+  const idx = list.findIndex(p=>p.id===item.id);
+  if(idx>=0) list[idx]=item; else list.push(item);
+  stock[activeLab] = list;
+
+  saveStock(); closeModal(); fullRender();
+  showToast('ok', `✓ ${item.name} enregistré`);
+}
+
+// Fermeture au clic fond
+document.getElementById('productOverlay').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeModal(); });
+document.getElementById('deleteOverlay').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeDelete(); });
+document.getElementById('cameraOverlay').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeCamera(); });
+
+// ═══════════════════════════════════════════════════════════════════
+//  CAMÉRA (BarcodeDetector API)
+// ═══════════════════════════════════════════════════════════════════
+async function openCamera() {
+  document.getElementById('cameraOverlay').classList.add('open');
+  const unsup = document.getElementById('camUnsupported');
+  if(!('BarcodeDetector' in window)){
+    unsup.style.display='block';
+    document.getElementById('camVideo').style.display='none';
+    return;
+  }
+  unsup.style.display='none';
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } });
+    const video = document.getElementById('camVideo');
+    video.srcObject = camStream;
+    video.style.display='block';
+    camDetector = new BarcodeDetector({ formats:['ean_13','ean_8','code_128','code_39','qr_code','data_matrix'] });
+    scanFrame();
+  } catch(e){
+    unsup.textContent = 'Accès caméra refusé ou indisponible : ' + e.message;
+    unsup.style.display='block';
+  }
+}
+async function scanFrame(){
+  if(!camStream) return;
+  const video = document.getElementById('camVideo');
+  if(video.readyState===video.HAVE_ENOUGH_DATA){
+    try{
+      const barcodes = await camDetector.detect(video);
+      if(barcodes.length){
+        const code = barcodes[0].rawValue;
+        closeCamera();
+        document.getElementById('scanInput').value = code;
+        handleScan();
+        return;
+      }
+    } catch{}
+  }
+  camAnimId = requestAnimationFrame(scanFrame);
+}
+function closeCamera(){
+  document.getElementById('cameraOverlay').classList.remove('open');
+  if(camAnimId){ cancelAnimationFrame(camAnimId); camAnimId=null; }
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+}
+
+function showAlertPanel() {
+  const a = allAlerts();
+  if(!a.length) return;
+  const lab = labOf(a[0].labId);
+  setLab(a[0].labId);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════
+loadStock();
+fullRender();
+</script>
+</body>
+</html>

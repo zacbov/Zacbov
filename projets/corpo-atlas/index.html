@@ -4291,13 +4291,46 @@ function getSystemForMesh(meshName) {
   // Fat attached to integumentary by default unless reproductive area
   if (lc.includes('fat')) return 'integumentary';
 
-  // ── Rattrapage : structures qui tombaient dans "Autres" ──
+  // ══ Rattrapage : structures qui tombaient dans "Autres" ══
+  /* `u` = nom sans accents, espaces → underscores. Les noms de meshes
+     mélangent français accentué et anglais : sans normalisation, les
+     motifs manquent « réseau trabéculaire », « conjonctive »… */
+  const u = lc.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g, '_');
+
   // Œil, annexes et oreille interne → nerveux (organes des sens)
-  if (/cornea|lens|pupil|iris|sclera|conjunctiv|aqueous|vitreous|ciliar|choroid|eyelid|palpebr|lacrimal|caruncle|limbus|humeur|paupi|cochlea|vestibul|tympan|ossicle|incus|malleus|stapes|semicircular|auditory/.test(lc)) return 'nervous';
-  // Séreuses et ligaments génitaux → reproducteur
-  if (/mesovarium|mesosalpinx|mesometrium|broad_ligament|ostium|isthmus|round_ligament/.test(lc)) return 'reproductive';
-  // Péritoine, mésentère, épiploon → digestif
-  if (/peritone|mesenter|omentum|epiploic|mesocolon/.test(lc)) return 'digestive';
+  if (/cornea|lens|pupil|iris|sclera|conjunctiv|aqueous|vitreous|ciliar|choroid|eyelid|palpebr|lacrimal|caruncle|limbus|humeur|paupi|fovea|fov.a|macula|schlemm|trabecul|reseau_trabec|conjonctive|corps_ciliaire|proc.s_ciliaire|corn.o|jonction_corn|cochlea|vestibul|tympan|ossicle|incus|malleus|stapes|semicircular|auditory/i.test(u)) return 'nervous';
+
+  // Noyaux gris centraux → nerveux
+  if (/noyau_caud|caudate|putamen|pallidum|striatum/i.test(u)) return 'nervous';
+
+  // Col utérin : « segment inférieur » est obstétrical, à traiter AVANT
+  // les segments hépatiques qui partagent le mot « segment »
+  if (/^segment_inferieur$|segment_inferieur_du_col|col_uterin/i.test(u)) return 'reproductive';
+
+  // Voies biliaires et pancréatiques → digestif
+  // (la bile rejoint le duodénum : ce n'est pas de l'urinaire)
+  if (/bile|biliar|biliaire|choledoch|cystic_duct|hepatic_duct|santorini|wirsung|oddi|ampulla_of_vater|pancreatic_duct/i.test(u)) return 'digestive';
+
+  // Segments et lobes hépatiques (nomenclature de Couinaud) → digestif
+  if (/segment_ant|segment_post|segment_sup|segment_inf|segment_lat|segment_med|segment_ant.ro|segment_post.ro|segment_inf.ro|segment_sup.ro|lobes_h.patiques|ligaments_.*h.patique|hepatic_segment/i.test(u)) return 'digestive';
+
+  // Anses intestinales nommées isolément
+  if (/(^|_)ileum(_|$)|(^|_)jejunum(_|$)|jejenum|(^|_)duodenum(_|$)|caecum|ileocaecal/i.test(u)) return 'digestive';
+
+  // Péritoine, mésentère, épiploon, tronc cœliaque → digestif
+  if (/peritone|mesenter|omentum|epiploic|mesocolon|coeliac|celiac|tronc_c.liaque/i.test(u)) return 'digestive';
+
+  // Séreuses, ligaments et orifices génitaux → reproducteur
+  if (/mesovarium|mesosalpinx|mesometrium|broad_ligament|ostium|isthmus|round_ligament|m.sovarium|m.sosalpinx|segment_inf.rieur|col_ut|vagin/i.test(u)) return 'reproductive';
+
+  // Gros troncs artériels et branches coronaires → circulatoire
+  if (/aortic_arch|arc_aortique|marginal_branch|branche_marginale|branche_ventriculaire|posterior_descending|circumflex/i.test(u)) return 'circulatory';
+
+  // Bronches et cartilages trachéo-bronchiques → respiratoire
+  if (/bronches|cartilages_bronch|bronchial_cartilage/i.test(u)) return 'respiratory';
+
+  // Enthèses, condyles, surfaces articulaires, rotule → squelettique
+  if (/enth.se|condyle|periostal|p.richondral|perichondral|trochlea|trocheaire|gorge_troch|intercondyl|patella|rotule|meniscus|m.nisque|cruciate|crois.e|epicondyl|.picondyl/i.test(u)) return 'skeletal';
   return null; // unknown
 }
 
@@ -4819,8 +4852,86 @@ function cleanMeshName(rawName) {
     }
   }
 
-  // Pour les suffixes _L/_R restants → G/D
+  // ── Post-traitement : termes anglais résiduels ──
+  // Le DICT fait du remplacement de sous-chaînes ; les motifs ancrés (^ $)
+  // n'y fonctionnent pas. On applique ici de vraies expressions régulières.
+  /* Expressions entières d'abord : la traduction mot à mot produit un
+     ordre incorrect en français (« cortical noyau » au lieu de « noyau
+     cortical »). Ces motifs priment sur le remplacement terme à terme. */
+  const PHRASES = [
+    [/\bamygdalohippocampal area\b/gi, 'aire amygdalo-hippocampique'],
+    [/\bamygdaloid complex\b/gi,       'complexe amygdalien'],
+    [/\bamygdaloid area\b/gi,          'aire amygdalienne'],
+    [/\bcortical nucleus\b/gi,         'noyau cortical'],
+    [/\bolfactory nucleus\b/gi,        'noyau olfactif'],
+    [/\bcaudate nucleus\b/gi,          'noyau caudé'],
+    [/\bparahippocampal gyrus\b/gi,    'gyrus parahippocampique'],
+    [/\bintermediate orbital gyrus\b/gi,'gyrus orbitaire intermédiaire'],
+    [/\borbital gyrus\b/gi,            'gyrus orbitaire'],
+    [/\btemporal gyrus\b/gi,           'gyrus temporal'],
+    [/\bfrontal gyrus\b/gi,            'gyrus frontal'],
+    [/\bcingulate gyrus\b/gi,          'gyrus cingulaire'],
+    [/\boccipital gyrus\b/gi,          'gyrus occipital'],
+    [/\bmacula lutea\b/gi,             'macula'],
+    [/\bcorpus callosum\b/gi,          'corps calleux'],
+    [/\blateral ventricle\b/gi,        'ventricule latéral'],
+    [/\bthird ventricle\b/gi,          '3e ventricule'],
+    [/\bfourth ventricle\b/gi,         '4e ventricule'],
+    [/\bcornea\b/gi, 'cornée'], [/\blens\b/gi, 'cristallin'],
+    [/\bpupil\b/gi,  'pupille'], [/\bsclera\b/gi,'sclère'],
+    [/\biris\b/gi,   'iris'],
+    [/\bileum\b/gi,  'iléon'], [/\bjej[eu]num\b/gi,'jéjunum'],
+    [/\bduodenum\b/gi,'duodénum'], [/\bcaecum\b/gi,'cæcum'],
+    [/^left\s+/i, ''], [/^right\s+/i, ''],   // « left segment » → « segment … G »
+  ];
+  PHRASES.forEach(([re, to]) => { n = n.replace(re, to); });
+
+  const RX = [
+    // Latéralité en suffixe, toutes graphies
+    [/[\s_]([lL])$/,  ' G'], [/[\s_]([rR])$/,  ' D'],
+    [/\bleft\b/gi,    'gauche'], [/\bright\b/gi,  'droit'],
+    // Directionnels restants
+    [/\banterior\b/gi,'antérieur'], [/\bposterior\b/gi,'postérieur'],
+    [/\bsuperior\b/gi,'supérieur'], [/\binferior\b/gi,'inférieur'],
+    [/\blateral\b/gi, 'latéral'],   [/\bmedial\b/gi,   'médial'],
+    [/\bmiddle\b/gi,  'moyen'],     [/\bcentral\b/gi,  'central'],
+    [/\bdeep\b/gi,    'profond'],   [/\bsuperficial\b/gi,'superficiel'],
+    [/\bupper\b/gi,   'supérieur'], [/\blower\b/gi,    'inférieur'],
+    [/\binner\b/gi,   'interne'],   [/\bouter\b/gi,    'externe'],
+    [/\binternal\b/gi,'interne'],   [/\bexternal\b/gi, 'externe'],
+    [/\bventral\b/gi, 'ventral'],   [/\bdorsal\b/gi,   'dorsal'],
+    // Vocabulaire neuro-anatomique (Allen Brain Atlas)
+    [/\bnucleus\b/gi, 'noyau'],     [/\bnuclei\b/gi,   'noyaux'],
+    [/\bgyrus\b/gi,   'gyrus'],     [/\bsulcus\b/gi,   'sillon'],
+    [/\bcortex\b/gi,  'cortex'],    [/\bcortical\b/gi, 'cortical'],
+    [/\barea\b/gi,    'aire'],      [/\bcomplex\b/gi,  'complexe'],
+    [/\bamygdaloid\b/gi,'amygdalien'],
+    [/\bparahippocampal\b/gi,'parahippocampique'],
+    [/\bhippocampal\b/gi,'hippocampique'],
+    [/\bolfactory\b/gi,'olfactif'], [/\borbital\b/gi,  'orbitaire'],
+    [/\bintermediate\b/gi,'intermédiaire'],
+    [/\btemporal\b/gi,'temporal'],  [/\bfrontal\b/gi,  'frontal'],
+    [/\bparietal\b/gi,'pariétal'],  [/\boccipital\b/gi,'occipital'],
+    [/\binsular\b/gi, 'insulaire'], [/\bcingulate\b/gi,'cingulaire'],
+    [/\bthalamic\b/gi,'thalamique'],[/\bcaudate\b/gi,  'caudé'],
+    [/\bventricle\b/gi,'ventricule'],[/\bfissure\b/gi, 'fissure'],
+    [/\blobule\b/gi,  'lobule'],    [/\blobe\b/gi,     'lobe'],
+    [/\bsegment\b/gi, 'segment'],   [/\bbranch\b/gi,   'branche'],
+    [/\bduct\b/gi,    'canal'],     [/\bvein\b/gi,     'veine'],
+    [/\bartery\b/gi,  'artère'],    [/\bnerve\b/gi,    'nerf'],
+    [/\bmuscle\b/gi,  'muscle'],    [/\bbone\b/gi,     'os'],
+    [/\bof the\b/gi,  'du'],        [/\bof\b/gi,       'de'],
+  ];
+  RX.forEach(([re, to]) => { n = n.replace(re, to); });
+
+  /* En français l'adjectif suit le nom : « Antérieur noyau cortical »
+     devient « Noyau cortical antérieur ». */
+  n = n.replace(/^(antérieur|postérieur|supérieur|inférieur|latéral|médial|moyen|profond)\s+(.+?)(\s+[GD])?$/i,
+                (m, adj, rest, side) => rest + ' ' + adj.toLowerCase() + (side || ''));
+
+  // Suffixes _L/_R isolés restants → G/D
   n = n.replace(/\bL\b/g, 'G').replace(/\bR\b/g, 'D');
+  n = n.replace(/\s{2,}/g, ' ').trim();
 
   // Capitaliser le premier caractère
   return n.charAt(0).toUpperCase() + n.slice(1);

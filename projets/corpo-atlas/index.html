@@ -52,8 +52,8 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 /* Ancré sous le bouton (et non au bord de la page) + zone tampon
    invisible au-dessus pour que le survol ne se coupe pas au passage. */
 #tb-overflow{position:relative}
-#tb-overflow-menu{position:absolute;top:calc(100% + 6px);left:0;background:var(--bg3);
-  border:.5px solid var(--border2);border-radius:8px;padding:5px;z-index:200;display:none;
+#tb-overflow-menu{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg3);
+  border:.5px solid var(--border2);border-radius:8px;padding:5px;z-index:9500;display:none;
   min-width:300px;box-shadow:0 8px 32px rgba(0,0,0,.5)}
 #tb-overflow-menu::before{content:'';position:absolute;top:-8px;left:0;right:0;height:8px}
 #tb-overflow:hover #tb-overflow-menu{display:grid;grid-template-columns:1fr 1fr;gap:3px}
@@ -427,7 +427,7 @@ kbd{font-size:14px;font-family:monospace;background:var(--bg5);border:.5px solid
     <button class="tbtn" id="btdouleur" onclick="toggleDouleur()" title="Propagation douleur">⚡ Douleur</button>
     <!-- Bouton overflow → tous les autres modes -->
     <div id="tb-overflow">
-      <button id="tb-overflow-btn" onclick="toggleOverflowMenu()" title="Tous les modes">
+      <button id="tb-overflow-btn" onclick="toggleOverflowMenu(event)" title="Tous les modes">
         ☰ <span>Modes</span>
       </button>
       <button class="tbtn" title="Fiches de sémiologie (60 conditions)"
@@ -435,6 +435,33 @@ kbd{font-size:14px;font-family:monospace;background:var(--bg5);border:.5px solid
          onclick="openFicheModal('conditions/index.html','Fiches de sémiologie')">📋 <span>Fiches</span></button>
       <span id="block-toggles" style="display:inline-flex;gap:3px;margin-left:8px;
             padding-left:8px;border-left:1px solid var(--border2)"></span>
+      <!-- Menu overflow (tous les modes supplémentaires) -->
+      <div id="tb-overflow-menu">
+      <div class="tb-overflow-section">🌀 Anatomie & Physio</div>
+      <button class="tbtn" id="btperistal" onclick="togglePeristal();closeOverflowMenu()">🌀 Péristaltisme</button>
+      <button class="tbtn" id="btlymph" onclick="toggleLymph();closeOverflowMenu()">🔗 Lymphome</button>
+      <button class="tbtn" id="btfibrose" onclick="toggleFibrose();closeOverflowMenu()">🧱 Fibrose</button>
+      <button class="tbtn" id="bttumeur" onclick="toggleTumeur();closeOverflowMenu()">🔴 Tumeur CHC</button>
+      <button class="tbtn" id="btoedeme" onclick="toggleOedeme();closeOverflowMenu()">💧 Œdèmes</button>
+      <button class="tbtn" id="btperito" onclick="togglePerito();closeOverflowMenu()">🦠 Péritonite</button>
+      <div class="tb-overflow-section">❤️ Cardiovasculaire</div>
+      <button class="tbtn" id="btdissec" onclick="toggleDissec&&toggleDissec();closeOverflowMenu()">🩸 Dissection Ao</button>
+      <button class="tbtn" id="btep" onclick="toggleEP&&toggleEP();closeOverflowMenu()">🫁 Embolie pulm.</button>
+      <button class="tbtn" id="btendo" onclick="toggleEndo&&toggleEndo();closeOverflowMenu()">🦠 Endocardite</button>
+      <div class="tb-overflow-section">🧠 Neurologie</div>
+      <button class="tbtn" id="btavc" onclick="toggleAVC&&toggleAVC();closeOverflowMenu()">🧠 AVC</button>
+      <button class="tbtn" id="btmeningite" onclick="toggleMeningite&&toggleMeningite();closeOverflowMenu()">💉 Méningite</button>
+      <button class="tbtn" id="btgb" onclick="toggleGB&&toggleGB();closeOverflowMenu()">⚡ Guillain-Barré</button>
+      <button class="tbtn" id="btalzheimer" onclick="toggleAlzheimer&&toggleAlzheimer();closeOverflowMenu()">🧩 Alzheimer</button>
+      <div class="tb-overflow-section">🫁 Pneumo & Endocrino</div>
+      <button class="tbtn" id="btpno" onclick="togglePNO&&togglePNO();closeOverflowMenu()">💨 Pneumothorax</button>
+      <button class="tbtn" id="btbpco" onclick="toggleBPCO&&toggleBPCO();closeOverflowMenu()">🫧 BPCO</button>
+      <button class="tbtn" id="btretino" onclick="toggleRetino&&toggleRetino();closeOverflowMenu()">👁 Rétinopathie</button>
+      <button class="tbtn" id="btsopk" onclick="toggleSOPK&&toggleSOPK();closeOverflowMenu()">🌸 SOPK</button>
+      <div class="tb-overflow-section">🔮 Psychiatrie</div>
+      <button class="tbtn" id="btdopa" onclick="toggleDopa&&toggleDopa();closeOverflowMenu()">🔮 Schizophrénie</button>
+      <button class="tbtn" id="btlimbic" onclick="toggleLimbic&&toggleLimbic();closeOverflowMenu()">💙 Dépression</button>
+      </div>
     </div>
   </div>
 
@@ -447,33 +474,6 @@ kbd{font-size:14px;font-family:monospace;background:var(--bg5);border:.5px solid
   </div>
 </div>
 
-<!-- Menu overflow (tous les modes supplémentaires) -->
-<div id="tb-overflow-menu">
-  <div class="tb-overflow-section">🌀 Anatomie & Physio</div>
-  <button class="tbtn" id="btperistal" onclick="togglePeristal();closeOverflowMenu()">🌀 Péristaltisme</button>
-  <button class="tbtn" id="btlymph" onclick="toggleLymph();closeOverflowMenu()">🔗 Lymphome</button>
-  <button class="tbtn" id="btfibrose" onclick="toggleFibrose();closeOverflowMenu()">🧱 Fibrose</button>
-  <button class="tbtn" id="bttumeur" onclick="toggleTumeur();closeOverflowMenu()">🔴 Tumeur CHC</button>
-  <button class="tbtn" id="btoedeme" onclick="toggleOedeme();closeOverflowMenu()">💧 Œdèmes</button>
-  <button class="tbtn" id="btperito" onclick="togglePerito();closeOverflowMenu()">🦠 Péritonite</button>
-  <div class="tb-overflow-section">❤️ Cardiovasculaire</div>
-  <button class="tbtn" id="btdissec" onclick="toggleDissec&&toggleDissec();closeOverflowMenu()">🩸 Dissection Ao</button>
-  <button class="tbtn" id="btep" onclick="toggleEP&&toggleEP();closeOverflowMenu()">🫁 Embolie pulm.</button>
-  <button class="tbtn" id="btendo" onclick="toggleEndo&&toggleEndo();closeOverflowMenu()">🦠 Endocardite</button>
-  <div class="tb-overflow-section">🧠 Neurologie</div>
-  <button class="tbtn" id="btavc" onclick="toggleAVC&&toggleAVC();closeOverflowMenu()">🧠 AVC</button>
-  <button class="tbtn" id="btmeningite" onclick="toggleMeningite&&toggleMeningite();closeOverflowMenu()">💉 Méningite</button>
-  <button class="tbtn" id="btgb" onclick="toggleGB&&toggleGB();closeOverflowMenu()">⚡ Guillain-Barré</button>
-  <button class="tbtn" id="btalzheimer" onclick="toggleAlzheimer&&toggleAlzheimer();closeOverflowMenu()">🧩 Alzheimer</button>
-  <div class="tb-overflow-section">🫁 Pneumo & Endocrino</div>
-  <button class="tbtn" id="btpno" onclick="togglePNO&&togglePNO();closeOverflowMenu()">💨 Pneumothorax</button>
-  <button class="tbtn" id="btbpco" onclick="toggleBPCO&&toggleBPCO();closeOverflowMenu()">🫧 BPCO</button>
-  <button class="tbtn" id="btretino" onclick="toggleRetino&&toggleRetino();closeOverflowMenu()">👁 Rétinopathie</button>
-  <button class="tbtn" id="btsopk" onclick="toggleSOPK&&toggleSOPK();closeOverflowMenu()">🌸 SOPK</button>
-  <div class="tb-overflow-section">🔮 Psychiatrie</div>
-  <button class="tbtn" id="btdopa" onclick="toggleDopa&&toggleDopa();closeOverflowMenu()">🔮 Schizophrénie</button>
-  <button class="tbtn" id="btlimbic" onclick="toggleLimbic&&toggleLimbic();closeOverflowMenu()">💙 Dépression</button>
-</div>
 
 <div id="workspace" role="main">
 
@@ -4295,7 +4295,7 @@ function getSystemForMesh(meshName) {
   /* `u` = nom sans accents, espaces → underscores. Les noms de meshes
      mélangent français accentué et anglais : sans normalisation, les
      motifs manquent « réseau trabéculaire », « conjonctive »… */
-  const u = lc.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g, '_');
+  const u = lc.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[\s-]+/g, '_');
 
   // Œil, annexes et oreille interne → nerveux (organes des sens)
   if (/cornea|lens|pupil|iris|sclera|conjunctiv|aqueous|vitreous|ciliar|choroid|eyelid|palpebr|lacrimal|caruncle|limbus|humeur|paupi|fovea|fov.a|macula|schlemm|trabecul|reseau_trabec|conjonctive|corps_ciliaire|proc.s_ciliaire|corn.o|jonction_corn|cochlea|vestibul|tympan|ossicle|incus|malleus|stapes|semicircular|auditory/i.test(u)) return 'nervous';
@@ -4328,6 +4328,23 @@ function getSystemForMesh(meshName) {
 
   // Bronches et cartilages trachéo-bronchiques → respiratoire
   if (/bronches|cartilages_bronch|bronchial_cartilage/i.test(u)) return 'respiratory';
+
+  // Utérus, trompes, ovaires et leurs ligaments → reproducteur
+  if (/uterus|uterin|ut.rus|ut.rin|myometr|endometr|fallopian|uterine_tube|trompes|ovaire|ovarian|ligament_large|suspensory_ligament_of_ovary/i.test(u)) return 'reproductive';
+
+  // Bronches, carène et cartilages trachéo-bronchiques → respiratoire
+  if (/bronchus|bronchi|bronches|carina|cartilage_of_trachea|tracheal_cartilage|bronchopulmonary/i.test(u)) return 'respiratory';
+
+  // Lobes, hiles, ligaments et ampoules hépatobiliaires → digestif
+  if (/caudate_lobe|quadrate_lobe|left_medial_lobe|left_lateral_lobe|right_lobe_of_liver|lobes_hepatiques|hilum_of_liver|hile_h.patique|ligaments_.*hepatique|hepatopancreatic_ampulla|duodenal_ampulla|sphincter_of_hept|ampoule_h.patopancr/i.test(u)) return 'digestive';
+
+  // Branches ventriculaires et coronaires → circulatoire
+  if (/branche_ventriculaire|ventricular_branch|posterior_ventricular|interventricular|papillary_muscle_of_heart/i.test(u)) return 'circulatory';
+
+  /* Segments rénaux (nomenclature vasculaire du rein) → urinaire.
+     Ces noms ne contiennent ni « kidney » ni « renal », d'où leur chute
+     dans « Autres ». À traiter APRÈS les segments hépatiques. */
+  if (/segment_(antero|postero|supero|infero|anterolat)/i.test(u)) return 'urinary';
 
   // Enthèses, condyles, surfaces articulaires, rotule → squelettique
   if (/enth.se|condyle|periostal|p.richondral|perichondral|trochlea|trocheaire|gorge_troch|intercondyl|patella|rotule|meniscus|m.nisque|cruciate|crois.e|epicondyl|.picondyl/i.test(u)) return 'skeletal';
@@ -4883,6 +4900,7 @@ function cleanMeshName(rawName) {
     [/\bileum\b/gi,  'iléon'], [/\bjej[eu]num\b/gi,'jéjunum'],
     [/\bduodenum\b/gi,'duodénum'], [/\bcaecum\b/gi,'cæcum'],
     [/^left\s+/i, ''], [/^right\s+/i, ''],   // « left segment » → « segment … G »
+    [/^gauche\s+/i, ''], [/^droit\s+/i, ''],
   ];
   PHRASES.forEach(([re, to]) => { n = n.replace(re, to); });
 
@@ -11735,7 +11753,8 @@ function lerpHex2(c1,c2,t){
 ══════════════════════════════════════════════════════ */
 
 /* ─── Overflow menu ─── */
-function toggleOverflowMenu(){
+function toggleOverflowMenu(ev){
+  if(ev && ev.stopPropagation) ev.stopPropagation();
   const m=document.getElementById('tb-overflow-menu');
   if(m) m.classList.toggle('on');
 }
@@ -11743,10 +11762,13 @@ function closeOverflowMenu(){
   const m=document.getElementById('tb-overflow-menu');
   if(m) m.classList.remove('on');
 }
+/* Fermeture au clic extérieur — en phase de capture désactivée et avec
+   stopPropagation côté bouton, sinon le même clic ouvrait puis refermait
+   aussitôt le menu. */
 document.addEventListener('click', e=>{
-  const btn=document.getElementById('tb-overflow-btn');
+  const wrap=document.getElementById('tb-overflow');
   const menu=document.getElementById('tb-overflow-menu');
-  if(menu&&btn&&!menu.contains(e.target)&&!btn.contains(e.target)){
+  if(menu && wrap && !wrap.contains(e.target)){
     menu.classList.remove('on');
   }
 });

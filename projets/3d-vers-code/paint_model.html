@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Peindre un modele Three.js</title>
+<style>
+:root{--bg:#07090c;--bg2:#0d1018;--bg3:#141720;--bg4:#1c2030;--border:rgba(255,255,255,.08);--text:#e2ded8;--text2:#8a887f;--text3:#4a4845;--acc:#7ecfa8;--warn:#d4b870}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100%}
+#topbar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
+#topbar h1{font-size:14px;font-weight:700;margin-right:6px}
+#topbar h1 em{color:var(--acc);font-style:normal}
+.btn{background:var(--bg4);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:11.5px;cursor:pointer}
+.btn:hover{border-color:var(--acc)}
+.btn.primary{background:var(--acc);color:#04120b;border:none;font-weight:700}
+.btn.active{background:var(--acc);color:#04120b;border-color:var(--acc)}
+#toolGroup{display:flex;gap:4px;background:var(--bg3);padding:3px;border-radius:8px}
+.sep{width:1px;height:22px;background:var(--border);margin:0 4px}
+#colorInput{width:34px;height:30px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;padding:0}
+.palette{display:flex;gap:4px}
+.swatch{width:20px;height:20px;border-radius:5px;border:1px solid rgba(255,255,255,.25);cursor:pointer}
+#brushSizeWrap{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+#brushSize{width:90px;accent-color:var(--acc)}
+#status{margin-left:auto;font-size:10.5px;color:var(--text3);max-width:320px;text-align:right}
+#workspace{flex:1;position:relative;min-height:0}
+#viewer-canvas{width:100%;height:100%;display:block;background:#0c0f18}
+#empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);font-size:12px;text-align:center;gap:10px;pointer-events:none}
+#empty-hint svg{opacity:.4}
+#fileinput{display:none}
+#brushCursor{position:absolute;border:2px solid var(--acc);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);opacity:0;display:none}
+#treepanel{position:absolute;top:8px;right:8px;background:rgba(13,16,24,.9);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:10.5px;color:var(--text2);max-width:220px;max-height:40vh;overflow:auto}
+#treepanel .item{padding:2px 0;cursor:pointer;border-radius:4px;padding-left:4px}
+#treepanel .item:hover{background:var(--bg4)}
+#treepanel .item.sel{color:var(--acc);font-weight:700}
+#toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--bg4);border:1px solid var(--border);padding:6px 16px;border-radius:20px;font-size:11px;color:var(--acc);opacity:0;transition:.25s;pointer-events:none;z-index:20}
+#toast.show{opacity:1}
+#hexPickerBtn{width:30px;height:30px;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:var(--bg4);font-size:13px;color:var(--text2)}
+#hexPopover{position:absolute;top:46px;z-index:30;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px;display:none;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+#hexPopover.show{display:block}
+#svCanvas{border-radius:6px;cursor:crosshair;display:block}
+#hueCanvas{border-radius:6px;cursor:crosshair;display:block;margin-top:8px}
+#hexRow{display:flex;align-items:center;gap:6px;margin-top:8px}
+#hexRow label{font-size:10px;color:var(--text3)}
+#hexTextInput{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:12px;padding:4px 6px;font-family:Consolas,monospace}
+#hexSwatchPreview{width:22px;height:22px;border-radius:5px;border:1px solid var(--border)}
+#transformPanel{position:absolute;bottom:8px;left:8px;background:rgba(13,16,24,.95);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);display:none;width:230px}
+#transformPanel.show{display:block}
+#transformPanel h3{font-size:11.5px;color:var(--text);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+#transformPanel h3 button{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px}
+.tf-row{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.tf-row label{width:14px;color:var(--text3);font-size:10px}
+.tf-row input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;padding:3px 5px}
+.tf-group-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 3px}
+#deleteMeshBtn{width:100%;margin-top:8px;background:rgba(200,64,64,.15);border:1px solid rgba(200,64,64,.4);color:#e08080}
+#deleteMeshBtn:hover{background:rgba(200,64,64,.3)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <h1>Peindre <em>Three.js</em></h1>
+    <button class="btn primary" id="loadBtn">Charger un/des modele(s)</button>
+    <input type="file" id="fileinput" accept=".js,.glb,.gltf" multiple>
+    <button class="btn" id="clearSceneBtn" title="Retire tous les fichiers charges">Vider la scene</button>
+    <div class="sep"></div>
+    <div id="toolGroup">
+      <button class="btn active" id="toolBucket" title="Pot de peinture — remplit tout un materiau">🪣 Pot</button>
+      <button class="btn" id="toolBrush" title="Pinceau — peint des couleurs de vertex localement">🖌️ Pinceau</button>
+      <button class="btn" id="toolEyedrop" title="Pipette — recupere une couleur du modele">💧 Pipette</button>
+      <button class="btn" id="toolSelect" title="Selection — deplacer, redimensionner, supprimer un maillage">🖱️ Selection</button>
+    </div>
+    <input type="color" id="colorInput" value="#e06060">
+    <div style="position:relative">
+      <button id="hexPickerBtn" title="Palette hexadecimale">#</button>
+      <div id="hexPopover">
+        <canvas id="svCanvas" width="160" height="120"></canvas>
+        <canvas id="hueCanvas" width="160" height="14"></canvas>
+        <div id="hexRow">
+          <div id="hexSwatchPreview"></div>
+          <label>#</label>
+          <input type="text" id="hexTextInput" maxlength="6" value="E06060">
+        </div>
+      </div>
+    </div>
+    <div class="palette" id="palette"></div>
+    <div id="brushSizeWrap" style="display:none">
+      <span>Taille</span>
+      <input type="range" id="brushSize" min="2" max="60" value="16">
+    </div>
+    <div class="sep"></div>
+    <button class="btn" id="resetBtn" title="Retire toute couleur ajoutee">Reinitialiser couleurs</button>
+    <button class="btn" id="undoBtn" title="Annuler la derniere action">Annuler</button>
+    <div class="sep"></div>
+    <button class="btn" id="copyBtn">Copier le code</button>
+    <button class="btn primary" id="downloadBtn">Telecharger .js</button>
+    <span id="status"></span>
+  </div>
+  <div id="workspace">
+    <canvas id="viewer-canvas"></canvas>
+    <div id="empty-hint">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1"><circle cx="20" cy="20" r="16"/><path d="M12 22c2 6 6 8 10 6s6-8 2-12-10-2-12 6z"/></svg>
+      <div>Charge un ou plusieurs fichiers <code>_threejs.js</code> ou <code>.glb</code><br>(selection multiple = assembles dans la meme scene)<br>puis choisis le pot ou le pinceau</div>
+    </div>
+    <div id="treepanel" style="display:none"></div>
+    <div id="transformPanel">
+      <h3><span>Maillage selectionne</span><button id="closeTransform">✕</button></h3>
+      <input type="text" id="tf-name" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--acc);font-size:11px;padding:4px 6px;margin-bottom:6px">
+      <div class="tf-group-label">Position</div>
+      <div class="tf-row"><label>X</label><input type="number" step="0.01" id="tfPosX"></div>
+      <div class="tf-row"><label>Y</label><input type="number" step="0.01" id="tfPosY"></div>
+      <div class="tf-row"><label>Z</label><input type="number" step="0.01" id="tfPosZ"></div>
+      <div class="tf-group-label">Echelle</div>
+      <div class="tf-row"><label>X</label><input type="number" step="0.01" id="tfScaleX"></div>
+      <div class="tf-row"><label>Y</label><input type="number" step="0.01" id="tfScaleY"></div>
+      <div class="tf-row"><label>Z</label><input type="number" step="0.01" id="tfScaleZ"></div>
+      <div class="tf-group-label">Rotation (deg)</div>
+      <div class="tf-row"><label>X</label><input type="number" step="1" id="tfRotX"></div>
+      <div class="tf-row"><label>Y</label><input type="number" step="1" id="tfRotY"></div>
+      <div class="tf-row"><label>Z</label><input type="number" step="1" id="tfRotZ"></div>
+      <button class="btn" id="duplicateMeshBtn" style="width:100%;margin-top:8px">⎘ Dupliquer ce maillage</button>
+      <button class="btn" id="deleteMeshBtn">🗑 Supprimer ce maillage</button>
+    </div>
+  </div>
+</div>
+<div id="brushCursor"></div>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+<script>
+'use strict';
+
+// Shared Draco decoder — GLB files compressed with KHR_draco_mesh_compression
+// (e.g. via a compress-glb.sh / gltf-transform draco pipeline) need this to
+// decode mesh geometry. Decoder files are fetched lazily from Google's CDN
+// only when an actual Draco-compressed file is loaded.
+var _dracoLoader = null;
+function getDracoLoader(){
+  if(!_dracoLoader && typeof THREE.DRACOLoader === 'function'){
+    _dracoLoader = new THREE.DRACOLoader();
+    _dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+    _dracoLoader.setDecoderConfig({ type: 'js' });
+  }
+  return _dracoLoader;
+}
+function createGLTFLoader(){
+  var loader = new THREE.GLTFLoader();
+  var draco = getDracoLoader();
+  if(draco) loader.setDRACOLoader(draco);
+  return loader;
+}
+// Global safety net: an uncaught error anywhere in this file would otherwise
+// silently stop ALL subsequent top-level script execution (lighting setup,
+// tool wiring, export buttons...), which is very hard to diagnose from the
+// outside. Surface it visibly instead of failing silently.
+window.addEventListener('error', function(e){
+  console.error('Erreur non interceptee:', e.error || e.message);
+  try{
+    var el = document.getElementById('status') || document.getElementById('stats');
+    if(el) el.textContent = 'Erreur JS : ' + (e.message || 'voir la console (F12)');
+  }catch(_){}
+});
+window.addEventListener('unhandledrejection', function(e){
+  console.error('Promesse rejetee non interceptee:', e.reason);
+});
+
+/* ---------------- Scene setup ---------------- */
+var canvas = document.getElementById('viewer-canvas');
+var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0c0f18);
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+var hemi = new THREE.HemisphereLight(0xddeeff, 0x332922, 0.7); scene.add(hemi);
+var d1 = new THREE.DirectionalLight(0xffeedd, 1.15); d1.position.set(2,3,3); scene.add(d1);
+var d2 = new THREE.DirectionalLight(0x8899cc, 0.6); d2.position.set(-3,-1,-2); scene.add(d2);
+var d3 = new THREE.DirectionalLight(0xffffff, 0.4); d3.position.set(0,-2,3); scene.add(d3);
+
+var camera = new THREE.PerspectiveCamera(40, 1, 0.001, 5000);
+camera.position.set(0,0,3);
+var controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+
+// NOTE: we deliberately do NOT use a PMREMGenerator-based environment map
+// here. It kept leaving the renderer in a bad state (rendering to the wrong
+// target) on some GPU/driver combinations, making the whole canvas look
+// unlit regardless of file. Plain lights are less "physically perfect" for
+// fully metallic materials but are 100% reliable — that trade-off wins.
+
+function resize(){
+  var W = canvas.clientWidth, H = canvas.clientHeight;
+  if(!W || !H) return;
+  renderer.setSize(W, H, false);
+  camera.aspect = W/H; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+(function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+
+/* ---------------- Model loading ---------------- */
+// sceneRoot persists for the whole session: every loaded file is added as a
+// named sub-group under it instead of replacing what's already there, so
+// multiple files can be assembled together in the same scene.
+var sceneRoot = new THREE.Group();
+sceneRoot.name = 'Scene';
+scene.add(sceneRoot);
+var currentModel = sceneRoot; // export/tree/select always operate on sceneRoot
+var currentFilename = 'scene_assemblee';
+var loadedSourceCount = 0;
+var meshList = []; // { mesh, name }
+
+function fitCameraToModel(model){
+  var box = new THREE.Box3().setFromObject(model);
+  var size = box.getSize(new THREE.Vector3());
+  var center = box.getCenter(new THREE.Vector3());
+  var maxDim = Math.max(size.x, size.y, size.z) || 1;
+  var fov = camera.fov * (Math.PI/180);
+  var dist = (maxDim/2) / Math.tan(fov/2) * 1.7;
+  camera.position.set(center.x, center.y, center.z + dist);
+  controls.target.copy(center);
+  controls.update();
+}
+
+function buildModelFromCode(code){
+  var factory = new Function('THREE', code + '\n;return createModel();');
+  return factory(THREE);
+}
+
+function collectMeshes(model){
+  meshList = [];
+  model.traverse(function(o){ if(o.isMesh) meshList.push({ mesh:o, name:o.name||'mesh' }); });
+}
+
+var treeFilterText = '';
+var checkedMeshIdxSet = new Set(); // persists across re-renders (unlike raw DOM checkbox state)
+
+function renderTreePanel(){
+  var panel = document.getElementById('treepanel');
+  if(meshList.length === 0){ panel.style.display='none'; return; }
+  panel.style.display='block';
+
+  var filter = treeFilterText.trim().toLowerCase();
+  var visibleIndices = meshList.map(function(m,i){ return i; })
+    .filter(function(i){ return !filter || meshList[i].name.toLowerCase().indexOf(filter) !== -1; });
+
+  panel.innerHTML =
+    '<div style="color:var(--text3);margin-bottom:4px;">'+meshList.length+' mesh(es) — clic = surligner, case = multi-selection</div>' +
+    '<input type="text" id="treeFilter" placeholder="Filtrer par nom..." value="'+escapeHtml(treeFilterText)+'" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10.5px;padding:4px 6px;margin-bottom:6px">' +
+    '<div style="display:flex;gap:4px;margin-bottom:6px">' +
+      '<button class="btn" id="selAllBtn" style="flex:1;padding:3px 4px;font-size:9.5px">Tout ('+visibleIndices.length+')</button>' +
+      '<button class="btn" id="selNoneBtn" style="flex:1;padding:3px 4px;font-size:9.5px">Aucun</button>' +
+      '<button class="btn" id="selInvBtn" style="flex:1;padding:3px 4px;font-size:9.5px">Inverser</button>' +
+    '</div>' +
+    visibleIndices.map(function(i){
+      var checked = checkedMeshIdxSet.has(i) ? ' checked' : '';
+      return '<div class="item"><input type="checkbox" class="item-check" data-i="'+i+'"'+checked+' style="margin-right:4px;vertical-align:middle"><span class="item-label" data-i="'+i+'">'+escapeHtml(meshList[i].name)+'</span></div>';
+    }).join('') +
+    (visibleIndices.length === 0 ? '<div style="color:var(--text3);padding:6px 0">Aucun resultat</div>' : '') +
+    '<div style="display:flex;gap:4px;margin-top:8px">' +
+      '<button class="btn" id="groupSelBtn" style="flex:1;padding:4px 6px;font-size:10px">Grouper</button>' +
+      '<button class="btn" id="dupSelBtn" style="flex:1;padding:4px 6px;font-size:10px">Dupliquer</button>' +
+    '</div>' +
+    '<button class="btn" id="paintSelBtn" style="width:100%;margin-top:4px;padding:4px 6px;font-size:10px">🪣 Peindre la selection (couleur active)</button>' +
+    '<button class="btn" id="deleteSelBtn" style="width:100%;margin-top:4px;padding:4px 6px;font-size:10px;color:#e08080">🗑 Supprimer la selection</button>';
+
+  Array.prototype.forEach.call(panel.querySelectorAll('.item-label'), function(el){
+    el.addEventListener('click', function(){
+      var i = parseInt(el.getAttribute('data-i'),10);
+      flashMesh(meshList[i].mesh);
+      selectMesh(meshList[i].mesh);
+    });
+  });
+  Array.prototype.forEach.call(panel.querySelectorAll('.item-check'), function(cb){
+    cb.addEventListener('change', function(){
+      var i = parseInt(cb.getAttribute('data-i'),10);
+      if(cb.checked) checkedMeshIdxSet.add(i); else checkedMeshIdxSet.delete(i);
+    });
+  });
+  document.getElementById('treeFilter').addEventListener('input', function(e){
+    treeFilterText = e.target.value;
+    renderTreePanel();
+    var f = document.getElementById('treeFilter');
+    f.focus(); f.selectionStart = f.selectionEnd = f.value.length;
+  });
+  document.getElementById('selAllBtn').addEventListener('click', function(){
+    visibleIndices.forEach(function(i){ checkedMeshIdxSet.add(i); });
+    renderTreePanel();
+  });
+  document.getElementById('selNoneBtn').addEventListener('click', function(){
+    visibleIndices.forEach(function(i){ checkedMeshIdxSet.delete(i); });
+    renderTreePanel();
+  });
+  document.getElementById('selInvBtn').addEventListener('click', function(){
+    visibleIndices.forEach(function(i){
+      if(checkedMeshIdxSet.has(i)) checkedMeshIdxSet.delete(i); else checkedMeshIdxSet.add(i);
+    });
+    renderTreePanel();
+  });
+  document.getElementById('groupSelBtn').addEventListener('click', groupCheckedMeshes);
+  document.getElementById('dupSelBtn').addEventListener('click', duplicateCheckedMeshes);
+  document.getElementById('paintSelBtn').addEventListener('click', paintCheckedMeshes);
+  document.getElementById('deleteSelBtn').addEventListener('click', deleteCheckedMeshes);
+}
+function checkedMeshIndices(){
+  return Array.from(checkedMeshIdxSet).filter(function(i){ return meshList[i]; });
+}
+function escapeHtml(s){ return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+
+function paintCheckedMeshes(){
+  var idxs = checkedMeshIndices();
+  if(idxs.length === 0){ showToast('Coche au moins un maillage'); return; }
+  idxs.forEach(function(i){
+    var mat = meshList[i].mesh.material;
+    mat.color.copy(currentColor);
+    if(mat.vertexColors) mat.vertexColors = false;
+  });
+  showToast(idxs.length + ' maillage(s) peint(s)');
+}
+
+function deleteCheckedMeshes(){
+  var idxs = checkedMeshIndices();
+  if(idxs.length === 0){ showToast('Coche au moins un maillage'); return; }
+  if(!confirm('Supprimer definitivement ' + idxs.length + ' maillage(s) ?')) return;
+  var removed = idxs.map(function(i){
+    var mesh = meshList[i].mesh;
+    return { mesh: mesh, parent: mesh.parent };
+  });
+  removed.forEach(function(r){ r.parent.remove(r.mesh); });
+  pushHistory(function(){
+    removed.forEach(function(r){ r.parent.add(r.mesh); });
+    collectMeshes(currentModel); renderTreePanel();
+  });
+  checkedMeshIdxSet.clear();
+  deselectMesh();
+  collectMeshes(currentModel);
+  renderTreePanel();
+  showToast(removed.length + ' maillage(s) supprime(s)');
+}
+
+function flashMesh(mesh){
+  var orig = mesh.material.emissive ? mesh.material.emissive.getHex() : null;
+  if(mesh.material.emissive){
+    mesh.material.emissive.setHex(0x336633);
+    setTimeout(function(){ mesh.material.emissive.setHex(orig); }, 500);
+  }
+}
+
+function loadFromJsCode(code, filename){
+  var model;
+  try{
+    model = buildModelFromCode(code);
+  }catch(e){
+    showToast('Erreur a l\'execution du code : ' + e.message);
+    console.error(e);
+    return;
+  }
+  addModelToScene(model, filename);
+}
+
+// Wraps an incoming model in a named container and adds it under sceneRoot,
+// keeping whatever was already loaded intact (multi-file assembly).
+function addModelToScene(model, filename){
+  model.name = model.name || filename.replace(/\.[^.]+$/, '');
+  sceneRoot.add(model);
+  loadedSourceCount++;
+  fitCameraToModel(sceneRoot);
+  collectMeshes(sceneRoot);
+  renderTreePanel();
+  document.getElementById('empty-hint').style.display = 'none';
+  showToast('Ajoute a la scene : ' + filename + ' (' + loadedSourceCount + ' fichier(s) au total)');
+}
+
+function clearScene(){
+  while(sceneRoot.children.length) sceneRoot.remove(sceneRoot.children[0]);
+  loadedSourceCount = 0;
+  meshList = [];
+  actionHistory = [];
+  checkedMeshIdxSet.clear();
+  treeFilterText = '';
+  deselectMesh();
+  renderTreePanel();
+  document.getElementById('empty-hint').style.display = 'flex';
+  showToast('Scene videe');
+}
+document.getElementById('clearSceneBtn').addEventListener('click', function(){
+  if(sceneRoot.children.length && !confirm('Vider toute la scene (tous les fichiers charges) ?')) return;
+  clearScene();
+});
+
+function loadGlb(file){
+  return new Promise(function(resolve){
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var loader = createGLTFLoader();
+      loader.parse(ev.target.result, '', function(gltf){
+        addModelToScene(gltf.scene, file.name);
+        resolve();
+      }, function(err){ showToast('Erreur de parsing GLB : ' + file.name); console.error(err); resolve(); });
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+function loadJsFile(file){
+  return new Promise(function(resolve){
+    var reader = new FileReader();
+    reader.onload = function(ev){ loadFromJsCode(ev.target.result, file.name); resolve(); };
+    reader.readAsText(file);
+  });
+}
+
+document.getElementById('loadBtn').addEventListener('click', function(){
+  document.getElementById('fileinput').click();
+});
+document.getElementById('fileinput').addEventListener('change', function(e){
+  var files = Array.prototype.slice.call(e.target.files);
+  if(!files.length) return;
+  // Load sequentially so each addModelToScene() call sees the scene state
+  // left by the previous file (matters for camera framing / status text).
+  (function next(i){
+    if(i >= files.length){ e.target.value = ''; return; }
+    var file = files[i];
+    var p = /\.(glb|gltf)$/i.test(file.name) ? loadGlb(file) : loadJsFile(file);
+    p.then(function(){ next(i+1); });
+  })(0);
+});
+
+/* ---------------- Toast ---------------- */
+var toastTimer = null;
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 1800);
+}
+function setStatus(msg){ document.getElementById('status').textContent = msg; }
+
+/* ---------------- Tools ---------------- */
+var currentTool = 'bucket'; // 'bucket' | 'brush' | 'eyedrop'
+var currentColor = new THREE.Color(0xe06060);
+document.getElementById('colorInput').addEventListener('input', function(e){
+  currentColor.set(e.target.value);
+});
+
+var palette = ['#e06060','#e8a050','#d4b870','#7ecfa8','#7eb8d4','#8080e0','#c860c8','#ffffff','#333333'];
+var paletteEl = document.getElementById('palette');
+palette.forEach(function(hex){
+  var sw = document.createElement('div');
+  sw.className = 'swatch';
+  sw.style.background = hex;
+  sw.addEventListener('click', function(){
+    currentColor.set(hex);
+    var ci = document.getElementById('colorInput');
+    ci.value = hex;
+    ci.dispatchEvent(new Event('input'));
+  });
+  paletteEl.appendChild(sw);
+});
+
+function setTool(tool){
+  currentTool = tool;
+  ['toolBucket','toolBrush','toolEyedrop','toolSelect'].forEach(function(id){
+    document.getElementById(id).classList.toggle('active', id === 'tool'+tool.charAt(0).toUpperCase()+tool.slice(1));
+  });
+  document.getElementById('brushSizeWrap').style.display = (tool === 'brush') ? 'flex' : 'none';
+  document.getElementById('brushCursor').style.display = (tool === 'brush') ? 'block' : 'none';
+}
+document.getElementById('toolBucket').addEventListener('click', function(){ setTool('bucket'); });
+document.getElementById('toolBrush').addEventListener('click', function(){ setTool('brush'); });
+document.getElementById('toolEyedrop').addEventListener('click', function(){ setTool('eyedrop'); });
+document.getElementById('toolSelect').addEventListener('click', function(){ setTool('select'); });
+
+var brushRadiusPx = 16;
+document.getElementById('brushSize').addEventListener('input', function(e){
+  brushRadiusPx = parseInt(e.target.value, 10);
+});
+
+/* ---------------- History (undo) ---------------- */
+var actionHistory = [];
+function pushHistory(undoFn){
+  actionHistory.push(undoFn);
+  if(actionHistory.length > 60) actionHistory.shift();
+}
+document.getElementById('undoBtn').addEventListener('click', function(){
+  var fn = actionHistory.pop();
+  if(fn){ fn(); showToast('Action annulee'); }
+  else showToast('Rien a annuler');
+});
+
+/* ---------------- Raycasting helpers ---------------- */
+var raycaster = new THREE.Raycaster();
+var mouseNdc = new THREE.Vector2();
+function ndcFromEvent(e){
+  var rect = canvas.getBoundingClientRect();
+  mouseNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouseNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+}
+function intersectModel(e){
+  if(!currentModel) return null;
+  ndcFromEvent(e);
+  raycaster.setFromCamera(mouseNdc, camera);
+  var hits = raycaster.intersectObject(currentModel, true);
+  return hits.length ? hits[0] : null;
+}
+
+/* ---------------- Bucket tool: fills a whole material's color ---------------- */
+function applyBucket(hit){
+  var mesh = hit.object;
+  if(!mesh.isMesh) return;
+  var mat = mesh.material;
+  var prevColor = mat.color.clone();
+  var prevVC = mat.vertexColors;
+  mat.color.copy(currentColor);
+  // If this mesh currently relies on vertex colors, disable them so the
+  // flat fill actually shows (otherwise vertex color would multiply it away).
+  if(mat.vertexColors) mat.vertexColors = false;
+  pushHistory(function(){ mat.color.copy(prevColor); mat.vertexColors = prevVC; });
+  setStatus('Pot applique sur "' + (mesh.name||'mesh') + '"');
+}
+
+/* ---------------- Eyedropper ---------------- */
+function applyEyedrop(hit){
+  var mesh = hit.object;
+  if(!mesh.isMesh) return;
+  var hex = '#' + mesh.material.color.getHexString();
+  currentColor.set(hex);
+  var ci = document.getElementById('colorInput');
+  ci.value = hex;
+  ci.dispatchEvent(new Event('input'));
+  setStatus('Couleur recuperee sur "' + (mesh.name||'mesh') + '"');
+}
+
+/* ---------------- Brush tool: paints vertex colors near the hit point ---------------- */
+function ensureVertexColors(mesh){
+  var geom = mesh.geometry;
+  if(!geom.attributes.color){
+    var count = geom.attributes.position.count;
+    var arr = new Float32Array(count * 3).fill(1); // start white so painting shows true hue
+    geom.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+  }
+  if(!mesh.material.vertexColors){
+    mesh.material.vertexColors = THREE.VertexColors;
+    mesh.material.needsUpdate = true;
+    // A flat white base color multiplies cleanly with vertex colors.
+    mesh.material.color.set(0xffffff);
+  }
+}
+
+function applyBrush(hit){
+  var mesh = hit.object;
+  if(!mesh.isMesh) return;
+  ensureVertexColors(mesh);
+  var geom = mesh.geometry;
+  var posAttr = geom.attributes.position;
+  var colorAttr = geom.attributes.color;
+
+  // Convert brush radius from screen pixels to world units at the hit distance.
+  var dist = camera.position.distanceTo(hit.point);
+  var vFov = camera.fov * Math.PI/180;
+  var worldPerPixel = (2 * Math.tan(vFov/2) * dist) / canvas.clientHeight;
+  var radiusWorld = brushRadiusPx * worldPerPixel;
+
+  var localPoint = mesh.worldToLocal(hit.point.clone());
+  var v = new THREE.Vector3();
+  var touched = [];
+  for(var i=0;i<posAttr.count;i++){
+    v.fromBufferAttribute(posAttr, i);
+    var d = v.distanceTo(localPoint);
+    if(d <= radiusWorld){
+      var falloff = 1 - (d / radiusWorld); // soft edge
+      var idx = i*3;
+      var prev = [colorAttr.array[idx], colorAttr.array[idx+1], colorAttr.array[idx+2]];
+      touched.push({ idx: idx, prev: prev });
+      colorAttr.array[idx]   += (currentColor.r - colorAttr.array[idx])   * falloff;
+      colorAttr.array[idx+1] += (currentColor.g - colorAttr.array[idx+1]) * falloff;
+      colorAttr.array[idx+2] += (currentColor.b - colorAttr.array[idx+2]) * falloff;
+    }
+  }
+  colorAttr.needsUpdate = true;
+  if(touched.length){
+    pushHistory(function(){
+      touched.forEach(function(t){
+        colorAttr.array[t.idx] = t.prev[0];
+        colorAttr.array[t.idx+1] = t.prev[1];
+        colorAttr.array[t.idx+2] = t.prev[2];
+      });
+      colorAttr.needsUpdate = true;
+    });
+  }
+  setStatus('Pinceau: ' + touched.length + ' vertices peints sur "' + (mesh.name||'mesh') + '"');
+}
+
+/* ---------------- Pointer events ---------------- */
+var isPainting = false;
+canvas.addEventListener('pointerdown', function(e){
+  if(!currentModel) return;
+  var hit = intersectModel(e);
+  if(!hit) return;
+  if(currentTool === 'bucket') applyBucket(hit);
+  else if(currentTool === 'eyedrop') applyEyedrop(hit);
+  else if(currentTool === 'select') selectMesh(hit.object);
+  else if(currentTool === 'brush'){
+    isPainting = true;
+    controls.enabled = false; // avoid orbit while dragging brush
+    applyBrush(hit);
+  }
+});
+canvas.addEventListener('pointermove', function(e){
+  var cursor = document.getElementById('brushCursor');
+  if(currentTool === 'brush'){
+    var rect = canvas.getBoundingClientRect();
+    cursor.style.left = (e.clientX - rect.left) + 'px';
+    cursor.style.top = (e.clientY - rect.top) + 'px';
+    cursor.style.width = cursor.style.height = (brushRadiusPx*2) + 'px';
+    cursor.style.opacity = 1;
+  }
+  if(isPainting){
+    var hit = intersectModel(e);
+    if(hit) applyBrush(hit);
+  }
+});
+window.addEventListener('pointerup', function(){
+  if(isPainting){ isPainting = false; controls.enabled = true; }
+});
+canvas.addEventListener('pointerleave', function(){
+  document.getElementById('brushCursor').style.opacity = 0;
+});
+
+/* ---------------- Reset colors ---------------- */
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if(!currentModel) return;
+  meshList.forEach(function(m){
+    var mesh = m.mesh;
+    mesh.material.color.set(0xffffff);
+    mesh.material.vertexColors = false;
+    if(mesh.geometry.attributes.color) mesh.geometry.deleteAttribute('color');
+  });
+  actionHistory = [];
+  showToast('Couleurs reinitialisees');
+});
+
+/* ---------------- Selection & transform panel ---------------- */
+var selectedMesh = null;
+var selectHelper = null;
+
+function selectMesh(mesh){
+  if(!mesh || !mesh.isMesh) return;
+  selectedMesh = mesh;
+  if(selectHelper) scene.remove(selectHelper);
+  selectHelper = new THREE.BoxHelper(mesh, 0x7ecfa8);
+  scene.add(selectHelper);
+
+  document.getElementById('tf-name').value = mesh.name || '';
+  document.getElementById('tfPosX').value = round3(mesh.position.x);
+  document.getElementById('tfPosY').value = round3(mesh.position.y);
+  document.getElementById('tfPosZ').value = round3(mesh.position.z);
+  document.getElementById('tfScaleX').value = round3(mesh.scale.x);
+  document.getElementById('tfScaleY').value = round3(mesh.scale.y);
+  document.getElementById('tfScaleZ').value = round3(mesh.scale.z);
+  document.getElementById('tfRotX').value = round3(THREE.MathUtils.radToDeg(mesh.rotation.x));
+  document.getElementById('tfRotY').value = round3(THREE.MathUtils.radToDeg(mesh.rotation.y));
+  document.getElementById('tfRotZ').value = round3(THREE.MathUtils.radToDeg(mesh.rotation.z));
+  document.getElementById('transformPanel').classList.add('show');
+}
+function round3(n){ return Math.round(n*1000)/1000; }
+
+function deselectMesh(){
+  selectedMesh = null;
+  if(selectHelper){ scene.remove(selectHelper); selectHelper = null; }
+  document.getElementById('transformPanel').classList.remove('show');
+}
+document.getElementById('closeTransform').addEventListener('click', deselectMesh);
+
+// Keyboard shortcuts (ignored while typing in a text/number field so they
+// don't interfere with renaming a mesh or editing transform values).
+window.addEventListener('keydown', function(e){
+  var tag = (document.activeElement && document.activeElement.tagName) || '';
+  if(tag === 'INPUT' || tag === 'TEXTAREA') return;
+  if((e.key === 'Delete' || e.key === 'Backspace') && selectedMesh){
+    e.preventDefault();
+    document.getElementById('deleteMeshBtn').click();
+  } else if(e.key === 'Escape'){
+    deselectMesh();
+    document.getElementById('hexPopover').classList.remove('show');
+  }
+});
+
+// Keep the selection box in sync as values change / camera moves.
+var _origAnimateHook = null;
+(function hookSelectHelperUpdate(){
+  var raf = requestAnimationFrame;
+  function tick(){
+    if(selectHelper && selectedMesh) selectHelper.update();
+    requestAnimationFrame(tick);
+  }
+  raf(tick);
+})();
+
+function bindTransformInput(id, apply){
+  document.getElementById(id).addEventListener('input', function(e){
+    if(!selectedMesh) return;
+    var v = parseFloat(e.target.value);
+    if(isNaN(v)) return;
+    apply(selectedMesh, v);
+  });
+}
+bindTransformInput('tfPosX', function(m,v){ m.position.x = v; });
+bindTransformInput('tfPosY', function(m,v){ m.position.y = v; });
+bindTransformInput('tfPosZ', function(m,v){ m.position.z = v; });
+bindTransformInput('tfScaleX', function(m,v){ m.scale.x = v; });
+bindTransformInput('tfScaleY', function(m,v){ m.scale.y = v; });
+bindTransformInput('tfScaleZ', function(m,v){ m.scale.z = v; });
+bindTransformInput('tfRotX', function(m,v){ m.rotation.x = THREE.MathUtils.degToRad(v); });
+bindTransformInput('tfRotY', function(m,v){ m.rotation.y = THREE.MathUtils.degToRad(v); });
+bindTransformInput('tfRotZ', function(m,v){ m.rotation.z = THREE.MathUtils.degToRad(v); });
+
+document.getElementById('deleteMeshBtn').addEventListener('click', function(){
+  if(!selectedMesh) return;
+  var mesh = selectedMesh;
+  var parent = mesh.parent;
+  var name = mesh.name || '(sans nom)';
+  if(!confirm('Supprimer definitivement le maillage "'+name+'" ?')) return;
+  parent.remove(mesh);
+  pushHistory(function(){ parent.add(mesh); collectMeshes(currentModel); renderTreePanel(); });
+  deselectMesh();
+  collectMeshes(currentModel);
+  renderTreePanel();
+  showToast('Maillage "'+name+'" supprime');
+});
+
+document.getElementById('tf-name').addEventListener('input', function(e){
+  if(!selectedMesh) return;
+  selectedMesh.name = e.target.value;
+  collectMeshes(currentModel);
+  renderTreePanel();
+});
+
+document.getElementById('duplicateMeshBtn').addEventListener('click', function(){
+  if(!selectedMesh) return;
+  var dup = duplicateMesh(selectedMesh);
+  collectMeshes(currentModel);
+  renderTreePanel();
+  selectMesh(dup);
+  showToast('Maillage duplique');
+});
+
+// Clones a mesh (independent geometry + material so painting one doesn't
+// affect the other) as a sibling, offset slightly so it's visible, and
+// records an undo step that removes it again.
+function duplicateMesh(mesh){
+  var dup = mesh.clone();
+  dup.geometry = mesh.geometry.clone();
+  dup.material = mesh.material.clone();
+  dup.name = (mesh.name || 'mesh') + '_copie';
+  dup.position.x += (new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3()).x || 0.1) * 0.15;
+  mesh.parent.add(dup);
+  pushHistory(function(){
+    dup.parent && dup.parent.remove(dup);
+    collectMeshes(currentModel); renderTreePanel();
+  });
+  return dup;
+}
+
+function duplicateCheckedMeshes(){
+  var idxs = checkedMeshIndices();
+  if(idxs.length === 0){ showToast('Coche au moins un maillage'); return; }
+  idxs.forEach(function(i){ duplicateMesh(meshList[i].mesh); });
+  checkedMeshIdxSet.clear();
+  collectMeshes(currentModel);
+  renderTreePanel();
+  showToast(idxs.length + ' maillage(s) duplique(s)');
+}
+
+// Groups the checked meshes under a new THREE.Group using .attach() so each
+// mesh keeps its current world position/rotation/scale (only its parent
+// changes). Undo re-attaches each mesh back to its original parent.
+function groupCheckedMeshes(){
+  var idxs = checkedMeshIndices();
+  if(idxs.length < 2){ showToast('Coche au moins 2 maillages a grouper'); return; }
+  var groupName = prompt('Nom du groupe :', 'Groupe') || 'Groupe';
+  var group = new THREE.Group();
+  group.name = groupName;
+  var meshesToGroup = idxs.map(function(i){ return meshList[i].mesh; });
+  var originalParents = meshesToGroup.map(function(m){ return m.parent; });
+
+  sceneRoot.add(group);
+  meshesToGroup.forEach(function(m){ group.attach(m); });
+
+  pushHistory(function(){
+    meshesToGroup.forEach(function(m, k){ originalParents[k].attach(m); });
+    sceneRoot.remove(group);
+    collectMeshes(currentModel); renderTreePanel();
+  });
+  checkedMeshIdxSet.clear();
+
+  collectMeshes(currentModel);
+  renderTreePanel();
+  showToast(meshesToGroup.length + ' maillages groupes dans "' + groupName + '"');
+}
+
+
+(function setupHexPicker(){
+  var btn = document.getElementById('hexPickerBtn');
+  var pop = document.getElementById('hexPopover');
+  var svCanvas = document.getElementById('svCanvas');
+  var hueCanvas = document.getElementById('hueCanvas');
+  var svCtx = svCanvas.getContext('2d');
+  var hueCtx = hueCanvas.getContext('2d');
+  var hexInput = document.getElementById('hexTextInput');
+  var preview = document.getElementById('hexSwatchPreview');
+  var hue = 0; // 0-360
+
+  function drawHue(){
+    var grad = hueCtx.createLinearGradient(0,0,hueCanvas.width,0);
+    for(var i=0;i<=6;i++) grad.addColorStop(i/6, 'hsl('+(i*60)+',100%,50%)');
+    hueCtx.fillStyle = grad;
+    hueCtx.fillRect(0,0,hueCanvas.width,hueCanvas.height);
+  }
+  function drawSV(){
+    svCtx.fillStyle = 'hsl('+hue+',100%,50%)';
+    svCtx.fillRect(0,0,svCanvas.width,svCanvas.height);
+    var whiteGrad = svCtx.createLinearGradient(0,0,svCanvas.width,0);
+    whiteGrad.addColorStop(0,'rgba(255,255,255,1)');
+    whiteGrad.addColorStop(1,'rgba(255,255,255,0)');
+    svCtx.fillStyle = whiteGrad;
+    svCtx.fillRect(0,0,svCanvas.width,svCanvas.height);
+    var blackGrad = svCtx.createLinearGradient(0,0,0,svCanvas.height);
+    blackGrad.addColorStop(0,'rgba(0,0,0,0)');
+    blackGrad.addColorStop(1,'rgba(0,0,0,1)');
+    svCtx.fillStyle = blackGrad;
+    svCtx.fillRect(0,0,svCanvas.width,svCanvas.height);
+  }
+  drawHue(); drawSV();
+
+  function updateFromHex(hex, skipInput){
+    currentColor.set('#'+hex);
+    document.getElementById('colorInput').value = '#'+hex;
+    preview.style.background = '#'+hex;
+    if(!skipInput) hexInput.value = hex.toUpperCase();
+  }
+
+  function pickSV(e){
+    var rect = svCanvas.getBoundingClientRect();
+    var x = Math.max(0, Math.min(svCanvas.width, e.clientX - rect.left));
+    var y = Math.max(0, Math.min(svCanvas.height, e.clientY - rect.top));
+    var s = x / svCanvas.width;
+    var v = 1 - (y / svCanvas.height);
+    var c = new THREE.Color().setHSL(hue/360, s, v * (1 - s/2)); // approx HSV->HSL blend for a natural feel
+    // More accurate HSV -> RGB:
+    var rgb = hsvToRgb(hue/360, s, v);
+    var hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+    updateFromHex(hex);
+  }
+  function pickHue(e){
+    var rect = hueCanvas.getBoundingClientRect();
+    var x = Math.max(0, Math.min(hueCanvas.width, e.clientX - rect.left));
+    hue = (x / hueCanvas.width) * 360;
+    drawSV();
+  }
+  function hsvToRgb(h,s,v){
+    var i = Math.floor(h*6), f = h*6-i, p = v*(1-s), q = v*(1-f*s), t = v*(1-(1-f)*s);
+    var r,g,b;
+    switch(i%6){
+      case 0: r=v;g=t;b=p;break; case 1: r=q;g=v;b=p;break; case 2: r=p;g=v;b=t;break;
+      case 3: r=p;g=q;b=v;break; case 4: r=t;g=p;b=v;break; default: r=v;g=p;b=q;
+    }
+    return { r: Math.round(r*255), g: Math.round(g*255), b: Math.round(b*255) };
+  }
+  function rgbToHex(r,g,b){
+    return ((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1).toUpperCase();
+  }
+
+  var draggingSV = false, draggingHue = false;
+  svCanvas.addEventListener('pointerdown', function(e){ draggingSV = true; pickSV(e); });
+  window.addEventListener('pointermove', function(e){ if(draggingSV) pickSV(e); if(draggingHue) pickHue(e); });
+  window.addEventListener('pointerup', function(){ draggingSV = false; draggingHue = false; });
+  hueCanvas.addEventListener('pointerdown', function(e){ draggingHue = true; pickHue(e); });
+
+  hexInput.addEventListener('input', function(){
+    var v = hexInput.value.replace(/[^0-9a-fA-F]/g,'').slice(0,6);
+    if(v.length === 6) updateFromHex(v, true);
+  });
+
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    pop.classList.toggle('show');
+  });
+  document.addEventListener('click', function(e){
+    if(!pop.contains(e.target) && e.target !== btn) pop.classList.remove('show');
+  });
+
+  // Keep native color input + hex field in sync when the color changes from elsewhere (palette, eyedropper).
+  document.getElementById('colorInput').addEventListener('input', function(e){
+    hexInput.value = e.target.value.replace('#','').toUpperCase();
+    preview.style.background = e.target.value;
+  });
+})();
+
+
+function typedArrayToBase64(typedArray){
+  var bytes = new Uint8Array(typedArray.buffer, typedArray.byteOffset, typedArray.byteLength);
+  var binary = '';
+  var chunk = 0x8000;
+  for(var i=0;i<bytes.length;i+=chunk) binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk));
+  return btoa(binary);
+}
+function decodeFnForArray(arr){
+  if(arr instanceof Float32Array) return 'b64ToFloat32';
+  if(arr instanceof Uint8Array) return 'b64ToUint8';
+  if(arr instanceof Uint16Array) return 'b64ToUint16';
+  if(arr instanceof Uint32Array) return 'b64ToUint32';
+  return 'b64ToFloat32';
+}
+function fmtNum(n){ if(n===undefined||n===null||isNaN(n)) return '0'; return String(Math.round(n*1e5)/1e5); }
+function sanitizeVarName(name, fallback){
+  // Null-safe: works even if both name and fallback are empty/undefined
+  // (unnamed materials/meshes are common, especially from OBJ or AI-generated GLBs).
+  var n = String(name || fallback || 'obj');
+  n = n.replace(/[^a-zA-Z0-9_]/g,'_');
+  if(!/^[a-zA-Z_]/.test(n)) n = '_'+n;
+  return n;
+}
+
+// Some GLB exporters (common with AI-generated models like Tripo/Meshy)
+// pack position/normal/uv into a single INTERLEAVED buffer for compactness.
+// attribute.array in that case is the whole shared buffer, not just this
+// attribute's data — reading it directly produces garbage geometry/normals
+// (often rendering solid black). getComponent() works correctly for both
+// interleaved and plain attributes, so we always rebuild a clean, tightly
+// packed typed array through it instead of ever touching .array directly.
+function extractAttributeArray(attr){
+  // NOTE: BufferAttribute.getComponent() does not exist in three r128 (added
+  // in later revisions) — use the getX/getY/getZ/getW accessors instead,
+  // which are available on both plain and interleaved attributes there.
+  var itemSize = attr.itemSize;
+  var count = attr.count;
+  var srcArray = (attr.data && attr.data.array) ? attr.data.array : attr.array;
+  var Ctor = srcArray.constructor;
+  var out = new Ctor(count * itemSize);
+  var getters = [attr.getX, attr.getY, attr.getZ, attr.getW];
+  for(var i=0;i<count;i++){
+    for(var k=0;k<itemSize;k++){
+      out[i*itemSize+k] = getters[k].call(attr, i);
+    }
+  }
+  return out;
+}
+
+function geometryToCode(geom, varName){
+  var lines = [];
+  lines.push('var '+varName+' = new THREE.BufferGeometry();');
+  var attrs = geom.attributes;
+  ['position','normal','uv','color'].forEach(function(key){
+    if(attrs[key]){
+      var a = attrs[key];
+      var plainArray = extractAttributeArray(a);
+      var b64 = typedArrayToBase64(plainArray);
+      var decodeFn = decodeFnForArray(plainArray);
+      lines.push(varName+'.setAttribute("'+key+'", new THREE.BufferAttribute('+decodeFn+'("'+b64+'"), '+a.itemSize+', '+(a.normalized?'true':'false')+'));');
+    }
+  });
+  if(geom.index){
+    var isU32 = geom.index.array instanceof Uint32Array;
+    lines.push(varName+'.setIndex(new THREE.BufferAttribute('+(isU32?'b64ToUint32':'b64ToUint16')+'("'+typedArrayToBase64(geom.index.array)+'"), 1));');
+  }
+  if(!attrs.normal) lines.push(varName+'.computeVertexNormals();');
+  return lines.join('\n');
+}
+
+function materialToCode(mat, varName){
+  var lines = [];
+  var type = 'THREE.MeshStandardMaterial';
+  if(mat.type === 'MeshBasicMaterial') type = 'THREE.MeshBasicMaterial';
+  else if(mat.type === 'MeshPhysicalMaterial') type = 'THREE.MeshPhysicalMaterial';
+  var props = [];
+  props.push('  color: 0x'+mat.color.getHexString()+',');
+  if(mat.metalness !== undefined) props.push('  metalness: '+fmtNum(mat.metalness)+',');
+  if(mat.roughness !== undefined) props.push('  roughness: '+fmtNum(mat.roughness)+',');
+  if(mat.opacity !== undefined && mat.opacity < 1){ props.push('  opacity: '+fmtNum(mat.opacity)+','); props.push('  transparent: true,'); }
+  if(mat.side === THREE.DoubleSide) props.push('  side: THREE.DoubleSide,');
+  if(mat.vertexColors) props.push('  vertexColors: THREE.VertexColors,');
+  lines.push('var '+varName+' = new '+type+'({');
+  lines.push(props.join('\n'));
+  lines.push('});');
+  return lines.join('\n');
+}
+
+var geomVarCounter, matVarCounter, meshVarCounter, groupVarCounter;
+function generateExportCode(root, filename){
+  geomVarCounter = 0; matVarCounter = 0; meshVarCounter = 0; groupVarCounter = 0;
+  var defBlocks = [], buildLines = [];
+
+  function walk(obj, parentVar){
+    var varName;
+    if(obj.isMesh){
+      var geomVar = 'geom_'+(geomVarCounter++)+'_'+sanitizeVarName(obj.geometry.name||obj.name||'');
+      var matVar = 'mat_'+(matVarCounter++)+'_'+sanitizeVarName(obj.material.name||'');
+      var meshVar = 'mesh_'+(meshVarCounter++)+'_'+sanitizeVarName(obj.name||'mesh');
+      defBlocks.push(geometryToCode(obj.geometry, geomVar));
+      defBlocks.push(materialToCode(obj.material, matVar));
+      buildLines.push('var '+meshVar+' = new THREE.Mesh('+geomVar+', '+matVar+');');
+      buildLines.push(meshVar+'.name = '+JSON.stringify(obj.name||'')+';');
+      var p=obj.position, r=obj.rotation, s=obj.scale;
+      if(p.x||p.y||p.z) buildLines.push(meshVar+'.position.set('+fmtNum(p.x)+', '+fmtNum(p.y)+', '+fmtNum(p.z)+');');
+      if(r.x||r.y||r.z) buildLines.push(meshVar+'.rotation.set('+fmtNum(r.x)+', '+fmtNum(r.y)+', '+fmtNum(r.z)+');');
+      if(s.x!==1||s.y!==1||s.z!==1) buildLines.push(meshVar+'.scale.set('+fmtNum(s.x)+', '+fmtNum(s.y)+', '+fmtNum(s.z)+');');
+      buildLines.push(parentVar+'.add('+meshVar+');');
+      varName = meshVar;
+    } else {
+      var groupVar = 'group_'+(groupVarCounter++)+'_'+sanitizeVarName(obj.name||'group');
+      buildLines.push('var '+groupVar+' = new THREE.Group();');
+      buildLines.push(groupVar+'.name = '+JSON.stringify(obj.name||'')+';');
+      var p2=obj.position, r2=obj.rotation, s2=obj.scale;
+      if(p2.x||p2.y||p2.z) buildLines.push(groupVar+'.position.set('+fmtNum(p2.x)+', '+fmtNum(p2.y)+', '+fmtNum(p2.z)+');');
+      if(r2.x||r2.y||r2.z) buildLines.push(groupVar+'.rotation.set('+fmtNum(r2.x)+', '+fmtNum(r2.y)+', '+fmtNum(r2.z)+');');
+      if(s2.x!==1||s2.y!==1||s2.z!==1) buildLines.push(groupVar+'.scale.set('+fmtNum(s2.x)+', '+fmtNum(s2.y)+', '+fmtNum(s2.z)+');');
+      buildLines.push(parentVar+'.add('+groupVar+');');
+      varName = groupVar;
+    }
+    obj.children.forEach(function(c){ walk(c, varName); });
+    return varName;
+  }
+  walk(root, 'root');
+
+  var header = [
+    '// ===================================================================',
+    '// Code Three.js genere apres retouche couleur depuis : ' + filename,
+    '// Genere par l\'outil "Peindre Three.js"',
+    '// ===================================================================',
+    '',
+    'function b64ToBytes(b64){ var bin=atob(b64); var bytes=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i); return bytes; }',
+    'function b64ToFloat32(b64){ var b=b64ToBytes(b64); return new Float32Array(b.buffer); }',
+    'function b64ToUint8(b64){ return b64ToBytes(b64); }',
+    'function b64ToUint16(b64){ var b=b64ToBytes(b64); return new Uint16Array(b.buffer); }',
+    'function b64ToUint32(b64){ var b=b64ToBytes(b64); return new Uint32Array(b.buffer); }',
+    '',
+    'function createModel() {',
+    '  var root = new THREE.Group();',
+    ''
+  ];
+  var footer = ['', '  return root;', '}', '', '// Utilisation :', '// var model = createModel();', '// scene.add(model);'];
+  var indent = function(block){ return block.split('\n').map(function(l){return '  '+l;}).join('\n'); };
+  return header.join('\n') + '\n' + indent(defBlocks.join('\n\n')) + '\n\n' + indent(buildLines.join('\n')) + '\n' + footer.join('\n');
+}
+
+function getExportCode(){
+  if(!currentModel){ showToast('Aucun modele charge'); return null; }
+  return generateExportCode(currentModel, currentFilename);
+}
+
+document.getElementById('copyBtn').addEventListener('click', function(){
+  var code = getExportCode();
+  if(!code) return;
+  navigator.clipboard.writeText(code).then(function(){ showToast('Code copie'); });
+});
+document.getElementById('downloadBtn').addEventListener('click', function(){
+  var code = getExportCode();
+  if(!code) return;
+  var base = currentFilename.replace(/\.[^.]+$/, '');
+  var blob = new Blob([code], { type: 'text/javascript' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = base + '_painted.js';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Fichier telecharge');
+});
+</script>
+</body>
+</html>

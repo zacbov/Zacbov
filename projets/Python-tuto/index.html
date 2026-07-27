@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mémo débutant — Terminal, Linux, Docker, localhost et serveur Python</title>
+<style>
+:root{
+  --bg:#0f172a;--panel:#111827;--card:#1f2937;--text:#e5e7eb;--muted:#9ca3af;
+  --accent:#38bdf8;--accent2:#34d399;--warn:#fbbf24;--danger:#fb7185;--code:#020617;--border:rgba(255,255,255,.12)
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:linear-gradient(135deg,#0f172a,#111827 55%,#0b1120);color:var(--text);font-family:Arial,Helvetica,sans-serif;line-height:1.58}
+header{padding:42px 28px 28px;border-bottom:1px solid var(--border);background:radial-gradient(circle at top left,rgba(56,189,248,.24),transparent 36%)}
+main{max-width:1120px;margin:auto;padding:28px}
+h1{margin:0 0 10px;font-size:2.05rem}
+h2{color:var(--accent);margin-top:42px;border-bottom:1px solid var(--border);padding-bottom:8px}
+h3{color:var(--accent2);margin-top:24px}
+p,li{color:#d1d5db}.small{color:var(--muted);font-size:.95rem}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+nav a{color:#dbeafe;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:6px 10px;background:rgba(255,255,255,.04)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.card{background:rgba(31,41,55,.82);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.18)}
+.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(56,189,248,.14);color:#bae6fd;font-size:.8rem}
+.warn{border-left:4px solid var(--warn);padding:10px 14px;background:rgba(251,191,36,.08);border-radius:10px;margin:14px 0}
+.danger{border-left:4px solid var(--danger);padding:10px 14px;background:rgba(251,113,133,.08);border-radius:10px;margin:14px 0}
+.ok{border-left:4px solid var(--accent2);padding:10px 14px;background:rgba(52,211,153,.08);border-radius:10px;margin:14px 0}
+pre{background:var(--code);border:1px solid var(--border);color:#e2e8f0;padding:14px;border-radius:12px;overflow:auto;white-space:pre-wrap}
+code{font-family:Consolas,"Courier New",monospace}
+table{width:100%;border-collapse:collapse;margin:12px 0;background:rgba(31,41,55,.65)}
+th,td{border:1px solid var(--border);padding:10px;text-align:left;vertical-align:top}
+th{background:rgba(56,189,248,.12);color:#bfdbfe}
+.kbd{background:#020617;border:1px solid var(--border);border-radius:6px;padding:2px 6px}
+footer{color:var(--muted);text-align:center;padding:30px}
+hr{border:none;border-top:1px solid var(--border);margin:28px 0}
+</style>
+</head>
+<body>
+<header>
+<h1>Mémo débutant — Terminal, Linux, Docker, localhost et serveur Python</h1>
+<p class="small">Une page pour repartir de zéro : comprendre ce que tu tapes, où tu es, pourquoi certaines erreurs arrivent, et quelles commandes de base connaître quand on vient de Windows/Mac.</p>
+<nav>
+<a href="#idee">Idée générale</a>
+<a href="#terminal">Terminal</a>
+<a href="#chemins">Chemins</a>
+<a href="#commandes">Commandes utiles</a>
+<a href="#ssh">SSH</a>
+<a href="#localhost">localhost</a>
+<a href="#serveur">Serveur Python</a>
+<a href="#docker">Docker</a>
+<a href="#trois-services">3 services</a>
+<a href="#erreurs">Erreurs fréquentes</a>
+<a href="#recettes">Recettes</a>
+<a href="#serveur-bloquant">Logs & arrêt</a>
+</nav>
+</header>
+
+<main>
+
+<section id="idee">
+<h2>1. L’idée générale : tu navigues entre plusieurs machines</h2>
+<p>Quand tu tapes des commandes, la question la plus importante est toujours : <strong>où suis-je ?</strong></p>
+
+<div class="grid">
+<div class="card">
+<h3>Ton PC ou Mac</h3>
+<p>C’est ta machine de travail. Sur Windows, tu utilises PowerShell. Sur Mac, tu utilises Terminal.</p>
+<pre><code>PS C:\Users\Toi&gt;</code></pre>
+</div>
+<div class="card">
+<h3>Le serveur distant</h3>
+<p>Quand tu te connectes en SSH, tu contrôles une autre machine, par exemple un NAS ou un serveur Linux.</p>
+<pre><code>tice-nas@TICE:/volume1/docker$</code></pre>
+</div>
+<div class="card">
+<h3>Le conteneur Docker</h3>
+<p>Un conteneur est comme une mini-machine isolée dans le serveur. Tu peux entrer dedans.</p>
+<pre><code>root@31a9ffb529fe:/app#</code></pre>
+</div>
+</div>
+
+<div class="danger">
+<strong>Règle d’or :</strong><br>
+Une commande peut marcher dans un endroit et échouer dans un autre. Beaucoup d’erreurs viennent du fait qu’on tape une commande prévue pour Docker directement sur le serveur, ou une commande prévue pour Linux dans PowerShell.
+</div>
+</section>
+
+<section id="terminal">
+<h2>2. Terminal, shell, prompt : le vocabulaire</h2>
+
+<table>
+<tr><th>Mot</th><th>Définition simple</th></tr>
+<tr><td>Terminal</td><td>La fenêtre où tu tapes les commandes.</td></tr>
+<tr><td>Shell</td><td>Le programme qui interprète tes commandes : PowerShell, bash, sh, zsh...</td></tr>
+<tr><td>Prompt</td><td>La ligne qui indique où tu es et attend ta commande.</td></tr>
+<tr><td>Commande</td><td>Un ordre donné à l’ordinateur : <code>ls</code>, <code>cd</code>, <code>docker ps</code>...</td></tr>
+<tr><td>Argument</td><td>Une information donnée à une commande. Exemple : dans <code>cd /volume1/docker</code>, le chemin est l’argument.</td></tr>
+<tr><td>Option</td><td>Un réglage de commande, souvent avec <code>-</code> ou <code>--</code>. Exemple : <code>ls -lah</code>.</td></tr>
+</table>
+
+<h3>Lire le prompt</h3>
+<pre><code>tice-nas@TICE:/volume1/docker$</code></pre>
+<ul>
+<li><code>tice-nas</code> : l’utilisateur connecté.</li>
+<li><code>TICE</code> : le nom de la machine.</li>
+<li><code>/volume1/docker</code> : le dossier actuel.</li>
+<li><code>$</code> : utilisateur normal.</li>
+</ul>
+
+<pre><code>root@31a9ffb529fe:/app#</code></pre>
+<ul>
+<li><code>root</code> : super-utilisateur dans le conteneur.</li>
+<li><code>31a9ffb529fe</code> : identifiant du conteneur.</li>
+<li><code>/app</code> : dossier actuel.</li>
+<li><code>#</code> : droits élevés.</li>
+</ul>
+
+<div class="warn">
+Si une commande affiche une ligne qui commence par <code>&gt;</code>, cela veut souvent dire que le shell attend la suite d’une commande commencée mais pas terminée. Ça arrive quand tu as copié une commande multi-lignes de travers.
+</div>
+</section>
+
+<section id="chemins">
+<h2>3. Comprendre les chemins de fichiers</h2>
+
+<h3>Windows vs Linux</h3>
+<table>
+<tr><th>Windows</th><th>Linux / Mac</th></tr>
+<tr><td><code>C:\Users\Nom\Documents</code></td><td><code>/home/nom/Documents</code></td></tr>
+<tr><td>Utilise souvent <code>\</code></td><td>Utilise toujours <code>/</code></td></tr>
+<tr><td>Les majuscules/minuscules sont souvent moins strictes</td><td>Linux distingue <code>Sarcoptes</code> et <code>sarcoptes</code></td></tr>
+</table>
+
+<h3>Chemin absolu vs relatif</h3>
+<p>Un chemin absolu part de la racine :</p>
+<pre><code>/volume1/docker/app/server.py</code></pre>
+<p>Un chemin relatif part du dossier où tu es :</p>
+<pre><code>app/server.py</code></pre>
+
+<h3>Commandes de navigation</h3>
+<pre><code>pwd          # affiche le dossier actuel
+ls           # liste les fichiers
+ls -lah      # liste détaillée, avec fichiers cachés et tailles lisibles
+cd dossier   # entre dans un dossier
+cd ..        # remonte d’un dossier
+cd /         # va à la racine</code></pre>
+
+<h3>Espaces et accents dans les chemins</h3>
+<p>Si un nom contient des espaces, mets des guillemets :</p>
+<pre><code>cd "/volume1/docker/mon dossier"</code></pre>
+<p>Ou échappe l’espace avec <code>\</code> :</p>
+<pre><code>cd /volume1/docker/mon\ dossier</code></pre>
+</section>
+
+<section id="commandes">
+<h2>4. Commandes Linux utiles, avec explications</h2>
+
+<table>
+<tr><th>Commande</th><th>À quoi ça sert</th><th>Exemple</th></tr>
+<tr><td><code>pwd</code></td><td>Voir où tu es</td><td><code>pwd</code></td></tr>
+<tr><td><code>ls</code></td><td>Lister les fichiers</td><td><code>ls -lah</code></td></tr>
+<tr><td><code>cd</code></td><td>Changer de dossier</td><td><code>cd /volume1/docker</code></td></tr>
+<tr><td><code>mkdir</code></td><td>Créer un dossier</td><td><code>mkdir -p mon_dossier</code></td></tr>
+<tr><td><code>rm</code></td><td>Supprimer</td><td><code>rm fichier.txt</code></td></tr>
+<tr><td><code>rm -rf</code></td><td>Supprimer un dossier et tout son contenu</td><td><code>rm -rf dossier_temp</code></td></tr>
+<tr><td><code>mv</code></td><td>Déplacer ou renommer</td><td><code>mv ancien.txt nouveau.txt</code></td></tr>
+<tr><td><code>cp</code></td><td>Copier</td><td><code>cp fichier.txt copie.txt</code></td></tr>
+<tr><td><code>find</code></td><td>Chercher des fichiers</td><td><code>find . -name "*.html"</code></td></tr>
+<tr><td><code>grep</code></td><td>Filtrer du texte</td><td><code>ls | grep server</code></td></tr>
+<tr><td><code>head</code></td><td>Afficher le début d’un fichier</td><td><code>head -40 server.py</code></td></tr>
+<tr><td><code>cat</code></td><td>Afficher tout un fichier</td><td><code>cat Dockerfile</code></td></tr>
+<tr><td><code>du</code></td><td>Voir la taille des dossiers</td><td><code>du -h -d 1 .</code></td></tr>
+<tr><td><code>chmod</code></td><td>Changer les droits d’un fichier</td><td><code>chmod +x script.sh</code></td></tr>
+<tr><td><code>sudo</code></td><td>Lancer avec droits administrateur</td><td><code>sudo docker ps</code></td></tr>
+</table>
+
+<div class="danger">
+<strong>Attention à <code>rm -rf</code> :</strong><br>
+Cette commande supprime sans demander. Vérifie toujours le dossier avant.
+</div>
+
+<h3>Redirection et pipe</h3>
+<p>Le pipe <code>|</code> envoie le résultat d’une commande dans une autre.</p>
+<pre><code>ls -lah | grep docker</code></pre>
+
+<p>La redirection <code>&gt;</code> écrit dans un fichier et remplace son contenu :</p>
+<pre><code>echo "bonjour" &gt; test.txt</code></pre>
+
+<p>La redirection <code>&gt;&gt;</code> ajoute à la fin :</p>
+<pre><code>echo "suite" &gt;&gt; test.txt</code></pre>
+</section>
+
+<section id="ssh">
+<h2>5. SSH : contrôler un serveur à distance</h2>
+<p>SSH permet de contrôler une machine distante depuis ton PC.</p>
+
+<pre><code>ssh utilisateur@adresse_ip</code></pre>
+
+<p>Exemple :</p>
+<pre><code>ssh tice-nas@192.168.0.93</code></pre>
+
+<h3>Première connexion</h3>
+<p>SSH demande souvent :</p>
+<pre><code>Are you sure you want to continue connecting?</code></pre>
+<p>Il faut écrire :</p>
+<pre><code>yes</code></pre>
+
+<h3>Quitter SSH</h3>
+<pre><code>exit</code></pre>
+
+<div class="ok">
+Tu peux avoir un message du type <code>Could not chdir to home directory</code>. Ce n’est pas forcément grave : ça veut dire que le dossier personnel de l’utilisateur n’existe pas, mais tu es quand même connecté.
+</div>
+</section>
+
+<section id="localhost">
+<h2>6. Comprendre localhost</h2>
+
+<p><code>localhost</code> veut dire : <strong>cette machine-ci</strong>.</p>
+
+<table>
+<tr><th>Où tu tapes l’adresse ?</th><th>Ce que signifie localhost</th></tr>
+<tr><td>Dans ton navigateur sur ton PC</td><td>Ton PC</td></tr>
+<tr><td>Dans le NAS</td><td>Le NAS</td></tr>
+<tr><td>Dans un conteneur Docker</td><td>Le conteneur lui-même</td></tr>
+</table>
+
+<div class="warn">
+Une erreur classique : une page web utilise <code>http://localhost:8080</code>. Sur ton PC, cela cherche un serveur sur ton PC, pas sur le NAS. Pour accéder au NAS, il faut utiliser son IP, par exemple <code>http://192.168.0.93:8080</code>.
+</div>
+
+<h3>Ports</h3>
+<p>Un port est comme une porte d’entrée d’un service.</p>
+<ul>
+<li><code>80</code> : HTTP classique</li>
+<li><code>443</code> : HTTPS</li>
+<li><code>8080</code> : souvent utilisé pour les applications web de test</li>
+<li><code>22</code> : SSH</li>
+</ul>
+
+<p>Dans Docker :</p>
+<pre><code>-p 8080:8080</code></pre>
+<p>signifie : le port 8080 du NAS redirige vers le port 8080 du conteneur.</p>
+</section>
+
+<section id="serveur">
+<h2>7. Comment fonctionne un serveur Python</h2>
+
+<p>Un serveur Python est un programme qui reste lancé et répond à des requêtes HTTP.</p>
+
+<h3>Exemple minimal avec Flask</h3>
+<pre><code>from flask import Flask
+
+app = Flask(__name__)
+
+@app.route("/")
+def accueil():
+    return "Bonjour"
+
+app.run(host="0.0.0.0", port=8080)</code></pre>
+
+<h3>Ce que ça veut dire</h3>
+<table>
+<tr><th>Ligne</th><th>Explication</th></tr>
+<tr><td><code>Flask(__name__)</code></td><td>Crée l’application web</td></tr>
+<tr><td><code>@app.route("/")</code></td><td>Déclare une adresse web</td></tr>
+<tr><td><code>return "Bonjour"</code></td><td>Réponse envoyée au navigateur</td></tr>
+<tr><td><code>host="0.0.0.0"</code></td><td>Écoute toutes les interfaces réseau</td></tr>
+<tr><td><code>port=8080</code></td><td>Utilise la porte 8080</td></tr>
+</table>
+
+<h3>Pourquoi <code>0.0.0.0</code> ?</h3>
+<p><code>127.0.0.1</code> ou <code>localhost</code> limite souvent l’accès à la machine elle-même. <code>0.0.0.0</code> permet d’accéder au serveur depuis d’autres machines du réseau, si le pare-feu et le réseau l’autorisent.</p>
+
+<h3>HTTP 200, 304, 404</h3>
+<table>
+<tr><th>Code</th><th>Signification</th></tr>
+<tr><td><code>200</code></td><td>OK, la requête a réussi</td></tr>
+<tr><td><code>304</code></td><td>Le navigateur utilise une version en cache</td></tr>
+<tr><td><code>404</code></td><td>Non trouvé ou ressource non ouvrable selon le code du serveur</td></tr>
+<tr><td><code>500</code></td><td>Erreur interne du serveur</td></tr>
+</table>
+</section>
+
+<section id="docker">
+<h2>8. Docker expliqué simplement</h2>
+
+<p>Docker permet de lancer une application dans un environnement isolé, reproductible, avec ses dépendances.</p>
+
+<div class="grid">
+<div class="card">
+<h3>Image</h3>
+<p>Modèle figé, comme une recette ou une photo du système.</p>
+<pre><code>histoviewer</code></pre>
+</div>
+<div class="card">
+<h3>Conteneur</h3>
+<p>Instance lancée d’une image, comme une application en cours d’exécution.</p>
+<pre><code>histoviewer</code></pre>
+</div>
+<div class="card">
+<h3>Volume</h3>
+<p>Dossier du serveur branché dans le conteneur.</p>
+<pre><code>-v /nas/dossier:/conteneur/dossier</code></pre>
+</div>
+</div>
+
+<h3>Dockerfile</h3>
+<p>Le Dockerfile décrit comment fabriquer l’image.</p>
+<pre><code>FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y openslide-tools
+
+WORKDIR /app
+
+RUN pip install flask pillow openslide-python
+
+COPY app/server.py /app/server.py
+
+EXPOSE 8080
+
+CMD ["python", "/app/server.py"]</code></pre>
+
+<h3>Build vs run</h3>
+<table>
+<tr><th>Commande</th><th>Rôle</th></tr>
+<tr><td><code>docker build</code></td><td>Fabrique une image depuis le Dockerfile</td></tr>
+<tr><td><code>docker run</code></td><td>Lance un conteneur depuis une image</td></tr>
+<tr><td><code>docker restart</code></td><td>Redémarre un conteneur existant</td></tr>
+<tr><td><code>docker logs</code></td><td>Affiche ce que l’application écrit</td></tr>
+</table>
+
+<h3>Commande type</h3>
+<pre><code>sudo docker run -d \
+  --name monserveur \
+  --restart unless-stopped \
+  -p 8080:8080 \
+  -v /volume1/docker/data:/data:ro \
+  monimage</code></pre>
+
+<ul>
+<li><code>-d</code> : en arrière-plan</li>
+<li><code>--name</code> : nom du conteneur</li>
+<li><code>--restart unless-stopped</code> : redémarre automatiquement</li>
+<li><code>-p</code> : expose un port</li>
+<li><code>-v</code> : branche un dossier</li>
+</ul>
+
+<h3>.dockerignore</h3>
+<p>Docker envoie le dossier courant comme contexte de build. Si ce dossier contient des dizaines de Go, le build devient énorme. Le fichier <code>.dockerignore</code> permet d’exclure des dossiers.</p>
+<pre><code>slides/
+convertion/
+@eaDir/
+\#recycle/
+*.svs
+*.ndpi
+*.mrxs
+*.tif
+*.tiff</code></pre>
+
+<div class="warn">
+Piège rencontré : <code>#recycle/</code> commence par <code>#</code>, donc peut être compris comme un commentaire. Il faut écrire <code>\#recycle/</code>.
+</div>
+</section>
+
+<section id="erreurs">
+<h2>9. Les erreurs que tu as rencontrées, expliquées</h2>
+
+<table>
+<tr><th>Message</th><th>Cause</th><th>Solution</th></tr>
+<tr><td><code>command not found</code></td><td>La commande n’existe pas dans cet environnement</td><td>Vérifier si tu es sur le NAS ou dans Docker</td></tr>
+<tr><td><code>No such file or directory</code></td><td>Le chemin n’existe pas là où tu es</td><td>Faire <code>pwd</code>, <code>ls</code>, puis corriger le chemin</td></tr>
+<tr><td><code>Permission denied</code></td><td>Tu n’as pas les droits ou tu es dans le mauvais environnement</td><td>Utiliser le bon dossier ou <code>sudo</code> si nécessaire</td></tr>
+<tr><td><code>docker build requires exactly 1 argument</code></td><td>Tu as oublié le point final</td><td><code>sudo docker build -t histoviewer .</code></td></tr>
+<tr><td><code>There are stopped jobs</code></td><td>Une commande est suspendue dans le shell</td><td><code>jobs</code>, puis <code>exit</code> ou fermer la session</td></tr>
+<tr><td><code>HTTP 304</code></td><td>Cache navigateur</td><td><code>Ctrl + F5</code> ou ajouter <code>?nocache=1</code></td></tr>
+<tr><td><code>HTTP 404</code></td><td>Ressource absente ou non ouvrable</td><td>Lire les logs serveur</td></tr>
+<tr><td>NAS qui travaille beaucoup</td><td>Trop de fichiers ouverts/miniatures générées</td><td>Limiter la liste, désactiver miniatures, éviter trop de liens</td></tr>
+</table>
+</section>
+
+<section id="recettes">
+<h2>10. Recettes de base à garder</h2>
+
+<h3>Savoir où je suis</h3>
+<pre><code>pwd
+ls -lah</code></pre>
+
+<h3>Voir la taille des dossiers</h3>
+<pre><code>du -h -d 1 .</code></pre>
+
+<h3>Trouver des fichiers</h3>
+<pre><code>find . -name "*.py"
+find . -type f -iname "*.html"</code></pre>
+
+<h3>Filtrer un résultat</h3>
+<pre><code>ls -lah | grep docker</code></pre>
+
+<h3>Voir les conteneurs</h3>
+<pre><code>sudo docker ps
+sudo docker ps -a</code></pre>
+
+<h3>Entrer dans un conteneur</h3>
+<pre><code>sudo docker exec -it histoviewer bash</code></pre>
+
+<h3>Relancer un conteneur</h3>
+<pre><code>sudo docker restart histoviewer</code></pre>
+
+<h3>Lire les logs</h3>
+<pre><code>sudo docker logs histoviewer</code></pre>
+
+<h3>Tester une URL depuis le serveur</h3>
+<pre><code>curl http://localhost:8080</code></pre>
+
+<h3>Rebuild propre</h3>
+<pre><code>cd /volume1/docker
+sudo docker build -t histoviewer .</code></pre>
+
+<h3>Créer un fichier rapidement</h3>
+<pre><code>cat &gt; memo.txt &lt;&lt;'EOF'
+Bonjour
+Ceci est un fichier créé depuis le terminal.
+EOF</code></pre>
+</section>
+
+
+
+<section id="trois-services">
+<h2>13. À quoi servent PowerShell, Docker et le serveur Python ?</h2>
+
+<p>Ces trois éléments ne font pas la même chose. Une grande partie de la confusion vient du fait qu’on les utilise parfois dans la même session, mais ils n’ont pas le même rôle.</p>
+
+<div class="grid">
+  <div class="card">
+    <h3>PowerShell</h3>
+    <p><strong>Rôle :</strong> ton terminal côté Windows.</p>
+    <p>Il sert à envoyer des commandes depuis ton PC : te connecter en SSH, copier des fichiers, lancer des commandes locales, ou piloter un serveur distant.</p>
+    <pre><code>ssh tice-nas@192.168.0.93</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>Docker</h3>
+    <p><strong>Rôle :</strong> lancer une application dans un environnement isolé.</p>
+    <p>Docker contient Python, les bibliothèques nécessaires, le serveur, et les outils installés dans l’image.</p>
+    <pre><code>sudo docker restart histoviewer</code></pre>
+  </div>
+
+  <div class="card">
+    <h3>Serveur Python</h3>
+    <p><strong>Rôle :</strong> l’application web qui répond au navigateur.</p>
+    <p>Il écoute sur un port, reçoit les requêtes HTTP, lit des fichiers, et renvoie du HTML, du JSON ou des données.</p>
+    <pre><code>python server.py /slides 8080</code></pre>
+  </div>
+</div>
+
+<h3>Image mentale simple</h3>
+
+<pre><code>Ton PC Windows
+  └── PowerShell
+        └── SSH vers le NAS
+              └── Docker sur le NAS
+                    └── Conteneur histoviewer
+                          └── Serveur Python Flask</code></pre>
+
+<p>Tu peux voir ça comme des poupées russes : PowerShell peut te connecter au NAS, le NAS lance Docker, Docker lance le serveur Python.</p>
+
+<h3>Qui fait quoi ?</h3>
+
+<table>
+<tr><th>Besoin</th><th>Outil concerné</th><th>Exemple</th></tr>
+<tr>
+<td>Me connecter au NAS depuis Windows</td>
+<td>PowerShell + SSH</td>
+<td><code>ssh tice-nas@192.168.0.93</code></td>
+</tr>
+<tr>
+<td>Voir où je suis dans les dossiers du NAS</td>
+<td>Shell Linux du NAS</td>
+<td><code>pwd</code>, <code>ls -lah</code></td>
+</tr>
+<tr>
+<td>Lancer, arrêter ou redémarrer l’application</td>
+<td>Docker</td>
+<td><code>sudo docker restart histoviewer</code></td>
+</tr>
+<tr>
+<td>Voir les logs de l’application</td>
+<td>Docker</td>
+<td><code>sudo docker logs histoviewer</code></td>
+</tr>
+<tr>
+<td>Entrer dans l’environnement isolé de l’application</td>
+<td>Docker</td>
+<td><code>sudo docker exec -it histoviewer bash</code></td>
+</tr>
+<tr>
+<td>Modifier le comportement du site ou de l’API</td>
+<td>Serveur Python</td>
+<td>Modifier <code>server.py</code></td>
+</tr>
+<tr>
+<td>Modifier l’interface affichée dans le navigateur</td>
+<td>HTML/JS côté viewer</td>
+<td>Modifier <code>viewer.html</code></td>
+</tr>
+<tr>
+<td>Rendre le site accessible depuis un navigateur</td>
+<td>Serveur Python + réseau + port</td>
+<td><code>http://192.168.0.93:8080</code></td>
+</tr>
+</table>
+
+<h3>PowerShell : quand l’utiliser ?</h3>
+
+<p>PowerShell est ton point de départ quand tu es sur Windows.</p>
+
+<p>Tu l’utilises pour :</p>
+<ul>
+<li>te connecter au NAS avec SSH ;</li>
+<li>tester une connexion réseau ;</li>
+<li>copier des fichiers avec <code>scp</code> si besoin ;</li>
+<li>lancer des commandes Windows locales.</li>
+</ul>
+
+<pre><code># Se connecter au NAS
+ssh tice-nas@192.168.0.93
+
+# Tester si le NAS répond
+ping 192.168.0.93
+
+# Tester une URL depuis Windows
+curl http://192.168.0.93:8080</code></pre>
+
+<div class="warn">
+<strong>À ne pas oublier :</strong><br>
+Quand tu es dans PowerShell, les chemins Linux comme <code>/volume1/docker</code> n’existent pas localement. Ils existent sur le NAS après connexion SSH.
+</div>
+
+<h3>Docker : quand l’utiliser ?</h3>
+
+<p>Docker sert à gérer le conteneur, c’est-à-dire l’environnement dans lequel tourne ton application.</p>
+
+<p>Tu l’utilises pour :</p>
+<ul>
+<li>démarrer ou arrêter l’application ;</li>
+<li>voir les logs ;</li>
+<li>entrer dans le conteneur ;</li>
+<li>monter des dossiers du NAS dans le conteneur ;</li>
+<li>reconstruire l’image si tu modifies les dépendances ou le code copié dedans.</li>
+</ul>
+
+<pre><code># Voir les conteneurs actifs
+sudo docker ps
+
+# Voir tous les conteneurs
+sudo docker ps -a
+
+# Redémarrer
+sudo docker restart histoviewer
+
+# Voir les logs
+sudo docker logs histoviewer
+
+# Entrer dans le conteneur
+sudo docker exec -it histoviewer bash</code></pre>
+
+<h3>Serveur Python : quand intervient-il ?</h3>
+
+<p>Le serveur Python est le programme qui tourne à l’intérieur du conteneur. Il reçoit les requêtes du navigateur.</p>
+
+<p>Exemples de requêtes :</p>
+
+<pre><code>GET /
+GET /api/slides
+GET /api/info/nom_du_fichier
+GET /api/dzi/nom_du_fichier.dzi</code></pre>
+
+<p>Dans ton code, Flask associe ces adresses à des fonctions Python :</p>
+
+<pre><code>@app.route("/api/slides")
+def list_slides():
+    return jsonify(...)</code></pre>
+
+<p>Donc quand tu tapes dans le navigateur :</p>
+
+<pre><code>http://192.168.0.93:8080/api/slides</code></pre>
+
+<p>Le navigateur contacte le serveur Python, qui exécute la fonction associée et renvoie une réponse.</p>
+
+<h3>Différence entre arrêter Docker et arrêter Python</h3>
+
+<table>
+<tr><th>Situation</th><th>Ce qui se passe</th></tr>
+<tr>
+<td><code>Ctrl + C</code> après <code>python server.py</code></td>
+<td>Tu arrêtes le serveur Python lancé directement au premier plan.</td>
+</tr>
+<tr>
+<td><code>sudo docker stop histoviewer</code></td>
+<td>Tu arrêtes tout le conteneur, donc aussi le serveur Python dedans.</td>
+</tr>
+<tr>
+<td><code>sudo docker restart histoviewer</code></td>
+<td>Docker arrête puis relance le conteneur et le serveur Python.</td>
+</tr>
+<tr>
+<td><code>sudo docker logs -f histoviewer</code> puis <code>Ctrl + C</code></td>
+<td>Tu arrêtes seulement le suivi des logs ; le serveur continue de tourner.</td>
+</tr>
+</table>
+
+<h3>Quand faut-il rebuild ?</h3>
+
+<table>
+<tr><th>Action</th><th>Rebuild ?</th><th>Pourquoi</th></tr>
+<tr>
+<td>Ajouter des fichiers dans un dossier monté avec <code>-v</code></td>
+<td>Non</td>
+<td>Docker lit directement le dossier du NAS.</td>
+</tr>
+<tr>
+<td>Supprimer ou déplacer des fichiers dans un dossier monté</td>
+<td>Non</td>
+<td>Un simple restart suffit parfois à rafraîchir l’état.</td>
+</tr>
+<tr>
+<td>Modifier <code>server.py</code> s’il est copié dans l’image par le Dockerfile</td>
+<td>Oui</td>
+<td>L’image contient l’ancienne version tant qu’elle n’est pas reconstruite.</td>
+</tr>
+<tr>
+<td>Modifier <code>viewer.html</code> s’il est copié dans l’image</td>
+<td>Oui</td>
+<td>Le conteneur sert le fichier copié au build.</td>
+</tr>
+<tr>
+<td>Modifier le <code>Dockerfile</code></td>
+<td>Oui</td>
+<td>Il faut reconstruire l’environnement.</td>
+</tr>
+<tr>
+<td>Changer la commande <code>docker run</code> ou les volumes</td>
+<td>Pas forcément rebuild, mais recréer le conteneur</td>
+<td>Les volumes et ports sont définis au lancement du conteneur.</td>
+</tr>
+</table>
+
+<h3>Résumé ultra court</h3>
+
+<table>
+<tr><th>Service</th><th>Question à se poser</th><th>Commande typique</th></tr>
+<tr>
+<td>PowerShell</td>
+<td>Comment accéder au serveur depuis mon PC ?</td>
+<td><code>ssh utilisateur@ip</code></td>
+</tr>
+<tr>
+<td>Docker</td>
+<td>Comment gérer l’environnement où tourne l’application ?</td>
+<td><code>sudo docker restart histoviewer</code></td>
+</tr>
+<tr>
+<td>Serveur Python</td>
+<td>Que fait mon application quand le navigateur l’appelle ?</td>
+<td><code>python server.py</code></td>
+</tr>
+</table>
+
+<div class="ok">
+<strong>Réflexe pratique :</strong><br>
+Si le problème est “je n’arrive pas à me connecter”, pense réseau/PowerShell/SSH.<br>
+Si le problème est “le conteneur ne tourne pas”, pense Docker.<br>
+Si le problème est “l’URL répond mal ou renvoie une erreur”, pense serveur Python et logs.
+</div>
+</section>
+
+<section id="serveur-bloquant">
+<h2>14. Quand un serveur affiche les logs et bloque le terminal</h2>
+
+<p>Quand tu lances un serveur directement dans le terminal, par exemple :</p>
+
+<pre><code>python server.py
+# ou
+flask run
+# ou
+npm run dev</code></pre>
+
+<p>le programme reste actif. Il écoute les requêtes et affiche les logs en direct. C’est normal que tu ne récupères pas tout de suite une nouvelle ligne de commande.</p>
+
+<h3>Exemple</h3>
+
+<pre><code>Serveur démarré sur http://localhost:8080
+127.0.0.1 - - "GET / HTTP/1.1" 200 -
+127.0.0.1 - - "GET /api/slides HTTP/1.1" 200 -</code></pre>
+
+<p>Tant que le serveur tourne, le terminal est occupé par ce processus.</p>
+
+<div class="ok">
+<strong>À retenir :</strong><br>
+Voir les logs ne veut pas dire que le terminal bug. Cela veut dire que le serveur tourne au premier plan.
+</div>
+
+<h3>Arrêter proprement un serveur lancé au premier plan</h3>
+
+<p>La commande la plus importante :</p>
+
+<pre><code>Ctrl + C</code></pre>
+
+<p>Sur Windows, Mac et Linux, <code>Ctrl + C</code> envoie un signal d’arrêt au programme actif. Dans la majorité des cas, cela arrête le serveur et te rend la main.</p>
+
+<p>Après arrêt, tu dois revoir un prompt du type :</p>
+
+<pre><code>tice-nas@TICE:/volume1/docker$
+# ou
+PS C:\Users\Toi&gt;
+# ou
+root@xxxx:/app#</code></pre>
+
+<h3>Ne pas confondre Ctrl+C et fermer la fenêtre</h3>
+
+<table>
+<tr><th>Action</th><th>Effet</th></tr>
+<tr><td><code>Ctrl + C</code></td><td>Arrête le processus actif dans le terminal.</td></tr>
+<tr><td>Fermer la fenêtre</td><td>Coupe la session, parfois brutalement.</td></tr>
+<tr><td><code>exit</code></td><td>Quitte le shell actuel, mais n’arrête pas toujours un serveur si un processus tourne encore.</td></tr>
+</table>
+
+<h3>Lancer un serveur en arrière-plan</h3>
+
+<p>Si tu veux récupérer le terminal tout de suite, tu peux lancer une commande en arrière-plan avec <code>&amp;</code> :</p>
+
+<pre><code>python server.py &amp;</code></pre>
+
+<p>Mais pour débuter, ce n’est pas toujours le plus simple, car il faut ensuite savoir retrouver et arrêter le processus.</p>
+
+<h3>Voir les processus en cours</h3>
+
+<pre><code>ps aux | grep python</code></pre>
+
+<p>Cette commande cherche les processus Python actifs.</p>
+
+<h3>Arrêter un processus avec son PID</h3>
+
+<p>Si tu vois une ligne comme :</p>
+
+<pre><code>tice-nas  12345  ...  python server.py</code></pre>
+
+<p>Le nombre <code>12345</code> est le PID, c’est-à-dire l’identifiant du processus. Tu peux l’arrêter avec :</p>
+
+<pre><code>kill 12345</code></pre>
+
+<p>Si le processus refuse de s’arrêter :</p>
+
+<pre><code>kill -9 12345</code></pre>
+
+<div class="danger">
+<strong>Attention :</strong><br>
+<code>kill -9</code> force l’arrêt. À utiliser seulement si <code>Ctrl + C</code> ou <code>kill</code> simple ne fonctionne pas.
+</div>
+
+<h3>Cas Docker : voir les logs sans bloquer définitivement</h3>
+
+<p>Avec Docker, tu peux afficher les logs :</p>
+
+<pre><code>sudo docker logs histoviewer</code></pre>
+
+<p>Cette commande affiche les logs déjà présents puis te rend la main.</p>
+
+<p>Si tu utilises :</p>
+
+<pre><code>sudo docker logs -f histoviewer</code></pre>
+
+<p>le <code>-f</code> signifie <strong>follow</strong> : tu suis les logs en direct. Le terminal reste donc occupé.</p>
+
+<p>Pour arrêter de suivre les logs sans arrêter le conteneur :</p>
+
+<pre><code>Ctrl + C</code></pre>
+
+<div class="ok">
+<strong>Important :</strong><br>
+<code>Ctrl + C</code> sur <code>docker logs -f</code> arrête seulement l’affichage des logs. Le conteneur continue de tourner.
+</div>
+
+<h3>Cas Docker : arrêter vraiment le serveur</h3>
+
+<p>Si ton serveur tourne dans Docker, il vaut mieux arrêter le conteneur :</p>
+
+<pre><code>sudo docker stop histoviewer</code></pre>
+
+<p>Le redémarrer :</p>
+
+<pre><code>sudo docker start histoviewer</code></pre>
+
+<p>Ou faire les deux d’un coup :</p>
+
+<pre><code>sudo docker restart histoviewer</code></pre>
+
+<h3>Comprendre les modes : premier plan, arrière-plan, logs</h3>
+
+<table>
+<tr><th>Situation</th><th>Ce que tu vois</th><th>Comment reprendre la main</th></tr>
+<tr><td>Serveur lancé avec <code>python server.py</code></td><td>Logs en direct</td><td><code>Ctrl + C</code> arrête le serveur</td></tr>
+<tr><td>Logs Docker avec <code>docker logs -f</code></td><td>Logs en direct</td><td><code>Ctrl + C</code> arrête seulement le suivi</td></tr>
+<tr><td>Conteneur lancé avec <code>docker run -d</code></td><td>Le terminal revient tout de suite</td><td>Utiliser <code>docker logs</code> pour voir les logs</td></tr>
+<tr><td>Commande bloquée avec un <code>&gt;</code></td><td>Le shell attend la suite</td><td><code>Ctrl + C</code> annule la commande incomplète</td></tr>
+</table>
+
+<h3>Quand tu vois un <code>&gt;</code> au début de la ligne</h3>
+
+<p>Exemple :</p>
+
+<pre><code>&gt;   -v /volume1/docker/slides:/slides \
+&gt;   histoviewer \
+&gt;   bash</code></pre>
+
+<p>Ce n’est pas une erreur en soi : cela veut dire que le shell attend la suite d’une commande multi-lignes. Mais si tu as collé une commande de travers, tu peux te retrouver bloqué.</p>
+
+<p>Pour annuler et repartir proprement :</p>
+
+<pre><code>Ctrl + C</code></pre>
+
+<h3>Réflexe simple</h3>
+
+<ol>
+<li>Je vois des logs défiler : le serveur tourne probablement.</li>
+<li>Je veux arrêter ce serveur lancé directement : <code>Ctrl + C</code>.</li>
+<li>Je suis en train de suivre des logs Docker : <code>Ctrl + C</code> arrête seulement l’affichage.</li>
+<li>Je veux arrêter le serveur Docker : <code>sudo docker stop histoviewer</code>.</li>
+<li>Je vois un <code>&gt;</code> et je ne comprends plus : <code>Ctrl + C</code>.</li>
+</ol>
+</section>
+
+<section>
+<h2>15. Ce que tu dois retenir en priorité</h2>
+<ol>
+<li>Avant de taper une commande, regarde ton prompt : PC, NAS ou Docker ?</li>
+<li><code>localhost</code> veut toujours dire “la machine où je suis”.</li>
+<li>Un conteneur Docker est isolé : ses chemins ne sont pas forcément ceux du NAS.</li>
+<li><code>-v dossier_nas:dossier_docker</code> est le pont entre les deux.</li>
+<li>Un serveur Python écoute sur un port, par exemple <code>8080</code>.</li>
+<li><code>docker build</code> fabrique l’image ; <code>docker run</code> lance le conteneur.</li>
+<li>Pour ajouter des données, on ne rebuild pas : on redémarre juste si nécessaire.</li>
+<li>Les logs sont tes meilleurs amis : <code>sudo docker logs nom_du_conteneur</code>.</li>
+</ol>
+
+<div class="danger">
+<strong>Réflexe anti-panique :</strong><br>
+1. <code>pwd</code> — où suis-je ?<br>
+2. <code>ls -lah</code> — qu’est-ce qu’il y a ici ?<br>
+3. <code>sudo docker ps</code> — le conteneur tourne-t-il ?<br>
+4. <code>sudo docker logs histoviewer</code> — que dit l’application ?
+</div>
+</section>
+
+</main>
+<footer>Mémo débutant — Terminal, Linux, Docker, localhost et serveur Python.</footer>
+</body>
+</html>

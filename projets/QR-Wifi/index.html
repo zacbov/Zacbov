@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Générateur QR — Wifi DESCARTES</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --bleu: #00457c;
+    --bleu-clair: #e8f0f7;
+    --gris: #5a6470;
+    --bord: #d4dae1;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    background: #f4f6f8;
+    color: #1c2530;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; color: var(--bleu); }
+  .sub { color: var(--gris); margin: 0 0 24px; font-size: 0.95rem; }
+
+  .panel {
+    background: #fff;
+    border: 1px solid var(--bord);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .panel h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: .04em; color: var(--gris); margin: 0 0 16px; }
+
+  label { display: block; font-weight: 600; font-size: 0.9rem; margin: 14px 0 6px; }
+  label:first-of-type { margin-top: 0; }
+  input, select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 1rem;
+    border: 1px solid var(--bord);
+    border-radius: 8px;
+    background: #fff;
+  }
+  input:focus, select:focus { outline: 2px solid var(--bleu); border-color: var(--bleu); }
+  .hint { font-size: 0.8rem; color: var(--gris); margin-top: 5px; }
+
+  .btn {
+    display: inline-block; margin-top: 18px; width: 100%;
+    background: var(--bleu); color: #fff; border: none;
+    padding: 13px; font-size: 1rem; font-weight: 600;
+    border-radius: 8px; cursor: pointer;
+  }
+  .btn:hover { background: #00375f; }
+  .btn-sec { background: #fff; color: var(--bleu); border: 1px solid var(--bleu); margin-top: 10px; }
+  .btn-sec:hover { background: var(--bleu-clair); }
+
+  /* La fiche imprimable */
+  #fiche { display: none; }
+  #fiche.show { display: block; }
+  .ticket {
+    background: #fff; border: 2px solid var(--bleu); border-radius: 14px;
+    padding: 28px; text-align: center; max-width: 380px; margin: 0 auto;
+  }
+  .ticket .net { font-size: 1.05rem; font-weight: 700; color: var(--bleu); margin: 0 0 2px; }
+  .ticket .net small { display:block; font-weight: 500; color: var(--gris); font-size:.8rem; letter-spacing:.02em; }
+  #qrbox { display: flex; justify-content: center; padding: 18px 0 8px; }
+  #qrbox img, #qrbox canvas { border-radius: 6px; }
+  .creds {
+    text-align: left; background: var(--bleu-clair); border-radius: 10px;
+    padding: 14px 16px; margin-top: 14px; font-size: 0.95rem;
+  }
+  .creds .row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+  .creds .k { color: var(--gris); }
+  .creds .v { font-weight: 700; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; word-break: break-all; text-align: right; }
+  .note { font-size: 0.78rem; color: var(--gris); margin-top: 14px; }
+  .warn {
+    font-size: 0.82rem; background: #fff7e6; border: 1px solid #f0d48a;
+    border-radius: 8px; padding: 10px 12px; margin-top: 16px; color: #7a5b00;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .wrap > h1, .wrap > .sub, .panel, .actions { display: none !important; }
+    #fiche { display: block !important; }
+    .ticket { border-color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Générateur QR — Wifi DESCARTES</h1>
+  <p class="sub">Saisissez les identifiants du ticket fourni par le service informatique. L'outil produit un QR code à scanner, avec les identifiants rappelés en dessous.</p>
+
+  <div class="panel">
+    <h2>Identifiants du ticket</h2>
+
+    <label for="ssid">Nom du réseau (SSID)</label>
+    <input id="ssid" type="text" value="DESCARTES" autocomplete="off">
+
+    <label for="login">Identifiant / login</label>
+    <input id="login" type="text" placeholder="ex. invite-4821" autocomplete="off">
+
+    <label for="pass">Mot de passe</label>
+    <input id="pass" type="text" placeholder="le mot de passe du ticket" autocomplete="off">
+    <div class="hint">Affiché en clair volontairement : c'est un ticket temporaire destiné à être distribué.</div>
+
+    <label for="type">Type de sécurité du réseau</label>
+    <select id="type">
+      <option value="WPA">WPA/WPA2 — mot de passe partagé (scan direct)</option>
+      <option value="WPA2-EAP">WPA2-Enterprise — login + mot de passe individuel</option>
+      <option value="nopass">Réseau ouvert (sans mot de passe)</option>
+    </select>
+    <div class="hint">En cas de doute, demandez au service info. S'il y a un <em>login</em> ET un mot de passe, c'est en général « Enterprise ».</div>
+
+    <label for="validite">Validité (optionnel, affiché sous le QR)</label>
+    <input id="validite" type="text" placeholder="ex. valable 24 h — jusqu'au 12/06 18 h" autocomplete="off">
+
+    <button class="btn" onclick="generer()">Générer le QR code</button>
+  </div>
+
+  <div id="fiche" class="panel">
+    <div class="ticket">
+      <p class="net" id="f-ssid">DESCARTES <small>Réseau wifi — Université Paris Cité</small></p>
+      <div id="qrbox"></div>
+      <div class="creds">
+        <div class="row"><span class="k">Réseau</span><span class="v" id="f-net">DESCARTES</span></div>
+        <div class="row" id="r-login"><span class="k">Identifiant</span><span class="v" id="f-login"></span></div>
+        <div class="row"><span class="k">Mot de passe</span><span class="v" id="f-pass"></span></div>
+        <div class="row" id="r-valid" style="display:none"><span class="k">Validité</span><span class="v" id="f-valid"></span></div>
+      </div>
+      <p class="note" id="f-note">Scannez le QR code avec l'appareil photo, puis confirmez la connexion.</p>
+    </div>
+    <div class="warn" id="f-warn" style="display:none">
+      ⚠️ Réseau de type Enterprise : le scan direct n'est pas pris en charge par tous les téléphones.
+      Si la connexion automatique échoue, saisissez manuellement l'identifiant et le mot de passe ci-dessus.
+    </div>
+  </div>
+
+  <div class="actions" id="actions" style="display:none">
+    <button class="btn" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+    <button class="btn btn-sec" onclick="reset()">Nouveau ticket</button>
+  </div>
+</div>
+
+<script>
+function esc(s){ return String(s).replace(/([\\;,":])/g, "\\$1"); }
+
+function generer(){
+  var ssid = document.getElementById('ssid').value.trim();
+  var login = document.getElementById('login').value.trim();
+  var pass = document.getElementById('pass').value.trim();
+  var type = document.getElementById('type').value;
+  var valid = document.getElementById('validite').value.trim();
+
+  if(!ssid){ alert("Indiquez le nom du réseau (SSID)."); return; }
+  if(type !== 'nopass' && !pass){ alert("Indiquez le mot de passe."); return; }
+
+  // Construction de la chaîne QR wifi standard
+  var payload;
+  if(type === 'nopass'){
+    payload = "WIFI:S:" + esc(ssid) + ";T:nopass;;";
+  } else if(type === 'WPA2-EAP'){
+    // Format Enterprise : inclut l'identité. Support variable selon l'OS.
+    payload = "WIFI:S:" + esc(ssid) + ";T:WPA2-EAP;I:" + esc(login) + ";P:" + esc(pass) + ";;";
+  } else {
+    payload = "WIFI:S:" + esc(ssid) + ";T:WPA;P:" + esc(pass) + ";;";
+  }
+
+  // Rendu du QR
+  var box = document.getElementById('qrbox');
+  box.innerHTML = "";
+  new QRCode(box, { text: payload, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+
+  // Remplissage de la fiche
+  document.getElementById('f-ssid').firstChild.textContent = ssid + " ";
+  document.getElementById('f-net').textContent = ssid;
+  document.getElementById('f-pass').textContent = pass || "(aucun)";
+
+  var rLogin = document.getElementById('r-login');
+  if(login){ document.getElementById('f-login').textContent = login; rLogin.style.display = "flex"; }
+  else { rLogin.style.display = "none"; }
+
+  var rValid = document.getElementById('r-valid');
+  if(valid){ document.getElementById('f-valid').textContent = valid; rValid.style.display = "flex"; }
+  else { rValid.style.display = "none"; }
+
+  document.getElementById('f-warn').style.display = (type === 'WPA2-EAP') ? "block" : "none";
+
+  document.getElementById('fiche').classList.add('show');
+  document.getElementById('actions').style.display = "block";
+  document.getElementById('fiche').scrollIntoView({behavior:'smooth'});
+}
+
+function reset(){
+  document.getElementById('login').value = "";
+  document.getElementById('pass').value = "";
+  document.getElementById('validite').value = "";
+  document.getElementById('fiche').classList.remove('show');
+  document.getElementById('actions').style.display = "none";
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+</script>
+</body>
+</html>

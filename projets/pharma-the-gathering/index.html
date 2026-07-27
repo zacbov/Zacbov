@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>PharmaDuel</title>
 <style>
   :root{
@@ -53,8 +53,8 @@
   .recept.r-mu .dot,.recept.r-gaba .dot{background:var(--snc)} .recept.r-beta .dot{background:var(--cardio)}
   .slot{width:96px;height:clamp(132px,22vh,182px);border-radius:11px;border:1px dashed var(--line);display:flex;align-items:center;
     justify-content:center;color:var(--dim);font-family:var(--mono);font-size:9px;background:rgba(255,255,255,.012);transition:.15s}
-  .slot.you.legal{border:1.6px solid var(--pk);background:rgba(56,189,248,.06);cursor:pointer;box-shadow:0 0 14px rgba(56,189,248,.25)}
-  .slot.you.legal:hover{background:rgba(56,189,248,.12)} .slot.filled{border-color:transparent;padding:0}
+  .slot.legal{border:1.6px solid var(--pk);background:rgba(56,189,248,.06);cursor:pointer;box-shadow:0 0 14px rgba(56,189,248,.25)}
+  .slot.legal:hover{background:rgba(56,189,248,.12)} .slot.filled{border-color:transparent;padding:0}
 
   .hand{background:linear-gradient(0deg,rgba(11,14,20,.5),rgba(11,14,20,.12) 60%,transparent)}
   .zlabel{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:5px 14px 0}
@@ -218,6 +218,25 @@
     22%{transform:translate(-50%,-12px) scale(1.15);opacity:1}
     100%{transform:translate(-50%,-46px) scale(1);opacity:0}}
 
+
+  /* ── Multijoueur : menus & salle ── */
+  .modes{display:flex;flex-direction:column;gap:10px;margin:16px 0}
+  .bigbtn{font-size:15px;padding:14px 18px;border-radius:12px}
+  .subbtn{background:transparent;border:1px solid var(--line);opacity:.8;margin-top:4px}
+  .joinrow{display:flex;gap:8px;margin-top:10px}
+  .joinrow input{flex:1;padding:12px 14px;border-radius:10px;border:1px solid var(--line);
+    background:rgba(9,13,19,.8);color:var(--ink);font-family:var(--mono);font-size:18px;
+    letter-spacing:.28em;text-transform:uppercase;text-align:center}
+  .joinrow input:focus{outline:none;border-color:var(--acc)}
+  .neterr{color:#fca5a5;font-size:12px;min-height:16px;margin-top:8px;text-align:center}
+  .waitbox{display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px 0}
+  .roomcode{font-family:var(--mono);font-size:34px;font-weight:800;letter-spacing:.32em;
+    color:var(--acc);text-shadow:0 0 20px rgba(56,189,248,.5);
+    padding:10px 20px;border:2px dashed var(--line);border-radius:12px;background:rgba(9,13,19,.6)}
+  .spinner{width:38px;height:38px;border-radius:50%;border:3px solid rgba(56,189,248,.18);
+    border-top-color:var(--acc);animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
   /* ── Pathologies ── */
   .pathorow{display:flex;gap:6px;align-items:center;min-height:0;padding:0 10px;flex-wrap:wrap}
   .patho{display:flex;align-items:center;gap:6px;padding:3px 8px 3px 5px;border-radius:20px;
@@ -322,6 +341,7 @@
 </div>
 
 <script>
+
 /* ═══════ LIGNES ═══════ */
 const RECEPT=["mu","gaba","beta"], SYS=["sys0","sys1","sys2","sys3"], COLS=[...RECEPT,...SYS];
 const recLabel={mu:"μ-opioïde",gaba:"GABA-A",beta:"β-adréner."};
@@ -943,6 +963,21 @@ function beginTurn(side,noDraw){
 /* ═══════ ACTIONS JOUEUR ═══════ */
 function toggleConv(){if(!S||S.active!=="you"||S.over)return;if(S.you.terrDone){toast("Un seul terrain par tour");return;}if(!S.you.hand.length){toast("Main vide");return;}S.convMode=!S.convMode;const b=document.getElementById("convBtn");if(b)b.classList.toggle("active",S.convMode);toast(S.convMode?"Choisis une carte à troquer contre un terrain":"Annulé");}
 function clickHand(hid,el){
+  if(MODE==="mp"){
+    if(!myTurn()){toast("Ce n'est pas ton tour");return;}
+    const c=S[ME].hand[hid]; if(!c)return;
+    if(c.kw.includes("terrain")){ if(S[ME].terrDone){toast("Un seul terrain par tour");return;}
+      if(NET.role==="host") mpApplyTerrain("you",c.inst); else mpGuestTerrain(c.inst); return; }
+    const _cost=costOf(ME,c);
+    if(S[ME].energy<_cost){toast(`Énergie insuffisante : ${c.name} coûte ${_cost}É`);
+      if(el){el.classList.remove("shake");void el.offsetWidth;el.classList.add("shake");}return;}
+    if(c.spell){ if(NET.role==="host") mpApplySpell("you",c.inst); else mpGuestSpell(c.inst); return; }
+    // créature : sélection de lane, puis placeOnRouted
+    const slots=legalSlots(c,ME);
+    if(!slots.length){toast("Aucune ligne libre");return;}
+    S.placing=(S.placing&&S.placing.hid===hid)?null:{hid,cols:slots};
+    render(); return;
+  }
   const c=S.you.hand[hid];if(!c)return;
   if(S.convMode){const cc=S.you.hand.splice(hid,1)[0];toDisc("you",cc);const t=mkInst("terr_"+S.you.deckName);playTerrain("you",t);S.convMode=false;const cb=document.getElementById("convBtn");if(cb)cb.classList.remove("active");log(`Troc : ${cc.name} → terrain (+1 énergie permanente)`,"buff");toast("Terrain posé");render();return;}
   if(S.active!=="you"){toast("Ce n'est pas ton tour");return;}
@@ -1046,9 +1081,20 @@ function aiPickCol(side,c,cols){
 
 /* ═══════ VICTOIRE ═══════ */
 function checkWin(){
-  if(S.foe.hp<=0){endGame("Victoire",`${DECKS[S.you.deckName].label} l'emporte : homéostasie adverse à zéro.`);return true;}
-  if(S.you.hp<=0){endGame("Défaite",`${DECKS[S.foe.deckName].label} l'emporte.`);return true;}
-  return false;
+  let w=null;
+  if(S.foe.hp<=0){ S.over=true; w="you"; }
+  else if(S.you.hp<=0){ S.over=true; w="foe"; }
+  if(!w) return false;
+  S.winner=w;
+  if(MODE==="mp"){
+    if(NET.role==="host") netPushState();
+    const iWon=(w===ME);
+    endGame(iWon?"Victoire":"Défaite", iWon?"Homéostasie adverse rétablie.":"Ton adversaire l'emporte.");
+    return true;
+  }
+  endGame(w==="you"?"Victoire":"Défaite",
+    w==="you"?`${DECKS[S.you.deckName].label} l'emporte.`:`${DECKS[S.foe.deckName].label} l'emporte.`);
+  return true;
 }
 
 /* ═══════ RENDU ═══════ */
@@ -1076,7 +1122,7 @@ function slotEl(side,col){
     div.innerHTML=cardHTML(card,"onboard",(card.sick&&side==="you"&&S.active==="you"?"sick ":"")+(blk?"blk":""));
     const cel=div.querySelector(".card");if(cel){cel.dataset.side=side;cel.dataset.col=col;}}
   else{div.textContent=side==="foe"?"—":(col.startsWith("sys")?"systémique":"récepteur");
-    if(side==="you"&&S.placing&&S.placing.cols.includes(col))div.classList.add("legal");}
+    if(side===((typeof ME!=="undefined")?ME:"you")&&S.placing&&S.placing.cols.includes(col))div.classList.add("legal");}
   return div;
 }
 function heroDetail(side){
@@ -1153,34 +1199,38 @@ function pathoTipHTML(pk,side){
 }
 
 function render(){
+  if(!S){return;}
   document.getElementById("turnNo").textContent=S.turn;
-  document.getElementById("endBtn").disabled=(S.active!=="you"||S.over);
-  ["foe","you"].forEach(sd=>{const el=document.getElementById(sd==="foe"?"heroFoe":"heroYou");
+  document.getElementById("endBtn").disabled=(!myTurn()||S.over);
+  const _top=(typeof OP!=="undefined")?OP:"foe", _bot=(typeof ME!=="undefined")?ME:"you";
+  [[_top,"heroFoe"],[_bot,"heroYou"]].forEach(([sd,elid])=>{const el=document.getElementById(elid);
     el.innerHTML=heroHTML(sd)+pathoHTML(sd);const li=DECKS[S[sd].deckName].lieuImg;
     el.style.backgroundImage=li?`linear-gradient(90deg,rgba(11,14,20,.9),rgba(11,14,20,.5)),url('${li}')`:"";
     el.style.backgroundSize="cover";el.style.backgroundPosition="center";el.onclick=()=>heroDetail(sd);});
-  document.getElementById("pilesYou").innerHTML=pilesHTML("you");document.getElementById("pilesFoe").innerHTML=pilesHTML("foe");
+  document.getElementById("pilesYou").innerHTML=pilesHTML(_bot);document.getElementById("pilesFoe").innerHTML=pilesHTML(_top);
 
   const L=document.getElementById("lanes");L.innerHTML="";
   let hs=-1; SYS.forEach((k,i)=>{ if(S.you.slots[k]||S.foe.slots[k]) hs=i; });
   const visSys=SYS.slice(0,Math.max(1,Math.min(SYS.length,hs+2)));
   const vcols=["mu","gaba","beta",...visSys];
   vcols.forEach(col=>{const lane=document.createElement("div");lane.className="lane";
-    lane.appendChild(slotEl("foe",col));
+    lane.appendChild(slotEl(_top,col));
     const chip=document.createElement("div");chip.className="recept "+colCls(col);chip.innerHTML=`<span class="dot"></span>${colLabel(col)}`;
-    lane.appendChild(chip);lane.appendChild(slotEl("you",col));L.appendChild(lane);});
+    lane.appendChild(chip);lane.appendChild(slotEl(_bot,col));L.appendChild(lane);});
 
   const fh=document.getElementById("foeHand");
   if(fh){ fh.innerHTML="";
-    const n=S.foe.hand.filter(c=>!c._arriving).length;
+    const n=S[_top].hand.filter(c=>!c._arriving).length;
     for(let i=0;i<n;i++) fh.insertAdjacentHTML("beforeend",'<div class="cardback"></div>');
     const kids=fh.querySelectorAll(".cardback"), c=(n-1)/2;
     kids.forEach((el,i)=>{ const step=Math.min(6,40/Math.max(1,n));
       el.style.setProperty("--rot",(-(i-c)*step).toFixed(2)+"deg");
       el.style.setProperty("--ty",(-Math.pow(Math.abs(i-c),2)*3).toFixed(1)+"px"); }); }
   const hand=document.getElementById("hand");hand.innerHTML="";
-  S.you.hand.forEach((c,i)=>c._hid=i);
-  S.you.hand.filter(c=>!c._arriving).forEach(c=>{const playable=(S.active==="you"&&costOf("you",c)<=S.energy);
+  S[_bot].hand.forEach((c,i)=>c._hid=i);
+  const _myEnergy=(_bot==="you")?S.energy:S[_bot].energy;
+  const _myTurn=(typeof myTurn==="function")?myTurn():(S.active==="you");
+  S[_bot].hand.filter(c=>!c._arriving).forEach(c=>{const playable=(_myTurn&&costOf(_bot,c)<=_myEnergy);
     const sel=(S.placing&&S.placing.hid===c._hid)?"selected":"";
     hand.insertAdjacentHTML("beforeend",cardHTML(c,playable?"playable":"hand",sel));});
   { const kids=hand.querySelectorAll(".card"), n=kids.length, c=(n-1)/2;
@@ -1191,9 +1241,29 @@ function render(){
   wireTips();wireClicks();
 }
 function wireClicks(){
-  document.querySelectorAll("#hand .card").forEach(el=>el.onclick=()=>clickHand(+el.dataset.hid,el));
-  document.querySelectorAll(".slot.you.legal").forEach(el=>el.onclick=()=>placeOn(el.dataset.col));
-  document.getElementById("endBtn").onclick=endTurn;
+  document.querySelectorAll("#hand .card").forEach(el=>el.onclick=()=>{ if(myTurn()) clickHand(+el.dataset.hid,el); });
+  document.querySelectorAll(".slot.legal").forEach(el=>el.onclick=()=>placeOnRouted(el.dataset.col));
+  document.getElementById("endBtn").onclick=endTurnRouted;
+}
+/* Routage des actions : solo/hôte = moteur local ; invité = intentions réseau */
+function placeOnRouted(col){
+  if(MODE==="mp" && NET.role==="guest"){
+    if(!S.placing||!S.placing.cols.includes(col))return;
+    const c=S[ME].hand[S.placing.hid]; S.placing=null; render();
+    mpGuestPlace(c.inst,col); return;
+  }
+  if(MODE==="mp" && NET.role==="host"){
+    if(!S.placing||!S.placing.cols.includes(col))return;
+    const c=S.you.hand[S.placing.hid]; S.placing=null;
+    mpApplyPlace("you",c.inst,col); return;
+  }
+  placeOn(col);
+}
+function endTurnRouted(){
+  if(!myTurn())return;
+  if(MODE!=="mp"){ endTurn(); return; }
+  if(NET.role==="host"){ mpHostEndSelf(); }
+  else { mpGuestEnd(); }
 }
 
 /* ═══════ INFOBULLE ═══════ */
@@ -1253,7 +1323,7 @@ function wireTips(){
 function log(msg,cls=""){const l=document.getElementById("log");l.insertAdjacentHTML("beforeend",`<div class="ev ${cls}">› ${msg}</div>`);l.scrollTop=l.scrollHeight;}
 function toast(msg){let t=document.getElementById("toast");if(!t){t=document.createElement("div");t.id="toast";document.body.appendChild(t);}t.textContent=msg;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),1600);}
 function endGame(t,b){S.over=true;showModal(`<h2>${t}</h2><p>${b}</p><div class="endbtnrow"><button class="ctl" id="againBtn">Nouvelle partie</button></div>`);
-  document.getElementById("againBtn").onclick=deckSelect;}
+  document.getElementById("againBtn").onclick=homeScreen;}
 
 /* ═══════ ÉCRANS ═══════ */
 function showModal(html){const o=document.getElementById("over");document.getElementById("modal").innerHTML=html;o.classList.add("show");}
@@ -1296,7 +1366,527 @@ function startGame(youDeck){
   render();
 }
 DECK_KEYS.forEach(k=>{const d=DECKS[k];DB["terr_"+k]=mk(d.lieu.name,d.fac,"Lieu \u00b7 \u00c9nergie",0,0,0,"Terrain|buff","terrain \u00b7 +1 \u00e9nergie permanente (1 par tour)",{sp:1,kw:["terrain"],img:d.lieuImg||""});const sz=d.list.reduce((a,x)=>a+x[1],0);d.list.push(["terr_"+k,Math.round(sz*0.5)]);});
-tutorial();
+
+/* ==== net.js ==== */
+/* ═══════════════════════════════════════════════════════════
+   MULTIJOUEUR — Firebase Firestore · autorité à l'hôte (Option A)
+   ═══════════════════════════════════════════════════════════
+   • L'hôte exécute tout le moteur et écrit S dans rooms/{id}.state
+   • L'invité écrit ses intentions dans rooms/{id}.intent
+   • Les deux lisent via onSnapshot et rendent
+─────────────────────────────────────────────────────────────*/
+const NET = {
+  db:null, auth:null, uid:null,
+  room:null, role:null,        // "host" | "guest"
+  unsub:null, seq:0, lastIntentSeq:0,
+  mySide:null, foeSide:null,   // mappe l'UID vers "you"/"foe" du moteur
+  ready:false, remoteDeck:null
+};
+
+async function netInit(){
+  if(NET.ready) return true;
+  const [{initializeApp},{getAuth,signInAnonymously,onAuthStateChanged},
+         {getFirestore,doc,setDoc,getDoc,updateDoc,onSnapshot,collection,
+          query,where,getDocs,deleteDoc,serverTimestamp,runTransaction}] =
+    await Promise.all([
+      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"),
+    ]);
+  const cfg={apiKey:"AIzaSyAiJGi4EvFVRYXAt2ZUhudN8l3l5qsHpp8",
+    authDomain:"threejs-multiplayer-c7088.firebaseapp.com",
+    projectId:"threejs-multiplayer-c7088",
+    storageBucket:"threejs-multiplayer-c7088.firebasestorage.app",
+    messagingSenderId:"762467826378",
+    appId:"1:762467826378:web:ca972c84f2525ac66dd233"};
+  const app=initializeApp(cfg);
+  NET.auth=getAuth(app); NET.db=getFirestore(app);
+  NET.fs={doc,setDoc,getDoc,updateDoc,onSnapshot,collection,query,where,getDocs,
+          deleteDoc,serverTimestamp,runTransaction};
+  await new Promise((res,rej)=>{
+    onAuthStateChanged(NET.auth,u=>{ if(u){NET.uid=u.uid;res();} });
+    signInAnonymously(NET.auth).catch(rej);
+  });
+  NET.ready=true;
+  return true;
+}
+
+function roomRef(id){ return NET.fs.doc(NET.db,"rooms",id||NET.room); }
+function code6(){ const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s="";
+  for(let i=0;i<6;i++) s+=A[Math.random()*A.length|0]; return s; }
+
+/* ── Créer une salle (par code) ── */
+async function netCreateRoom(deckKey){
+  await netInit();
+  const {doc,setDoc,collection,serverTimestamp}=NET.fs;
+  const ref=doc(collection(NET.db,"rooms"));
+  const code=code6();
+  await setDoc(ref,{code,status:"waiting",host:NET.uid,guest:null,
+    hostDeck:deckKey,guestDeck:null,state:null,intent:null,seq:0,
+    createdAt:serverTimestamp()});
+  NET.room=ref.id; NET.role="host";
+  NET.mySide="you"; NET.foeSide="foe";
+  return code;
+}
+
+/* ── Rejoindre par code ── */
+async function netJoinByCode(code,deckKey){
+  await netInit();
+  const {collection,query,where,getDocs,updateDoc,doc}=NET.fs;
+  const q=query(collection(NET.db,"rooms"),where("code","==",code.toUpperCase()),
+                where("status","==","waiting"));
+  const snap=await getDocs(q);
+  if(snap.empty) throw new Error("Aucune salle avec ce code.");
+  const d=snap.docs[0];
+  await updateDoc(doc(NET.db,"rooms",d.id),
+    {guest:NET.uid,guestDeck:deckKey,status:"ready"});
+  NET.room=d.id; NET.role="guest";
+  NET.mySide="foe"; NET.foeSide="you";
+  NET.remoteDeck=d.data().hostDeck;
+  return d.id;
+}
+
+/* ── Matchmaking auto : rejoint une salle en attente ou en crée une ── */
+async function netQuickMatch(deckKey){
+  await netInit();
+  const {collection,query,where,getDocs,runTransaction,doc}=NET.fs;
+  const q=query(collection(NET.db,"rooms"),where("status","==","waiting"));
+  const snap=await getDocs(q);
+  const open=snap.docs.filter(d=>d.data().host!==NET.uid);
+  if(open.length){
+    // tenter de rejoindre atomiquement la première salle libre
+    const target=open[0];
+    try{
+      await runTransaction(NET.db, async tx=>{
+        const ref=doc(NET.db,"rooms",target.id);
+        const cur=await tx.get(ref);
+        if(!cur.exists()||cur.data().status!=="waiting"||cur.data().guest)
+          throw new Error("prise");
+        tx.update(ref,{guest:NET.uid,guestDeck:deckKey,status:"ready"});
+      });
+      NET.room=target.id; NET.role="guest";
+      NET.mySide="foe"; NET.foeSide="you";
+      NET.remoteDeck=target.data().hostDeck;
+      return {role:"guest",code:target.data().code};
+    }catch(e){ /* prise entre-temps → on crée */ }
+  }
+  const code=await netCreateRoom(deckKey);
+  return {role:"host",code};
+}
+
+/* ── Écoute de la salle ── */
+function netListen(onChange){
+  const {onSnapshot}=NET.fs;
+  if(NET.unsub)NET.unsub();
+  NET.unsub=onSnapshot(roomRef(),snap=>{
+    if(!snap.exists()){ onChange({gone:true}); return; }
+    onChange(snap.data());
+  });
+}
+
+/* ── HÔTE : pousser l'état complet ── */
+let _pushing=false;
+async function netPushState(){
+  if(NET.role!=="host") return;
+  const {updateDoc}=NET.fs;
+  NET.seq++;
+  const payload=serializeState();
+  _pushing=true;
+  const fx = fxCollect();
+  try{ await updateDoc(roomRef(),{state:payload,seq:NET.seq,fx:fx,status:S.over?"over":"playing"}); }
+  finally{ _pushing=false; }
+}
+
+/* ── INVITÉ : envoyer une intention ── */
+async function netSendIntent(kind,data){
+  if(NET.role!=="guest") return;
+  const {updateDoc}=NET.fs;
+  NET.lastIntentSeq++;
+  await updateDoc(roomRef(),{intent:{kind,data,seq:NET.lastIntentSeq,by:NET.uid}});
+}
+
+/* ── Quitter ── */
+async function netLeave(){
+  try{
+    if(NET.unsub)NET.unsub();
+    if(NET.role==="host"&&NET.room){ await NET.fs.deleteDoc(roomRef()); }
+  }catch(e){}
+  NET.room=null;NET.role=null;NET.unsub=null;NET.seq=0;NET.lastIntentSeq=0;
+}
+const serverTimestamp=()=>NET.fs.serverTimestamp();
+
+
+/* ==== serial.js ==== */
+/* ═══════ SÉRIALISATION DE L'ÉTAT (minimale) ═══════
+   On ne transmet JAMAIS les images ni la def complète des cartes,
+   seulement id + état vivant. On reconstruit via DB à l'arrivée.
+─────────────────────────────────────────────────────────────*/
+const LIVE = ["inst","id","pv","atkMod","tmp","sick","shield","antag","ag",
+              "block","tmpAtk","poisoned","sleep"];
+
+function packCard(c){
+  if(!c) return null;
+  const o={};
+  for(const k of LIVE) if(c[k]!==undefined && c[k]!==null) o[k]=c[k];
+  return o;
+}
+/* Supprime récursivement toute valeur undefined (Firestore les refuse) */
+function stripUndef(v){
+  if(Array.isArray(v)) return v.map(stripUndef);
+  if(v && typeof v==="object"){
+    const o={};
+    for(const k in v){ if(v[k]!==undefined){ o[k]=stripUndef(v[k]); } }
+    return o;
+  }
+  return v;
+}
+function unpackCard(o){
+  if(!o) return null;
+  if(o._arriving) delete o._arriving;
+  const base=DB[o.id];
+  if(!base){ console.warn("carte inconnue",o.id); return null; }
+  const c={...structuredClone(base), ...o};
+  instMap[c.inst]=c;
+  if(c.inst>UID) UID=c.inst;
+  return c;
+}
+function packSide(P){
+  return {
+    deckName:P.deckName, hp:(P.hp??20), energy:(P.energy??0), energyMax:(P.energyMax??0),
+    shield:P.shield||0, terrDone:!!P.terrDone,
+    deck:P.deck.map(c=>(c&&c.id)?c.id:c),           // pioche = ids (chaînes)
+    hand:P.hand.map(packCard),
+    slots:Object.fromEntries(COLS.map(k=>[k,packCard(P.slots[k])])),
+    terr:(P.terr||[]).map(packCard),
+    pathos:(P.pathos||[]).map(e=>({k:e.k,turns:e.turns})),
+    discN:P.discN||0,
+    lastDisc:P.lastDisc?{id:P.lastDisc.id}:null
+  };
+}
+function unpackSide(o){
+  const P={
+    deckName:o.deckName, hp:o.hp, energy:o.energy, energyMax:o.energyMax,
+    shield:o.shield||0, terrDone:!!o.terrDone,
+    deck:(o.deck||[]).slice(),   // ids bruts, mkInst() sera appelé à la pioche
+    hand:(o.hand||[]).map(unpackCard).filter(Boolean),
+    slots:emptySlots(),
+    terr:(o.terr||[]).map(unpackCard).filter(Boolean),
+    pathos:(o.pathos||[]).map(e=>({k:e.k,turns:e.turns})),
+    _temp:[],
+    discN:o.discN||0,
+    lastDisc:o.lastDisc?{...structuredClone(DB[o.lastDisc.id]),id:o.lastDisc.id}:null
+  };
+  COLS.forEach(k=>{P.slots[k]=unpackCard(o.slots[k]);});
+  return P;
+}
+
+/* Sérialise S entier (appelé par l'hôte) */
+function serializeState(){
+  S.you.energy=S.energy;  /* you utilise S.energy comme pool vivant */
+  return stripUndef({
+    turn:S.turn, active:S.active, over:!!S.over, energy:S.energy,
+    you:packSide(S.you), foe:packSide(S.foe),
+    winner:S.winner||null
+  });
+}
+
+/* Reconstruit S depuis un snapshot réseau (appelé par les deux) */
+function deserializeState(d){
+  instMap={}; UID=0;
+  S={
+    turn:d.turn, active:d.active, over:!!d.over, placing:null, energy:(d.you?d.you.energy:d.energy),
+    you:unpackSide(d.you), foe:unpackSide(d.foe),
+    winner:d.winner||null,
+    foeEnergyLeft(){return this.foe.energy;}
+  };
+  return S;
+}
+
+
+/* ==== mp.js ==== */
+/* ═══════════════════════════════════════════════════════════
+   COUCHE MULTI — menu, salle d'attente, pont d'actions
+─────────────────────────────────────────────────────────────*/
+let MODE="ai";           // "ai" | "mp"
+let ME="you", OP="foe";  // perspective d'affichage (invité = inversé)
+
+/* ── Écran d'accueil : IA ou Multijoueur ── */
+function homeScreen(){
+  MODE="ai"; ME="you"; OP="foe";
+  showModal(`<h2>PharMagic</h2>
+    <p>Duel de pharmacologie. Choisis ton mode.</p>
+    <div class="modes">
+      <button class="ctl bigbtn" id="mAI">🤖 Contre l'IA</button>
+      <button class="ctl bigbtn" id="mMP">🌐 Multijoueur</button>
+    </div>
+    <button class="ctl subbtn" id="mTuto">Comment jouer ?</button>`);
+  document.getElementById("mAI").onclick=()=>{MODE="ai";deckSelect();};
+  document.getElementById("mMP").onclick=mpMenu;
+  const t=document.getElementById("mTuto"); if(t)t.onclick=tutorial;
+}
+
+/* ── Menu multi : quick match ou code ── */
+function mpMenu(){
+  MODE="mp";
+  showModal(`<h2>🌐 Multijoueur</h2>
+    <p>Trouve un adversaire, ou partage un code de salle.</p>
+    <div class="modes">
+      <button class="ctl bigbtn" id="mpQuick">⚡ Partie rapide</button>
+      <button class="ctl bigbtn" id="mpCreate">➕ Créer une salle</button>
+    </div>
+    <div class="joinrow">
+      <input id="mpCode" maxlength="6" placeholder="CODE" autocomplete="off">
+      <button class="ctl" id="mpJoin">Rejoindre</button>
+    </div>
+    <div class="neterr" id="mpErr"></div>
+    <button class="ctl subbtn" id="mpBack">← Retour</button>`);
+  document.getElementById("mpBack").onclick=homeScreen;
+  document.getElementById("mpQuick").onclick=()=>mpPickDeck("quick");
+  document.getElementById("mpCreate").onclick=()=>mpPickDeck("create");
+  document.getElementById("mpJoin").onclick=()=>{
+    const code=document.getElementById("mpCode").value.trim().toUpperCase();
+    if(code.length!==6){netErr("Code à 6 caractères.");return;}
+    mpPickDeck("join",code);
+  };
+}
+function netErr(msg){ const e=document.getElementById("mpErr"); if(e)e.textContent=msg; }
+
+/* ── Choix du deck (chacun le sien) ── */
+function mpPickDeck(action,code){
+  const cards=DECK_KEYS.map(k=>{const d=DECKS[k];
+    return `<div class="deckcard f-${d.fac}" data-deck="${k}"><div class="dn">${d.label}</div><div class="da">${d.arch}</div></div>`;}).join("");
+  showModal(`<h2>Choisis ton deck</h2>
+    <div class="decks">${cards}</div>
+    <div class="neterr" id="mpErr2"></div>
+    <button class="ctl subbtn" id="mpBack2">← Retour</button>`);
+  document.getElementById("mpBack2").onclick=mpMenu;
+  document.querySelectorAll(".deckcard").forEach(el=>el.onclick=async()=>{
+    const deck=el.dataset.deck;
+    try{
+      mpWaiting("Connexion…");
+      if(action==="quick"){ const r=await netQuickMatch(deck); mpWaiting(r.role==="host"?`En attente… Code : ${r.code}`:"Adversaire trouvé !"); }
+      else if(action==="create"){ const c=await netCreateRoom(deck); mpWaiting(`Partage ce code :`,c); }
+      else if(action==="join"){ await netJoinByCode(code,deck); mpWaiting("Connexion à la salle…"); }
+      mpBind();
+    }catch(e){ mpMenu(); setTimeout(()=>netErr(e.message||"Erreur réseau"),50); }
+  });
+}
+
+/* ── Salle d'attente ── */
+function mpWaiting(msg,code){
+  showModal(`<h2>${code?"Salle créée":"Multijoueur"}</h2>
+    <div class="waitbox">
+      <div class="spinner"></div>
+      <p id="waitMsg">${msg}</p>
+      ${code?`<div class="roomcode">${code}</div><p class="hint">L'autre joueur entre ce code dans « Rejoindre ».</p>`:""}
+    </div>
+    <button class="ctl subbtn" id="mpCancel">Annuler</button>`);
+  document.getElementById("mpCancel").onclick=async()=>{ await netLeave(); homeScreen(); };
+}
+
+/* ── Écoute de la salle → démarrage quand les 2 sont prêts ── */
+let _started=false;
+function mpBind(){
+  _started=false;
+  netListen(data=>{
+    if(data.gone){ toast("Salle fermée."); homeScreen(); return; }
+    // démarrage : les deux decks présents
+    if(!_started && data.status!=="waiting" && data.hostDeck && data.guestDeck){
+      _started=true;
+      if(NET.role==="host") mpHostStart(data);
+      else mpGuestStart(data);
+    }
+    // mises à jour d'état (invité lit ; hôte lit les intentions)
+    if(NET.role==="guest" && data.state && (data.seq||0)!==(NET._appliedState??-1)){
+      NET._appliedState=(data.seq||0); mpGuestApply(data);
+    }
+    if(NET.role==="host" && data.intent && data.intent.seq>NET._appliedIntent){
+      NET._appliedIntent=data.intent.seq; mpHostHandleIntent(data.intent);
+    }
+  });
+}
+
+/* ── HÔTE démarre : monte S, joue normalement, pousse l'état ── */
+function mpHostStart(data){
+  MODE="mp"; ME="you"; OP="foe";
+  instMap={};UID=0;
+  S={turn:1,active:"you",placing:null,over:false,energy:0,
+    you:{deckName:data.hostDeck,hp:20,energy:0,energyMax:0,deck:shuffle(deckList(data.hostDeck)),hand:[],slots:emptySlots(),terr:[],_temp:[],pathos:[]},
+    foe:{deckName:data.guestDeck,hp:20,energy:0,energyMax:0,deck:shuffle(deckList(data.guestDeck)),hand:[],slots:emptySlots(),terr:[],_temp:[],pathos:[]},
+    foeEnergyLeft(){return this.foe.energy;}};
+  NET._appliedIntent=0;
+  hideModal();
+  document.getElementById("log").innerHTML='<div class="lt">Journal</div>';
+  openingHand("you");openingHand("foe");
+  beginTurn("you",true);
+  log(`${DECKS[data.hostDeck].label} vs ${DECKS[data.guestDeck].label}. À toi (tu es l'hôte).`);
+  render(); netPushState();
+}
+
+/* ── INVITÉ démarre : attend le premier état de l'hôte ── */
+function mpGuestStart(data){
+  MODE="mp"; ME="foe"; OP="you"; NET._appliedState=-1;
+  // effacer tout état résiduel (partie solo précédente) pour éviter un S fantôme
+  S=null; instMap={}; UID=0;
+  hideModal();
+  document.getElementById("log").innerHTML='<div class="lt">Journal</div>';
+  toast("Partie lancée. En attente de l'hôte…");
+}
+
+/* ── INVITÉ : applique l'état reçu ── */
+function mpGuestApply(data){
+  if(!data.state) return;
+  const keepPlacing = S && S.placing ? {...S.placing} : null;
+  const hadState = !!S;
+  deserializeState(data.state);
+  if(keepPlacing && myTurn() && S[ME].hand[keepPlacing.hid]){
+    S.placing = keepPlacing;
+  }
+  render();
+  // rejouer les animations transmises par l'hôte (pioche, pose, sort, combat)
+  if(hadState && data.fx && data.fx.length){ playFx(data.fx); }
+  if(S.over) endScreenMP();
+}
+
+/* Rejoue une liste d'events d'animation côté invité */
+function playFx(list){
+  list.forEach(ev=>{
+    if(ev.t==="combat" && typeof playCombat==="function"){
+      fxQueue(()=>playCombat(ev.events).then(()=>render()));
+    } else if(ev.t==="place"){
+      // léger flash sur la carte posée
+      fxQueue(()=>{ const el=document.querySelector(`.card.onboard[data-side="${ev.side}"][data-col="${ev.col}"]`);
+        if(el){ el.classList.add(ev.side===ME?"lunge-up":"lunge-down"); setTimeout(()=>el.classList.remove("lunge-up","lunge-down"),450); }
+        return wait(120); });
+    } else if(ev.t==="spell"){
+      // animation de défausse d'un sort adverse
+      fxQueue(()=>{ const disc=rectOf(`#piles${ev.side===ME?"You":"Foe"} .stk.disc`);
+        if(disc){ const from={left:window.innerWidth/2-30,top:window.innerHeight/2-42,width:60,height:84};
+          return flyCard(from,disc,{img:(DB[ev.id]&&DB[ev.id].img),dur:400,rot:20,fadeOut:true}); }
+        return Promise.resolve(); });
+    }
+  });
+}
+
+/* ── HÔTE : traite une intention de l'invité ── */
+function mpHostHandleIntent(intent){
+  if(S.over) return;
+  if(S.active!=="foe") return;
+  const {kind,data}=intent;
+  if(kind==="place"){ mpApplyPlace("foe",data.inst,data.col); }
+  else if(kind==="spell"){ mpApplySpell("foe",data.inst); }
+  else if(kind==="terrain"){ mpApplyTerrain("foe",data.inst); }
+  else if(kind==="endTurn"){ mpHostEndForGuest(); }
+}
+
+
+/* ==== mp2.js ==== */
+/* ═══════ HÔTE : applique les actions (pour you OU foe) ═══════
+   Réplique placeOn/castSpell/playTerrain sans dépendance au DOM,
+   puis pousse le nouvel état.
+─────────────────────────────────────────────────────────────*/
+function findHandCard(side,inst){
+  const i=S[side].hand.findIndex(c=>c.inst===inst);
+  return i<0?null:{c:S[side].hand[i],i};
+}
+/* ═══════ EVENTS D'ANIMATION RÉSEAU ═══════
+   L'hôte accumule des events visuels ; l'invité les rejoue. */
+function fxPush(ev){ if(NET.role!=="host")return; (NET._fxList=NET._fxList||[]).push(ev); }
+function fxCollect(){ const l=NET._fxList||null; NET._fxList=null; return l; }
+function mpApplyPlace(side,inst,col){
+  const f=findHandCard(side,inst);
+  if(!f) return;
+  const c=f.c, cost=costOf(side,c);
+  const pool=(side==="you"?S.energy:S[side].energy);
+  if(cost>pool) return;
+  if(!legalSlots(c,side).includes(col)) return;
+  if(side==="you") S.energy-=cost; else S[side].energy-=cost;
+  S[side].hand.splice(f.i,1);
+  const L=lieu(side);
+  if(c.cost>=4&&L.onHeavy)L.onHeavy(S,side);
+  if(c.kw.includes("plante")&&L.onPlant)L.onPlant(S,side);
+  if(c.kw.includes("synth")&&L.onSynth)L.onSynth(S,side);
+  if(c.kw.includes("hormone")&&L.onHormone)L.onHormone(S,side);
+  S[side].slots[col]=c;
+  c.sick=!(pharm(side).noSickTurns&&S.turn<=pharm(side).noSickTurns);
+  log(`${who(side)} place <b>${c.name}</b> sur ${colLabel(col)}`,"hl");
+  fxPush({t:"place",side,col});
+  onEnter(side,c); render(); if(checkWin()){netPushState();return;}
+  netPushState();
+}
+function mpApplySpell(side,inst){
+  const f=findHandCard(side,inst); if(!f) return;
+  const c=f.c;
+  if(c.kw.includes("terrain")){ return mpApplyTerrain(side,inst); }
+  const cost=costOf(side,c);
+  if(cost>(side==="you"?S.energy:S[side].energy)) return;
+  if(side==="you") S.energy-=cost; else S[side].energy-=cost;
+  S[side].hand.splice(f.i,1); toDisc(side,c);
+  log(`${who(side)} joue <b>${c.name}</b>`);
+  fxPush({t:"spell",side,id:c.id});
+  onEnter(side,c); render(); if(checkWin()){netPushState();return;}
+  netPushState();
+}
+function mpApplyTerrain(side,inst){
+  const f=findHandCard(side,inst); if(!f) return;
+  if(S[side].terrDone) return;
+  S[side].hand.splice(f.i,1);
+  playTerrain(side,f.c);
+  render(); netPushState();
+}
+function who(side){ return side===ME?"Tu":(side==="you"?"L'hôte":"L'invité"); }
+
+/* ── Fin de tour, version multi (remplace la boucle IA) ── */
+function mpEndTurn(side){
+  if(S.over) return;
+  const _ev=attackStep(side); render();
+  if(_ev && _ev.length) fxPush({t:"combat",events:_ev});
+  const finish=()=>{
+    if(checkWin()){netPushState();return;}
+    S.active=(side==="you")?"foe":"you";
+    S.turn += (S.active==="you")?1:0;
+    beginTurn(S.active);
+    render(); netPushState();
+  };
+  // garantir la transition même si l'animation de combat échoue
+  let done=false; const once=()=>{ if(done)return; done=true; finish(); };
+  fxQueue(()=>playCombat(_ev).then(()=>{ render(); once(); }).catch(once));
+  setTimeout(once, 3000); // filet de sécurité
+}
+/* l'hôte termine son propre tour */
+function mpHostEndSelf(){
+  if(S.active!=="you"||S.over) return;
+  if(S.placing){toast("Termine le placement");return;}
+  mpEndTurn("you");
+}
+/* l'hôte exécute la fin de tour demandée par l'invité */
+function mpHostEndForGuest(){
+  if(S.active!=="foe"||S.over) return;
+  mpEndTurn("foe");
+}
+
+/* ═══════ INVITÉ : émet des intentions ═══════ */
+function mpGuestPlace(inst,col){ netSendIntent("place",{inst,col}); }
+function mpGuestSpell(inst){ netSendIntent("spell",{inst}); }
+function mpGuestTerrain(inst){ netSendIntent("terrain",{inst}); }
+function mpGuestEnd(){ netSendIntent("endTurn",{}); }
+
+/* ── Mon tour ? (perspective) ── */
+function myTurn(){ return MODE!=="mp" ? S.active==="you" : S.active===ME; }
+
+/* ── Fin de partie multi ── */
+function endScreenMP(){
+  const iWon = (S.winner===ME);
+  showModal(`<h2>${iWon?"🏆 Victoire":"Défaite"}</h2>
+    <p>${iWon?"Homéostasie adverse rétablie.":"Ton adversaire l'a emporté."}</p>
+    <button class="ctl bigbtn" id="mpAgain">Rejouer</button>
+    <button class="ctl subbtn" id="mpHome">Menu</button>`);
+  document.getElementById("mpAgain").onclick=async()=>{await netLeave();mpMenu();};
+  document.getElementById("mpHome").onclick=async()=>{await netLeave();homeScreen();};
+}
+
+
+homeScreen();
 </script>
 </body>
 </html>

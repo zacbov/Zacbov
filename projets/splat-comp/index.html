@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gaussian Splat Studio — Visualiser &amp; Compresser en .ksplat</title>
+<style>
+:root{--bg:#07090c;--bg2:#0d1018;--bg3:#141720;--bg4:#1c2030;--border:rgba(255,255,255,.08);--text:#e2ded8;--text2:#8a887f;--text3:#4a4845;--acc:#7ecfa8;--warn:#d4b870;--err:#e08080}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100%}
+#topbar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+#topbar h1{font-size:14px;font-weight:700}
+#topbar h1 em{color:var(--acc);font-style:normal}
+#topbar .sub{font-size:10.5px;color:var(--text3)}
+.btn{background:var(--bg4);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:11.5px;cursor:pointer}
+.btn:hover{border-color:var(--acc)}
+.btn.primary{background:var(--acc);color:#04120b;border:none;font-weight:700}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+#workspace{flex:1;display:flex;min-height:0}
+#viewer-wrap{flex:1;position:relative;background:#0c0f18}
+#viewer-container{position:absolute;inset:0}
+#empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);font-size:12px;text-align:center;gap:10px;padding:24px;line-height:1.8}
+#sidepanel{width:300px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--border);overflow-y:auto;padding:14px}
+#sidepanel h2{font-size:12px;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:10.5px;color:var(--text3);margin-bottom:4px}
+.field select,.field input[type=range]{width:100%}
+.field .val{font-size:10.5px;color:var(--acc);float:right}
+#fileinput{display:none}
+#fname{font-size:11px;color:var(--text2);word-break:break-all;margin-bottom:10px;padding:8px;background:var(--bg3);border-radius:6px;display:none}
+#log{margin-top:14px;font-size:10.5px;color:var(--text3);line-height:1.7;max-height:200px;overflow-y:auto;background:var(--bg3);border-radius:6px;padding:8px;display:none}
+#log .err{color:var(--err)}
+#log .ok{color:var(--acc)}
+#sizeCompare{margin-top:10px;font-size:10.5px;color:var(--text2);display:none}
+#sizeCompare .bar{height:6px;border-radius:3px;background:var(--bg4);margin-top:4px;overflow:hidden}
+#sizeCompare .bar i{display:block;height:100%;background:var(--warn)}
+hr{border:none;border-top:1px solid var(--border);margin:14px 0}
+#status{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--bg4);border:1px solid var(--border);padding:6px 16px;border-radius:20px;font-size:11px;color:var(--acc);opacity:0;transition:.25s;pointer-events:none;z-index:20}
+#status.show{opacity:1}
+.note{font-size:10px;color:var(--text3);line-height:1.6;margin-top:6px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <h1>Gaussian Splat <em>Studio</em></h1>
+    <span class="sub">Visualiser un .ply/.splat/.ksplat et le compresser en .ksplat — via mkkellogg/GaussianSplats3D</span>
+    <button class="btn primary" id="loadBtn" style="margin-left:auto">Charger un splat</button>
+    <input type="file" id="fileinput" accept=".ply,.splat,.ksplat">
+  </div>
+  <div id="workspace">
+    <div id="viewer-wrap">
+      <div id="viewer-container"></div>
+      <div id="empty-hint">
+        <div>Charge un fichier <code>.ply</code>, <code>.splat</code> ou <code>.ksplat</code><br>pour le visualiser en 3D</div>
+        <div class="note">Molette = zoom · Glisser = orbiter</div>
+      </div>
+    </div>
+    <div id="sidepanel">
+      <h2>Fichier</h2>
+      <div id="fname"></div>
+      <button class="btn" id="viewBtn" style="width:100%;margin-bottom:6px" disabled>👁 Visualiser</button>
+
+      <hr>
+      <h2>Compression → .ksplat</h2>
+      <div class="field">
+        <label>Niveau de compression <span class="val" id="compressLevelVal">1</span></label>
+        <select id="compressLevel">
+          <option value="0">0 — Qualite maximale, gain de poids minimal</option>
+          <option value="1" selected>1 — Equilibre (recommande)</option>
+          <option value="2">2 — Poids minimal, qualite reduite</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Seuil de suppression alpha <span class="val" id="alphaVal">5</span>/255</label>
+        <input type="range" id="alphaThreshold" min="0" max="30" value="5">
+        <div class="note">Supprime les splats quasi-transparents (au-dela reduit le poids mais peut creer des trous visibles).</div>
+      </div>
+      <div class="field">
+        <label>Harmoniques spheriques (degre)</label>
+        <select id="shDegree">
+          <option value="0">0 — Pas de vue-dependance (plus leger)</option>
+          <option value="1" selected>1 — Reflets/couleur selon l'angle (standard)</option>
+          <option value="2">2 — Maximum de detail directionnel (plus lourd)</option>
+        </select>
+      </div>
+      <button class="btn primary" id="convertBtn" style="width:100%" disabled>⇩ Convertir et telecharger .ksplat</button>
+      <div id="sizeCompare">
+        <div>Original : <b id="origSize">—</b></div>
+        <div>.ksplat : <b id="newSize">—</b></div>
+        <div class="bar"><i id="sizeBar" style="width:0%"></i></div>
+      </div>
+
+      <div id="log"></div>
+
+      <hr>
+      <div class="note">
+        Bibliotheque : mkkellogg/GaussianSplats3D (communautaire, plus en developpement actif mais fonctionnelle).
+        Pour des besoins plus avances (multi-splats, fusion avec des meshes, streaming) l'alternative activement maintenue est <b>Spark</b> (sparkjs.dev) — dis-le moi si tu veux basculer dessus plus tard.
+      </div>
+    </div>
+  </div>
+</div>
+<div id="status"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "GaussianSplats3D": "https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import * as GaussianSplats3D from 'GaussianSplats3D';
+
+// Global safety net: surface any uncaught error instead of failing silently
+// (very hard to diagnose an all-black/frozen 3D viewer otherwise).
+window.addEventListener('error', function(e){
+  console.error('Erreur non interceptee:', e.error || e.message);
+  logMsg('Erreur JS : ' + (e.message || 'voir la console (F12)'), true);
+});
+window.addEventListener('unhandledrejection', function(e){
+  console.error('Promesse rejetee non interceptee:', e.reason);
+  logMsg('Erreur (promesse) : ' + (e.reason && e.reason.message || e.reason), true);
+});
+
+var currentFile = null;
+var currentObjectUrl = null;
+var viewer = null;
+
+function showToast(msg){
+  var t = document.getElementById('status');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+function logMsg(msg, isErr, isOk){
+  var log = document.getElementById('log');
+  log.style.display = 'block';
+  var line = document.createElement('div');
+  if(isErr) line.className = 'err';
+  if(isOk) line.className = 'ok';
+  line.textContent = (new Date()).toLocaleTimeString() + ' — ' + msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+function fmtBytes(n){
+  if(n < 1024) return n + ' o';
+  if(n < 1024*1024) return (n/1024).toFixed(1) + ' Ko';
+  return (n/1024/1024).toFixed(2) + ' Mo';
+}
+
+/* ---------------- File selection ---------------- */
+document.getElementById('loadBtn').addEventListener('click', function(){
+  document.getElementById('fileinput').click();
+});
+document.getElementById('fileinput').addEventListener('change', function(e){
+  var file = e.target.files[0];
+  if(!file) return;
+  currentFile = file;
+  if(currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+  currentObjectUrl = URL.createObjectURL(file);
+
+  var fnameEl = document.getElementById('fname');
+  fnameEl.style.display = 'block';
+  fnameEl.textContent = file.name + ' — ' + fmtBytes(file.size);
+
+  document.getElementById('viewBtn').disabled = false;
+  document.getElementById('convertBtn').disabled = !/\.(ply|splat)$/i.test(file.name);
+  if(/\.ksplat$/i.test(file.name)){
+    logMsg('Ce fichier est deja au format .ksplat — rien a compresser.');
+  }
+  document.getElementById('origSize').textContent = fmtBytes(file.size);
+  logMsg('Fichier selectionne : ' + file.name);
+});
+
+/* ---------------- Compression controls UI sync ---------------- */
+document.getElementById('compressLevel').addEventListener('change', function(e){
+  document.getElementById('compressLevelVal').textContent = e.target.value;
+});
+document.getElementById('alphaThreshold').addEventListener('input', function(e){
+  document.getElementById('alphaVal').textContent = e.target.value;
+});
+
+/* ---------------- Viewing ---------------- */
+document.getElementById('viewBtn').addEventListener('click', function(){
+  if(!currentObjectUrl) return;
+  document.getElementById('empty-hint').style.display = 'none';
+  loadIntoViewer(currentObjectUrl, currentFile.name);
+});
+
+var loadToken = 0; // ignore results from a superseded load if the user clicks fast
+
+function loadIntoViewer(url, filename){
+  logMsg('Chargement du splat pour visualisation...');
+  showToast('Chargement en cours...');
+
+  var myToken = ++loadToken;
+  var wrap = document.getElementById('viewer-wrap');
+  var oldViewer = viewer;
+  var oldContainer = document.getElementById('viewer-container');
+
+  try{
+    // IMPORTANT: don't reuse/clear the same container the previous viewer was
+    // rendering into — the Viewer's own internal loading-UI/dispose logic
+    // manipulates that DOM subtree asynchronously, and manually wiping it
+    // out from here at the same time causes "removeChild: node is not a
+    // child of this node" errors. Instead, mount the new viewer into a
+    // brand-new container and only remove the old one afterwards.
+    var newContainer = document.createElement('div');
+    newContainer.id = 'viewer-container';
+    newContainer.style.position = 'absolute';
+    newContainer.style.inset = '0';
+    wrap.appendChild(newContainer);
+
+    viewer = new GaussianSplats3D.Viewer({
+      rootElement: newContainer,
+      cameraUp: [0, -1, -0.6],
+      initialCameraPosition: [-1, -4, 6],
+      initialCameraLookAt: [0, 4, 0],
+      sharedMemoryForWorkers: false
+    });
+
+    var fileType = /\.ksplat$/i.test(filename) ? GaussianSplats3D.SceneFormat.KSplat
+      : /\.splat$/i.test(filename) ? GaussianSplats3D.SceneFormat.Splat
+      : GaussianSplats3D.SceneFormat.Ply;
+
+    viewer.init();
+    viewer.addSplatScene(url, {
+      splatAlphaRemovalThreshold: 5,
+      showLoadingUI: true,
+      format: fileType
+    }).then(function(){
+      if(myToken !== loadToken){
+        // A newer load started before this one finished — discard this
+        // instance instead of starting/showing it.
+        try{ viewer.dispose(); }catch(e){}
+        if(newContainer.parentNode === wrap) wrap.removeChild(newContainer);
+        return;
+      }
+      viewer.start();
+      logMsg('Splat charge et affiche.', false, true);
+      showToast('Splat affiche');
+      // Now that the new viewer is confirmed working, retire the old one.
+      if(oldViewer && typeof oldViewer.dispose === 'function'){
+        try{ oldViewer.dispose(); }catch(e){}
+      }
+      if(oldContainer && oldContainer !== newContainer && oldContainer.parentNode === wrap){
+        wrap.removeChild(oldContainer);
+      }
+    }).catch(function(err){
+      console.error(err);
+      logMsg('Echec du chargement pour visualisation : ' + (err && err.message || err), true);
+      showToast('Erreur de chargement — voir le journal');
+      if(newContainer.parentNode === wrap) wrap.removeChild(newContainer);
+      viewer = oldViewer;
+    });
+  }catch(err){
+    console.error(err);
+    logMsg('Erreur a l\'initialisation du viewer : ' + err.message, true);
+  }
+}
+
+/* ---------------- Compression to .ksplat ---------------- */
+document.getElementById('convertBtn').addEventListener('click', function(){
+  if(!currentObjectUrl || !currentFile) return;
+  var compressionLevel = parseInt(document.getElementById('compressLevel').value, 10);
+  var alphaThreshold = parseInt(document.getElementById('alphaThreshold').value, 10);
+  var shDegree = parseInt(document.getElementById('shDegree').value, 10);
+
+  document.getElementById('convertBtn').disabled = true;
+  document.getElementById('convertBtn').textContent = 'Conversion en cours...';
+  logMsg('Conversion vers .ksplat (compression=' + compressionLevel + ', alpha>=' + alphaThreshold + ', SH degre=' + shDegree + ')...');
+  showToast('Conversion en cours (peut prendre du temps sur un gros fichier)...');
+
+  function resetConvertBtn(){
+    document.getElementById('convertBtn').disabled = false;
+    document.getElementById('convertBtn').textContent = '⇩ Convertir et telecharger .ksplat';
+  }
+
+  var conversionPromise;
+  try{
+    conversionPromise = GaussianSplats3D.PlyLoader.loadFromURL(
+      currentObjectUrl,
+      function onProgress(pct){ /* optional: could show a progress bar */ },
+      false, // progressiveLoad
+      undefined, // onProgressiveLoadSectionProgress
+      alphaThreshold, // minimumAlpha — was hardcoded to 0 before, ignoring the slider entirely
+      compressionLevel,
+      true, // optimizeSplatData
+      shDegree
+    );
+  }catch(err){
+    console.error(err);
+    logMsg('Erreur avant meme le lancement de la conversion : ' + err.message, true);
+    resetConvertBtn();
+    return;
+  }
+
+  // NOTE: loadFromURL() returns a custom "thenable", not a native Promise —
+  // it supports .then()/.catch() but NOT .finally(). Calling .finally() on it
+  // throws immediately (this was the "... .finally is not a function" error),
+  // so the cleanup code is duplicated in both branches below instead.
+  conversionPromise.then(function(splatBuffer){
+    var outName = currentFile.name.replace(/\.[^.]+$/, '') + '.ksplat';
+    GaussianSplats3D.KSplatLoader.downloadFile(splatBuffer, outName);
+
+    var newBytes = (splatBuffer && splatBuffer.bufferSize) ? splatBuffer.bufferSize : null;
+    var cmp = document.getElementById('sizeCompare');
+    cmp.style.display = 'block';
+    document.getElementById('origSize').textContent = fmtBytes(currentFile.size);
+    if(newBytes){
+      document.getElementById('newSize').textContent = fmtBytes(newBytes);
+      var pct = Math.min(100, Math.round((newBytes / currentFile.size) * 100));
+      document.getElementById('sizeBar').style.width = pct + '%';
+      logMsg('Conversion reussie : ' + fmtBytes(currentFile.size) + ' → ' + fmtBytes(newBytes) + ' (' + outName + ')', false, true);
+    } else {
+      document.getElementById('newSize').textContent = 'voir le fichier telecharge';
+      logMsg('Conversion reussie, telechargement de ' + outName + ' lance.', false, true);
+    }
+    showToast('.ksplat telecharge');
+    resetConvertBtn();
+  }).catch(function(err){
+    console.error(err);
+    logMsg('Echec de la conversion : ' + (err && err.message || err), true);
+    showToast('Erreur de conversion — voir le journal');
+    resetConvertBtn();
+  });
+});
+</script>
+</body>
+</html>

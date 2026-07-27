@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GLB/OBJ → Draco Compressor</title>
+<style>
+:root{--bg:#07090c;--bg2:#0d1018;--bg3:#141720;--bg4:#1c2030;--border:rgba(255,255,255,.08);--text:#e2ded8;--text2:#8a887f;--text3:#4a4845;--acc:#7ecfa8;--warn:#d4b870;--err:#e08080}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100%}
+#topbar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+#topbar h1{font-size:14px;font-weight:700}
+#topbar h1 em{color:var(--acc);font-style:normal}
+#topbar .sub{font-size:10.5px;color:var(--text3)}
+.btn{background:var(--bg4);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:11.5px;cursor:pointer}
+.btn:hover{border-color:var(--acc)}
+.btn.primary{background:var(--acc);color:#04120b;border:none;font-weight:700}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+#workspace{flex:1;display:flex;min-height:0;overflow:hidden}
+#left{flex:1;display:flex;flex-direction:column;position:relative;background:#0c0f18}
+#viewer-canvas{flex:1;width:100%;display:block}
+#empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);font-size:12px;text-align:center;gap:10px;padding:24px;line-height:1.8;pointer-events:none}
+#sidepanel{width:340px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--border);overflow-y:auto;padding:14px}
+#sidepanel h2{font-size:11px;color:var(--text2);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.05em}
+#sidepanel h2:first-child{margin-top:0}
+.field{margin-bottom:10px}
+.field label{display:flex;justify-content:space-between;align-items:center;font-size:10.5px;color:var(--text3);margin-bottom:4px}
+.field select,.field input[type=text],.field input[type=number]{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:5px 7px}
+.field input[type=range]{width:100%}
+.field .val{color:var(--acc)}
+.toggle-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:11.5px}
+.toggle-row input{accent-color:var(--acc);width:15px;height:15px}
+.toggle-row .desc{font-size:9.5px;color:var(--text3);margin-left:23px;margin-top:-4px;line-height:1.5}
+#fileinput{display:none}
+#fname{font-size:11px;color:var(--text2);word-break:break-all;margin-bottom:10px;padding:8px;background:var(--bg3);border-radius:6px;display:none}
+#log{margin-top:10px;font-size:10.5px;color:var(--text3);line-height:1.7;max-height:220px;overflow-y:auto;background:var(--bg3);border-radius:6px;padding:8px;display:none}
+#log .err{color:var(--err)}
+#log .ok{color:var(--acc)}
+#sizeCompare{margin-top:10px;font-size:11px;color:var(--text2);display:none;background:var(--bg3);border-radius:8px;padding:10px}
+#sizeCompare .row{display:flex;justify-content:space-between;margin-bottom:2px}
+#sizeCompare .bar{height:6px;border-radius:3px;background:var(--bg4);margin-top:6px;overflow:hidden}
+#sizeCompare .bar i{display:block;height:100%;background:var(--acc)}
+#sizeCompare .pct{color:var(--acc);font-weight:700}
+hr{border:none;border-top:1px solid var(--border);margin:14px 0}
+#status{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--bg4);border:1px solid var(--border);padding:6px 16px;border-radius:20px;font-size:11px;color:var(--acc);opacity:0;transition:.25s;pointer-events:none;z-index:20}
+#status.show{opacity:1}
+.note{font-size:10px;color:var(--text3);line-height:1.6}
+#nodeReport{font-size:10.5px;color:var(--text2);background:var(--bg3);border-radius:6px;padding:8px;margin-top:8px;display:none;max-height:140px;overflow-y:auto}
+#nodeReport .warn{color:var(--warn)}
+#nodeReport .ok{color:var(--acc)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <h1>GLB/OBJ → <em>Draco</em></h1>
+    <span class="sub">Compression Draco en local (weld → simplification optionnelle → draco), via glTF-Transform</span>
+    <button class="btn primary" id="loadBtn" style="margin-left:auto">Charger .glb ou .obj</button>
+    <input type="file" id="fileinput" accept=".glb,.obj,.mtl" multiple>
+  </div>
+  <div id="workspace">
+    <div id="left">
+      <canvas id="viewer-canvas"></canvas>
+      <div id="empty-hint">
+        <div>Charge un <code>.glb</code>, ou un <code>.obj</code> (+ <code>.mtl</code> optionnel, les deux ensemble)<br>pour l'apercevoir avant/apres compression</div>
+        <div class="note">Molette = zoom · Glisser = orbiter</div>
+      </div>
+    </div>
+    <div id="sidepanel">
+      <h2>Fichier</h2>
+      <div id="fname"></div>
+
+      <h2>Pipeline (comme compress-glb.sh)</h2>
+      <div class="toggle-row"><input type="checkbox" id="optWeld" checked><label for="optWeld">1. Weld — fusion des sommets equivalents</label></div>
+      <div class="desc">Sans perte visuelle. Ameliore souvent beaucoup le taux de compression Draco ensuite.</div>
+
+      <div class="toggle-row" style="margin-top:10px"><input type="checkbox" id="optSimplify"><label for="optSimplify">2. Simplification agressive</label></div>
+      <div class="desc" style="color:var(--warn)">⚠ Reduit le nombre de triangles — DEGRADE la geometrie. A verifier visuellement.</div>
+      <div id="simplifyOpts" style="display:none;margin-top:8px">
+        <div class="field"><label>Ratio de sommets conserves <span class="val" id="simplifyRatioVal">0.75</span></label><input type="range" id="simplifyRatio" min="0.1" max="0.95" step="0.05" value="0.75"></div>
+        <div class="field"><label>Erreur max <span class="val" id="simplifyErrorVal">0.001</span></label><input type="range" id="simplifyError" min="0.0001" max="0.01" step="0.0001" value="0.001"></div>
+      </div>
+
+      <hr>
+      <h2>3. Draco</h2>
+      <div class="field">
+        <label>Methode</label>
+        <select id="dracoMethod">
+          <option value="edgebreaker" selected>Edgebreaker — meilleure compression</option>
+          <option value="sequential">Sequential — plus rapide, moins compresse</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Quantization position (bits) <span class="val" id="qPositionVal">14</span></label>
+        <input type="range" id="qPosition" min="6" max="16" value="14">
+      </div>
+      <div class="field">
+        <label>Quantization normales (bits) <span class="val" id="qNormalVal">10</span></label>
+        <input type="range" id="qNormal" min="6" max="16" value="10">
+      </div>
+      <div class="field">
+        <label>Quantization UV (bits) <span class="val" id="qTexVal">12</span></label>
+        <input type="range" id="qTex" min="6" max="16" value="12">
+      </div>
+
+      <hr>
+      <h2>Verification</h2>
+      <div class="field">
+        <label>Prefixe de noms a controler (optionnel)</label>
+        <input type="text" id="prefixCheck" placeholder="ex: VH_F_">
+      </div>
+      <div class="note">Comme dans ton script : verifie que les noms de nœuds necessaires a l'atlas (mapping, sidebar, ancres) ont bien survecu a la compression.</div>
+      <div id="nodeReport"></div>
+
+      <hr>
+      <button class="btn primary" id="compressBtn" style="width:100%" disabled>⇩ Compresser en .glb (Draco)</button>
+      <div id="sizeCompare">
+        <div class="row"><span>Original</span><b id="origSize">—</b></div>
+        <div class="row"><span>Compresse</span><b id="newSize">—</b></div>
+        <div class="row"><span>Gain</span><span class="pct" id="gainPct">—</span></div>
+        <div class="bar"><i id="sizeBar" style="width:0%"></i></div>
+      </div>
+
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+<div id="status"></div>
+
+<!-- Draco encoder/decoder — memes fichiers officiels Google (gstatic) que dans le pipeline existant -->
+<script src="https://www.gstatic.com/draco/versioned/decoders/1.5.6/draco_encoder.js"></script>
+<script src="https://www.gstatic.com/draco/versioned/decoders/1.5.6/draco_decoder.js"></script>
+
+<!-- Three.js r128 (uniquement pour le chemin OBJ -> GLB et l'apercu 3D) -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+
+<script type="module">
+import { WebIO } from 'https://esm.sh/@gltf-transform/core@4';
+import { KHRONOS_EXTENSIONS } from 'https://esm.sh/@gltf-transform/extensions@4';
+import { weld, draco, simplify } from 'https://esm.sh/@gltf-transform/functions@4';
+import { MeshoptSimplifier } from 'https://esm.sh/meshoptimizer@0.22';
+
+window.addEventListener('error', function(e){
+  console.error('Erreur non interceptee:', e.error || e.message);
+  logMsg('Erreur JS : ' + (e.message || 'voir la console (F12)'), true);
+});
+window.addEventListener('unhandledrejection', function(e){
+  console.error('Promesse rejetee non interceptee:', e.reason);
+  logMsg('Erreur (promesse) : ' + (e.reason && e.reason.message || e.reason), true);
+});
+
+/* ---------------- Small 3D preview (plain Three.js r128, global THREE) ---------------- */
+var canvas = document.getElementById('viewer-canvas');
+var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0c0f18);
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+var hemi = new THREE.HemisphereLight(0xddeeff, 0x332922, 0.7); scene.add(hemi);
+var d1 = new THREE.DirectionalLight(0xffeedd, 1.1); d1.position.set(2,3,3); scene.add(d1);
+var d2 = new THREE.DirectionalLight(0x8899cc, 0.5); d2.position.set(-3,-1,-2); scene.add(d2);
+var camera = new THREE.PerspectiveCamera(40, 1, 0.001, 5000);
+camera.position.set(0,0,3);
+var controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+var currentPreviewModel = null;
+
+function resize(){
+  var W = canvas.clientWidth, H = canvas.clientHeight;
+  if(!W || !H) return;
+  renderer.setSize(W, H, false);
+  camera.aspect = W/H; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+(function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+
+function fitCameraToModel(model){
+  var box = new THREE.Box3().setFromObject(model);
+  var size = box.getSize(new THREE.Vector3());
+  var center = box.getCenter(new THREE.Vector3());
+  var maxDim = Math.max(size.x, size.y, size.z) || 1;
+  var fov = camera.fov * (Math.PI/180);
+  var dist = (maxDim/2) / Math.tan(fov/2) * 1.7;
+  camera.position.set(center.x, center.y, center.z + dist);
+  controls.target.copy(center);
+  controls.update();
+}
+function showPreview(object3d){
+  if(currentPreviewModel) scene.remove(currentPreviewModel);
+  currentPreviewModel = object3d;
+  scene.add(currentPreviewModel);
+  fitCameraToModel(currentPreviewModel);
+  document.getElementById('empty-hint').style.display = 'none';
+}
+
+/* ---------------- Toast / log ---------------- */
+var toastTimer = null;
+function showToast(msg){
+  var t = document.getElementById('status');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+function logMsg(msg, isErr, isOk){
+  var log = document.getElementById('log');
+  log.style.display = 'block';
+  var line = document.createElement('div');
+  if(isErr) line.className = 'err';
+  if(isOk) line.className = 'ok';
+  line.textContent = (new Date()).toLocaleTimeString() + ' — ' + msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+function fmtBytes(n){
+  if(n < 1024) return n + ' o';
+  if(n < 1024*1024) return (n/1024).toFixed(1) + ' Ko';
+  return (n/1024/1024).toFixed(2) + ' Mo';
+}
+function escHtmlLocal(s){ return String(s).replace(/[&<>]/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+
+/* ---------------- UI wiring for sliders ---------------- */
+document.getElementById('optSimplify').addEventListener('change', function(e){
+  document.getElementById('simplifyOpts').style.display = e.target.checked ? 'block' : 'none';
+});
+document.getElementById('simplifyRatio').addEventListener('input', function(e){ document.getElementById('simplifyRatioVal').textContent = e.target.value; });
+document.getElementById('simplifyError').addEventListener('input', function(e){ document.getElementById('simplifyErrorVal').textContent = e.target.value; });
+document.getElementById('qPosition').addEventListener('input', function(e){ document.getElementById('qPositionVal').textContent = e.target.value; });
+document.getElementById('qNormal').addEventListener('input', function(e){ document.getElementById('qNormalVal').textContent = e.target.value; });
+document.getElementById('qTex').addEventListener('input', function(e){ document.getElementById('qTexVal').textContent = e.target.value; });
+
+/* ---------------- File loading ---------------- */
+var glbArrayBuffer = null;  // the input, as a GLB ArrayBuffer (converted from OBJ if needed)
+var currentBaseName = 'model';
+var originalBytes = 0;
+
+document.getElementById('loadBtn').addEventListener('click', function(){
+  document.getElementById('fileinput').click();
+});
+document.getElementById('fileinput').addEventListener('change', function(e){
+  var files = Array.prototype.slice.call(e.target.files);
+  if(!files.length) return;
+  handleFiles(files);
+  e.target.value = '';
+});
+
+function handleFiles(files){
+  var glb = files.find(function(f){ return /\.glb$/i.test(f.name); });
+  var obj = files.find(function(f){ return /\.obj$/i.test(f.name); });
+  var mtl = files.find(function(f){ return /\.mtl$/i.test(f.name); });
+
+  if(glb){
+    currentBaseName = glb.name.replace(/\.glb$/i, '');
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      glbArrayBuffer = ev.target.result;
+      originalBytes = glbArrayBuffer.byteLength;
+      afterInputReady(glb.name);
+    };
+    reader.readAsArrayBuffer(glb);
+    return;
+  }
+  if(obj){
+    currentBaseName = obj.name.replace(/\.obj$/i, '');
+    convertObjToGlb(obj, mtl).then(function(buf){
+      glbArrayBuffer = buf;
+      originalBytes = buf.byteLength;
+      afterInputReady(obj.name + (mtl ? ' + ' + mtl.name : ''));
+    }).catch(function(err){
+      console.error(err);
+      logMsg('Echec conversion OBJ -> GLB : ' + err.message, true);
+    });
+    return;
+  }
+  logMsg('Aucun .glb ou .obj reconnu dans la selection.', true);
+}
+
+function convertObjToGlb(objFile, mtlFile){
+  logMsg('Conversion OBJ -> GLB (necessaire avant compression Draco)...');
+  function readText(f){ return new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(ev){res(ev.target.result);}; r.onerror=rej; r.readAsText(f); }); }
+
+  var materialsPromise = mtlFile
+    ? readText(mtlFile).then(function(mtlText){
+        var mtlLoader = new THREE.MTLLoader();
+        var materials = mtlLoader.parse(mtlText, '');
+        materials.preload();
+        return materials;
+      })
+    : Promise.resolve(null);
+
+  return materialsPromise.then(function(materials){
+    return readText(objFile).then(function(objText){
+      var loader = new THREE.OBJLoader();
+      if(materials) loader.setMaterials(materials);
+      var group = loader.parse(objText);
+      return new Promise(function(resolve, reject){
+        new THREE.GLTFExporter().parse(group, function(glb){
+          resolve(glb); // ArrayBuffer since binary:true
+        }, function(err){ reject(err || new Error('Echec export GLTFExporter')); }, { binary: true });
+      });
+    });
+  });
+}
+
+function afterInputReady(label){
+  document.getElementById('fname').style.display = 'block';
+  document.getElementById('fname').textContent = label + ' — ' + fmtBytes(originalBytes);
+  document.getElementById('origSize').textContent = fmtBytes(originalBytes);
+  document.getElementById('compressBtn').disabled = false;
+  logMsg('Fichier pret : ' + label);
+  showToast('Fichier charge');
+
+  // Preview the (uncompressed) input.
+  var loader = new THREE.GLTFLoader();
+  loader.parse(glbArrayBuffer.slice(0), '', function(gltf){
+    showPreview(gltf.scene);
+  }, function(err){
+    console.warn('Apercu impossible:', err);
+  });
+}
+
+/* ---------------- gltf-transform + Draco pipeline ---------------- */
+var ioReady = null;
+function getIO(){
+  if(ioReady) return ioReady;
+  ioReady = Promise.all([
+    new window.DracoEncoderModule(),
+    new window.DracoDecoderModule()
+  ]).then(function(mods){
+    return new WebIO()
+      .registerExtensions(KHRONOS_EXTENSIONS)
+      .registerDependencies({
+        'draco3d.encoder': mods[0],
+        'draco3d.decoder': mods[1]
+      });
+  });
+  return ioReady;
+}
+
+document.getElementById('compressBtn').addEventListener('click', function(){
+  if(!glbArrayBuffer) return;
+  var btn = document.getElementById('compressBtn');
+  btn.disabled = true;
+  btn.textContent = 'Compression en cours...';
+  logMsg('Initialisation glTF-Transform + Draco (WASM)...');
+  showToast('Compression en cours (peut prendre du temps sur un gros fichier)...');
+
+  function resetBtn(){
+    btn.disabled = false;
+    btn.textContent = '⇩ Compresser en .glb (Draco)';
+  }
+
+  var optWeld = document.getElementById('optWeld').checked;
+  var optSimplify = document.getElementById('optSimplify').checked;
+  var simplifyRatio = parseFloat(document.getElementById('simplifyRatio').value);
+  var simplifyError = parseFloat(document.getElementById('simplifyError').value);
+  var dracoMethodStr = document.getElementById('dracoMethod').value;
+  var qPosition = parseInt(document.getElementById('qPosition').value, 10);
+  var qNormal = parseInt(document.getElementById('qNormal').value, 10);
+  var qTex = parseInt(document.getElementById('qTex').value, 10);
+  var prefix = document.getElementById('prefixCheck').value.trim();
+
+  getIO().then(function(io){
+    return io.readBinary(new Uint8Array(glbArrayBuffer)).then(function(doc){
+      var chain = Promise.resolve();
+
+      if(optWeld){
+        chain = chain.then(function(){
+          logMsg('[1] weld — fusion des sommets equivalents...');
+          return doc.transform(weld({}));
+        });
+      } else {
+        logMsg('[1] weld — ignore');
+      }
+
+      if(optSimplify){
+        chain = chain.then(function(){
+          logMsg('[2] simplify — ratio=' + simplifyRatio + ', erreur=' + simplifyError + ' (PERTE DE DETAIL)...');
+          return MeshoptSimplifier.ready.then(function(){
+            return doc.transform(simplify({ simplifier: MeshoptSimplifier, ratio: simplifyRatio, error: simplifyError }));
+          });
+        });
+      } else {
+        logMsg('[2] simplify — ignore');
+      }
+
+      chain = chain.then(function(){
+        logMsg('[3] draco — compression de la geometrie (methode=' + dracoMethodStr + ')...');
+        return doc.transform(draco({
+          method: dracoMethodStr,
+          quantizePosition: qPosition,
+          quantizeNormal: qNormal,
+          quantizeTexcoord: qTex
+        }));
+      });
+
+      return chain.then(function(){ return { io: io, doc: doc }; });
+    });
+  }).then(function(ctx){
+    return ctx.io.writeBinary(ctx.doc).then(function(outBytes){
+      return { doc: ctx.doc, outBytes: outBytes };
+    });
+  }).then(function(result){
+    var outBytes = result.outBytes;
+    var doc = result.doc;
+
+    // Verification des noms de nœuds (comme le script bash).
+    var names = doc.getRoot().listNodes().map(function(n){ return n.getName() || ''; });
+    var report = document.getElementById('nodeReport');
+    report.style.display = 'block';
+    var html = '<div><b>' + names.length + '</b> nœud(s) au total</div>';
+    if(prefix){
+      var matched = names.filter(function(n){ return n.indexOf(prefix) === 0; });
+      if(matched.length === 0){
+        html += '<div class="warn">⚠ AUCUN nom prefixe "' + escHtmlLocal(prefix) + '" — verifie que le mapping de l\'atlas fonctionnera toujours !</div>';
+      } else {
+        html += '<div class="ok">✓ ' + matched.length + ' nœud(s) prefixe(s) "' + escHtmlLocal(prefix) + '" preserve(s)</div>';
+        html += '<div style="margin-top:4px;color:var(--text3)">Exemples : ' + matched.slice(0,4).map(escHtmlLocal).join(', ') + '</div>';
+      }
+    } else {
+      html += '<div style="color:var(--text3)">Exemples : ' + names.slice(0,6).map(escHtmlLocal).join(', ') + (names.length > 6 ? '…' : '') + '</div>';
+    }
+    report.innerHTML = html;
+
+    // Download.
+    var outName = currentBaseName + '-draco.glb';
+    var blob = new Blob([outBytes], { type: 'model/gltf-binary' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = outName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // Size comparison.
+    var cmp = document.getElementById('sizeCompare');
+    cmp.style.display = 'block';
+    document.getElementById('origSize').textContent = fmtBytes(originalBytes);
+    document.getElementById('newSize').textContent = fmtBytes(outBytes.byteLength);
+    var pct = Math.round((1 - outBytes.byteLength / originalBytes) * 100);
+    document.getElementById('gainPct').textContent = '-' + pct + '%';
+    document.getElementById('sizeBar').style.width = Math.max(2, 100 - pct) + '%';
+
+    logMsg('Compression reussie : ' + fmtBytes(originalBytes) + ' → ' + fmtBytes(outBytes.byteLength) + ' (-' + pct + '%) — ' + outName, false, true);
+    showToast('.glb compresse telecharge');
+    resetBtn();
+
+    // Preview the compressed result too (re-parse the output bytes).
+    var loader = new THREE.GLTFLoader();
+    loader.parse(outBytes.buffer.slice(outBytes.byteOffset, outBytes.byteOffset + outBytes.byteLength), '', function(gltf){
+      showPreview(gltf.scene);
+    }, function(err){ console.warn('Apercu du resultat impossible (le fichier telecharge reste valide):', err); });
+
+  }).catch(function(err){
+    console.error(err);
+    logMsg('Echec de la compression : ' + (err && err.message || err), true);
+    showToast('Erreur — voir le journal');
+    resetBtn();
+  });
+});
+</script>
+</body>
+</html>

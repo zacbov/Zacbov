@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Compagnon Vietnam</title>
+<style>
+  :root{
+    --ink:#13110d;--paper:#f3ead6;--paper-2:#e9dcbf;
+    --teal:#0c6b6b;--teal-deep:#073e3e;--rust:#c4502a;--rust-deep:#8f3417;
+    --gold:#d99a2b;--line:#3a2f1f;--muted:#6b5d44;--shadow:0 2px 0 var(--line);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    background:var(--paper);color:var(--ink);line-height:1.45;
+    padding-bottom:env(safe-area-inset-bottom);overflow-x:hidden}
+
+  header{background:var(--teal-deep);color:var(--paper);
+    padding:calc(env(safe-area-inset-top) + 18px) 20px 16px;
+    border-bottom:3px solid var(--line);position:relative;overflow:hidden}
+  header::after{content:"";position:absolute;right:-30px;top:-30px;width:160px;height:160px;
+    border-radius:50%;border:2px solid rgba(243,234,214,.18);box-shadow:0 0 0 14px rgba(243,234,214,.05)}
+  .kicker{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.32em;
+    text-transform:uppercase;color:var(--gold);margin:0 0 6px}
+  h1{margin:0;font-size:30px;line-height:1.02;font-weight:700;letter-spacing:-.01em}
+  h1 small{display:block;font-size:14px;font-weight:400;color:rgba(243,234,214,.7);margin-top:6px;letter-spacing:0}
+
+  nav{display:flex;background:var(--paper-2);border-bottom:2px solid var(--line);
+    position:sticky;top:0;z-index:30;overflow-x:auto}
+  nav button{flex:1 0 auto;border:0;background:transparent;font-family:ui-monospace,monospace;
+    font-size:10px;letter-spacing:.02em;text-transform:uppercase;padding:11px 9px 9px;
+    color:var(--muted);border-bottom:3px solid transparent;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:600;white-space:nowrap}
+  nav button .ico{font-size:17px;line-height:1}
+  nav button[aria-selected="true"]{color:var(--rust-deep);border-bottom-color:var(--rust);background:var(--paper)}
+
+  main{padding:18px 16px 40px;max-width:680px;margin:0 auto}
+  section[hidden]{display:none}
+  .lead{color:var(--muted);font-size:14px;margin:0 0 18px}
+
+  .step{position:relative;border:2px solid var(--line);background:var(--paper-2);
+    border-radius:14px;margin:0 0 14px;overflow:hidden;box-shadow:var(--shadow)}
+  .step-head{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;
+    background:none;border:0;width:100%;text-align:left;font-family:inherit;color:inherit}
+  .pin{flex:none;width:38px;height:38px;border-radius:50%;background:var(--rust);
+    color:var(--paper);display:grid;place-items:center;font-size:16px;border:2px solid var(--line);
+    font-family:ui-monospace,monospace;font-weight:700}
+  .step:nth-child(odd) .pin{background:var(--teal)}
+  .step-title{flex:1;min-width:0}
+  .step-title b{display:block;font-size:17px;line-height:1.1}
+  .step-title span{font-size:12px;color:var(--muted);font-family:ui-monospace,monospace;letter-spacing:.04em}
+  .chev{flex:none;transition:transform .25s;color:var(--muted);font-size:14px}
+  .step[open-state="1"] .chev{transform:rotate(90deg)}
+  .step-body{padding:0 16px;max-height:0;overflow:hidden;transition:max-height .4s ease,padding .4s ease}
+  .step[open-state="1"] .step-body{padding:0 16px 16px;max-height:3600px}
+  .fiche{border-top:1px dashed var(--line);padding-top:12px;margin-top:2px}
+  .fiche h4{margin:14px 0 6px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    font-family:ui-monospace,monospace;color:var(--rust-deep)}
+  .fiche h4:first-child{margin-top:0}
+  .fiche p{margin:0 0 12px;font-size:14px}
+  .tagrow{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px}
+  .tag{font-family:ui-monospace,monospace;font-size:11px;background:var(--paper);
+    border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+
+  .resto{background:var(--paper);border:2px solid var(--line);border-radius:12px;
+    padding:11px 13px;margin:0 0 9px;box-shadow:var(--shadow)}
+  .resto b{font-size:15px;display:block;line-height:1.2}
+  .resto .meta{font-family:ui-monospace,monospace;font-size:11px;color:var(--teal);margin:2px 0 4px}
+  .resto.music .meta{color:var(--rust-deep)}
+  .resto .desc{font-size:13px;color:var(--muted);margin:0 0 8px}
+  .resto .map-link{display:inline-flex;align-items:center;gap:6px;font-family:ui-monospace,monospace;
+    font-size:11px;font-weight:600;color:var(--rust-deep);text-decoration:none;
+    border:1.5px solid var(--line);border-radius:999px;padding:5px 12px;background:var(--paper-2)}
+
+  .phrase{background:var(--paper);border:2px solid var(--line);border-radius:12px;
+    padding:12px 14px;margin:0 0 10px;box-shadow:var(--shadow)}
+  .phrase .fr{font-size:13px;color:var(--muted);margin:0 0 2px}
+  .phrase .vi{font-size:18px;font-weight:700;margin:0 0 2px;line-height:1.2}
+  .phrase .ph{font-family:ui-monospace,monospace;font-size:12px;color:var(--rust-deep);margin:0}
+  .phrase .ph::before{content:"≈ "}
+  .say{margin-top:8px;display:inline-flex;align-items:center;gap:7px;background:var(--teal);
+    color:var(--paper);border:2px solid var(--line);border-radius:999px;padding:7px 16px 7px 13px;
+    font-family:ui-monospace,monospace;font-size:12px;font-weight:600;letter-spacing:.04em;
+    cursor:pointer;box-shadow:var(--shadow)}
+  .say:active{transform:translateY(1px);box-shadow:none}
+  .say.playing{background:var(--rust)}
+  .say .wave{font-size:14px}
+
+  .passion-pick{display:flex;gap:7px;margin:0 0 18px}
+  .passion-pick button{flex:1;border:2px solid var(--line);background:var(--paper-2);
+    border-radius:12px;padding:12px 4px;font-family:inherit;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:var(--shadow);color:var(--ink)}
+  .passion-pick button .pico{font-size:22px}
+  .passion-pick button .plabel{font-size:11px;font-weight:700}
+  .passion-pick button[aria-selected="true"]{background:var(--gold)}
+  .passion-pick button:active{transform:translateY(1px);box-shadow:none}
+  .group-title{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--muted);margin:18px 0 10px;border-top:1px solid var(--line);padding-top:14px}
+  .group-title:first-child{border-top:0;padding-top:0;margin-top:0}
+
+  .card{background:var(--paper-2);border:2px solid var(--line);border-radius:14px;
+    padding:15px 16px;margin:0 0 14px;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 4px;font-size:17px}
+  .card .sub{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);
+    letter-spacing:.06em;text-transform:uppercase;margin:0 0 12px}
+  .linkbtn{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--paper);border:2px solid var(--line);border-radius:10px;
+    padding:12px 14px;margin:0 0 9px;text-decoration:none;color:var(--ink);box-shadow:var(--shadow)}
+  .linkbtn:active{transform:translateY(1px);box-shadow:none}
+  .linkbtn .l-main{min-width:0}
+  .linkbtn .l-main b{font-size:14px;display:block}
+  .linkbtn .l-main span{font-size:12px;color:var(--muted)}
+  .linkbtn .arrow{flex:none;color:var(--rust);font-size:18px}
+
+  .weather-pick{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+  .weather-pick button{font-family:ui-monospace,monospace;font-size:12px;background:var(--paper);
+    border:2px solid var(--line);border-radius:999px;padding:6px 13px;cursor:pointer;color:var(--ink)}
+  .weather-pick button[aria-selected="true"]{background:var(--teal);color:var(--paper)}
+  .wx-result{text-align:center;padding:8px 0 2px}
+  .wx-temp{font-size:44px;font-weight:700;line-height:1;margin:6px 0 2px}
+  .wx-desc{font-size:15px;margin:0 0 8px}
+  .wx-meta{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted)}
+  .wx-loading{text-align:center;color:var(--muted);font-family:ui-monospace,monospace;font-size:13px;padding:14px 0}
+  .wx-icon{font-size:40px;line-height:1}
+
+  .conv{display:flex;align-items:center;gap:8px;margin:0 0 12px}
+  .conv .field{flex:1;background:var(--paper);border:2px solid var(--line);border-radius:10px;padding:8px 10px}
+  .conv .field label{display:block;font-family:ui-monospace,monospace;font-size:10px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  .conv .field input{width:100%;border:0;background:transparent;font-family:inherit;
+    font-size:20px;font-weight:700;color:var(--ink);outline:none}
+  .conv .eq{font-size:20px;color:var(--muted)}
+  .rate-line{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .rate-line input{width:64px;border:1.5px solid var(--line);border-radius:6px;
+    padding:3px 6px;font-family:inherit;font-size:12px;background:var(--paper)}
+  .num{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--paper);border:2px solid var(--line);border-radius:10px;
+    padding:9px 13px;margin:0 0 8px;box-shadow:var(--shadow)}
+  .num .n-vnd{font-weight:700;font-size:15px}
+  .num .n-vi{font-family:ui-monospace,monospace;font-size:12px;color:var(--rust-deep)}
+  .num .n-eur{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted)}
+  .num button{flex:none;background:var(--teal);color:var(--paper);border:2px solid var(--line);
+    border-radius:999px;width:38px;height:38px;font-size:15px;cursor:pointer;box-shadow:var(--shadow)}
+
+  #map-wrap{height:300px;border:2px solid var(--line);border-radius:14px;overflow:hidden;
+    margin:0 0 12px;box-shadow:var(--shadow);position:relative}
+  #leaflet{width:100%;height:100%;background:var(--paper-2)}
+  .map-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    text-align:center;padding:20px;font-family:ui-monospace,monospace;font-size:13px;color:var(--muted);
+    background:var(--paper-2)}
+  .geo-btn{display:inline-flex;align-items:center;gap:8px;background:var(--rust);color:var(--paper);
+    border:2px solid var(--line);border-radius:999px;padding:9px 16px;font-family:ui-monospace,monospace;
+    font-size:12px;font-weight:600;cursor:pointer;box-shadow:var(--shadow);margin:0 0 12px}
+  .geo-btn:active{transform:translateY(1px);box-shadow:none}
+  .food-filter{display:flex;gap:6px;margin:0 0 12px}
+  .food-filter button{flex:1;font-family:ui-monospace,monospace;font-size:11px;background:var(--paper);
+    border:2px solid var(--line);border-radius:999px;padding:7px 6px;cursor:pointer;color:var(--ink);font-weight:600}
+  .food-filter button[aria-selected="true"]{background:var(--gold)}
+  .resto-list .resto .dist{font-family:ui-monospace,monospace;font-size:11px;color:var(--teal);font-weight:700}
+
+  .culture{background:var(--paper);border:2px solid var(--line);border-radius:12px;
+    padding:13px 15px;margin:0 0 11px;box-shadow:var(--shadow)}
+  .culture .c-ico{font-size:22px}
+  .culture b{display:block;font-size:15px;margin:4px 0 3px}
+  .culture p{margin:0;font-size:13.5px;color:var(--muted)}
+
+  .note{font-size:12px;color:var(--muted);text-align:center;margin:26px 0 0;font-family:ui-monospace,monospace}
+  .voicewarn{background:var(--rust);color:var(--paper);font-size:12px;padding:10px 14px;
+    border-radius:10px;margin:0 0 16px;border:2px solid var(--line);font-family:ui-monospace,monospace;display:none}
+  .voicewarn.show{display:block}
+  .disclaim{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace;
+    border-top:1px solid var(--line);margin-top:10px;padding-top:10px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<header>
+  <p class="kicker">Carnet de route · Việt Nam</p>
+  <h1>Compagnon Vietnam<small>Étapes, restos, musique, argent, culture & infos en direct</small></h1>
+</header>
+
+<nav role="tablist">
+  <button role="tab" aria-selected="true" data-tab="map"><span class="ico">🗺️</span>Étapes</button>
+  <button role="tab" aria-selected="false" data-tab="passions"><span class="ico">🥁</span>Passions</button>
+  <button role="tab" aria-selected="false" data-tab="essentials"><span class="ico">💬</span>Mots</button>
+  <button role="tab" aria-selected="false" data-tab="money"><span class="ico">💵</span>Argent</button>
+  <button role="tab" aria-selected="false" data-tab="food"><span class="ico">🍜</span>Restos</button>
+  <button role="tab" aria-selected="false" data-tab="culture"><span class="ico">🙏</span>Culture</button>
+  <button role="tab" aria-selected="false" data-tab="live"><span class="ico">🌤️</span>Live</button>
+</nav>
+
+<main>
+  <div class="voicewarn" id="voicewarn">La voix vietnamienne n'est pas installée sur cet iPhone. Réglages → Accessibilité → Contenu énoncé → Voix → Vietnamien, pour l'activer.</div>
+
+  <section id="map">
+    <p class="lead">Ton itinéraire, du sud au nord, élargi à Nha Trang (plongée), Da Lat (routes moto) et Ha Giang (la boucle mythique). Touche une étape : ambiance, restos atypiques, scènes pour jouer du cajon et phrases utiles.</p>
+    <div id="route"></div>
+  </section>
+
+  <section id="passions" hidden>
+    <p class="lead">Le vocabulaire qui compte pour toi. Choisis un univers.</p>
+    <div class="passion-pick" id="passionPick">
+      <button data-p="dive" aria-selected="true"><span class="pico">🤿</span><span class="plabel">Plongée</span></button>
+      <button data-p="moto" aria-selected="false"><span class="pico">🏍️</span><span class="plabel">Moto</span></button>
+      <button data-p="photo" aria-selected="false"><span class="pico">📷</span><span class="plabel">Photo</span></button>
+      <button data-p="music" aria-selected="false"><span class="pico">🥁</span><span class="plabel">Musique</span></button>
+    </div>
+    <div id="passionContent"></div>
+  </section>
+
+  <section id="essentials" hidden>
+    <p class="lead">Les phrases de survie, toutes situations.</p>
+    <div id="essentialContent"></div>
+  </section>
+
+  <section id="money" hidden>
+    <p class="lead">Pour lire les prix et négocier sans se faire avoir. Le dong a beaucoup de zéros : 100 000 ₫ ≈ 3,80 €.</p>
+    <div class="card">
+      <h3>Convertisseur 💱</h3>
+      <p class="sub">Tape un montant dans l'un des deux champs</p>
+      <div class="conv">
+        <div class="field"><label>Dong (₫)</label><input id="vndIn" inputmode="numeric" placeholder="100000"></div>
+        <span class="eq">≈</span>
+        <div class="field"><label>Euro (€)</label><input id="eurIn" inputmode="decimal" placeholder="3.80"></div>
+      </div>
+      <div class="rate-line">Taux : 1 € = <input id="rate" inputmode="numeric" value="26300"> ₫ <span>· à ajuster selon le jour</span></div>
+    </div>
+    <div class="card">
+      <h3>Les nombres à connaître 🔢</h3>
+      <p class="sub">Montants courants · appuie sur 🔊 pour entendre</p>
+      <div id="numList"></div>
+    </div>
+  </section>
+
+  <section id="food" hidden>
+    <p class="lead">Restos atypiques et scènes où jouer, tout l'itinéraire sur une carte. La carte a besoin de réseau ; sans réseau, la liste plus bas reste dispo avec un bouton vers Maps.</p>
+    <div class="food-filter" id="foodFilter">
+      <button data-f="all" aria-selected="true">Tout</button>
+      <button data-f="food">🍜 Manger</button>
+      <button data-f="music">🥁 Jouer / live</button>
+    </div>
+    <button class="geo-btn" id="geoBtn">📍 Où suis-je ? Trier par distance</button>
+    <div id="map-wrap"><div id="leaflet"></div><div class="map-fallback" id="mapFallback">Carte en cours… (besoin de réseau)</div></div>
+    <div class="resto-list" id="foodList"></div>
+  </section>
+
+  <section id="culture" hidden>
+    <p class="lead">Quelques repères pour être à l'aise et bien reçu partout.</p>
+    <div id="cultureList"></div>
+  </section>
+
+  <section id="live" hidden>
+    <p class="lead">Avec du réseau : météo en direct par ville, et les bons services pour trains, bateaux et hôtels.</p>
+    <div class="card">
+      <h3>Météo en direct 🌤️</h3>
+      <p class="sub">Source Open-Meteo · données réelles</p>
+      <div class="weather-pick" id="wxPick"></div>
+      <div id="wxResult" class="wx-loading">Choisis une ville.</div>
+    </div>
+    <div class="card">
+      <h3>Trains & bateaux 🚆🛥️</h3>
+      <p class="sub">Horaires & billets · ouvre dans le navigateur</p>
+      <a class="linkbtn" target="_blank" rel="noopener" href="https://www.baolau.com/"><span class="l-main"><b>Baolau</b><span>Trains, bus & ferries vietnamiens, en anglais</span></span><span class="arrow">↗</span></a>
+      <a class="linkbtn" target="_blank" rel="noopener" href="https://12go.asia/en/travel/vietnam"><span class="l-main"><b>12Go Asia</b><span>Compare train + bus + bateau + avion</span></span><span class="arrow">↗</span></a>
+      <a class="linkbtn" target="_blank" rel="noopener" href="https://dsvn.vn/"><span class="l-main"><b>Vietnam Railways (officiel)</b><span>Chemins de fer nationaux · dsvn.vn</span></span><span class="arrow">↗</span></a>
+    </div>
+    <div class="card">
+      <h3>Hôtels au moins cher 🛏️</h3>
+      <p class="sub">Liens pré-filtrés « prix croissant »</p>
+      <div id="hotelLinks"></div>
+      <p class="disclaim">Ces liens trient du moins cher au plus cher. Pour la nuit même, regarde aussi « Tonight's deals » sur l'appli Booking ou Agoda.</p>
+    </div>
+  </section>
+
+  <p class="note" id="footnote"></p>
+</main>
+
+<script>
+const STEPS=[
+  {pin:"1",city:"Hô Chi Minh — District 1 & Saigon",region:"Sud",
+   fiche:{vibe:"Le cœur de Saigon : Ben Thanh, Dong Khoi, rooftops et trafic dense de scooters. Scène live très active.",
+    tips:["Traverse lentement et sans t'arrêter, les scooters t'évitent","Grab (appli) évite la négociation des taxis","Café sữa đá glacé = institution locale"],
+    tags:["Ville","Café","Musique live","Scooters"]},
+   restos:[
+    {n:"Cục Gạch Quán",m:"Cuisine maison · villa coloniale",d:"Plats vietnamiens familiaux dans une vieille villa pleine de charme (bassin à carpes, déco rétro). Michelin Bib Gourmand.",city:"Hô Chi Minh"},
+    {n:"Pizza 4P's (Ben Thanh)",m:"Fusion japo-italienne",d:"Pizzas à la burrata produite à Da Lat. Né au Vietnam, culte chez les locaux.",city:"Hô Chi Minh"}],
+   music:[
+    {n:"Yoko Café",m:"Open mic le mardi · live tous les soirs",d:"Pionnier de la musique live à Saigon (depuis 2002). Mardi = scène ouverte : on vient avec son instrument et on joue avec le crowd. Idéal pour le cajon.",city:"Yoko Cafe Saigon District 3"},
+    {n:"Broma: Not a Bar",m:"Rooftop · open mic mardi 21h",d:"Toit-terrasse sur Nguyen Hue. Mardi soir, scène acoustique ouverte : amène ton cajon et joue avec les autres. Vue superbe sur le boulevard.",city:"Broma Not a Bar Nguyen Hue Saigon"}],
+   phrases:[
+    {fr:"Bonjour",vi:"Xin chào",ph:"sine tchao"},
+    {fr:"Combien ça coûte ?",vi:"Bao nhiêu tiền?",ph:"bao niou tienn"},
+    {fr:"Trop cher, c'est possible moins ?",vi:"Đắt quá, bớt được không?",ph:"dat koua, beut deuc khong"},
+    {fr:"L'addition, s'il vous plaît",vi:"Tính tiền nhé",ph:"tinh tienn nié"}]},
+
+  {pin:"2",city:"An Bang Beach — restaurant La Plage",region:"Centre",
+   fiche:{vibe:"Plage tranquille près de Hoi An. Transats, fruits de mer face à la mer, parfait pour souffler.",
+    tips:["Demande le poisson du jour, souvent grillé minute","Apporte du liquide, certains spots de plage ne prennent pas la carte","Coucher de soleil : arrive avant 17h30"],
+    tags:["Plage","Fruits de mer","Détente"]},
+   restos:[
+    {n:"Sound of Silence",m:"Café de plage",d:"Café posé sur le sable d'An Bang, parfait au lever du jour avant la foule. Bonnes pâtisseries et vue mer.",city:"An Bang Beach Hoi An"},
+    {n:"La Plage",m:"Fruits de mer · pieds dans le sable",d:"Le restaurant que tu connais déjà : poisson grillé et ambiance décontractée face à l'eau.",city:"An Bang Beach Hoi An"}],
+   music:[],
+   phrases:[
+    {fr:"Une table près de la mer",vi:"Một bàn gần biển",ph:"môt bane gueune bienn"},
+    {fr:"Le poisson du jour, grillé",vi:"Cá tươi nướng",ph:"ka tououi nououng"},
+    {fr:"Une bière fraîche",vi:"Một bia lạnh",ph:"môt bia lan"},
+    {fr:"C'était délicieux, merci",vi:"Ngon lắm, cảm ơn",ph:"ngonn lam, kam eune"}]},
+
+  {pin:"3",city:"Hoi An — Quảng Nam",region:"Centre",
+   fiche:{vibe:"Vieille ville lanternes, tailleurs sur mesure, vélos. Patrimoine UNESCO. Plongée accessible aux îles Cham (avril-septembre).",
+    tips:["Tailleurs : chemise sur mesure possible en 24h","Loue un vélo plutôt qu'un scooter dans la vieille ville","Les lanternes s'allument à la tombée du jour","Plongée aux îles Cham : récif de Hon Mo, 4 à 35 m"],
+    tags:["Lanternes","Tailleurs","Plongée 🤿","Musique live"]},
+   restos:[
+    {n:"Lion's Room",m:"Pâtes · minuscule, à l'écart",d:"Trois personnes en cuisine ouverte, pâtes maison et cocktails bien dosés à prix doux. Adresse de connaisseurs.",city:"Hoi An"},
+    {n:"Bếp Hên",m:"Cuisine de grand-mère",d:"Petite maison familiale, plats vietnamiens réconfortants comme à la maison. Loin des pièges à touristes.",city:"Hoi An"}],
+   music:[
+    {n:"Guitar Hawaii Live Music Bar",m:"Jam ouvert · tous les soirs dès 20h",d:"LE spot pour jouer à Hoi An. Le patron Tam, guitariste, prête les instruments et invite tout le monde à monter sur scène. Parfait pour poser ton cajon et faire un bœuf. Hors de la vieille ville.",city:"Guitar Hawaii Hoi An"}],
+   phrases:[
+    {fr:"Je voudrais une chemise sur mesure",vi:"Tôi muốn may một cái áo sơ mi",ph:"toi mououn maï môt kaï ao seu mi"},
+    {fr:"C'est prêt quand ?",vi:"Khi nào xong?",ph:"khi nao songg"},
+    {fr:"Je peux prendre une photo ?",vi:"Tôi chụp ảnh được không?",ph:"toi tchoup ane deuc khong"},
+    {fr:"Où louer un vélo ?",vi:"Thuê xe đạp ở đâu?",ph:"toué sé dap eu dôw"}]},
+
+  {pin:"4",city:"Nha Trang",region:"Côte centre-sud",
+   fiche:{vibe:"La capitale balnéaire de la plongée. Le parc marin de Hon Mun, « l'aquarium d'Asie du Sud-Est », abrite plus de 1500 espèces. Cousteau a plongé ici parmi ses premières fois.",
+    tips:["Meilleure saison plongée : mars à août (visibilité jusqu'à 30 m)","Bateaux depuis le port de Cau Da, ~40 min jusqu'à Hon Mun","Spots : Moray Beach (débutant, 18 m), Madonna Rock (cavernes, 25 m), Hon Mun Wall (avancé)","300 000–600 000 VND par plongée, équipement inclus"],
+    tags:["Plongée 🤿","Parc marin","Récifs","Cavernes"]},
+   restos:[
+    {n:"Lạc Cảnh",m:"Bœuf grillé à table",d:"Institution locale : tu grilles toi-même ton bœuf mariné sur un brasero. Bruyant, bondé, authentique.",city:"Nha Trang"},
+    {n:"Nha Trang Xưa",m:"Cuisine traditionnelle · maison-jardin",d:"Maison traditionnelle entourée de rizières, à l'écart du front de mer. Cadre paisible, plats régionaux.",city:"Nha Trang"}],
+   music:[
+    {n:"Bars live de Tran Phu / centre",m:"Live le soir · bord de mer",d:"Le front de mer concentre plusieurs bars à musique live le soir. Demande lesquels font une scène ouverte ce soir-là (ça tourne selon la saison).",city:"Tran Phu Nha Trang"}],
+   phrases:[
+    {fr:"Je suis plongeur certifié",vi:"Tôi có bằng lặn",ph:"toi ko bang lane"},
+    {fr:"Une sortie plongée pour demain ?",vi:"Có tour lặn ngày mai không?",ph:"ko tour lane ngaï maï khong"},
+    {fr:"On part de quel port ?",vi:"Thuyền đi từ cảng nào?",ph:"touienn di teu kang nao"},
+    {fr:"Quelle est la visibilité aujourd'hui ?",vi:"Hôm nay tầm nhìn thế nào?",ph:"home naï tame nine té nao"}]},
+
+  {pin:"5",city:"Đà Lạt",region:"Hauts plateaux",
+   fiche:{vibe:"Ville de montagne fraîche, forêts de pins, lacs, architecture coloniale. Paradis des routes moto faciles et de la scène café. Plantations de café et de thé tout autour.",
+    tips:["Boucle du lac Tuyen Lam : facile, paysages « suisses », passe par la Crazy House et le col de Prenn","Cau Dat Farm : plantation de thé photogénique avec un café-train","Loue un scooter ~120 000–150 000 VND/jour","Apporte une couche chaude, il fait frais même l'été"],
+    tags:["Moto 🏍️","Café","Pins","Photo","Frais"]},
+   restos:[
+    {n:"Twin Beans Farm",m:"Café-plantation isolé",d:"Plantation de café secrète au bout d'une route panoramique, café et chambres. Une étape sur la boucle moto du lac.",city:"Da Lat"},
+    {n:"Lang Thang",m:"Café-cabane dans les arbres",d:"Près de la cascade Cam Ly, déco vintage, marché d'artisanat et concerts acoustiques le week-end.",city:"Da Lat"}],
+   music:[
+    {n:"Cafés acoustiques du centre",m:"Concerts acoustiques · soir & week-end",d:"Da Lat a une forte culture de cafés à musique acoustique, surtout le week-end. Les cafés-jardins vintage accueillent volontiers les musiciens de passage — demande à jouer.",city:"Da Lat center cafe"}],
+   phrases:[
+    {fr:"La route est-elle bonne à moto ?",vi:"Đường đi xe máy có tốt không?",ph:"douong di sé maï ko tôt khong"},
+    {fr:"Le plein d'essence",vi:"Đổ đầy xăng",ph:"do daï sang"},
+    {fr:"Un café à la noix de coco",vi:"Cà phê cốt dừa",ph:"ka fé kôt zoua"},
+    {fr:"Il fait frais ici",vi:"Ở đây mát",ph:"eu daï mate"}]},
+
+  {pin:"6",city:"Hanoï",region:"Nord · Capitale",
+   fiche:{vibe:"Capitale, vieux quartier labyrinthique, lac Hoan Kiem, scène café, jazz et moto vintage. Le père du jazz vietnamien y joue encore.",
+    tips:["Le vieux quartier se fait à pied","Egg coffee (cà phê trứng) est né ici","Bia hơi : la bière pression locale à ~13 000 VND le verre","Beaucoup de garages de motos anciennes à dénicher"],
+    tags:["Capitale","Vieux quartier","Jazz","Moto vintage"]},
+   restos:[
+    {n:"Quán Kiến",m:"Cuisine des minorités ethniques",d:"Spécialités des montagnes du nord : porc grillé, riz en tube de bambou, options aventureuses (criquets, œufs de fourmi). Pour le photographe-explorateur.",city:"Hanoi"},
+    {n:"Phở Gia Truyền (Bát Đàn)",m:"Pho de bœuf · file d'attente",d:"Bouillon mijoté des heures, l'un des pho les plus réputés de Hanoï. On fait la queue, c'est bon signe.",city:"Hanoi"}],
+   music:[
+    {n:"Bình Minh Jazz Club",m:"Jazz live tous les soirs",d:"Le club de jazz historique de Hanoï, fondé par le saxophoniste Quyền Văn Minh, « père du jazz vietnamien ». Maison band de haut niveau, ambiance intime. Réserve le week-end.",city:"Binh Minh Jazz Club Hanoi"},
+    {n:"The Hanoi Social Club",m:"Live · villa coloniale 1920s",d:"Villa coloniale, ambiance créative, live réguliers (R&B, rock, jazz). Lieu apprécié des musiciens pour réseauter et jouer.",city:"Hanoi Social Club"}],
+   phrases:[
+    {fr:"Où est le vieux quartier ?",vi:"Phố cổ ở đâu?",ph:"fo ko eu dôw"},
+    {fr:"Un café aux œufs, s'il vous plaît",vi:"Cho tôi cà phê trứng",ph:"tcho toi ka fé tchoung"},
+    {fr:"Je cherche un garage de motos",vi:"Tôi tìm tiệm sửa xe máy",ph:"toi time tienm seua sé maï"},
+    {fr:"Un verre de bière pression",vi:"Một cốc bia hơi",ph:"môt kôk bia heui"}]},
+
+  {pin:"7",city:"Sa Pa & Gạo Sua",region:"Nord · Montagnes",
+   fiche:{vibe:"Montagnes du nord, rizières en terrasses, villages ethniques, brume. Routes de montagne sublimes à moto vers Ta Van et Lao Chai.",
+    tips:["Il fait frais, prends une couche chaude même en été","Routes magnifiques mais virages serrés","Rizières vertes (été) ou dorées (récolte, sept-oct)","Les vallées autour de Sapa se font très bien à moto"],
+    tags:["Montagne","Rizières","Moto 🏍️","Photo","Frais"]},
+   restos:[
+    {n:"Marché de nuit de Sapa",m:"Brochettes & grillades",d:"Stands de grillades en plein air : viandes marinées, légumes des montagnes, œufs grillés. Chaleureux quand il fait froid.",city:"Sa Pa"},
+    {n:"Restos H'mong (vallée)",m:"Cuisine de montagne",d:"Petites adresses tenues par des familles H'mong : porc fumé, vin de riz maison, légumes de forêt.",city:"Sa Pa"}],
+   music:[
+    {n:"Soirées en homestay",m:"Musique partagée · vin de riz",d:"Dans les homestays des vallées, les soirées finissent souvent en musique autour du vin de riz. Sors ton cajon : le rythme rassemble même sans langue commune.",city:"Sa Pa"}],
+   phrases:[
+    {fr:"La route est-elle praticable ?",vi:"Đường có đi được không?",ph:"douong ko di deuc khong"},
+    {fr:"Où sont les rizières en terrasses ?",vi:"Ruộng bậc thang ở đâu?",ph:"zououng bac tang eu dôw"},
+    {fr:"Il fait froid ici",vi:"Ở đây lạnh",ph:"eu daï lane"},
+    {fr:"Je peux dormir chez l'habitant ?",vi:"Tôi ở homestay được không?",ph:"toi eu home-staï deuc khong"}]},
+
+  {pin:"8",city:"Hà Giang (la boucle)",region:"Extrême Nord",
+   fiche:{vibe:"LA boucle moto mythique du Vietnam : 384 km de paysages d'un autre monde, cols vertigineux, plateaux karstiques et villages des minorités.",
+    tips:["Minimum 3 jours ; une semaine avec les détours","Routes pavées mais montagneuses, prudence par temps de pluie","Cols à ne pas manquer : Bac Sum, Heaven's Gate, le célèbre Ma Pi Leng près de Meo Vac","Fais le plein dès que possible, stations rares en altitude","Garde tes papiers et ton permis sur toi"],
+    tags:["Moto 🏍️","Boucle légendaire","Cols","Photo"]},
+   restos:[
+    {n:"Meo Vac · marché local",m:"Soupe & bord de route",d:"Petites gargotes de riz et soupes le long de la QL4C, parfaites pour une pause entre deux cols. Chaleureux et bon marché.",city:"Meo Vac Ha Giang"},
+    {n:"Homestays H'mong (Du Già)",m:"Repas partagé · vin de riz",d:"Sur la boucle, les homestays servent de grands repas partagés arrosés de vin de riz maison. Souvent le meilleur repas du voyage.",city:"Du Gia Ha Giang"}],
+   music:[
+    {n:"Bœufs en homestay (Du Già)",m:"Soirées musicales",d:"Les homestays de la boucle sont réputés pour leurs soirées festives. Ton cajon y trouvera vite sa place autour du feu et du vin de riz.",city:"Du Gia Ha Giang"}],
+   phrases:[
+    {fr:"Où est la prochaine station-service ?",vi:"Cây xăng tiếp theo ở đâu?",ph:"kaï sang tiep téo eu dôw"},
+    {fr:"La route du col est-elle ouverte ?",vi:"Đèo có đi được không?",ph:"déo ko di deuc khong"},
+    {fr:"Je cherche un homestay pour ce soir",vi:"Tôi tìm homestay tối nay",ph:"toi time home-staï toï naï"},
+    {fr:"Ma moto a un problème",vi:"Xe của tôi bị hỏng",ph:"sé koua toi bi honng"}]}
+];
+
+const PASSIONS={
+  dive:{label:"Plongée",groups:[
+    {title:"Réserver / certifier",items:[
+      {fr:"Je suis plongeur certifié (PADI)",vi:"Tôi có bằng lặn PADI",ph:"toi ko bang lane padi"},
+      {fr:"Une sortie plongée bouteille",vi:"Tour lặn bình hơi",ph:"tour lane bine heui"},
+      {fr:"Combien de plongées dans la sortie ?",vi:"Tour có mấy lần lặn?",ph:"tour ko maï lane lane"},
+      {fr:"À quelle heure le bateau part ?",vi:"Thuyền khởi hành lúc mấy giờ?",ph:"touienn kheui hane louc maï zeu"}]},
+    {title:"Matériel",items:[
+      {fr:"Louer masque, palmes, tuba",vi:"Thuê kính, chân vịt, ống thở",ph:"toué kine, tchane vit, ong teu"},
+      {fr:"Une combinaison, taille L",vi:"Bộ đồ lặn cỡ L",ph:"bo do lane keu L"},
+      {fr:"Ma bouteille est-elle pleine ?",vi:"Bình hơi đầy chưa?",ph:"bine heui daï tcheua"}]},
+    {title:"Sous l'eau & sécurité",items:[
+      {fr:"Le récif de corail",vi:"Rạn san hô",ph:"zane sane ho"},
+      {fr:"À quelle profondeur ?",vi:"Sâu bao nhiêu mét?",ph:"sôw bao niou met"},
+      {fr:"Tout va bien (OK)",vi:"Ổn",ph:"onn"},
+      {fr:"J'ai un problème",vi:"Tôi có vấn đề",ph:"toi ko vane dé"}]}]},
+  moto:{label:"Moto",groups:[
+    {title:"Louer / rouler",items:[
+      {fr:"J'ai le permis moto",vi:"Tôi có bằng lái xe máy",ph:"toi ko bang laï sé maï"},
+      {fr:"Louer une moto pour une journée",vi:"Thuê xe máy một ngày",ph:"toué sé maï môt ngaï"},
+      {fr:"Avez-vous une grosse cylindrée ?",vi:"Có xe phân khối lớn không?",ph:"ko sé fane khoï leune khong"},
+      {fr:"Un casque, s'il vous plaît",vi:"Cho tôi mũ bảo hiểm",ph:"tcho toi mou bao hiémm"}]},
+    {title:"Essence & mécanique",items:[
+      {fr:"Le plein, s'il vous plaît",vi:"Đổ đầy xăng",ph:"do daï sang"},
+      {fr:"Où est la station-service ?",vi:"Cây xăng ở đâu?",ph:"kaï sang eu dôw"},
+      {fr:"Ma moto est en panne",vi:"Xe của tôi bị hỏng",ph:"sé koua toi bi honng"},
+      {fr:"Pouvez-vous la réparer ?",vi:"Sửa được không?",ph:"seua deuc khong"},
+      {fr:"Le pneu est crevé",vi:"Lốp xe bị xịt",ph:"lop sé bi sit"}]},
+    {title:"Vintage & rencontres",items:[
+      {fr:"J'ai une Royal Enfield",vi:"Tôi có xe Royal Enfield",ph:"toi ko sé roïal ènnfilde"},
+      {fr:"J'aime les vieilles motos",vi:"Tôi thích xe máy cổ",ph:"toi tic sé maï ko"},
+      {fr:"Belle moto !",vi:"Xe đẹp quá!",ph:"sé dèp koua"},
+      {fr:"On roule ensemble ?",vi:"Mình đi cùng nhau nhé?",ph:"mine di koung niao nié"}]}]},
+  photo:{label:"Photo",groups:[
+    {title:"Demander la permission",items:[
+      {fr:"Je peux vous prendre en photo ?",vi:"Tôi chụp ảnh anh/chị được không?",ph:"toi tchoup ane ane/tchi deuc khong"},
+      {fr:"Je suis photographe",vi:"Tôi là nhiếp ảnh gia",ph:"toi la niep ane za"},
+      {fr:"C'est pour mon travail",vi:"Để cho công việc của tôi",ph:"dé tcho kong viec koua toi"},
+      {fr:"Merci beaucoup !",vi:"Cảm ơn nhiều!",ph:"kam eune niou"}]},
+    {title:"Diriger / poser",items:[
+      {fr:"Regardez par ici",vi:"Nhìn vào đây",ph:"nine vao daï"},
+      {fr:"Un grand sourire",vi:"Cười tươi lên",ph:"kououi tououi lenn"},
+      {fr:"Restez comme ça",vi:"Giữ nguyên",ph:"zou ngouienn"},
+      {fr:"Encore une, parfait",vi:"Thêm một tấm, đẹp lắm",ph:"tem môt tame, dèp lam"}]},
+    {title:"Matériel & lieux",items:[
+      {fr:"Où acheter une carte mémoire ?",vi:"Mua thẻ nhớ ở đâu?",ph:"moua té nieu eu dôw"},
+      {fr:"Je cherche un bon point de vue",vi:"Tôi tìm chỗ chụp đẹp",ph:"toi time tcho tchoup dèp"},
+      {fr:"La lumière est belle",vi:"Ánh sáng đẹp",ph:"ane sangg dèp"}]}]},
+  music:{label:"Musique",groups:[
+    {title:"Mon instrument",items:[
+      {fr:"Je joue du cajon (caisse de percussion)",vi:"Tôi chơi trống cajon (trống hộp)",ph:"toi tcheui trong cajon (trong hop)"},
+      {fr:"Je suis musicien / percussionniste",vi:"Tôi là nhạc công, chơi bộ gõ",ph:"toi la niac kong, tcheui bo go"},
+      {fr:"C'est un instrument à percussion",vi:"Đây là nhạc cụ gõ",ph:"daï la niac kou go"},
+      {fr:"Je peux poser mon cajon ici ?",vi:"Tôi để cajon ở đây được không?",ph:"toi dé cajon eu daï deuc khong"}]},
+    {title:"Trouver une scène / un bœuf",items:[
+      {fr:"Y a-t-il de la musique live ce soir ?",vi:"Tối nay có nhạc sống không?",ph:"toï naï ko niac song khong"},
+      {fr:"Y a-t-il une scène ouverte (open mic) ?",vi:"Có sân khấu mở không?",ph:"ko sane khôw meu khong"},
+      {fr:"Je peux jouer avec vous ?",vi:"Tôi chơi cùng được không?",ph:"toi tcheui koung deuc khong"},
+      {fr:"On fait un bœuf ensemble ?",vi:"Mình chơi nhạc chung nhé?",ph:"mine tcheui niac tchoung nié"}]},
+    {title:"Sur scène",items:[
+      {fr:"On joue dans quelle tonalité ?",vi:"Bài này tông gì?",ph:"baï naï tong zi"},
+      {fr:"Un peu plus lentement, s'il vous plaît",vi:"Chậm lại một chút",ph:"tchame laï môt tchoute"},
+      {fr:"Je garde le rythme",vi:"Tôi giữ nhịp",ph:"toi zou nip"},
+      {fr:"C'était super, merci !",vi:"Tuyệt vời, cảm ơn!",ph:"touiet veui, kam eune"}]}]}
+};
+
+const ESSENTIALS=[
+  {title:"Politesse",items:[
+    {fr:"Bonjour",vi:"Xin chào",ph:"sine tchao"},
+    {fr:"Merci",vi:"Cảm ơn",ph:"kam eune"},
+    {fr:"S'il vous plaît",vi:"Làm ơn",ph:"lame eune"},
+    {fr:"Oui / Non",vi:"Vâng / Không",ph:"vang / khong"},
+    {fr:"Pardon / Excusez-moi",vi:"Xin lỗi",ph:"sine loï"}]},
+  {title:"Se débrouiller",items:[
+    {fr:"Je ne parle pas vietnamien",vi:"Tôi không nói được tiếng Việt",ph:"toi khong noï deuc tienng viet"},
+    {fr:"Parlez-vous anglais ?",vi:"Anh nói tiếng Anh không?",ph:"ane noï tienng ane khong"},
+    {fr:"Je ne comprends pas",vi:"Tôi không hiểu",ph:"toi khong hiéou"},
+    {fr:"Lentement, s'il vous plaît",vi:"Xin nói chậm",ph:"sine noï tchame"}]},
+  {title:"Argent & achats",items:[
+    {fr:"Combien ça coûte ?",vi:"Bao nhiêu tiền?",ph:"bao niou tienn"},
+    {fr:"C'est trop cher",vi:"Đắt quá",ph:"dat koua"},
+    {fr:"Vous prenez la carte ?",vi:"Có nhận thẻ không?",ph:"ko niane té khong"},
+    {fr:"L'addition",vi:"Tính tiền",ph:"tinh tienn"}]},
+  {title:"Transport",items:[
+    {fr:"Emmenez-moi à cette adresse",vi:"Cho tôi đến địa chỉ này",ph:"tcho toi denn dia tchi naï"},
+    {fr:"Arrêtez ici",vi:"Dừng ở đây",ph:"zoung eu daï"},
+    {fr:"C'est loin ?",vi:"Có xa không?",ph:"ko sa khong"}]},
+  {title:"Urgence & santé",items:[
+    {fr:"Au secours !",vi:"Cứu với!",ph:"kououou veui"},
+    {fr:"J'ai besoin d'un médecin",vi:"Tôi cần bác sĩ",ph:"toi kane bac si"},
+    {fr:"Où est l'hôpital ?",vi:"Bệnh viện ở đâu?",ph:"benn vienn eu dôw"},
+    {fr:"Je suis allergique",vi:"Tôi bị dị ứng",ph:"toi bi zi oung"},
+    {fr:"Appelez la police (113)",vi:"Gọi công an",ph:"goï kong ane"}]}
+];
+
+const NUMBERS=[
+  {vnd:10000,vi:"mười nghìn"},{vnd:20000,vi:"hai mươi nghìn"},
+  {vnd:50000,vi:"năm mươi nghìn"},{vnd:100000,vi:"một trăm nghìn"},
+  {vnd:200000,vi:"hai trăm nghìn"},{vnd:500000,vi:"năm trăm nghìn"},
+  {vnd:1000000,vi:"một triệu"},{vnd:2000000,vi:"hai triệu"}
+];
+
+const CULTURE=[
+  {ico:"🙏",t:"Saluer",d:"Un léger hochement de tête et un sourire suffisent. « Xin chào ». Les Vietnamiens sont chaleureux ; la politesse est très appréciée."},
+  {ico:"👞",t:"Chaussures",d:"On se déchausse en entrant chez quelqu'un, dans beaucoup d'homestays et certains temples. Regarde s'il y a des chaussures à l'entrée : imite."},
+  {ico:"💰",t:"Pourboire",d:"Pas une tradition forte, mais toujours apprécié. Arrondir l'addition ou laisser un peu de monnaie dans les bons restos est un beau geste."},
+  {ico:"🛕",t:"Temples & pagodes",d:"Épaules et genoux couverts. Retire chapeau et lunettes de soleil. Ne pointe pas les statues du doigt et ne tourne pas le dos à un autel pour une photo."},
+  {ico:"🤝",t:"Donner & recevoir",d:"Tends et reçois les objets (argent, carte, cadeau) des deux mains, ou de la main droite : c'est un signe de respect."},
+  {ico:"😤",t:"Garder la face",d:"Évite de hausser le ton ou de montrer ta colère en public, même en cas de litige. Rester calme et souriant règle tout plus vite."},
+  {ico:"📸",t:"Photographier les gens",d:"Demande toujours avant de photographier quelqu'un, surtout les personnes âgées et dans les villages ethniques. Un sourire et le geste de l'appareil suffisent souvent."},
+  {ico:"🥁",t:"Jouer de la musique",d:"Demander à se joindre à un groupe est très bien vu. La musique passe au-dessus de la langue : un sourire, un geste vers ton cajon, et le courant passe."},
+  {ico:"🧧",t:"La tête et les pieds",d:"Ne touche pas la tête de quelqu'un (même un enfant) et ne pointe pas tes pieds vers les gens ou un autel : la tête est « noble », les pieds « impurs »."},
+  {ico:"🍚",t:"À table",d:"Attends que l'aîné commence. Ne plante pas tes baguettes verticalement dans le riz (ça évoque l'encens des morts). Repas souvent partagés au centre."},
+  {ico:"🚦",t:"Traverser la rue",d:"Avance lentement, d'un pas régulier, sans courir ni t'arrêter brusquement : les scooters anticipent ta trajectoire et t'évitent."}
+];
+
+const LIVE_CITIES=[
+  {name:"Hô Chi Minh",lat:10.776,lon:106.701,booking:"Ho-Chi-Minh-City"},
+  {name:"Hoi An",lat:15.880,lon:108.338,booking:"Hoi-An"},
+  {name:"Nha Trang",lat:12.239,lon:109.196,booking:"Nha-Trang"},
+  {name:"Da Lat",lat:11.940,lon:108.458,booking:"Da-Lat"},
+  {name:"Hanoï",lat:21.028,lon:105.854,booking:"Hanoi"},
+  {name:"Sa Pa",lat:22.336,lon:103.844,booking:"Sa-Pa"},
+  {name:"Ha Giang",lat:22.823,lon:104.984,booking:"Ha-Giang"},
+  {name:"Phu Quoc",lat:10.227,lon:103.960,booking:"Phu-Quoc-Island"}
+];
+
+const CITY_COORDS={
+  "Hô Chi Minh":[10.788,106.690],"Yoko Cafe Saigon District 3":[10.784,106.687],
+  "Broma Not a Bar Nguyen Hue Saigon":[10.773,106.704],
+  "An Bang Beach Hoi An":[15.916,108.343],"Hoi An":[15.880,108.338],
+  "Guitar Hawaii Hoi An":[15.882,108.327],
+  "Nha Trang":[12.239,109.196],"Tran Phu Nha Trang":[12.243,109.196],
+  "Da Lat":[11.940,108.458],"Da Lat center cafe":[11.942,108.437],
+  "Hanoi":[21.030,105.852],"Binh Minh Jazz Club Hanoi":[21.024,105.857],"Hanoi Social Club":[21.030,105.846],
+  "Sa Pa":[22.336,103.844],
+  "Meo Vac Ha Giang":[23.165,105.411],"Du Gia Ha Giang":[22.926,105.150]
+};
+
+/* voix */
+let viVoice=null;
+function pickVoice(){
+  const v=speechSynthesis.getVoices();
+  viVoice=v.find(x=>x.lang&&x.lang.toLowerCase().startsWith("vi"))||null;
+  const w=document.getElementById("voicewarn");
+  if(!viVoice&&v.length)w.classList.add("show");else w.classList.remove("show");
+}
+if("speechSynthesis" in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
+function speak(t,btn){
+  if(!("speechSynthesis" in window))return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(t);
+  u.lang="vi-VN";if(viVoice)u.voice=viVoice;u.rate=0.85;
+  document.querySelectorAll(".say.playing,.num button.playing").forEach(b=>b.classList.remove("playing"));
+  if(btn){btn.classList.add("playing");u.onend=u.onerror=()=>btn.classList.remove("playing");}
+  speechSynthesis.speak(u);
+}
+
+function esc(s){return s.replace(/"/g,'&quot;');}
+function fmtVND(n){return n.toLocaleString('fr-FR').replace(/\u202f/g,' ');}
+function phraseHTML(p){return `<div class="phrase"><p class="fr">${p.fr}</p><p class="vi">${p.vi}</p><p class="ph">${p.ph}</p><button class="say" data-vi="${esc(p.vi)}"><span class="wave">🔊</span> Dire</button></div>`;}
+function mapsUrl(q){return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q);}
+function restoHTML(r,isMusic){
+  return `<div class="resto${isMusic?' music':''}"><b>${isMusic?'🥁 ':''}${r.n}</b><div class="meta">${r.m} · ${r.city}</div>
+    <p class="desc">${r.d}</p>
+    <a class="map-link" target="_blank" rel="noopener" href="${mapsUrl(r.n+' '+r.city+' Vietnam')}">📍 Ouvrir dans Maps</a></div>`;
+}
+
+function renderSteps(){
+  const root=document.getElementById("route");
+  root.innerHTML=STEPS.map((s,i)=>{const f=s.fiche;
+    const musicBlock=(s.music&&s.music.length)?`<h4>Musique live & bœufs</h4>${s.music.map(m=>restoHTML(m,true)).join("")}`:"";
+    return `<div class="step" data-i="${i}" open-state="0">
+    <button class="step-head"><span class="pin">${s.pin}</span>
+      <span class="step-title"><b>${s.city}</b><span>${s.region}</span></span><span class="chev">▶</span></button>
+    <div class="step-body"><div class="fiche">
+      <div class="tagrow">${f.tags.map(t=>`<span class="tag">${t}</span>`).join("")}</div>
+      <p>${f.vibe}</p>
+      <h4>Bon à savoir</h4><p>${f.tips.map(t=>"• "+t).join("<br>")}</p>
+      <h4>Où manger · atypique</h4>${s.restos.map(r=>restoHTML(r,false)).join("")}
+      ${musicBlock}
+      <h4>À dire ici</h4>${s.phrases.map(phraseHTML).join("")}
+    </div></div></div>`;}).join("");
+  root.querySelectorAll(".step-head").forEach(h=>h.addEventListener("click",()=>{
+    const st=h.closest(".step");st.setAttribute("open-state",st.getAttribute("open-state")==="1"?"0":"1");
+  }));
+}
+function renderPassion(k){const d=PASSIONS[k];
+  document.getElementById("passionContent").innerHTML=d.groups.map(g=>`<div class="group-title">${g.title}</div>${g.items.map(phraseHTML).join("")}`).join("");}
+function renderEssentials(){
+  document.getElementById("essentialContent").innerHTML=ESSENTIALS.map(g=>`<div class="group-title">${g.title}</div>${g.items.map(phraseHTML).join("")}`).join("");}
+function renderCulture(){
+  document.getElementById("cultureList").innerHTML=CULTURE.map(c=>`<div class="culture"><span class="c-ico">${c.ico}</span><b>${c.t}</b><p>${c.d}</p></div>`).join("");}
+
+function rate(){const r=parseFloat(document.getElementById("rate").value);return (r&&r>0)?r:26300;}
+function bindConverter(){
+  const vnd=document.getElementById("vndIn"),eur=document.getElementById("eurIn"),rt=document.getElementById("rate");
+  vnd.addEventListener("input",()=>{const v=parseFloat(vnd.value.replace(/\s/g,''));eur.value=v?(v/rate()).toFixed(2):"";});
+  eur.addEventListener("input",()=>{const e=parseFloat(eur.value.replace(',','.'));vnd.value=e?Math.round(e*rate()):"";});
+  rt.addEventListener("input",()=>{const v=parseFloat(vnd.value.replace(/\s/g,''));if(v)eur.value=(v/rate()).toFixed(2);renderNumbers();});
+}
+function renderNumbers(){
+  document.getElementById("numList").innerHTML=NUMBERS.map(n=>{
+    const eur=(n.vnd/rate());
+    return `<div class="num"><div>
+      <div class="n-vnd">${fmtVND(n.vnd)} ₫</div><div class="n-vi">${n.vi}</div>
+      <div class="n-eur">≈ ${eur.toFixed(2)} €</div>
+    </div><button data-vi="${esc(n.vi)}">🔊</button></div>`;
+  }).join("");
+  document.querySelectorAll("#numList .num button").forEach(b=>{
+    b.addEventListener("click",()=>{
+      document.querySelectorAll(".num button.playing").forEach(x=>x.classList.remove("playing"));
+      b.classList.add("playing");speak(b.dataset.vi,b);
+    });
+  });
+}
+
+const ALL_RESTOS=[];
+STEPS.forEach(s=>{
+  s.restos.forEach(r=>ALL_RESTOS.push({...r,type:"food",coords:CITY_COORDS[r.city]||null}));
+  (s.music||[]).forEach(r=>ALL_RESTOS.push({...r,type:"music",coords:CITY_COORDS[r.city]||null}));
+});
+let mapInited=false,leafletMap=null,userMarker=null,curFilter="all",curUserPos=null,markers=[];
+
+function visibleRestos(){return ALL_RESTOS.filter(r=>curFilter==="all"||r.type===curFilter);}
+function renderFoodList(){
+  let list=visibleRestos().slice();
+  if(curUserPos){
+    list.forEach(r=>{r._d=r.coords?haversine(curUserPos[0],curUserPos[1],r.coords[0],r.coords[1]):Infinity;});
+    list.sort((a,b)=>a._d-b._d);
+  }
+  document.getElementById("foodList").innerHTML=list.map(r=>{
+    const dist=(curUserPos&&isFinite(r._d))?`<div class="dist">≈ ${r._d<1?Math.round(r._d*1000)+' m':r._d.toFixed(r._d<10?1:0)+' km'} d'ici</div>`:"";
+    return `<div class="resto${r.type==="music"?' music':''}"><b>${r.type==="music"?'🥁 ':''}${r.n}</b><div class="meta">${r.m} · ${r.city}</div>${dist}
+      <p class="desc">${r.d}</p>
+      <a class="map-link" target="_blank" rel="noopener" href="${mapsUrl(r.n+' '+r.city+' Vietnam')}">📍 Ouvrir dans Maps</a></div>`;
+  }).join("");
+}
+function haversine(la1,lo1,la2,lo2){
+  const R=6371,dLa=(la2-la1)*Math.PI/180,dLo=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dLa/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function loadLeaflet(){
+  return new Promise((res,rej)=>{
+    if(window.L)return res();
+    const css=document.createElement("link");css.rel="stylesheet";css.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";document.head.appendChild(css);
+    const js=document.createElement("script");js.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";js.onload=res;js.onerror=rej;document.head.appendChild(js);
+  });
+}
+function drawMarkers(){
+  if(!leafletMap)return;
+  markers.forEach(m=>leafletMap.removeLayer(m));markers=[];
+  visibleRestos().forEach(r=>{
+    if(!r.coords)return;
+    const m=L.marker(r.coords).addTo(leafletMap)
+      .bindPopup(`<b>${r.type==="music"?"🥁 ":""}${r.n}</b><br>${r.city}<br><a href="${mapsUrl(r.n+' '+r.city+' Vietnam')}" target="_blank">Ouvrir dans Maps</a>`);
+    markers.push(m);
+  });
+}
+async function initMap(){
+  if(mapInited)return;
+  try{
+    await loadLeaflet();
+    document.getElementById("mapFallback").style.display="none";
+    leafletMap=L.map("leaflet",{scrollWheelZoom:false}).setView([16.0,107.5],5);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap",maxZoom:18}).addTo(leafletMap);
+    drawMarkers();mapInited=true;
+  }catch(e){
+    document.getElementById("mapFallback").textContent="Carte indisponible (pas de réseau). La liste ci-dessous reste utilisable.";
+  }
+}
+function locateUser(){
+  if(!navigator.geolocation){alert("Géolocalisation indisponible.");return;}
+  const btn=document.getElementById("geoBtn");btn.textContent="📍 Localisation…";
+  navigator.geolocation.getCurrentPosition(pos=>{
+    curUserPos=[pos.coords.latitude,pos.coords.longitude];
+    renderFoodList();btn.textContent="📍 Trié par distance ✓";
+    if(mapInited&&leafletMap){
+      if(userMarker)leafletMap.removeLayer(userMarker);
+      userMarker=L.circleMarker(curUserPos,{radius:8,color:"#c4502a",fillColor:"#c4502a",fillOpacity:.9}).addTo(leafletMap).bindPopup("Moi");
+      leafletMap.setView(curUserPos,9);
+    }
+  },err=>{btn.textContent="📍 Position refusée — réessayer";},{enableHighAccuracy:true,timeout:10000});
+}
+
+const WX={0:["Ciel dégagé","☀️"],1:["Plutôt dégagé","🌤️"],2:["Partiellement nuageux","⛅"],3:["Couvert","☁️"],
+  45:["Brouillard","🌫️"],48:["Brouillard givrant","🌫️"],51:["Bruine légère","🌦️"],53:["Bruine","🌦️"],55:["Bruine dense","🌦️"],
+  61:["Pluie faible","🌧️"],63:["Pluie","🌧️"],65:["Forte pluie","🌧️"],66:["Pluie verglaçante","🌧️"],67:["Pluie verglaçante","🌧️"],
+  71:["Neige faible","🌨️"],73:["Neige","🌨️"],75:["Forte neige","🌨️"],80:["Averses","🌦️"],81:["Averses","🌦️"],82:["Fortes averses","⛈️"],
+  95:["Orage","⛈️"],96:["Orage + grêle","⛈️"],99:["Orage violent","⛈️"]};
+function renderWxPick(){
+  document.getElementById("wxPick").innerHTML=LIVE_CITIES.map((c,i)=>`<button data-wx="${i}"${i===0?' aria-selected="true"':''}>${c.name}</button>`).join("");
+  document.querySelectorAll("#wxPick button").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll("#wxPick button").forEach(x=>x.setAttribute("aria-selected","false"));
+    b.setAttribute("aria-selected","true");loadWeather(LIVE_CITIES[+b.dataset.wx]);
+  }));
+}
+async function loadWeather(c){
+  const box=document.getElementById("wxResult");box.className="wx-loading";box.textContent="Chargement…";
+  try{
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`;
+    const r=await fetch(url);if(!r.ok)throw 0;
+    const d=await r.json(),cur=d.current,day=d.daily,info=WX[cur.weather_code]||["—","🌡️"];
+    box.className="wx-result";
+    box.innerHTML=`<div class="wx-icon">${info[1]}</div><div class="wx-temp">${Math.round(cur.temperature_2m)}°</div>
+      <div class="wx-desc">${info[0]} · ${c.name}</div>
+      <div class="wx-meta">min ${Math.round(day.temperature_2m_min[0])}° / max ${Math.round(day.temperature_2m_max[0])}° · 💧 ${cur.relative_humidity_2m}% · 💨 ${Math.round(cur.wind_speed_10m)} km/h</div>`;
+  }catch(e){box.className="wx-loading";box.innerHTML="Pas de réseau pour la météo. Réessaie avec une connexion.";}
+}
+function renderHotelLinks(){
+  document.getElementById("hotelLinks").innerHTML=LIVE_CITIES.map(c=>{
+    const u=`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(c.booking)}%2C+Vietnam&order=price`;
+    return `<a class="linkbtn" target="_blank" rel="noopener" href="${u}"><span class="l-main"><b>${c.name}</b><span>Hôtels triés du moins cher</span></span><span class="arrow">↗</span></a>`;
+  }).join("");
+}
+
+document.addEventListener("click",e=>{const b=e.target.closest(".say");if(b)speak(b.dataset.vi,b);});
+let wxOnce=false;
+document.querySelectorAll('nav button').forEach(btn=>btn.addEventListener("click",()=>{
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute("aria-selected","false"));
+  btn.setAttribute("aria-selected","true");
+  ["map","passions","essentials","money","food","culture","live"].forEach(id=>document.getElementById(id).hidden=true);
+  const tab=btn.dataset.tab;document.getElementById(tab).hidden=false;
+  speechSynthesis&&speechSynthesis.cancel();window.scrollTo({top:0,behavior:"smooth"});
+  if(tab==="live"&&!wxOnce){wxOnce=true;loadWeather(LIVE_CITIES[0]);}
+  if(tab==="food"){initMap();setTimeout(()=>{if(leafletMap)leafletMap.invalidateSize();},300);}
+}));
+document.querySelectorAll("#passionPick button").forEach(btn=>btn.addEventListener("click",()=>{
+  document.querySelectorAll("#passionPick button").forEach(b=>b.setAttribute("aria-selected","false"));
+  btn.setAttribute("aria-selected","true");renderPassion(btn.dataset.p);
+}));
+document.querySelectorAll("#foodFilter button").forEach(btn=>btn.addEventListener("click",()=>{
+  document.querySelectorAll("#foodFilter button").forEach(b=>b.setAttribute("aria-selected","false"));
+  btn.setAttribute("aria-selected","true");curFilter=btn.dataset.f;renderFoodList();drawMarkers();
+}));
+document.getElementById("geoBtn").addEventListener("click",locateUser);
+
+renderSteps();renderPassion("dive");renderEssentials();renderCulture();
+bindConverter();renderNumbers();renderFoodList();renderWxPick();renderHotelLinks();
+document.getElementById("footnote").textContent="Mots, restos, musique, argent & culture hors-ligne · carte, météo et liens nécessitent du réseau · bon voyage 🛵🥁";
+</script>
+</body>
+</html>

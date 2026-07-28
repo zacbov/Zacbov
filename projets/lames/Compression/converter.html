@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HistoConvert</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #0b0d11;
+  --surface: #111418;
+  --card:    #161a21;
+  --border:  rgba(255,255,255,.07);
+  --border2: rgba(255,255,255,.12);
+  --accent:  #00e5b0;
+  --accent2: #00a87f;
+  --blue:    #3d8bff;
+  --yellow:  #f5c518;
+  --red:     #ff4d6a;
+  --text:    #dde1ea;
+  --muted:   rgba(221,225,234,.4);
+  --mono:    'Space Mono', monospace;
+  --sans:    'DM Sans', sans-serif;
+}
+
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ── HEADER ──────────────────────────────────────────────────────────────── */
+header {
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.logo {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.logo-sep { width: 1px; height: 20px; background: var(--border2); }
+.logo-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
+.hd-caps {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 9px;
+}
+.cap { padding: 3px 8px; border-radius: 4px; border: 1px solid; font-weight: 700; letter-spacing: .5px; }
+.cap.ok  { border-color: rgba(0,229,176,.35); color: rgba(0,229,176,.75); background: rgba(0,229,176,.06); }
+.cap.err { border-color: rgba(255,77,106,.35); color: rgba(255,77,106,.7); background: rgba(255,77,106,.06); }
+
+/* ── LAYOUT ──────────────────────────────────────────────────────────────── */
+main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; display: grid; gap: 24px; }
+
+/* ── CARDS ───────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.card-head .icon { font-size: 14px; }
+.card-body { padding: 20px; }
+
+/* ── DIR PICKER ──────────────────────────────────────────────────────────── */
+.dir-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.dir-input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  outline: none;
+  transition: border-color .15s;
+}
+.dir-input:focus { border-color: var(--accent); }
+.btn {
+  padding: 0 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  transition: all .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary { background: var(--accent); color: #000; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-ghost { background: transparent; color: var(--accent); border: 1px solid rgba(0,229,176,.35); }
+.btn-ghost:hover { background: rgba(0,229,176,.08); }
+.btn-sm { padding: 6px 12px; font-size: 11px; }
+.btn:disabled { opacity: .4; cursor: default; }
+
+/* ── SLIDE TABLE ─────────────────────────────────────────────────────────── */
+.slide-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.slide-table th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+}
+.slide-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.slide-table tr:last-child td { border-bottom: none; }
+.slide-table tr:hover td { background: rgba(255,255,255,.02); }
+.slide-name { font-weight: 500; }
+.slide-size { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .5px;
+}
+.badge-ext  { background: rgba(61,139,255,.12); color: rgba(61,139,255,.85); border: 1px solid rgba(61,139,255,.25); }
+.badge-done { background: rgba(0,229,176,.1);  color: rgba(0,229,176,.8);   border: 1px solid rgba(0,229,176,.2); }
+.badge-todo { background: rgba(255,255,255,.04); color: var(--muted); border: 1px solid var(--border); }
+.cb-cell { text-align: center; }
+.row-check { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+
+.select-all-row { padding: 8px 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+
+/* ── OPTIONS GRID ────────────────────────────────────────────────────────── */
+.opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.opt-group { display: flex; flex-direction: column; gap: 6px; }
+.opt-label { font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+.opt-control {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.opt-control:focus { border-color: var(--accent); }
+select.opt-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+.opt-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; }
+.opt-row label { font-size: 12px; font-weight: 500; cursor: pointer; flex: 1; }
+
+/* ── RANGE SLIDER ────────────────────────────────────────────────────────── */
+.range-wrap { display: flex; align-items: center; gap: 10px; }
+input[type=range] {
+  flex: 1;
+  appearance: none;
+  height: 4px;
+  background: var(--border2);
+  border-radius: 2px;
+  outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+}
+.range-val { font-family: var(--mono); font-size: 11px; color: var(--accent); min-width: 32px; text-align: right; }
+input[type=checkbox] { accent-color: var(--accent); }
+
+/* ── ACTION BAR ──────────────────────────────────────────────────────────── */
+.action-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: rgba(0,229,176,.04);
+  border-top: 1px solid rgba(0,229,176,.1);
+}
+.action-bar .sel-count { font-size: 11px; color: var(--muted); flex: 1; }
+
+/* ── JOBS ────────────────────────────────────────────────────────────────── */
+.job-list { display: flex; flex-direction: column; gap: 8px; }
+.job-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.job-head { display: flex; align-items: center; gap: 8px; }
+.job-name { font-weight: 500; font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job-status { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .5px; }
+.job-status.running { color: var(--yellow); }
+.job-status.done    { color: var(--accent); }
+.job-status.error   { color: var(--red); }
+.job-msg { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+.job-bar-track { height: 3px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+.job-bar-fill  { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
+.job-stats {
+  display: flex;
+  gap: 16px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+.job-stats span strong { color: var(--accent); }
+.job-stats.error-txt { color: var(--red); }
+
+/* ── EMPTY ───────────────────────────────────────────────────────────────── */
+.empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 12px; line-height: 2; }
+.empty-icon { font-size: 36px; opacity: .2; margin-bottom: 8px; }
+
+/* ── TOAST ───────────────────────────────────────────────────────────────── */
+#toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  background: #1e2128; border: 1px solid var(--border2);
+  border-radius: 8px; padding: 10px 18px;
+  font-size: 12px; color: var(--text); z-index: 100;
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+  pointer-events: none; white-space: nowrap;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 640px) { .opt-grid { grid-template-columns: 1fr; } main { padding: 16px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">HistoConvert</div>
+  <div class="logo-sep"></div>
+  <div class="logo-sub">Convertisseur de lames WSI</div>
+  <div class="hd-caps" id="caps"></div>
+</header>
+
+<main>
+
+  <!-- Sélection dossier -->
+  <div class="card">
+    <div class="card-head"><span class="icon">📁</span> Dossier de lames</div>
+    <div class="card-body">
+      <div class="dir-row">
+        <input class="dir-input" id="dir-input" type="text" placeholder="/home/pi/lames" value=".">
+        <button class="btn btn-primary" onclick="scanDir()">Analyser →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tableau des lames -->
+  <div class="card" id="slides-card" style="display:none">
+    <div class="card-head"><span class="icon">🔬</span> Lames disponibles <span id="slides-count" style="margin-left:auto;font-weight:700;color:var(--text)"></span></div>
+    <div class="select-all-row">
+      <input type="checkbox" class="row-check" id="check-all" onchange="toggleAll(this.checked)">
+      <label for="check-all" style="font-size:11px;color:var(--muted);cursor:pointer;">Tout sélectionner</label>
+    </div>
+    <table class="slide-table" id="slides-table">
+      <thead><tr>
+        <th style="width:28px"></th>
+        <th>Nom</th>
+        <th>Format</th>
+        <th>Taille</th>
+        <th>État</th>
+      </tr></thead>
+      <tbody id="slides-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Options de conversion -->
+  <div class="card">
+    <div class="card-head"><span class="icon">⚙️</span> Paramètres de conversion</div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:16px;">
+      <div class="opt-grid">
+        <div class="opt-group">
+          <div class="opt-label">Format de tuiles</div>
+          <select class="opt-control" id="opt-fmt">
+            <option value="webp">WebP — meilleure compression</option>
+            <option value="jpeg">JPEG — compatibilité maximale</option>
+          </select>
+        </div>
+        <div class="opt-group">
+          <div class="opt-label">Taille des tuiles (px)</div>
+          <select class="opt-control" id="opt-tile">
+            <option value="256">256px — standard OSD</option>
+            <option value="512">512px — moins de requêtes réseau</option>
+            <option value="1024">1024px — gros fichiers</option>
+          </select>
+        </div>
+        <div class="opt-group">
+          <div class="opt-label">Qualité <span id="q-val" style="color:var(--accent)">82</span></div>
+          <div class="range-wrap">
+            <input type="range" id="opt-quality" min="50" max="95" value="82"
+              oninput="document.getElementById('q-val').textContent=this.value">
+            <span class="range-val" id="q-disp">82</span>
+          </div>
+        </div>
+        <div class="opt-group">
+          <div class="opt-label">Threads parallèles</div>
+          <select class="opt-control" id="opt-workers">
+            <option value="2">2 threads — Pi 3</option>
+            <option value="4" selected>4 threads — Pi 4/5</option>
+            <option value="8">8 threads — PC/NAS</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:20px;">
+        <div class="opt-row">
+          <input type="checkbox" id="opt-flat" style="accent-color:var(--accent)">
+          <label for="opt-flat" style="font-size:12px;font-weight:500;cursor:pointer;">Générer aussi un aperçu WebP plat (par lame)</label>
+        </div>
+        <div class="opt-row">
+          <input type="checkbox" id="opt-force" style="accent-color:var(--accent)">
+          <label for="opt-force" style="font-size:12px;font-weight:500;cursor:pointer;">Forcer la reconversion (ignorer les existants)</label>
+        </div>
+      </div>
+    </div>
+    <div class="action-bar">
+      <div class="sel-count" id="sel-count">Aucune lame sélectionnée</div>
+      <button class="btn btn-ghost btn-sm" onclick="estimateSize()">Estimer la taille →</button>
+      <button class="btn btn-primary" id="btn-convert" onclick="startConvert()" disabled>Convertir →</button>
+    </div>
+  </div>
+
+  <!-- Jobs en cours -->
+  <div class="card" id="jobs-card">
+    <div class="card-head"><span class="icon">⚡</span> Conversions</div>
+    <div class="card-body">
+      <div class="job-list" id="job-list">
+        <div class="empty"><div class="empty-icon">⚡</div>Aucune conversion en cours.<br>Sélectionnez des lames et lancez la conversion.</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+const API = 'http://localhost:8181';
+let currentDir = '.';
+let slides     = [];
+let jobs       = {};
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const data = await api('/api/scan?dir=.');
+    renderCaps(data);
+    if (data.slides && data.slides.length > 0) {
+      currentDir = data.dir;
+      slides = data.slides;
+      document.getElementById('dir-input').value = data.dir;
+      renderSlides();
+    }
+  } catch(e) { /* serveur non encore prêt */ }
+}
+
+function renderCaps(data) {
+  document.getElementById('caps').innerHTML = [
+    ['OpenSlide', data.has_openslide],
+    ['tifffile',  data.has_tifffile],
+    ['imagecodecs', data.has_imagecodecs],
+  ].map(([n,v]) => `<div class="cap ${v?'ok':'err'}">${v?'✓':'✗'} ${n}</div>`).join('');
+}
+
+// ── SCAN DIR ─────────────────────────────────────────────────────────────────
+async function scanDir() {
+  const dir = document.getElementById('dir-input').value.trim();
+  try {
+    const data = await api(`/api/scan?dir=${encodeURIComponent(dir)}`);
+    currentDir = data.dir;
+    slides     = data.slides || [];
+    renderCaps(data);
+    document.getElementById('slides-card').style.display = slides.length ? '' : 'none';
+    renderSlides();
+    if (!slides.length) toast('Aucune lame trouvée dans ce dossier');
+  } catch(e) {
+    toast(`Erreur : ${e.message}`);
+  }
+}
+
+function renderSlides() {
+  const tb    = document.getElementById('slides-tbody');
+  const count = document.getElementById('slides-count');
+  count.textContent = `${slides.length} lame${slides.length>1?'s':''}`;
+  tb.innerHTML = slides.map(s => `
+    <tr>
+      <td class="cb-cell"><input type="checkbox" class="row-check slide-cb" data-name="${s.name}" onchange="updateSel()"></td>
+      <td class="slide-name">${s.name}</td>
+      <td><span class="badge badge-ext">${s.ext}</span></td>
+      <td class="slide-size">${fmtSize(s.size)}</td>
+      <td>${s.converted
+        ? '<span class="badge badge-done">✓ converti</span>'
+        : '<span class="badge badge-todo">brut</span>'}</td>
+    </tr>`).join('');
+  updateSel();
+}
+
+function toggleAll(v) {
+  document.querySelectorAll('.slide-cb').forEach(cb => cb.checked = v);
+  updateSel();
+}
+
+function updateSel() {
+  const sel = document.querySelectorAll('.slide-cb:checked').length;
+  document.getElementById('sel-count').textContent = sel
+    ? `${sel} lame${sel>1?'s':''} sélectionnée${sel>1?'s':''}`
+    : 'Aucune lame sélectionnée';
+  document.getElementById('btn-convert').disabled = sel === 0;
+  document.getElementById('check-all').indeterminate = sel > 0 && sel < slides.length;
+  document.getElementById('check-all').checked = sel === slides.length;
+}
+
+// ── ESTIMATION ────────────────────────────────────────────────────────────────
+function estimateSize() {
+  const sel  = getSelected();
+  if (!sel.length) { toast('Sélectionnez des lames d\'abord'); return; }
+  const fmt  = document.getElementById('opt-fmt').value;
+  const q    = parseInt(document.getElementById('opt-quality').value);
+  // Facteurs empiriques de compression
+  const ratio = fmt === 'webp' ? (0.08 + (100-q)*0.001) : (0.12 + (100-q)*0.002);
+  const total = sel.reduce((a, s) => a + s.size, 0);
+  const est   = total * ratio;
+  toast(`Estimation : ${fmtSize(total)} → ±${fmtSize(est)} (${Math.round(ratio*100)}% du brut)`);
+}
+
+function getSelected() {
+  return Array.from(document.querySelectorAll('.slide-cb:checked'))
+    .map(cb => slides.find(s => s.name === cb.dataset.name))
+    .filter(Boolean);
+}
+
+// ── CONVERT ───────────────────────────────────────────────────────────────────
+async function startConvert() {
+  const sel = getSelected();
+  if (!sel.length) return;
+  const opts = {
+    fmt:      document.getElementById('opt-fmt').value,
+    quality:  parseInt(document.getElementById('opt-quality').value),
+    tile_size:parseInt(document.getElementById('opt-tile').value),
+    workers:  parseInt(document.getElementById('opt-workers').value),
+    flat_webp:document.getElementById('opt-flat').checked,
+    force:    document.getElementById('opt-force').checked,
+    output:   currentDir + '/converted',
+  };
+
+  // Lancer les jobs en parallèle (max 1 à la fois pour le Pi)
+  for (const slide of sel) {
+    const payload = { src: currentDir + '/' + slide.name, ...opts };
+    try {
+      const { job_id } = await api('/api/convert', payload);
+      addJob(job_id, slide.name);
+      pollJob(job_id);
+    } catch(e) {
+      toast(`Erreur lancement ${slide.name}: ${e.message}`);
+    }
+  }
+}
+
+function addJob(id, name) {
+  const list = document.getElementById('job-list');
+  if (list.querySelector('.empty')) list.innerHTML = '';
+  jobs[id] = { name, status: 'running', progress: 0 };
+  const el = document.createElement('div');
+  el.className = 'job-card';
+  el.id = `job-${id}`;
+  el.innerHTML = `
+    <div class="job-head">
+      <div class="job-name">${name}</div>
+      <div class="job-status running" id="js-${id}">EN COURS</div>
+    </div>
+    <div class="job-bar-track"><div class="job-bar-fill" id="jb-${id}" style="width:0%"></div></div>
+    <div class="job-msg" id="jm-${id}">Démarrage…</div>
+    <div class="job-stats" id="jst-${id}"></div>`;
+  list.prepend(el);
+}
+
+async function pollJob(id) {
+  const tick = async () => {
+    try {
+      const j = await api(`/api/job/${id}`);
+      document.getElementById(`jb-${id}`).style.width = `${Math.round(j.progress*100)}%`;
+      document.getElementById(`jm-${id}`).textContent = j.message || '';
+
+      if (j.status === 'done') {
+        const s = document.getElementById(`js-${id}`);
+        s.textContent = 'TERMINÉ'; s.className = 'job-status done';
+        const r = j.result;
+        document.getElementById(`jst-${id}`).innerHTML =
+          `<span><strong>${fmtSize(r.src_size)}</strong> source</span>` +
+          `<span>→ <strong>${fmtSize(r.dst_size)}</strong> converti</span>` +
+          `<span><strong>${r.ratio}%</strong> réduction</span>` +
+          `<span><strong>${r.n_tiles}</strong> tuiles</span>` +
+          `<span><strong>${r.levels}</strong> niveaux</span>` +
+          `<span><strong>${r.duration}s</strong></span>`;
+        scanDir(); // rafraîchir l'état des lames
+        return;
+      }
+      if (j.status === 'error') {
+        const s = document.getElementById(`js-${id}`);
+        s.textContent = 'ERREUR'; s.className = 'job-status error';
+        document.getElementById(`jst-${id}`).className = 'job-stats error-txt';
+        document.getElementById(`jst-${id}`).textContent = j.result?.error || 'Erreur inconnue';
+        return;
+      }
+      setTimeout(tick, 800);
+    } catch(e) { setTimeout(tick, 2000); }
+  };
+  tick();
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+async function api(url, body) {
+  const opts = body
+    ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    : {};
+  const r = await fetch(`${API}${url}`, opts);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+function fmtSize(b) {
+  if (b >= 1e9) return (b/1e9).toFixed(2) + ' Go';
+  if (b >= 1e6) return (b/1e6).toFixed(0)  + ' Mo';
+  if (b >= 1e3) return (b/1e3).toFixed(0)  + ' Ko';
+  return b + ' o';
+}
+
+let _toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+// Sync quality display
+document.getElementById('opt-quality').addEventListener('input', function() {
+  document.getElementById('q-val').textContent = this.value;
+  document.getElementById('q-disp').textContent = this.value;
+});
+
+init();
+</script>
+</body>
+</html>

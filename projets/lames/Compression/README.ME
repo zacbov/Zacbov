@@ -1,0 +1,16 @@
+Pour le lancer sur PC :
+
+pip install flask openslide-python Pillow tifffile imagecodecs
+python convert.py
+
+Sans aucun argument, python convert.py lance directement l'interface web et ouvre ton navigateur tout seul sur http://localhost:8181/. Tu tapes ton dossier de lames (ex. C:\lames), tu analyses, tu sélectionnes et tu convertis.
+
+Ce qui a changé par rapport à tes deux fichiers :
+
+La page est servie depuis la mémoire (Response(CONVERTER_HTML)) au lieu d'être lue sur le disque — d'où le fichier unique.
+python convert.py seul suffit désormais (la sous-commande est devenue optionnelle, avec le serveur par défaut). Les commandes scan, convert, batch, server restent disponibles si tu préfères la ligne de commande.
+Ouverture automatique du navigateur au démarrage.
+
+Tout le reste est identique à ta version (cascade de décodeurs, DZI WebP/JPEG, batch, rapport_conversion.csv), et j'ai vérifié que le HTML embarqué est byte-identique à l'original.
+
+Une seule dépendance à garder en tête sous Windows : openslide-python a besoin des binaires OpenSlide (les DLL) pour lire les SVS/NDPI/MRXS. Si tu ne les installes pas, l'outil bascule automatiquement sur tifffile+imagecodecs pour les SVS/NDPI/TIFF, ce qui couvre déjà la majorité des cas — mais pas le MRXS, qui exige OpenSlide. Tu veux que je t'ajoute une petite note d'installation Windows pour OpenSlide dans l'en-tête du fichier ?

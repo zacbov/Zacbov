@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HistoViewer</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0d0f14;
+  --surface:   #13161e;
+  --surface2:  #1a1d27;
+  --border:    rgba(255,255,255,.07);
+  --border2:   rgba(255,255,255,.12);
+  --accent:    #00e5b0;
+  --accent2:   #00a87f;
+  --text:      #e8eaf0;
+  --muted:     rgba(232,234,240,.45);
+  --danger:    #ff5f72;
+  --panel-w:   300px;
+  --toolbar-h: 48px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOOLBAR ─────────────────────────────────────────────────────────────── */
+#toolbar {
+  height: var(--toolbar-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.app-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+
+.tb-divider { width: 1px; height: 22px; background: var(--border2); flex-shrink:0; }
+
+.tb-btn {
+  height: 32px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.tb-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,229,176,.06); }
+.tb-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,229,176,.1); }
+.tb-btn svg { flex-shrink: 0; }
+
+.tb-sep { flex: 1; }
+
+.zoom-display {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  min-width: 56px;
+  text-align: right;
+}
+
+#slide-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── MAIN LAYOUT ─────────────────────────────────────────────────────────── */
+#layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── SIDEBAR ─────────────────────────────────────────────────────────────── */
+#sidebar {
+  width: var(--panel-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width .2s;
+  overflow: hidden;
+}
+#sidebar.collapsed { width: 0; }
+
+.sidebar-head {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-head h3 {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.dir-path {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: var(--accent);
+  background: rgba(0,229,176,.06);
+  border: 1px solid rgba(0,229,176,.15);
+  border-radius: 5px;
+  padding: 5px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: break-all;
+}
+
+.slide-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.slide-list::-webkit-scrollbar { width: 4px; }
+.slide-list::-webkit-scrollbar-track { background: transparent; }
+.slide-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.slide-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all .15s;
+  min-height: 56px;
+}
+.slide-item:hover { background: var(--surface2); border-color: var(--border2); }
+.slide-item.active {
+  background: rgba(0,229,176,.07);
+  border-color: rgba(0,229,176,.25);
+}
+
+.thumb-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  background: var(--surface2);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.thumb-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.thumb-placeholder { font-size: 20px; opacity: .35; }
+
+.slide-meta { flex: 1; min-width: 0; }
+.slide-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slide-size {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 2px;
+  font-family: 'Space Mono', monospace;
+}
+
+.slide-loading {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+  display: none;
+}
+.slide-item.loading .slide-loading { display: block; }
+
+/* ── VIEWER AREA ─────────────────────────────────────────────────────────── */
+#viewer-wrap {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  background: var(--bg);
+}
+
+#osd-container {
+  position: absolute;
+  inset: 0;
+}
+
+/* OSD Navigator override */
+#osd-container .openseadragon-canvas { cursor: crosshair !important; }
+
+/* ── EMPTY STATE ─────────────────────────────────────────────────────────── */
+#empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+.empty-icon {
+  width: 72px;
+  height: 72px;
+  border: 2px solid var(--border2);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  opacity: .35;
+}
+.empty-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.empty-sub { font-size: 11px; color: rgba(255,255,255,.2); max-width: 280px; line-height: 1.6; }
+
+/* ── LOADING OVERLAY ─────────────────────────────────────────────────────── */
+#loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(13,15,20,.85);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 20;
+  backdrop-filter: blur(4px);
+}
+#loading-overlay.show { display: flex; }
+.loading-ring {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(0,229,176,.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+.loading-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── INFO PANEL ─────────────────────────────────────────────────────────── */
+#info-panel {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  background: rgba(13,15,20,.9);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  line-height: 1.8;
+  letter-spacing: .5px;
+  backdrop-filter: blur(8px);
+  z-index: 5;
+  max-width: 220px;
+  display: none;
+}
+#info-panel.show { display: block; }
+#info-panel strong { color: var(--accent); font-weight: 700; }
+
+/* ── ZOOM CONTROLS ───────────────────────────────────────────────────────── */
+#zoom-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 5;
+}
+.zoom-btn {
+  width: 34px;
+  height: 34px;
+  background: rgba(13,15,20,.85);
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+  backdrop-filter: blur(8px);
+  font-family: monospace;
+}
+.zoom-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── FILTER CONTROLS ─────────────────────────────────────────────────────── */
+#filter-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  gap: 6px;
+  z-index: 5;
+  flex-wrap: wrap;
+  max-width: 380px;
+}
+.filter-btn {
+  height: 28px;
+  padding: 0 10px;
+  background: rgba(13,15,20,.85);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  backdrop-filter: blur(8px);
+}
+.filter-btn:hover { border-color: rgba(0,229,176,.4); color: var(--accent); }
+.filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,229,176,.08); }
+
+/* ── ERROR TOAST ─────────────────────────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: #2a1015;
+  border: 1px solid rgba(255,95,114,.35);
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 12px;
+  color: var(--danger);
+  z-index: 100;
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+  font-weight: 500;
+  max-width: 380px;
+  text-align: center;
+  pointer-events: none;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── ERROR STATE ─────────────────────────────────────────────────────────── */
+.server-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 24px;
+}
+.server-error h2 {
+  font-family: 'Space Mono', monospace;
+  font-size: 14px;
+  color: var(--danger);
+  letter-spacing: 1px;
+}
+.server-error pre {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--surface2);
+  padding: 12px;
+  border-radius: 8px;
+  max-width: 480px;
+  white-space: pre-wrap;
+  text-align: left;
+  line-height: 1.7;
+}
+</style>
+</head>
+<body>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <div class="app-title">HistoViewer</div>
+  <div class="tb-divider"></div>
+
+  <button class="tb-btn active" id="btn-sidebar" title="Panneau lames (S)" onclick="toggleSidebar()">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="1" y="1" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/>
+      <rect x="7" y="1" width="6" height="2" rx="0.5" fill="currentColor" opacity=".5"/>
+      <rect x="7" y="5" width="6" height="2" rx="0.5" fill="currentColor" opacity=".5"/>
+      <rect x="7" y="9" width="4" height="2" rx="0.5" fill="currentColor" opacity=".5"/>
+    </svg>
+    Lames
+  </button>
+
+  <button class="tb-btn" id="btn-info" title="Métadonnées (I)" onclick="toggleInfo()">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/>
+      <path d="M7 6v4M7 4.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>
+    Info
+  </button>
+
+  <div class="tb-divider"></div>
+  <span id="slide-title" style="color:var(--muted);font-size:11px;">Aucune lame ouverte</span>
+
+  <div class="tb-sep"></div>
+
+  <button class="tb-btn" onclick="resetZoom()" title="Réinitialiser le zoom (H)">⊙ Reset</button>
+  <button class="tb-btn" onclick="rotateSlide()" title="Rotation 90°">↻ Rot.</button>
+  <div class="zoom-display" id="zoom-pct">—</div>
+</div>
+
+<!-- MAIN -->
+<div id="layout">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sidebar-head">
+      <h3>Collection</h3>
+      <div class="dir-path" id="dir-path" title="">…</div>
+    </div>
+    <div class="slide-list" id="slide-list"></div>
+  </div>
+
+  <!-- VIEWER -->
+  <div id="viewer-wrap">
+    <div id="osd-container"></div>
+
+    <div id="empty-state">
+      <div class="empty-icon">🔬</div>
+      <div class="empty-title">Aucune lame sélectionnée</div>
+      <div class="empty-sub">Choisissez une lame dans le panneau gauche, ou lancez le serveur avec un dossier contenant des fichiers SVS, NDPI, MRXS ou TIFF.</div>
+    </div>
+
+    <div id="loading-overlay">
+      <div class="loading-ring"></div>
+      <div class="loading-label" id="loading-label">CHARGEMENT…</div>
+    </div>
+
+    <!-- Zoom controls -->
+    <div id="zoom-controls">
+      <button class="zoom-btn" onclick="zoomIn()" title="Zoom + (=)">+</button>
+      <button class="zoom-btn" onclick="zoomOut()" title="Zoom - (-)">−</button>
+    </div>
+
+    <!-- Filter bar -->
+    <div id="filter-bar">
+      <button class="filter-btn active" data-filter="none"   onclick="applyFilter('none')">Original</button>
+      <button class="filter-btn"        data-filter="contr"  onclick="applyFilter('contr')">↑ Contraste</button>
+      <button class="filter-btn"        data-filter="gray"   onclick="applyFilter('gray')">N&amp;B</button>
+      <button class="filter-btn"        data-filter="invert" onclick="applyFilter('invert')">Inversé</button>
+      <button class="filter-btn"        data-filter="desat"  onclick="applyFilter('desat')">Désaturé</button>
+    </div>
+
+    <!-- Info panel -->
+    <div id="info-panel">
+      <div id="info-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- OpenSeadragon -->
+<script src="https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/openseadragon.min.js"></script>
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════════════════════════════════
+const API = 'http://localhost:8080';
+const OSD_IMAGES = 'https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/images/';
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ÉTAT
+// ════════════════════════════════════════════════════════════════════════════
+let viewer    = null;
+let curSlide  = null;
+let rotation  = 0;
+let filterMode= 'none';
+
+// ════════════════════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════════════════════
+async function init() {
+  try {
+    const data = await fetchJSON(`${API}/api/slides`);
+    document.getElementById('dir-path').textContent = data.dir;
+    document.getElementById('dir-path').title       = data.dir;
+    renderSlideList(data.slides);
+    if (!data.has_openslide) {
+      showToast('⚠ OpenSlide non installé — fallback PIL (TIFF/JPEG/PNG seulement)');
+    }
+  } catch (e) {
+    showServerError();
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SLIDE LIST
+// ════════════════════════════════════════════════════════════════════════════
+function renderSlideList(slides) {
+  const el = document.getElementById('slide-list');
+  if (!slides.length) {
+    el.innerHTML = '<div style="padding:16px;text-align:center;font-size:11px;color:var(--muted);line-height:1.7;">Aucune lame trouvée dans ce dossier.<br>Formats : SVS, NDPI, MRXS, TIFF…</div>';
+    return;
+  }
+
+  el.innerHTML = '';
+  slides.forEach(slide => {
+    const item = document.createElement('div');
+    item.className = 'slide-item';
+    item.dataset.name = slide.name;
+
+    const ext  = slide.name.split('.').pop().toUpperCase();
+    const size = formatSize(slide.size);
+
+    item.innerHTML = `
+      <div class="thumb-wrap" id="thumb-${CSS.escape(slide.name)}">
+        <span class="thumb-placeholder">${extIcon(ext)}</span>
+      </div>
+      <div class="slide-meta">
+        <div class="slide-name" title="${slide.name}">${slide.name}</div>
+        <div class="slide-size">${ext} · ${size}</div>
+      </div>
+      <div class="slide-loading"></div>
+    `;
+    item.addEventListener('click', () => openSlide(slide.name));
+    el.appendChild(item);
+
+    // Charger la miniature en background
+    loadThumb(slide.name);
+  });
+}
+
+function loadThumb(name) {
+  const img = new Image();
+  img.onload = () => {
+    const wrap = document.getElementById(`thumb-${CSS.escape(name)}`);
+    if (wrap) { wrap.innerHTML = ''; wrap.appendChild(img); }
+  };
+  img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+  img.src = `${API}/api/thumbnail/${encodeURIComponent(name)}?size=88`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  OPEN SLIDE
+// ════════════════════════════════════════════════════════════════════════════
+async function openSlide(name) {
+  if (curSlide === name) return;
+  curSlide = name;
+  rotation = 0;
+
+  // UI active
+  document.querySelectorAll('.slide-item').forEach(el => {
+    el.classList.toggle('active',   el.dataset.name === name);
+    el.classList.toggle('loading',  el.dataset.name === name);
+  });
+  document.getElementById('slide-title').textContent = name;
+  document.getElementById('empty-state').style.display = 'none';
+  showLoading(name);
+
+  try {
+    // Métadonnées
+    const info = await fetchJSON(`${API}/api/info/${encodeURIComponent(name)}`);
+
+    if (info.error) {
+      hideLoading();
+      document.querySelectorAll('.slide-item').forEach(el => el.classList.remove('loading'));
+      showToast(`⚠ ${info.error}${info.hint ? ' — ' + info.hint : ''}`);
+      document.getElementById('empty-state').style.display = 'flex';
+      document.getElementById('empty-state').querySelector('.empty-sub').textContent =
+        info.hint || info.error;
+      return;
+    }
+
+    showMetaPanel(info);
+
+    // Détruire le viewer précédent
+    if (viewer) { viewer.destroy(); viewer = null; }
+
+    // Créer l'OSD avec source DZI
+    const dziUrl = `${API}/api/dzi/${encodeURIComponent(name)}.dzi`;
+
+    viewer = OpenSeadragon({
+      id: 'osd-container',
+      prefixUrl: OSD_IMAGES,
+      tileSources: dziUrl,
+      showNavigationControl: false,
+      showNavigator: true,
+      navigatorPosition: 'TOP_RIGHT',
+      navigatorHeight: '90px',
+      navigatorWidth: '135px',
+      navigatorAutoFade: false,
+      animationTime: 0.25,
+      blendTime: 0.1,
+      minZoomImageRatio: 0.4,
+      maxZoomPixelRatio: 20,
+      gestureSettingsMouse: { clickToZoom: false, scrollToZoom: true, flickEnabled: true },
+      gestureSettingsTouch: { pinchToZoom: true, flickEnabled: true },
+      backgroundColor: '#0d0f14',
+      crossOriginPolicy: 'Anonymous',
+    });
+
+    viewer.addHandler('open', () => {
+      hideLoading();
+      updateZoomDisplay();
+      applyFilter(filterMode);
+      document.querySelectorAll('.slide-item').forEach(el => el.classList.remove('loading'));
+    });
+
+    viewer.addHandler('open-failed', () => {
+      hideLoading();
+      showToast(`Impossible d'ouvrir la lame "${name}"`);
+      document.querySelectorAll('.slide-item').forEach(el => el.classList.remove('loading'));
+    });
+
+    viewer.addHandler('zoom', updateZoomDisplay);
+    viewer.addHandler('pan',  updateZoomDisplay);
+
+  } catch (e) {
+    hideLoading();
+    showToast(`Erreur : ${e.message}`);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ZOOM / ROTATION / FILTRES
+// ════════════════════════════════════════════════════════════════════════════
+function zoomIn()  { if (viewer) viewer.viewport.zoomBy(1.5); }
+function zoomOut() { if (viewer) viewer.viewport.zoomBy(0.67); }
+function resetZoom(){ if (viewer) { rotation=0; viewer.viewport.goHome(); viewer.viewport.setRotation(0); updateZoomDisplay(); } }
+
+function rotateSlide() {
+  if (!viewer) return;
+  rotation = (rotation + 90) % 360;
+  viewer.viewport.setRotation(rotation);
+}
+
+function updateZoomDisplay() {
+  if (!viewer) return;
+  const z = viewer.viewport.getZoom(true);
+  const img = viewer.viewport.viewportToImageZoom(z);
+  document.getElementById('zoom-pct').textContent = `×${img.toFixed(1)}`;
+}
+
+const FILTERS = {
+  none:   'none',
+  contr:  'contrast(1.7) saturate(1.3)',
+  gray:   'grayscale(1) contrast(1.2)',
+  invert: 'invert(1) hue-rotate(180deg)',
+  desat:  'saturate(0.3) brightness(1.1)',
+};
+
+function applyFilter(mode) {
+  filterMode = mode;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === mode);
+  });
+  const canvas = document.querySelector('#osd-container canvas');
+  if (canvas) canvas.style.filter = FILTERS[mode] || 'none';
+  // Aussi sur les tiles
+  const imgs = document.querySelectorAll('#osd-container img');
+  imgs.forEach(img => img.style.filter = FILTERS[mode] || 'none');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SIDEBAR / INFO
+// ════════════════════════════════════════════════════════════════════════════
+function toggleSidebar() {
+  const sb  = document.getElementById('sidebar');
+  const btn = document.getElementById('btn-sidebar');
+  sb.classList.toggle('collapsed');
+  btn.classList.toggle('active', !sb.classList.contains('collapsed'));
+}
+
+function toggleInfo() {
+  const panel = document.getElementById('info-panel');
+  const btn   = document.getElementById('btn-info');
+  panel.classList.toggle('show');
+  btn.classList.toggle('active', panel.classList.contains('show'));
+}
+
+function showMetaPanel(info) {
+  const [w, h] = info.dimensions[0] || [0, 0];
+  const mpx = ((w * h) / 1e6).toFixed(1);
+  let html = `
+    <strong>DIMENSIONS</strong><br>
+    ${w.toLocaleString()} × ${h.toLocaleString()} px<br>
+    ${mpx} Mpx · ${info.dz_levels} niveaux DZ<br>
+    <br>
+    <strong>TUILES</strong><br>
+    ${info.tile_size}px · overlap 1px<br>
+  `;
+  const props = info.properties || {};
+  const useful = ['openslide.mpp-x','openslide.mpp-y','openslide.objective-power','tiff.ImageDescription'];
+  useful.forEach(k => {
+    if (props[k]) {
+      const label = k.replace('openslide.','').replace('tiff.','').replace(/-/g,' ');
+      html += `<br><strong>${label.toUpperCase()}</strong><br>${props[k].substring(0,60)}<br>`;
+    }
+  });
+  document.getElementById('info-content').innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════════════════════════════
+async function fetchJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+function showLoading(name) {
+  document.getElementById('loading-label').textContent = name.length > 36 ? name.slice(0,33)+'…' : name;
+  document.getElementById('loading-overlay').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.remove('show');
+}
+
+let _toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+function showServerError() {
+  document.getElementById('slide-list').innerHTML = `
+    <div style="padding:16px;">
+      <div class="server-error">
+        <h2>⚠ Serveur non accessible</h2>
+        <pre>
+Lancez le serveur Python :
+
+  pip install flask openslide-python Pillow
+  python server.py /chemin/vers/lames
+
+→ http://localhost:8080/
+        </pre>
+      </div>
+    </div>`;
+  document.getElementById('empty-state').querySelector('.empty-sub').textContent =
+    'Lancez server.py dans un dossier contenant vos lames histologiques.';
+}
+
+function formatSize(bytes) {
+  if (bytes >= 1e9) return (bytes/1e9).toFixed(1)+' Go';
+  if (bytes >= 1e6) return (bytes/1e6).toFixed(0)+' Mo';
+  if (bytes >= 1e3) return (bytes/1e3).toFixed(0)+' Ko';
+  return bytes+' o';
+}
+
+function extIcon(ext) {
+  const map = {SVS:'🧫',NDPI:'🔬',MRXS:'🧬',TIFF:'📋',TIF:'📋',PNG:'🖼',JPG:'🖼',JPEG:'🖼',DCM:'⚕️'};
+  return map[ext] || '📄';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RACCOURCIS CLAVIER
+// ════════════════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  switch(e.key) {
+    case 's': case 'S': toggleSidebar(); break;
+    case 'i': case 'I': toggleInfo(); break;
+    case 'h': case 'H': resetZoom(); break;
+    case '=': case '+': zoomIn(); break;
+    case '-': case '_': zoomOut(); break;
+    case 'r': case 'R': rotateSlide(); break;
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DÉMARRAGE
+// ════════════════════════════════════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>

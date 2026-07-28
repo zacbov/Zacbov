@@ -1,0 +1,15 @@
+[Unit]
+Description=Inky Bird Frame - serveur de rendu e-ink
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/inky-bird-frame
+ExecStart=/home/pi/inky-bird-frame/venv/bin/python server.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

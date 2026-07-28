@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Maquette Dashboard e-ink 800×480</title>
+<style>
+  /* ============================================================
+     MAQUETTE E-INK — contraintes réelles du support :
+     - 800×480 px exactement (Waveshare 7.5" V2)
+     - 1 bit : NOIR (#000) ou BLANC (#fff), rien d'autre
+     - Pas de dégradés, pas d'anti-aliasing fin
+     - Polices : simulées ici, seront bitmap dans le firmware
+     ============================================================ */
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#8a8f94; /* gris "cadre plastique" autour de l'écran */
+    display:flex; flex-direction:column; align-items:center;
+    gap:18px; padding:30px; font-family:'Segoe UI', Arial, sans-serif;
+  }
+  h1 { color:#fff; font-size:16px; font-weight:600; letter-spacing:.05em; }
+  .note { color:#e8e8e8; font-size:12px; max-width:800px; text-align:center; }
+
+  /* L'écran lui-même */
+  .screen {
+    width:800px; height:480px; background:#fff; color:#000;
+    position:relative; overflow:hidden;
+    box-shadow:0 0 0 14px #2b2b2b, 0 0 0 16px #555, 0 12px 30px rgba(0,0,0,.45);
+    font-family:'Courier New', monospace; /* rendu proche bitmap */
+  }
+
+  /* --- Bandeau supérieur : heure + date + météo --- */
+  .topbar {
+    display:flex; height:120px; border-bottom:4px solid #000;
+  }
+  .clock {
+    width:300px; display:flex; flex-direction:column;
+    justify-content:center; align-items:center;
+    border-right:4px solid #000;
+  }
+  .clock .time { font-size:72px; font-weight:bold; letter-spacing:-2px; line-height:1; }
+  .clock .secs { font-size:16px; margin-top:4px; }
+  .datebox {
+    flex:1; display:flex; flex-direction:column; justify-content:center;
+    padding-left:24px; border-right:4px solid #000;
+  }
+  .datebox .day { font-size:30px; font-weight:bold; text-transform:uppercase; }
+  .datebox .full { font-size:20px; margin-top:6px; }
+  .weather {
+    width:230px; display:flex; align-items:center; justify-content:center; gap:14px;
+  }
+  .weather .icon { font-size:52px; }
+  .weather .temp { font-size:40px; font-weight:bold; }
+  .weather .detail { font-size:13px; line-height:1.5; }
+
+  /* --- Corps : planning à gauche, colonne widgets à droite --- */
+  .body { display:flex; height:308px; }
+
+  .agenda {
+    flex:1; padding:14px 18px; border-right:4px solid #000;
+    display:flex; flex-direction:column;
+  }
+  .agenda h2 {
+    font-size:15px; text-transform:uppercase; letter-spacing:.18em;
+    border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:10px;
+  }
+  .event { display:flex; gap:14px; padding:7px 0; align-items:baseline; }
+  .event + .event { border-top:1px dotted #000; }
+  .event .h { font-size:18px; font-weight:bold; min-width:64px; }
+  .event .t { font-size:17px; flex:1; }
+  .event .loc { font-size:12px; border:1px solid #000; padding:1px 6px; }
+  .event.now { background:#000; color:#fff; padding-left:8px; padding-right:8px; }
+  .event.now .loc { border-color:#fff; }
+  .agenda .empty { font-size:14px; margin-top:auto; text-align:center; padding-bottom:8px; }
+
+  .widgets { width:230px; display:flex; flex-direction:column; }
+  .widget {
+    flex:1; padding:10px 14px; display:flex; flex-direction:column; justify-content:center;
+  }
+  .widget + .widget { border-top:2px solid #000; }
+  .widget .label {
+    font-size:11px; text-transform:uppercase; letter-spacing:.15em; margin-bottom:4px;
+  }
+  .widget .value { font-size:26px; font-weight:bold; }
+  .widget .sub { font-size:12px; margin-top:2px; }
+  .widget.absent { color:#000; }
+  .widget.absent .value { font-size:15px; font-weight:normal; font-style:italic; }
+
+  /* --- Barre inférieure : launcher d'apps --- */
+  .dock {
+    height:48px; border-top:4px solid #000;
+    display:flex; align-items:stretch;
+  }
+  .dock .app {
+    flex:1; display:flex; align-items:center; justify-content:center;
+    font-size:13px; text-transform:uppercase; letter-spacing:.08em;
+    border-right:2px solid #000; gap:8px;
+  }
+  .dock .app:last-child { border-right:none; }
+  .dock .app.active { background:#000; color:#fff; font-weight:bold; }
+  .dock .batt { flex:0 0 110px; font-size:13px; }
+
+  /* Simulation du refresh e-ink au clic */
+  .flash { animation: einkflash 1.2s steps(2, end); }
+  @keyframes einkflash {
+    0% { filter:invert(1); }
+    40% { filter:invert(0); }
+    60% { filter:invert(1); }
+    100% { filter:invert(0); }
+  }
+  button.sim {
+    background:#2b2b2b; color:#fff; border:none; padding:10px 22px;
+    font-size:14px; cursor:pointer; letter-spacing:.05em;
+  }
+  button.sim:hover { background:#000; }
+</style>
+</head>
+<body>
+
+<h1>MAQUETTE — Assistant e-ink 800×480 (échelle 1:1)</h1>
+
+<div class="screen" id="screen">
+
+  <!-- Bandeau supérieur -->
+  <div class="topbar">
+    <div class="clock">
+      <div class="time" id="time">14:37</div>
+      <div class="secs">MàJ toutes les minutes</div>
+    </div>
+    <div class="datebox">
+      <div class="day" id="dayname">Vendredi</div>
+      <div class="full" id="datefull">17 juillet 2026</div>
+    </div>
+    <div class="weather">
+      <div class="icon">☀</div>
+      <div>
+        <div class="temp">24°</div>
+        <div class="detail">Paris<br>min 17° · max 27°</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Corps -->
+  <div class="body">
+    <div class="agenda">
+      <h2>Aujourd'hui — 4 événements</h2>
+      <div class="event">
+        <span class="h">09:00</span><span class="t">Réunion labo</span><span class="loc">Salle Houël</span>
+      </div>
+      <div class="event now">
+        <span class="h">14:30</span><span class="t">TP Chimie analytique</span><span class="loc">Labo 33</span>
+      </div>
+      <div class="event">
+        <span class="h">16:00</span><span class="t">Point projet e-ink</span><span class="loc">Visio</span>
+      </div>
+      <div class="event">
+        <span class="h">18:30</span><span class="t">Course à pied</span><span class="loc">Luxembourg</span>
+      </div>
+      <div class="empty">— fin de journée —</div>
+    </div>
+
+    <div class="widgets">
+      <div class="widget">
+        <div class="label">Baromètre · BME280</div>
+        <div class="value">1013 hPa</div>
+        <div class="sub">stable ▸ 21,5°C int. · 48 %</div>
+      </div>
+      <div class="widget">
+        <div class="label">Podomètre · LSM6DS3</div>
+        <div class="value">6 842</div>
+        <div class="sub">pas · objectif 10 000</div>
+      </div>
+      <div class="widget absent">
+        <div class="label">Slot libre · I²C</div>
+        <div class="value">Aucun capteur détecté</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dock apps -->
+  <div class="dock">
+    <div class="app active">◉ Accueil</div>
+    <div class="app">Agenda</div>
+    <div class="app">Météo</div>
+    <div class="app">Capteurs</div>
+    <div class="app">Apps…</div>
+    <div class="app batt">▮▮▮▯ 78 % · WiFi ✓</div>
+  </div>
+
+</div>
+
+<button class="sim" onclick="simulateRefresh()">Simuler un refresh e-ink</button>
+
+<p class="note">
+  Tout est strictement noir/blanc (1 bit). L'événement en cours est affiché en vidéo inversée.
+  Le widget du bas montre l'état « capteur non branché » du système plug-and-play.
+  Le bouton simule le clignotement caractéristique d'un rafraîchissement complet.
+</p>
+
+<script>
+  // Horloge réelle pour se projeter
+  function tick(){
+    const n = new Date();
+    document.getElementById('time').textContent =
+      String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+    const jours = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+    const mois = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+    document.getElementById('dayname').textContent = jours[n.getDay()];
+    document.getElementById('datefull').textContent = n.getDate() + ' ' + mois[n.getMonth()] + ' ' + n.getFullYear();
+  }
+  tick(); setInterval(tick, 5000);
+
+  function simulateRefresh(){
+    const s = document.getElementById('screen');
+    s.classList.remove('flash'); void s.offsetWidth; s.classList.add('flash');
+  }
+</script>
+
+</body>
+</html>

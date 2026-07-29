@@ -223,29 +223,27 @@ section { padding:90px 24px; }
   grid-template-columns:repeat(auto-fill,minmax(270px,1fr));
   gap:24px;
 }
-.card { cursor:pointer; transition:transform .32s, box-shadow .32s; }
-.card:hover { transform:translateY(-5px); box-shadow:0 20px 44px rgba(0,0,0,.5); }
+.card { cursor:pointer; transition:box-shadow .32s, outline-color .32s; outline:1px solid transparent; }
+.card:hover { box-shadow:0 18px 44px rgba(0,0,0,.55); outline-color:rgba(181,81,31,.35); }
 .card .frame {
   position:relative; overflow:hidden;
-  aspect-ratio:4/3; background:#000;
+  height:220px; background:#000; /* fixed height → no ratio calculation */
 }
+/* subtle hover sheen on gallery cards (lightweight CSS) */
+.card .frame::after {
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),
+    rgba(255,255,255,.16) 0%, transparent 52%);
+  opacity:0; transition:opacity .3s;
+}
+.card .frame.lit::after { opacity:1; }
 .card .frame img {
   width:100%; height:100%; object-fit:cover; display:block;
   filter:saturate(1.04) contrast(1.03);
-  transition:transform .55s, filter .55s;
+  transition:filter .45s;  /* no transform scale → no ratio risk */
 }
-.card:hover .frame img { transform:scale(1.07); filter:saturate(1.18) contrast(1.07); }
-/* holographic specular sheen */
-.card .frame::after {
-  content:""; position:absolute; inset:0; pointer-events:none;
-  background:
-    radial-gradient(circle at var(--mx,50%) var(--my,50%),
-      rgba(255,255,255,.6) 0%, rgba(255,255,255,.16) 18%, transparent 42%),
-    conic-gradient(from calc(var(--mx,50%) * 1deg) at var(--mx,50%) var(--my,50%),
-      transparent 0deg, rgba(255,236,210,.1) 60deg, transparent 120deg);
-  mix-blend-mode:overlay; opacity:0; transition:opacity .4s;
-}
-.card .frame.lit::after { opacity:1; }
+.card:hover .frame img { filter:saturate(1.18) contrast(1.07) brightness(1.04); }
+
 .card-meta {
   padding:12px 8px 3px;
   display:flex; justify-content:space-between; align-items:baseline; gap:8px;
@@ -556,6 +554,7 @@ function openLightbox(src, cap) {
   document.getElementById('lbCap').textContent = cap;
   document.getElementById('lightbox').classList.add('open');
 }
+window.openLightbox = openLightbox;
 document.getElementById('lbClose').addEventListener('click', () => document.getElementById('lightbox').classList.remove('open'));
 document.getElementById('lightbox').addEventListener('click', e => { if(e.target===document.getElementById('lightbox')) document.getElementById('lightbox').classList.remove('open'); });
 document.addEventListener('keydown', e => { if(e.key==='Escape') document.getElementById('lightbox').classList.remove('open'); });
@@ -609,6 +608,422 @@ window.addEventListener('scroll', () => {
   const y = window.scrollY;
   if (y < window.innerHeight) heroBg.style.transform = `scale(1.05) translateY(${y*0.25}px)`;
 }, {passive:true});
+
+
+</script>
+
+
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   WebGL Metal-Plate Reflection — Lightbox
+   v3: Sobel normal map + entrance scan + gyroscope mobile support
+   
+   Shader features:
+   - Sobel operator derives surface normals from image gradients
+     (bright areas = raised metal → catches light at their edges)
+   - Phong BRDF with anisotropic brushed-metal lobe
+   - Entrance scan: a warm stripe sweeps L→R on open, then fades
+     to the interactive mouse-driven mode
+   
+   Mobile: DeviceOrientationEvent drives tilt instead of mouse
+═══════════════════════════════════════════════════════════════════ */
+(function() {
+
+/* ── Vertex shader ── */
+const VS = `
+  attribute vec2 aP;
+  varying   vec2 vU;
+  void main(){
+    vU = vec2(aP.x*.5+.5, .5-aP.y*.5);
+    gl_Position = vec4(aP,0.,1.);
+  }`;
+
+/* ── Fragment shader with Sobel normals + scan ── */
+const FS = `
+  precision highp float;
+  uniform sampler2D uT;       /* artwork texture            */
+  uniform vec2      uTx;      /* texel size (1/w, 1/h)      */
+  uniform vec2      uL;       /* light UV position          */
+  uniform float     uF;       /* reflection fade 0-1        */
+  uniform float     uScan;    /* scan progress 0-2 (>1=done)*/
+  uniform float     uNS;      /* normal strength            */
+  varying vec2      vU;
+
+  float lum(vec3 c){ return dot(c,vec3(.2126,.7152,.0722)); }
+
+  /* Sobel 3×3 kernel — returns surface normal from height field */
+  vec3 sobelNormal(){
+    float tl=lum(texture2D(uT,vU+vec2(-uTx.x,-uTx.y)).rgb);
+    float t =lum(texture2D(uT,vU+vec2(      0,-uTx.y)).rgb);
+    float tr=lum(texture2D(uT,vU+vec2( uTx.x,-uTx.y)).rgb);
+    float l =lum(texture2D(uT,vU+vec2(-uTx.x,      0)).rgb);
+    float r =lum(texture2D(uT,vU+vec2( uTx.x,      0)).rgb);
+    float bl=lum(texture2D(uT,vU+vec2(-uTx.x, uTx.y)).rgb);
+    float b =lum(texture2D(uT,vU+vec2(      0, uTx.y)).rgb);
+    float br=lum(texture2D(uT,vU+vec2( uTx.x, uTx.y)).rgb);
+    float gx=(tr+2.*r+br)-(tl+2.*l+bl);  /* horizontal gradient */
+    float gy=(bl+2.*b+br)-(tl+2.*t+tr);  /* vertical gradient   */
+    return normalize(vec3(-gx*uNS, -gy*uNS, 1.0));
+  }
+
+  void main(){
+    vec4  s     = texture2D(uT, vU);
+    float L     = lum(s.rgb);
+    float mask  = smoothstep(.38,.76,L);   /* metal shows in bright areas */
+
+    /* ── Normal-based specular (Phong BRDF) ── */
+    vec3  N     = sobelNormal();
+    vec3  Ldir  = normalize(vec3(uL - vU, 0.45));
+    vec3  V     = vec3(0.,0.,1.);          /* view = straight on */
+    vec3  H     = normalize(Ldir + V);
+    float diff  = max(0., dot(N, Ldir));
+    float spec  = pow(max(0., dot(N, H)), 28.) * mask;
+
+    /* anisotropic brushed-metal lobe (wider along grain axis) */
+    vec2  d    = uL - vU;
+    float ax   = pow(max(0.,1.-abs(d.y)*2.4),1.7)
+               * pow(max(0.,1.-abs(d.x)*.9), 0.5) * mask;
+
+    float refl  = spec*.70 + ax*.30 + diff*mask*.12;
+
+    /* ── Entrance scan: Gaussian stripe sweeping left→right ── */
+    float scanX = uScan * 1.6 - 0.3;           /* overshoot edges */
+    float stripe= exp(-pow((vU.x - scanX)*9.,2.));
+    float scanGlow = stripe * mask * max(0., 1.-uScan) * 1.4;
+
+    /* ── Combine ── */
+    vec3 shine  = vec3(1.,.974,.89);
+    vec3 out_   = mix(s.rgb, shine, clamp(refl*.88,0.,1.) * uF);
+    out_       += shine * scanGlow;            /* scan is additive */
+
+    gl_FragColor = vec4(clamp(out_,0.,1.),1.);
+  }`;
+
+/* ── compile helper ── */
+function mkS(gl,type,src){
+  const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))
+    console.warn('GL:',gl.getShaderInfoLog(s));
+  return s;
+}
+
+/* ── canvas ── */
+const cvs = document.createElement('canvas');
+cvs.style.cssText='position:absolute;pointer-events:none;opacity:0;z-index:2;';
+
+const gl = cvs.getContext('webgl',{alpha:false,antialias:false});
+if(!gl) return;
+
+const prog=gl.createProgram();
+gl.attachShader(prog,mkS(gl,gl.VERTEX_SHADER,VS));
+gl.attachShader(prog,mkS(gl,gl.FRAGMENT_SHADER,FS));
+gl.linkProgram(prog);
+if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){
+  console.warn('GL link:',gl.getProgramInfoLog(prog)); return;
+}
+gl.useProgram(prog);
+
+const quad=gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,quad);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const aP  =gl.getAttribLocation(prog,'aP');
+const uTx =gl.getUniformLocation(prog,'uTx');
+const uL  =gl.getUniformLocation(prog,'uL');
+const uF  =gl.getUniformLocation(prog,'uF');
+const uSc =gl.getUniformLocation(prog,'uScan');
+const uNS =gl.getUniformLocation(prog,'uNS');
+const uT  =gl.getUniformLocation(prog,'uT');
+gl.enableVertexAttribArray(aP);
+gl.vertexAttribPointer(aP,2,gl.FLOAT,false,0,0);
+gl.uniform1i(uT,0);
+gl.uniform1f(uNS,6.0);   /* normal strength — tweak if too strong */
+
+let tex=null, loaded=false, imgW=1, imgH=1;
+let fadeT=0, targetT=0;
+let scanT=0, scanActive=false;
+let mx=0.5, my=0.5;
+let tiltX=0, tiltY=0, curTX=0, curTY=0;
+let rafId=null;
+
+/* ── DOM refs ── */
+const lbImg   = document.getElementById('lbImg');
+const lbInner = document.querySelector('.lb-inner');
+const lb      = document.getElementById('lightbox');
+if(!lbImg||!lbInner||!lb) return;
+lbInner.style.position='relative';
+lbInner.appendChild(cvs);
+
+/* ── Snap canvas to exact image rect (avoids distortion) ── */
+function snapToImage(){
+  if(!lbImg.naturalWidth) return;
+  const ir=lbImg.getBoundingClientRect();
+  const pr=lbInner.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const pw=Math.round(ir.width*dpr), ph=Math.round(ir.height*dpr);
+  if(cvs.width!==pw||cvs.height!==ph){
+    cvs.width=pw; cvs.height=ph;
+    gl.viewport(0,0,pw,ph);
+    gl.uniform2f(uTx, 1/imgW, 1/imgH);
+  }
+  cvs.style.left  =(ir.left-pr.left)+'px';
+  cvs.style.top   =(ir.top -pr.top )+'px';
+  cvs.style.width =ir.width +'px';
+  cvs.style.height=ir.height+'px';
+}
+
+/* ── Texture load ── */
+function loadTex(img){
+  loaded=false;
+  if(tex) gl.deleteTexture(tex);
+  tex=gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D,tex);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,
+                new Uint8Array([80,80,80,255]));
+  const upload=()=>{
+    if(!img.naturalWidth) return;
+    imgW=img.naturalWidth; imgH=img.naturalHeight;
+    gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);
+    gl.uniform2f(uTx, 1/imgW, 1/imgH);
+    loaded=true;
+    snapToImage();
+    /* start entrance scan */
+    scanT=0; scanActive=true;
+    targetT=0; fadeT=0;
+    kick();
+  };
+  if(img.complete&&img.naturalWidth>0) upload();
+  else img.addEventListener('load',upload,{once:true});
+}
+
+/* ── Main render loop ── */
+function render(){
+  rafId=null;
+  if(!loaded){ return; }
+
+  /* scan animation: 0→1 over ~1.4s, then hand off to interactive */
+  const SCAN_DUR=90; /* frames at 60fps ≈ 1.5s */
+  if(scanActive){
+    scanT += 1/SCAN_DUR;
+    if(scanT>=1.0){ scanActive=false; scanT=1.0; targetT=0; }
+    /* fade-in the canvas as scan starts */
+    if(scanT<0.15) fadeT=scanT/0.15;
+    else if(scanT>0.85){ fadeT=1-(scanT-0.85)/0.15; }
+    else fadeT=1;
+  } else {
+    /* interactive phase */
+    const fd=targetT-fadeT;
+    fadeT+=fd*0.13+(fd>0?0.025:-0.025);
+    fadeT=Math.max(0,Math.min(1,fadeT));
+  }
+
+  /* parallax tilt lerp */
+  curTX+=(tiltX-curTX)*0.07;
+  curTY+=(tiltY-curTY)*0.07;
+  const px=curTX.toFixed(3), py=curTY.toFixed(3);
+  lbImg.style.transform=
+    `perspective(920px) rotateX(${-px}deg) rotateY(${py}deg) scale(1.014)`;
+
+  if(fadeT>0.005){
+    snapToImage();
+    cvs.style.transformOrigin='50% 50%';
+    cvs.style.transform=
+      `perspective(920px) rotateX(${-px}deg) rotateY(${py}deg) scale(1.014)`;
+    gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.uniform2f(uL,mx,my);
+    gl.uniform1f(uF,scanActive?0:fadeT);
+    gl.uniform1f(uSc,scanActive?scanT:1.5);/* >1 = scan gone */
+    gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    cvs.style.opacity=fadeT>0.01?'1':'0';
+  } else {
+    cvs.style.opacity='0';
+  }
+
+  const still=scanActive||Math.abs(fadeT-targetT)>0.003
+    ||Math.abs(curTX-tiltX)>0.02||Math.abs(curTY-tiltY)>0.02
+    ||(targetT>0&&fadeT>0.01);
+  if(still) rafId=requestAnimationFrame(render);
+}
+
+function kick(){ if(!rafId) rafId=requestAnimationFrame(render); }
+
+/* ── Reset ── */
+function reset(){
+  targetT=0; scanActive=false; scanT=0;
+  tiltX=0; tiltY=0; curTX=0; curTY=0;
+  fadeT=0; cvs.style.opacity='0';
+  lbImg.style.transform='';
+  if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
+}
+
+/* ── Hook into openLightbox ── */
+const origOpen=window.openLightbox;
+window.openLightbox=function(src,cap){
+  if(origOpen) origOpen(src,cap);
+  reset();
+  setTimeout(()=>{ loadTex(lbImg); mx=0.5; my=0.5; },60);
+};
+
+/* ── Mouse tracking (desktop) ── */
+lbInner.addEventListener('pointermove',e=>{
+  const r=lbImg.getBoundingClientRect();
+  if(e.clientX<r.left||e.clientX>r.right||
+     e.clientY<r.top ||e.clientY>r.bottom){
+    if(!scanActive){ tiltX=0; tiltY=0; targetT=0; kick(); } return;
+  }
+  const nx=(e.clientX-r.left)/r.width;
+  const ny=(e.clientY-r.top)/r.height;
+  mx=nx; my=ny;
+  tiltY=(nx-0.5)*7;
+  tiltX=(ny-0.5)*5;
+  if(!scanActive){ targetT=1; kick(); }
+});
+lbInner.addEventListener('pointerleave',()=>{
+  if(!scanActive){ tiltX=0; tiltY=0; targetT=0; kick(); }
+});
+
+/* ── Gyroscope (mobile) ── */
+let gyroEnabled=false;
+function onGyro(e){
+  if(!lb.classList.contains('open')) return;
+  const beta =e.beta  || 0;   /* pitch -180→180 */
+  const gamma=e.gamma || 0;   /* roll  -90→90   */
+  /* neutral position: ~30° forward tilt (natural phone-viewing angle) */
+  const tx=( (beta -30)*0.18);  /* ±5 deg tilt  */
+  const ty=( gamma     *0.12);
+  tiltX=Math.max(-5,Math.min(5,tx));
+  tiltY=Math.max(-5,Math.min(5,ty));
+  mx=0.5+gamma/180;
+  my=0.5+(beta-30)/120;
+  mx=Math.max(0,Math.min(1,mx));
+  my=Math.max(0,Math.min(1,my));
+  if(!scanActive){ targetT=1; kick(); }
+}
+function requestGyro(){
+  if(gyroEnabled) return;
+  if(typeof DeviceOrientationEvent!=='undefined'&&
+     typeof DeviceOrientationEvent.requestPermission==='function'){
+    /* iOS 13+ requires user gesture permission */
+    DeviceOrientationEvent.requestPermission().then(state=>{
+      if(state==='granted'){
+        window.addEventListener('deviceorientation',onGyro);
+        gyroEnabled=true;
+      }
+    }).catch(()=>{});
+  } else if('DeviceOrientationEvent' in window){
+    window.addEventListener('deviceorientation',onGyro);
+    gyroEnabled=true;
+  }
+}
+/* Request on first touch inside lightbox */
+lb.addEventListener('touchstart',requestGyro,{once:true});
+
+/* ── Close handlers ── */
+document.getElementById('lbClose').addEventListener('click',reset);
+lb.addEventListener('click',e=>{ if(e.target===lb) reset(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') reset(); });
+
+})();
+</script>
+
+
+
+<script>
+/* Gallery Gyroscope Parallax v2 — Android + iOS */
+(function(){
+  if(!('ontouchstart' in window)) return;
+
+  let ox=null, oy=null;
+  let tx=0, ty=0, cx=0, cy=0;
+  let enabled=false, rafId=null;
+  const MAX=14, LERP=0.07;
+
+  /* ── Debug overlay (remove once confirmed working) ── */
+  const dbg = document.createElement('div');
+  dbg.style.cssText =
+    'position:fixed;top:10px;left:10px;z-index:999;background:rgba(0,0,0,.7);' +
+    'color:#fff;font-size:11px;padding:6px 10px;border-radius:4px;font-family:monospace;' +
+    'pointer-events:none;';
+  dbg.textContent = 'Gyro: waiting...';
+  document.body.appendChild(dbg);
+  /* Auto-remove debug after 10s */
+  setTimeout(() => dbg.remove(), 10000);
+
+  function applyTilt(){
+    cx += (tx-cx)*LERP;
+    cy += (ty-cy)*LERP;
+    if(Math.abs(cx)>0.05||Math.abs(cy)>0.05){
+      const xs=cx.toFixed(2), ys=cy.toFixed(2);
+      document.querySelectorAll('.card .frame img').forEach(img=>{
+        img.style.transform=`scale(1.08) translate(${xs}px,${ys}px)`;
+      });
+    }
+    rafId=requestAnimationFrame(applyTilt);
+  }
+
+  function onOrient(e){
+    const g=e.gamma||0, b=e.beta||0;
+    if(ox===null){ ox=g; oy=b; }
+    const dg=g-ox, db=b-oy;
+    tx=Math.max(-MAX,Math.min(MAX,-dg*0.55));
+    ty=Math.max(-MAX,Math.min(MAX,-db*0.40));
+    dbg.textContent=`β=${b.toFixed(1)} γ=${g.toFixed(1)} → ${tx.toFixed(1)},${ty.toFixed(1)}`;
+  }
+
+  function startGyro(){
+    if(enabled) return;
+    enabled=true;
+    window.addEventListener('deviceorientation',onOrient,{passive:true});
+    if(!rafId) rafId=requestAnimationFrame(applyTilt);
+    dbg.textContent='Gyro: started, move phone...';
+  }
+
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  if(isIOS){
+    /* iOS 13+: need explicit permission */
+    if(typeof DeviceOrientationEvent.requestPermission==='function'){
+      const btn=document.createElement('button');
+      btn.textContent='🔄 Activer le gyroscope';
+      btn.style.cssText=
+        'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);'+
+        'z-index:70;background:rgba(22,24,27,.9);color:#eae6de;'+
+        'border:1px solid rgba(181,81,31,.6);padding:10px 20px;'+
+        'font-family:Oswald,sans-serif;font-size:12px;letter-spacing:.1em;'+
+        'text-transform:uppercase;cursor:pointer;border-radius:4px;';
+      document.body.appendChild(btn);
+      btn.addEventListener('click',()=>{
+        DeviceOrientationEvent.requestPermission()
+          .then(s=>{if(s==='granted') startGyro(); btn.remove();})
+          .catch(()=>btn.remove());
+      });
+    } else {
+      /* Older iOS — just start */
+      document.addEventListener('touchstart',startGyro,{once:true});
+    }
+  } else {
+    /* Android: start immediately — no permission needed */
+    dbg.textContent='Gyro: init Android...';
+    /* Try immediately */
+    startGyro();
+    /* Fallback: also on first touch in case browser defers events */
+    document.addEventListener('touchstart', startGyro, {once:true});
+  }
+
+  /* Recalibrate on double-tap */
+  let lastTap=0;
+  document.addEventListener('touchend',e=>{
+    const now=Date.now();
+    if(now-lastTap<350){ ox=null; oy=null; dbg.textContent='Gyro: recalibrated'; }
+    lastTap=now;
+  },{passive:true});
+
+})();
 </script>
 </body>
 </html>

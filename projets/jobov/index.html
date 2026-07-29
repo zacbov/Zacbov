@@ -810,7 +810,7 @@ function render(){
   const SCAN_DUR=90; /* frames at 60fps ≈ 1.5s */
   if(scanActive){
     scanT += 1/SCAN_DUR;
-    if(scanT>=1.0){ scanActive=false; scanT=1.0; targetT=0; }
+    if(scanT>=1.0){ scanActive=false; scanT=1.0; targetT=1; /* keep effect on */ }
     /* fade-in the canvas as scan starts */
     if(scanT<0.15) fadeT=scanT/0.15;
     else if(scanT>0.85){ fadeT=1-(scanT-0.85)/0.15; }
@@ -844,9 +844,12 @@ function render(){
     cvs.style.opacity='0';
   }
 
-  const still=scanActive||Math.abs(fadeT-targetT)>0.003
-    ||Math.abs(curTX-tiltX)>0.02||Math.abs(curTY-tiltY)>0.02
-    ||(targetT>0&&fadeT>0.01);
+  /* Keep loop alive if lightbox open (gyro keeps updating tilt) */
+  const lbOpen = lb.classList.contains('open');
+  const still = scanActive || lbOpen
+    || Math.abs(fadeT-targetT)>0.003
+    || Math.abs(curTX-tiltX)>0.02
+    || Math.abs(curTY-tiltY)>0.02;
   if(still) rafId=requestAnimationFrame(render);
 }
 
@@ -883,8 +886,11 @@ lbInner.addEventListener('pointermove',e=>{
   tiltX=(ny-0.5)*5;
   if(!scanActive){ targetT=1; kick(); }
 });
-lbInner.addEventListener('pointerleave',()=>{
-  if(!scanActive){ tiltX=0; tiltY=0; targetT=0; kick(); }
+lbInner.addEventListener('pointerleave', e=>{
+  /* Only fade out on real mouse-leave, not on touch (pointerleave fires spuriously on mobile) */
+  if(!e || e.pointerType === 'mouse'){
+    if(!scanActive){ tiltX=0; tiltY=0; targetT=0; kick(); }
+  }
 });
 
 /* ── Gyroscope (mobile) — drives the WebGL reflection when lightbox is open ── */

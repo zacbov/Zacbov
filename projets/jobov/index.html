@@ -659,7 +659,7 @@ const FS=`
 
     vec4  s   =texture2D(uT,imgUV);
     float L   =lum(s.rgb);
-    float mask=smoothstep(.36,.76,L);
+    float mask=smoothstep(.22,.68,L);
 
     /* Sobel normals (in image-UV space) */
     float tl=lum(texture2D(uT,imgUV+uTx*vec2(-1,-1)).rgb);
@@ -677,21 +677,26 @@ const FS=`
     /* Phong specular */
     vec3  Ld =normalize(vec3(uL-imgUV,0.45));
     vec3  H  =normalize(Ld+vec3(0.,0.,1.));
-    float sp =pow(max(0.,dot(N,H)),26.)*mask;
+    float sp =pow(max(0.,dot(N,H)),10.)*mask;
 
     /* Anisotropic brushed-metal lobe */
     vec2  d =uL-imgUV;
-    float ax=pow(max(0.,1.-abs(d.y)*2.4),1.8)
-            *pow(max(0.,1.-abs(d.x)*.9), 0.5)*mask;
-    float refl=clamp(sp*.75+ax*.30,0.,1.);
+    float ax=pow(max(0.,1.-abs(d.y)*2.0),1.4)
+            *pow(max(0.,1.-abs(d.x)*.8), 0.4)*mask;
+    float refl=clamp(sp*.70+ax*.50,0.,1.);
 
     /* Scan stripe (in image UV x-axis) */
     float stripe=exp(-pow((imgUV.x-uSc*1.4+.2)*8.5,2.));
     float scan  =stripe*mask*clamp(1.-abs(uSc-.5)*2.8,0.,1.)*1.5;
 
-    vec3 shine=vec3(1.,.974,.89);
-    vec3 out_ =mix(s.rgb,shine,refl*uF);
-    out_     +=shine*scan;
+    /* Additive shimmer — metal glint overexposes bright areas */
+    vec3 shine=vec3(1.,.97,.88);
+    /* Broad base sheen so effect is always visible in ACTIVE mode */
+    float base=mask*uF*0.18;
+    /* Additive specular: adds brightness on top, clamps to white */
+    vec3 out_=s.rgb + shine*(refl*uF*0.90 + base);
+    /* Scan is also additive */
+    out_+=shine*scan;
     gl_FragColor=vec4(clamp(out_,0.,1.),1.);
   }`;
 
@@ -742,7 +747,7 @@ gl.uniform1i(uT,0);
 let tex=null, loaded=false, imgW=1, imgH=1;
 let STATE='IDLE';
 let scanT=0, fadeT=0;
-let mx=0.5, my=0.5;
+let mx=0.25, my=0.30;   /* start off-center → visible glint immediately */
 let tiltX=0, tiltY=0, curTX=0, curTY=0;
 let rafId=null;
 
@@ -858,7 +863,7 @@ lbInner.addEventListener('pointermove',e=>{
   tiltY=(mx-0.5)*7; tiltX=(my-0.5)*5;
 });
 lbInner.addEventListener('pointerleave',e=>{
-  if(e.pointerType==='mouse'){ tiltX=0; tiltY=0; mx=0.5; my=0.5; }
+  if(e.pointerType==='mouse'){ tiltX=0; tiltY=0; mx=0.25; my=0.30; }
 });
 
 /* Gyroscope */

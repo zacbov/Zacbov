@@ -119,15 +119,36 @@ const P=[
 ["Plan 3D","Fac","plan-3d","Plans 3D des locaux",1],
 ];
 const grid=document.getElementById('grid');
-grid.innerHTML=P.map(([n,c,slug,d,s])=>{
-  const pct=s*20;
-  return `<a class="card" data-c="${c}" href="projets/${slug}/index.html">
-    <span class="tag">${c}</span>
-    <h2>${n}</h2>
-    <p>${d}</p>
-    <div class="meta"><div class="bar"><i style="width:${pct}%"></i></div><span class="pct">${pct}%</span></div>
-    <span class="open" aria-hidden="true">↗</span>
-  </a>`;
+grid.innerHTML = P.map(([n,c,link,d,s]) => {
+
+  const pct = s * 20;
+
+  const isExternal =
+      link.startsWith("http://") ||
+      link.startsWith("https://");
+
+  const href = isExternal
+      ? link
+      : `projets/${link}/index.html`;
+
+  const target = isExternal ? '_blank' : '_self';
+  const rel = isExternal ? 'noopener noreferrer' : '';
+
+  return `
+    <a class="card"
+       data-c="${c}"
+       href="${href}"
+       target="${target}"
+       rel="${rel}">
+      <span class="tag">${c}</span>
+      <h2>${n}</h2>
+      <p>${d}</p>
+      <div class="meta">
+        <div class="bar"><i style="width:${pct}%"></i></div>
+        <span class="pct">${pct}%</span>
+      </div>
+      <span class="open">↗</span>
+    </a>`;
 }).join('');
 const count=document.getElementById('count');
 const update=f=>{

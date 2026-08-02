@@ -259,7 +259,14 @@ section { padding:90px 24px; }
 }
 .lightbox.open { display:flex; }
 .lb-inner { position:relative; max-width:1100px; width:100%; }
-.lb-inner img { width:100%; max-height:80vh; object-fit:contain; border:1px solid var(--line); }
+.lb-inner img {
+  display:block;
+  width:auto; height:auto;      /* let natural ratio determine both dims */
+  max-width:100%; max-height:80vh;
+  object-fit:contain;
+  border:1px solid var(--line);
+  margin:0 auto;                /* center portrait images horizontally */
+}
 .lb-caption { text-align:center; margin-top:14px; color:var(--steel-l); font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:.08em; }
 .lb-close {
   position:absolute; top:-44px; right:0;
@@ -639,29 +646,27 @@ const VS=`
 const FS=`
   precision highp float;
   uniform sampler2D uT;
-  uniform vec2  uTx;       /* 1/imgW, 1/imgH */
-  uniform vec4  uIR;       /* imgRect in canvas UV: x0,y0,x1,y1 */
-  uniform vec2  uL;        /* light position in image UV 0-1 */
-  uniform float uF;        /* reflection intensity 0-1 */
-  uniform float uSc;       /* scan progress 0->1 */
-  varying vec2  vU;        /* canvas UV 0-1 */
+  uniform vec2  uTx;
+  uniform vec4  uIR;
+  uniform vec2  uL;     /* light UV — moves with gyro/mouse */
+  uniform float uF;     /* 0-1 fade */
+  uniform float uSc;    /* scan 0-1 */
+  varying vec2  vU;
 
   float lum(vec3 c){ return dot(c,vec3(.2126,.7152,.0722)); }
 
   void main(){
-    /* Remap canvas UV to image UV */
     vec2 imgUV=(vU-uIR.xy)/(uIR.zw-uIR.xy);
-
-    /* Outside image → transparent so underlying img shows */
     if(imgUV.x<0.||imgUV.x>1.||imgUV.y<0.||imgUV.y>1.){
       gl_FragColor=vec4(0.); return;
     }
 
     vec4  s   =texture2D(uT,imgUV);
     float L   =lum(s.rgb);
-    float mask=smoothstep(.22,.68,L);
+    /* Metal mask: bright = polished metal showing through ink */
+    float mask=smoothstep(.20,.65,L);
 
-    /* Sobel normals (in image-UV space) */
+    /* Sobel normals */
     float tl=lum(texture2D(uT,imgUV+uTx*vec2(-1,-1)).rgb);
     float t =lum(texture2D(uT,imgUV+uTx*vec2( 0,-1)).rgb);
     float tr=lum(texture2D(uT,imgUV+uTx*vec2( 1,-1)).rgb);
@@ -672,31 +677,32 @@ const FS=`
     float br=lum(texture2D(uT,imgUV+uTx*vec2( 1, 1)).rgb);
     float gx=(tr+2.*r+br)-(tl+2.*l+bl);
     float gy=(bl+2.*b+br)-(tl+2.*t+tr);
-    vec3  N =normalize(vec3(-gx*5.5,-gy*5.5,1.));
+    vec3  N =normalize(vec3(-gx*6.,-gy*6.,1.));
 
-    /* Phong specular */
-    vec3  Ld =normalize(vec3(uL-imgUV,0.45));
-    vec3  H  =normalize(Ld+vec3(0.,0.,1.));
-    float sp =pow(max(0.,dot(N,H)),10.)*mask;
+    /* Moving specular: tight Phong spot that travels with uL */
+    vec3  Ld=normalize(vec3(uL-imgUV,0.38));
+    vec3  H =normalize(Ld+vec3(0.,0.,1.));
+    float sp=pow(max(0.,dot(N,H)),8.)*mask;
 
-    /* Anisotropic brushed-metal lobe */
-    vec2  d =uL-imgUV;
-    float ax=pow(max(0.,1.-abs(d.y)*2.0),1.4)
-            *pow(max(0.,1.-abs(d.x)*.8), 0.4)*mask;
-    float refl=clamp(sp*.70+ax*.50,0.,1.);
+    /* Traveling specular — precise, focused, moves on both axes */
+    vec2  d    = uL - imgUV;
+    /* Tight spot: precise hot-point */
+    float spot = exp(-d.x*d.x*14. - d.y*d.y*14.) * mask;
+    /* Narrow halo: stays close to the spot */
+    float glow = exp(-d.x*d.x*5.5 - d.y*d.y*7.0) * mask * 0.45;
+    /* Brushed-grain streak: thin horizontal trace of the grain */
+    float streak=exp(-d.x*d.x*2.2 - d.y*d.y*18.) * mask * 0.30;
 
-    /* Scan stripe (in image UV x-axis) */
+    float refl = clamp(sp*0.50 + spot*0.85 + glow + streak, 0., 1.);
+
+    /* Scan stripe */
     float stripe=exp(-pow((imgUV.x-uSc*1.4+.2)*8.5,2.));
-    float scan  =stripe*mask*clamp(1.-abs(uSc-.5)*2.8,0.,1.)*1.5;
+    float scan  =stripe*mask*clamp(1.-abs(uSc-.5)*2.8,0.,1.)*1.6;
 
-    /* Additive shimmer — metal glint overexposes bright areas */
-    vec3 shine=vec3(1.,.97,.88);
-    /* Broad base sheen so effect is always visible in ACTIVE mode */
-    float base=mask*uF*0.18;
-    /* Additive specular: adds brightness on top, clamps to white */
-    vec3 out_=s.rgb + shine*(refl*uF*0.90 + base);
-    /* Scan is also additive */
-    out_+=shine*scan;
+    /* Additive blend: light adds on top of existing color */
+    vec3 shine=vec3(1.,.96,.86);
+    vec3 out_ =s.rgb + shine*refl*uF*0.40;
+    out_     +=shine*scan;
     gl_FragColor=vec4(clamp(out_,0.,1.),1.);
   }`;
 
@@ -747,7 +753,7 @@ gl.uniform1i(uT,0);
 let tex=null, loaded=false, imgW=1, imgH=1;
 let STATE='IDLE';
 let scanT=0, fadeT=0;
-let mx=0.25, my=0.30;   /* start off-center → visible glint immediately */
+let mx=0.18, my=0.35;   /* start off-left → visible anisotropic band immediately */
 let tiltX=0, tiltY=0, curTX=0, curTY=0;
 let rafId=null;
 
@@ -801,11 +807,14 @@ function render(){
   if(STATE==='IDLE') return;
   if(!loaded){ rafId=requestAnimationFrame(render); return; }
 
-  /* Parallax on image ONLY — canvas stays flat */
+  /* Parallax on image ONLY — canvas stays flat.
+     Only apply transform when tilt is non-trivial (gyro on mobile) */
   curTX+=(tiltX-curTX)*0.08;
   curTY+=(tiltY-curTY)*0.08;
-  lbImg.style.transform=
-    `perspective(900px) rotateX(${(-curTX).toFixed(3)}deg) rotateY(${curTY.toFixed(3)}deg) scale(1.012)`;
+  const hasTilt=Math.abs(curTX)>0.05||Math.abs(curTY)>0.05;
+  lbImg.style.transform = hasTilt
+    ? `perspective(900px) rotateX(${(-curTX).toFixed(3)}deg) rotateY(${curTY.toFixed(3)}deg) scale(1.012)`
+    : '';
 
   resizeCvs();
 
@@ -853,17 +862,17 @@ window.openLightbox=function(src,cap){
   setTimeout(()=>loadTex(lbImg),60);
 };
 
-/* Desktop mouse */
+/* Desktop mouse: update light position only — image stays still, light moves */
 lbInner.addEventListener('pointermove',e=>{
   if(e.pointerType!=='mouse') return;
   const r=lbImg.getBoundingClientRect();
   if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) return;
   mx=(e.clientX-r.left)/r.width;
   my=(e.clientY-r.top)/r.height;
-  tiltY=(mx-0.5)*7; tiltX=(my-0.5)*5;
+  /* tiltX/tiltY intentionally NOT updated on desktop — no image movement */
 });
 lbInner.addEventListener('pointerleave',e=>{
-  if(e.pointerType==='mouse'){ tiltX=0; tiltY=0; mx=0.25; my=0.30; }
+  if(e.pointerType==='mouse'){ mx=0.18; my=0.35; }
 });
 
 /* Gyroscope */
@@ -873,10 +882,10 @@ function onGyro(e){
   const g=e.gamma||0, b=e.beta||0;
   if(gox===null){ gox=g; goy=b; }
   const dg=g-gox, db=b-goy;
-  tiltY=Math.max(-6,Math.min(6,dg*0.22));
-  tiltX=Math.max(-5,Math.min(5,db*0.18));
-  mx=Math.max(0,Math.min(1,0.5+dg/80));
-  my=Math.max(0,Math.min(1,0.5+db/80));
+  tiltY=Math.max(-6,Math.min(6,dg*0.42));  /* ~14° phone tilt → max effect */
+  tiltX=Math.max(-5,Math.min(5,db*0.30));
+  mx=Math.max(0,Math.min(1,0.5+dg/40));  /* ±40° → full sweep */
+  my=Math.max(0,Math.min(1,0.5+db/55));
 }
 function startGyro(){
   if(gyroOn) return; gyroOn=true;

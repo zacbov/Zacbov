@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PharmAtlas · Lames numériques</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0d11; --surface:#111418; --card:#161a21; --card-h:#1b2028;
+  --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.12);
+  --accent:#00e5b0; --accent2:#00a87f;
+  --stain-n:#8a4fd0; --stain-c:#e089ad;
+  --text:#dde1ea; --muted:rgba(221,225,234,.42);
+  --mono:'Space Mono',monospace; --sans:'DM Sans',sans-serif;
+}
+html,body{height:100%}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100%;
+  background-image:radial-gradient(circle at 15% 8%,rgba(0,229,176,.05),transparent 45%),
+                    radial-gradient(circle at 85% 88%,rgba(138,79,208,.06),transparent 45%);
+}
+
+header{display:flex;align-items:center;gap:10px;padding:20px 32px;border-bottom:1px solid var(--border)}
+.logo{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:3px;color:var(--accent);text-transform:uppercase}
+.logo-sep{width:1px;height:18px;background:var(--border2)}
+.logo-sub{font-size:12px;color:var(--muted)}
+
+.hero{padding:64px 32px 40px;text-align:center;max-width:760px;margin:0 auto}
+.hero h1{font-family:var(--sans);font-weight:700;font-size:clamp(26px,4vw,38px);letter-spacing:-.5px;margin-bottom:14px}
+.hero h1 span{color:var(--accent)}
+.hero p{color:var(--muted);font-size:14.5px;line-height:1.7;max-width:520px;margin:0 auto}
+
+.grid{max-width:1080px;margin:0 auto;padding:20px 32px 80px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px}
+
+.card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px 24px 22px;
+  display:flex;flex-direction:column;gap:16px;text-decoration:none;color:var(--text);
+  transition:border-color .2s,background .2s,transform .2s;overflow:hidden}
+.card::before{content:"";position:absolute;inset:0;opacity:0;transition:opacity .25s;
+  background:radial-gradient(circle at 30% 0%,rgba(0,229,176,.08),transparent 60%)}
+.card:hover{border-color:rgba(0,229,176,.4);background:var(--card-h);transform:translateY(-3px)}
+.card:hover::before{opacity:1}
+.card.empty{opacity:.55;cursor:default}
+.card.empty:hover{border-color:var(--border);background:var(--card);transform:none}
+.card.empty::before{display:none}
+
+.c-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:relative;z-index:1}
+.c-icon{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:21px;flex-shrink:0;
+  border:1px solid var(--border2);background:rgba(255,255,255,.02)}
+.c-count{font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--muted);border:1px solid var(--border2);
+  border-radius:20px;padding:4px 10px;white-space:nowrap}
+.c-count b{color:var(--accent);font-weight:700}
+
+.c-body{position:relative;z-index:1}
+.c-title{font-size:18px;font-weight:700;margin-bottom:6px}
+.c-desc{font-size:12.5px;color:var(--muted);line-height:1.6}
+
+.c-tags{display:flex;flex-wrap:wrap;gap:6px;position:relative;z-index:1}
+.tag{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.4px;padding:3px 8px;border-radius:5px;
+  border:1px solid var(--border2);color:var(--muted)}
+
+.c-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;padding-top:4px}
+.c-cta{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--accent);
+  display:flex;align-items:center;gap:6px}
+.c-cta .arrow{transition:transform .2s}
+.card:hover .c-cta .arrow{transform:translateX(3px)}
+.c-soon{font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--muted);
+  border:1px dashed var(--border2);border-radius:20px;padding:4px 10px}
+
+.stain-physio{color:var(--accent);border-color:rgba(0,229,176,.3);background:rgba(0,229,176,.06)}
+.stain-para{color:var(--stain-c);border-color:rgba(224,137,173,.3);background:rgba(224,137,173,.06)}
+.stain-hemato{color:#ff5f72;border-color:rgba(255,95,114,.3);background:rgba(255,95,114,.06)}
+
+footer{text-align:center;padding:24px;color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.5px;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PharmAtlas</div>
+  <div class="logo-sep"></div>
+  <div class="logo-sub">Lames numériques</div>
+</header>
+
+<div class="hero">
+  <h1>Bibliothèque de lames <span>histologiques</span></h1>
+  <p>Visualiseurs de lames numériques haute résolution, organisés par discipline. Sélectionnez une catégorie pour explorer les coupes en zoom profond.</p>
+</div>
+
+<div class="grid">
+
+  <a class="card" href="https://histoviewer-physio.tice-pharma.workers.dev/" target="_blank" rel="noopener">
+    <div class="c-top">
+      <div class="c-icon">🧫</div>
+      <div class="c-count"><b>9</b> lames</div>
+    </div>
+    <div class="c-body">
+      <div class="c-title">Physiologie</div>
+      <div class="c-desc">Hypophyse, ovaire, pancréas, surrénale, testicule, thyroïde — histologie normale et pathologique des glandes endocrines.</div>
+    </div>
+    <div class="c-tags">
+      <span class="tag stain-physio">HE</span>
+      <span class="tag stain-physio">Masson</span>
+      <span class="tag">Endocrinologie</span>
+    </div>
+    <div class="c-foot">
+      <span class="c-cta">Ouvrir le viewer <span class="arrow">→</span></span>
+    </div>
+  </a>
+
+  <a class="card" href="https://histoviewer-parasito-myco.tice-pharma.workers.dev/" target="_blank" rel="noopener">
+    <div class="c-top">
+      <div class="c-icon">🦟</div>
+      <div class="c-count"><b>7</b> lames</div>
+    </div>
+    <div class="c-body">
+      <div class="c-title">Parasitologie &amp; Mycologie</div>
+      <div class="c-desc">Lente, pou, puce, punaise, tique, sarcoptes, rhizopus — ectoparasites et champignons filamenteux.</div>
+    </div>
+    <div class="c-tags">
+      <span class="tag stain-para">Masson</span>
+      <span class="tag">Insectes</span>
+      <span class="tag">Acariens</span>
+      <span class="tag">Champignons</span>
+    </div>
+    <div class="c-foot">
+      <span class="c-cta">Ouvrir le viewer <span class="arrow">→</span></span>
+    </div>
+  </a>
+
+  <div class="card empty">
+    <div class="c-top">
+      <div class="c-icon">🩸</div>
+      <div class="c-count"><b>0</b> lame</div>
+    </div>
+    <div class="c-body">
+      <div class="c-title">Hématologie</div>
+      <div class="c-desc">Frottis sanguins et médullaires. Le viewer est déployé mais aucune lame n'a encore été numérisée.</div>
+    </div>
+    <div class="c-tags">
+      <span class="tag stain-hemato">MGG</span>
+      <span class="tag">Frottis</span>
+    </div>
+    <div class="c-foot">
+      <span class="c-soon">Bientôt disponible</span>
+    </div>
+  </div>
+
+</div>
+
+<footer>PHARMATLAS · HISTOVIEW ENGINE</footer>
+
+</body>
+</html>

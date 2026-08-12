@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Palimpseste</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@600&family=Spectral:wght@300;400&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;background:#0a0908;overflow:hidden;font-family:'Spectral',serif}
+  canvas{display:block}
+  #ui{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:22px;z-index:10}
+  #top{display:flex;justify-content:space-between}
+  #title h1{font-family:'Cormorant SC',serif;font-size:17px;letter-spacing:.16em;text-transform:uppercase;color:#e8dcc4}
+  #roomBox{font-family:'Cormorant SC',serif;font-size:13px;letter-spacing:.1em;color:#7a2e1e;text-transform:uppercase;background:rgba(232,221,195,.7);padding:7px 13px;border:1px solid #8a7455}
+  #bars{display:none}
+  #timer{font-family:'Cormorant SC',serif;font-size:13px;letter-spacing:.12em;color:#7a6b52;background:rgba(20,17,13,.5);padding:6px 14px;border:1px solid #4a3f2e}
+  #tip{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);font-family:'Cormorant SC',serif;font-size:17px;letter-spacing:.1em;color:#c9a8d8;background:rgba(18,12,22,.85);padding:16px 32px;border:1px solid #5a4a6a;pointer-events:none;text-align:center;z-index:20;max-width:600px;opacity:0;transition:opacity .6s}
+  #bars b{color:#d4a15a}
+  .bw{width:130px;height:5px;background:rgba(90,74,53,.25);margin-top:4px;border:1px solid #4a3f2e}
+  .bf{height:100%;background:#7a2e1e;transition:width .1s}
+  #doorUI{display:none;position:fixed;inset:0;background:rgba(8,6,5,.92);z-index:50;align-items:center;justify-content:center;flex-direction:column;font-family:'Cormorant SC',serif;color:#e8dcc4;pointer-events:auto}
+  #doorUI.open{display:flex}
+  #doorTitle{font-size:18px;letter-spacing:.18em;margin-bottom:18px;color:#c9a8d8}
+  #doorSlots{display:flex;gap:14px;margin-bottom:16px}
+  .ds{width:44px;height:54px;border:1px solid #5a4a6a;display:flex;align-items:center;justify-content:center;font-size:26px}
+  .ds.cur{border-color:#c9a8d8;box-shadow:0 0 10px rgba(201,168,216,.4)}
+  #doorMsg{font-size:12px;color:#7a6b52}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="top">
+    <div id="title"><h1>Palimpseste</h1></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+      <div id="roomBox">—</div>
+      <div id="timer">00:00</div>
+    </div>
+  </div>
+  <div id="bars">
+    🜂 <b id="wB">0</b>/3 &nbsp;🜍 <b id="wS">0</b>/3 &nbsp;🜄 <span id="wW">—</span><br>
+    <div class="bw"><div class="bf" id="wBar" style="width:100%"></div></div>
+    ☀ <span id="wH">—</span>
+    <div class="bw"><div class="bf" id="hBar" style="width:0;background:#d4a15a"></div></div>
+  </div>
+</div>
+<div id="tip"></div>
+<div id="doorUI">
+  <div id="doorTitle">☩ Sceau de la Porte ☩</div>
+  <div id="doorSlots"></div>
+  <div id="doorMsg">Un mot traverse toutes les strates.</div>
+</div>
+<script>
+// ── canvas ─────────────────────────────────────────────────────────────────
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+let W,H,DPR;
+function resize(){DPR=devicePixelRatio||1;W=cv.width=innerWidth*DPR;H=cv.height=innerHeight*DPR;cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';}
+resize();window.addEventListener('resize',()=>{resize();buildPaper();});
+
+// ── utils ──────────────────────────────────────────────────────────────────
+const sr=s=>()=>{s=(s*9301+49297)%233280;return s/233280;};
+const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function hexA(h,a){h=h.replace('#','');return`rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${a})`;}
+
+// ── tooltips ───────────────────────────────────────────────────────────────
+const TIPS=['Le parchemin brûle… mais la cendre garde sa mémoire.','Ce qui s\'efface laisse parfois une lumière.','L\'eau a soif d\'obscurité. La torche a soif d\'eau.','Un caillou bien jeté ne roule jamais deux fois.','Le Grand Œuvre réclame un ordre. Le désordre l\'annule.','L\'ombre dit ce que la lumière tait.','Les étoiles ne parlent qu\'aux patients.','La lumière plie autour des obstacles, si on la guide.','Pair ou impair — la géomancie tranche.','La vérité est dispersée. Il faut la rassembler.','Un mot traverse toutes les strates.','Avant les lettres, il y avait les runes.','Toutes les racines ne guérissent pas de la même main.','Pair ou impair, la terre répond toujours.','Le messager précède toujours les rois.','Rien ne pèse juste par hasard.','Trois cercles, un seul mot vrai.','Le silence a une mélodie, si on sait l\'écouter.','Ce que tu vois à gauche, cherche-le inversé à droite.','Le temps ne s\'arrête pas pour celui qui hésite.','Ni trop, ni trop peu — la juste mesure.','Ce qui dévore fer et pierre ne se voit jamais venir.','Trois voix, trois débuts, un seul mot au bout.'];
+let tipT=0;
+function showTip(t){const el=document.getElementById('tip');el.textContent=t;el.style.opacity='1';tipT=5;}
+function tickTip(dt){if(tipT<=0)return;tipT-=dt;if(tipT<1)document.getElementById('tip').style.opacity=Math.max(0,tipT).toFixed(2);}
+
+// ── glyphs ─────────────────────────────────────────────────────────────────
+const GLYPHS=['🜁','🜂','🜃','🜄','🜅','🜆','🜇','🜈','🜉','🜊','🜋','🜌','🜍','🜎','🜏','🜐','🜑','🜒','🜓','🜔','🜕','🜖','🜗','🜘','🜙','🜚','🜛','Α','Β','Γ','Δ','Θ','Ξ','Σ','Φ','Ψ','Ω','ᚠ','ᚢ','ᚦ','ᚨ','ᚱ','ᚲ','ᚷ','ᚹ','ᚺ','ᚾ','ᛁ','ᛃ','ᛈ','ᛊ','ᛏ','ᛒ','ᛖ','ᛗ','ᛚ','ᛜ','ᛞ','ᛟ','☉','☽','☿','♀','♂','♃','♄','☊','☋','△','□','⚹','⛤','⛥','⛧','✡','☤','☥','☧','☨','✠','♁','⚮','⚯','⚲','⚱','⚳','⚴','⚵','⚶','⦿','⟁','◈','⁂','⊕','⌖','¶','❡','⁘','⁜','☩','ſ'];
+const ALPHA=['A','B','C','D','E','F','G','H','I','L','M','N','O','P','R','S','T','V'];
+const WORDS=['VERITAS','IGNIS','AQUA','CORPVS','LVMEN','ARCANVM','MEMORIA','CINIS'];
+// Decorative ambient symbols per room theme (non-interactive, colored)
+const DECO_SETS=[
+  ['🜂','☉','⁂','ᚠ'],['🜍','☽','⁘','ᚢ'],
+  ['🜄','⚲','🜚','ᚁ','ᚂ'],['☿','◈','⟁'],
+  ['⛤','✡','☤','♁'],['🜔','⛧','☥'],
+  ['✡','☊','⦿','ᛊ'],['☉','◈','△','⁜'],
+  ['⚲','⚮','⚯','⚶'],['⛤','☩','⁂','✠'],
+  ['☩','✡','♁','☤'],
+];
+
+// ── world ──────────────────────────────────────────────────────────────────
+const W0=900,NR=23;
+const world={w:W0*NR,h:900};let camX=0,camY=0;
+function w2s(x,y){return[(x-camX)*DPR,(y-camY)*DPR];}
+const BD=34;
+const ROOMS=['Salle 🜂','Salle 🜍','Salle 🜄','Salle ☿','Salle du Sceau','Salle des Ombres','Salle des Étoiles','Salle du Prisme','Salle des Leviers','Salle des Pages','Salle de la Porte','Salle Runique','Apothicairerie','Salle Géomantique','Salle des Sphères','La Balance','Le Cryptex','Le Carillon','Le Bassin des Reflets','Le Cadran Solaire','Les Bidons','La Devinette de Gollum','La Bibliothèque'].map((n,i)=>({n,x0:W0*i,x1:W0*(i+1)}));
+function roomOf(x){return ROOMS.find(r=>x>=r.x0&&x<r.x1)||ROOMS[0];}
+function inR(i,x){return x>=ROOMS[i].x0&&x<ROOMS[i].x1;}
+let lastRI=-1;
+let visitedRooms=new Set([0]);
+const PIL_JUMP=5;
+let pilMsg=0;// warning flash when target room isn't unlocked yet
+
+// ── walls ──────────────────────────────────────────────────────────────────
+const walls=[];
+// full perimeter including LEFT and RIGHT borders
+walls.push({x:0,y:0,w:world.w,h:BD,tag:'border'});// top
+walls.push({x:0,y:world.h-BD,w:world.w,h:BD,tag:'border'});// bottom
+walls.push({x:0,y:0,w:BD,h:world.h,tag:'border'});// LEFT — was missing!
+walls.push({x:world.w-BD,y:0,w:BD,h:world.h,tag:'border'});// right
+// corridor dividers between rooms (open passage 340-560)
+for(let i=1;i<NR;i++){walls.push({x:ROOMS[i].x0,y:0,w:40,h:340});walls.push({x:ROOMS[i].x0,y:560,w:40,h:340});}
+// ── Room 3 maze walls ────────────────────────────────────────────────────
+const R3x=ROOMS[2].x0;
+// 4 baffles, each nearly full-height with a single gap, alternating top/bottom.
+// Verified by construction: single mandatory gap per baffle, connected serpentine.
+walls.push({x:R3x+220,y:BD,     w:32,h:586});          // baffle1: gap below y=620
+walls.push({x:R3x+370,y:280,    w:32,h:world.h-280-BD}); // baffle2: gap above y=280
+walls.push({x:R3x+520,y:BD,     w:32,h:586});          // baffle3: gap below y=620
+walls.push({x:R3x+670,y:280,    w:32,h:world.h-280-BD}); // baffle4: gap above y=280
+// Back wall between R3 and R4
+const backWall={x:ROOMS[3].x0-40,y:BD,w:40,h:world.h-2*BD,tag:'back'};
+walls.push(backWall);
+// ── Lever door (R9 exit) ──────────────────────────────────────────────────
+const levDoor={x:ROOMS[9].x1-40,y:BD,w:40,h:world.h-2*BD,tag:'levdoor'};
+walls.push(levDoor);
+// ── Final door ─────────────────────────────────────────────────────────────
+const finalDoor={x:ROOMS[10].x1-40,y:BD,w:40,h:world.h-2*BD,tag:'finaldoor'};
+const r22Door={x:ROOMS[21].x1-40,y:BD,w:40,h:world.h-2*BD,tag:'r22door'};
+const r23Door={x:ROOMS[22].x1-40,y:BD,w:40,h:world.h-2*BD,tag:'r23door'};
+walls.push(r22Door,r23Door);
+walls.push(finalDoor);
+
+// ── paper texture ──────────────────────────────────────────────────────────
+let paper=null;
+function buildPaper(){const o=document.createElement('canvas');o.width=W;o.height=H;const c2=o.getContext('2d'),d=c2.createImageData(W,H);for(let i=0;i<d.data.length;i+=4){const v=200+Math.random()*40;d.data[i]=v*.94;d.data[i+1]=v*.88;d.data[i+2]=v*.74;d.data[i+3]=16;}c2.putImageData(d,0,0);paper=o;}
+buildPaper();
+
+// ── draw helpers ──────────────────────────────────────────────────────────
+function hL(x1,y1,x2,y2,j,rnd){ctx.beginPath();ctx.moveTo(x1,y1);for(let i=1;i<=5;i++){const t=i/5;ctx.lineTo(x1+(x2-x1)*t+(rnd()-.5)*j,y1+(y2-y1)*t+(rnd()-.5)*j);}ctx.stroke();}
+function drawGlyphWall(w,seed,ink){
+  const rnd=sr(seed);const[sx,sy]=w2s(w.x,w.y);const ww=w.w*DPR,wh=w.h*DPR;
+  const hz=w.w>=w.h;const th=hz?wh:ww,axL=hz?ww:wh,gs=th*.85,step=gs*.58;
+  const cnt=Math.ceil(axL/step)+2,word=WORDS[Math.floor(rnd()*WORDS.length)];
+  const ws=Math.floor(rnd()*Math.max(1,cnt-word.length-2))+1;
+  ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+  for(let i=0;i<cnt;i++){
+    const t=i*step-step*.5;const inW=i>=ws&&i<ws+word.length;
+    let g;if(inW){g=word[i-ws];if(rnd()<.3)g+='\u0336';}else if(rnd()<.25)g=ALPHA[Math.floor(rnd()*ALPHA.length)];else g=GLYPHS[Math.floor(rnd()*GLYPHS.length)];
+    const size=gs*(.7+rnd()*.32),rot=inW?(rnd()-.5)*.1:(rnd()-.5)*.55,perp=(rnd()-.5)*th*.3;
+    let px,py;if(hz){px=sx+t;py=sy+th/2+perp;}else{px=sx+th/2+perp;py=sy+t;}
+    ctx.save();ctx.translate(px,py);ctx.rotate(rot);ctx.font=`${size}px serif`;ctx.fillStyle=ink?hexA(ink,.4+rnd()*.25):`rgba(58,42,24,${.35+rnd()*.25})`;ctx.fillText(g,0,0);ctx.restore();
+  }ctx.restore();
+}
+function G(s,x,y,col,sz,a=.9){const[sx,sy]=w2s(x,y);ctx.save();ctx.font=`${sz*DPR}px serif`;ctx.fillStyle=col;ctx.textAlign='center';ctx.textBaseline='middle';ctx.globalAlpha=a;ctx.fillText(s,sx,sy);ctx.restore();ctx.globalAlpha=1;}
+function drawDeco(ri){
+  // ambient decorative symbols scattered in each room (non-interactive, low opacity)
+  const rm=ROOMS[ri];const rnd=sr(ri*1337+42);const dset=DECO_SETS[ri]||[];
+  if(!dset.length)return;
+  for(let i=0;i<12;i++){
+    const x=rm.x0+BD+60+rnd()*(W0-BD*2-120);const y=BD+60+rnd()*(world.h-BD*2-120);
+    const sym=dset[Math.floor(rnd()*dset.length)];const sz=12+rnd()*14;const a=.06+rnd()*.1;
+    let col='rgba(58,42,24,1)';
+    if(sym.match(/ᚁ|ᚂ|ᚃ|ᚄ|ᚅ/))col='rgba(60,90,55,1)';// ogham = green
+    else if(sym.match(/🜄|⚲/))col='rgba(50,80,120,1)';// water = blue
+    else if(sym.match(/☉|☽|⁂/))col='rgba(180,140,60,1)';// celestial = gold
+    G(sym,x,y,col,sz,a);
+  }
+}
+function drawPatch(spot,mode){
+  if(spot.wear<=0)return;
+  const rnd=sr(Math.floor(spot.x*7+spot.y*(mode==='burn'?1:3)));
+  const[sx,sy]=w2s(spot.x,spot.y);const R=46*DPR;const sp=18;
+  const rad=[];for(let i=0;i<sp;i++)rad.push(.6+rnd()*.5-(rnd()<.12?rnd()*.25:0));
+  const stage=Math.min(spot.wear,2),pR=R*(.35+stage*.32);
+  ctx.save();
+  const hG=ctx.createRadialGradient(sx,sy,pR*.4,sx,sy,pR*1.3);
+  if(mode==='burn'){hG.addColorStop(0,stage===1?'rgba(150,110,40,.28)':'rgba(110,60,15,.4)');hG.addColorStop(1,'rgba(110,60,15,0)');}
+  else{hG.addColorStop(0,stage===1?'rgba(255,250,235,.4)':'rgba(255,252,245,.6)');hG.addColorStop(1,'rgba(255,252,245,0)');}
+  ctx.beginPath();ctx.arc(sx,sy,pR*1.3,0,Math.PI*2);ctx.fillStyle=hG;ctx.fill();
+  ctx.beginPath();for(let i=0;i<=sp;i++){const a=(i/sp)*Math.PI*2,rr=rad[i%sp]*pR;ctx.lineTo(sx+Math.cos(a)*rr,sy+Math.sin(a)*rr);}ctx.closePath();
+  const pG=ctx.createRadialGradient(sx,sy,pR*.1,sx,sy,pR);
+  if(mode==='burn'){if(stage===1){pG.addColorStop(0,'rgba(150,120,50,.5)');pG.addColorStop(.7,'rgba(140,110,45,.35)');pG.addColorStop(1,'rgba(140,110,45,.05)');}else{pG.addColorStop(0,'rgba(90,50,15,.65)');pG.addColorStop(.55,'rgba(110,60,20,.55)');pG.addColorStop(.85,'rgba(150,80,25,.4)');pG.addColorStop(1,'rgba(150,80,25,.05)');}}
+  else{pG.addColorStop(0,'rgba(255,255,252,.85)');pG.addColorStop(.55,'rgba(255,254,250,.68)');pG.addColorStop(.85,'rgba(250,248,240,.45)');pG.addColorStop(1,'rgba(250,248,240,.05)');}
+  ctx.fillStyle=pG;ctx.fill();ctx.restore();
+}
+function drawOpening(t,mode){
+  const[sx,sy]=w2s(t.x,t.y);const rnd=sr(Math.floor(t.x*3+t.y*5));const R=t.r*DPR;const sp=20;
+  const rad=[];for(let i=0;i<sp;i++)rad.push(.6+rnd()*.55-(rnd()<.1?rnd()*.2:0));
+  ctx.save();
+  const hG=ctx.createRadialGradient(sx,sy,R*.5,sx,sy,R*1.5);
+  if(mode==='burn'){hG.addColorStop(0,'rgba(90,45,10,.45)');hG.addColorStop(.6,'rgba(70,35,8,.22)');hG.addColorStop(1,'rgba(70,35,8,0)');}
+  else{hG.addColorStop(0,'rgba(255,255,250,.5)');hG.addColorStop(.6,'rgba(255,253,245,.25)');hG.addColorStop(1,'rgba(255,253,245,0)');}
+  ctx.beginPath();ctx.arc(sx,sy,R*1.5,0,Math.PI*2);ctx.fillStyle=hG;ctx.fill();
+  ctx.beginPath();for(let i=0;i<=sp;i++){const a=(i/sp)*Math.PI*2,rr=rad[i%sp]*R*1.13;ctx.lineTo(sx+Math.cos(a)*rr,sy+Math.sin(a)*rr);}ctx.closePath();
+  const rG=ctx.createRadialGradient(sx,sy,R*.6,sx,sy,R*1.13);
+  if(mode==='burn'){rG.addColorStop(0,'rgba(0,0,0,0)');rG.addColorStop(.55,'rgba(60,25,5,.55)');rG.addColorStop(.85,'rgba(210,90,20,.85)');rG.addColorStop(1,'rgba(255,150,40,.9)');}
+  else{rG.addColorStop(0,'rgba(0,0,0,0)');rG.addColorStop(.6,'rgba(255,253,248,.5)');rG.addColorStop(1,'rgba(255,255,255,.85)');}
+  ctx.fillStyle=rG;ctx.fill();
+  ctx.beginPath();for(let i=0;i<=sp;i++){const a=(i/sp)*Math.PI*2,rr=rad[i%sp]*R;ctx.lineTo(sx+Math.cos(a)*rr,sy+Math.sin(a)*rr);}ctx.closePath();
+  const iG=ctx.createRadialGradient(sx,sy,2,sx,sy,R);
+  if(mode==='burn'){iG.addColorStop(0,'#241a2a');iG.addColorStop(1,'#120c16');}else{iG.addColorStop(0,'#fffdf8');iG.addColorStop(1,'#f3ecd8');}
+  ctx.fillStyle=iG;ctx.fill();ctx.strokeStyle=mode==='burn'?'rgba(40,18,6,.9)':'rgba(180,160,120,.6)';ctx.lineWidth=1.3*DPR;ctx.stroke();ctx.restore();
+}
+function drawNegative(textLines){
+  ctx.save();
+  const rm=roomOf(player.x);
+  const[rx0]=w2s(rm.x0+BD,0),[rx1]=w2s(rm.x1-BD,0);
+  const[,ry0]=w2s(0,BD),[,ry1]=w2s(0,world.h-BD);
+  const clipX0=Math.max(0,rx0),clipX1=Math.min(W,rx1),clipY0=Math.max(0,ry0),clipY1=Math.min(H,ry1);
+  ctx.beginPath();ctx.rect(clipX0,clipY0,clipX1-clipX0,clipY1-clipY0);ctx.clip();
+  const g=ctx.createRadialGradient(W/2,H/2,H*.1,W/2,H/2,H*.75);g.addColorStop(0,'#3a2e3e');g.addColorStop(1,'#231a28');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  const ink='#c9a8d8';
+  walls.forEach((w,i)=>{if(w.x<rm.x1&&w.x+w.w>rm.x0)drawGlyphWall(w,i*23+5,ink);});
+  if(textLines&&textLines.length){ctx.font=`${18*DPR}px 'Cormorant SC',serif`;ctx.fillStyle=ink;ctx.textAlign='center';textLines.forEach((l,i)=>ctx.fillText(l,W/2,H*.28+i*29*DPR));}
+  drawPlayer(0);
+  const vg=ctx.createRadialGradient(W/2,H/2,H*.32,W/2,H/2,H*.85);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(10,5,15,.55)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);ctx.restore();
+}
+
+// ── room state ─────────────────────────────────────────────────────────────
+const burn={x:ROOMS[0].x0+440,y:450,wear:0};let tear=null;
+const scratch={x:ROOMS[1].x0+450,y:450,wear:0};let erasure=null,halo=0;
+// R3 torches placed at maze bottlenecks
+const R3T=[
+  {x:R3x+220,y:740,r:100},  // baffle1 gap (bottom)
+  {x:R3x+370,y:200,r:100},  // baffle2 gap (top)
+  {x:R3x+520,y:740,r:100},  // baffle3 gap (bottom)
+  {x:R3x+670,y:200,r:100},  // baffle4 gap (top)
+];
+const jarSrc={x:R3x+80,y:450},altar3={x:R3x+820,y:450};
+let carryJar=false,jarLvl=1,jarDone=false;
+const r3burn={x:backWall.x+20,y:450,wear:0};let r3tear=null,backDug=false;
+// R4 fading path — perpendicular L-shapes, goes backwards
+const R4x=ROOMS[3].x0;
+// Path with perpendicular L-turns, backwards segment, dead-end branch (marked separately), and extra crossroad
+const path4=[
+  {x:R4x+70,y:450},   // start
+  {x:R4x+70,y:180},   // up
+  {x:R4x+360,y:180},  // right
+  {x:R4x+360,y:700},  // down (long)
+  {x:R4x+160,y:700},  // LEFT — goes back!
+  {x:R4x+160,y:480},  // up
+  {x:R4x+560,y:480},  // right — crossroad
+  {x:R4x+560,y:180},  // up
+  {x:R4x+720,y:180},  // right
+  {x:R4x+720,y:620},  // down
+  {x:R4x+860,y:620},  // right
+  {x:R4x+860,y:450},  // up to exit
+];
+// Dead-end branch off the crossroad (rendered but leads nowhere)
+const path4dead=[{x:R4x+560,y:480},{x:R4x+760,y:480},{x:R4x+760,y:700},{x:R4x+640,y:700}];
+const P4E={x:R4x+70,y:450},P4X={x:R4x+860,y:450},P4T=42;
+let r4ok=false,ffall=0;
+function dPath4(x,y){let m=Infinity;for(let i=0;i<path4.length-1;i++){const a=path4[i],b=path4[i+1];const dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy||1;let t=((x-a.x)*dx+(y-a.y)*dy)/l2;t=clamp(t,0,1);const px=a.x+dx*t,py=a.y+dy*t;m=Math.min(m,dist(x,y,px,py));}return m;}
+// Stones thrown by the player (E) — permanent once they land on the true path,
+// exactly like marking an illusory floor by testing it with a thrown item.
+let stones4=[];
+let shockwaves4=[];// {x,y,t,onPath} — brief ripples revealing safe/void ground where a stone lands
+// R5 seal — 3 stations forming a true DOWNWARD TRIANGLE (water symbol ∇):
+// flat top edge between two upper vertices, single apex pointing down.
+// The walk must CLOSE the shape: end by returning to the first symbol touched.
+const R5c={x:ROOMS[4].x0+450,y:450};
+const R5R=190;// circumradius — every real station sits exactly on this circle
+// Order: apex (bottom) -> top-right -> top-left -> back to apex, closing the triangle
+const R5ANG={apex:90,tr:330,tl:210};// degrees, y-down convention — a clean ▽
+function r5pt(deg){const r=deg*Math.PI/180;return[R5c.x+R5R*Math.cos(r),R5c.y+R5R*Math.sin(r)];}
+const[apx,apy]=r5pt(R5ANG.apex),[trx,tryy]=r5pt(R5ANG.tr),[tlx,tly]=r5pt(R5ANG.tl);
+const R5ST=[
+  {k:'apex',sym:'🜁',x:apx,y:apy,c:'#8a9a6a',hit:false},// bottom apex — Air, touch 1st (and last, to close)
+  {k:'tr',  sym:'🜃',x:trx,y:tryy,c:'#6b5a3a',hit:false},// top-right — Earth, touch 2nd
+  {k:'tl',  sym:'⚷', x:tlx,y:tly, c:'#8a7050',hit:false},// top-left — Chiron (the Key), touch 3rd
+  // decoys — on the same circle at unused angles, so touching them still LOOKS plausible
+  {k:'d1',sym:'⦿',x:r5pt(30)[0], y:r5pt(30)[1], c:'#3a2e1e',decoy:true,hit:false},
+  {k:'d2',sym:'⟁',x:r5pt(150)[0],y:r5pt(150)[1],c:'#3a2e1e',decoy:true,hit:false},
+  {k:'d3',sym:'◈',x:r5pt(270)[0],y:r5pt(270)[1],c:'#3a2e1e',decoy:true,hit:false},
+  {k:'d4',sym:'⌖',x:R5c.x,y:R5c.y,c:'#3a2e1e',decoy:true,hit:false},// center
+];
+const R5ORD=['apex','tr','tl','apex'];// closes the loop
+let r5prog=0,r5ok=false,r5fl=0;
+const R5RIDDLE={x:R5c.x,y:R5c.y-310,r:38};
+// R6 shadows — Sokoban-style block push, all-direction movement
+const R6x=ROOMS[5].x0;
+// the torch sits ON the block itself — it moves as you push it, casting live shadows
+const BLOCK6={x:R6x+100,y:450,w:54,h:54};
+const BLOCK6_GOAL={x:R6x+460,y:450};// goal: block here makes shadows align
+const PIL6=[{x:R6x+260,y:180},{x:R6x+380,y:480},{x:R6x+520,y:200},{x:R6x+640,y:500},{x:R6x+730,y:280}];
+const R6HINT={x:R6x+90,y:250,r:34};
+const R6RIDDLE={x:R6x+90,y:650,r:38};
+let r6ok=false;
+function sTip(px,py,tx,ty,len){const dx=px-tx,dy=py-ty,d=Math.hypot(dx,dy)||1;return{x:px+dx/d*len,y:py+dy/d*len};}
+function blockCol(bx,by){
+  if(bx<ROOMS[5].x0+BD||by<BD||bx+BLOCK6.w>ROOMS[5].x1-BD||by+BLOCK6.h>world.h-BD)return true;
+  return false;
+}
+// R7 stars — the Great Bear / Grande Ourse (Big Dipper), handle to bowl
+const R7x=ROOMS[6].x0;
+const STARS7=[
+  {x:R7x+120,y:220,idx:0,lit:false,ts:-1},// Alkaid — handle tip
+  {x:R7x+260,y:260,idx:1,lit:false,ts:-1},// Mizar
+  {x:R7x+390,y:300,idx:2,lit:false,ts:-1},// Alioth
+  {x:R7x+510,y:270,idx:3,lit:false,ts:-1},// Megrez — bowl corner
+  {x:R7x+560,y:420,idx:4,lit:false,ts:-1},// Phecda
+  {x:R7x+740,y:400,idx:5,lit:false,ts:-1},// Merak
+  {x:R7x+770,y:220,idx:6,lit:false,ts:-1},// Dubhe
+];
+const STAR_FADE=11000;
+let r7prog=0,r7ok=false,r7fl=0;
+// A jar of fireflies gives a moving personal light so the constellation can be
+// found in the true dark — dropped near the entrance, carried like the water jar.
+const FIREFLY_JAR={x:R7x+70,y:450};
+let carryFireflies=false;
+// R8 prism — physically accurate beam. Two prisms are frozen at their correct
+// angle AND position (no interaction); the other two start wrong on both counts
+// and must be pushed into place (like the stone/block mechanics) and rotated (E).
+const R8x=ROOMS[7].x0;
+const LSRC={x:R8x+80,y:450};
+const PRISMS8=[
+  {x:R8x+280,y:450,angle:Math.PI/4,   sol:Math.PI/4,   fixed:true},
+  {x:R8x+430,y:650,angle:0,           sol:5*Math.PI/4, fixed:false,w:26,h:26,solX:R8x+280,solY:180},
+  {x:R8x+620,y:180,angle:7*Math.PI/4, sol:7*Math.PI/4, fixed:true},
+  {x:R8x+400,y:250,angle:0,           sol:7*Math.PI/4, fixed:false,w:26,h:26,solX:R8x+620,solY:500},
+];
+const PTGT={x:R8x+850,y:500};
+let r8ok=false;
+function reflDir(dx,dy,na){const nx=Math.cos(na),ny=Math.sin(na),dot=dx*nx+dy*ny;return[dx-2*dot*nx,dy-2*dot*ny];}
+function traceBeam(){
+  let cx=LSRC.x,cy=LSRC.y,dx=1,dy=0;const pts=[{x:cx,y:cy}];
+  for(const p of PRISMS8){
+    const t=(p.x-cx)*dx+(p.y-cy)*dy;if(t<0){pts.push({x:cx+dx*900,y:cy+dy*900});return pts;}
+    const hx=cx+dx*t,hy=cy+dy*t;
+    if(dist(hx,hy,p.x,p.y)>40){pts.push({x:cx+dx*900,y:cy+dy*900});return pts;}
+    pts.push({x:p.x,y:p.y});cx=p.x;cy=p.y;[dx,dy]=reflDir(dx,dy,p.angle);
+  }
+  pts.push({x:cx+dx*900,y:cy+dy*900});return pts;
+}
+function checkBeam(){
+  const pts=traceBeam();const last=pts[pts.length-1],prev=pts[pts.length-2];
+  const sdx=last.x-prev.x,sdy=last.y-prev.y,sl=Math.hypot(sdx,sdy)||1;
+  const t=((PTGT.x-prev.x)*sdx+(PTGT.y-prev.y)*sdy)/(sl*sl);
+  const tc=clamp(t,0,1);r8ok=dist(prev.x+sdx*tc,prev.y+sdy*tc,PTGT.x,PTGT.y)<32;
+}
+// R9 levers — classic interlocking mechanism: toggling a lever also flips its
+// neighbors. Goal: get all 5 levers down. Initial state built from a known-
+// solvable sequence of presses starting from all-down, so it's always solvable.
+const R9x=ROOMS[8].x0;
+const LEVERS9=[0,1,2,3,4].map(i=>({x:R9x+150+i*150,y:450,state:0}));
+function toggleLever9(i){
+  [i-1,i,i+1].forEach(j=>{if(j>=0&&j<LEVERS9.length)LEVERS9[j].state=LEVERS9[j].state?0:1;});
+}
+// scramble deterministically (seeded) so it's always the same solvable puzzle
+[0,2,4].forEach(i=>toggleLever9(i));
+const R9BURN={x:R9x+450,y:700,r:38};
+let r9ok=false;
+// R10 pages — 3 pages, must be gathered in order (S, E, L) or the discovery resets
+const R10x=ROOMS[9].x0;
+const PAGES10=[
+  {x:R10x+180,y:300,found:false,letter:'S',sym:'⛤'},
+  {x:R10x+720,y:300,found:false,letter:'E',sym:'✡'},
+  {x:R10x+450,y:620,found:false,letter:'L',sym:'☤'},
+];
+let r10ok=false,r10next=0;
+// Letters permanently shown on floor in solved rooms (via render, no HUD)
+let solvedRooms=new Set();
+
+// R11 door
+const R11x=ROOMS[10].x0;
+const DOOR_WORD='AIR';
+let door11Open=false,doorActive=false,doorIn=['A','A','A'],doorCur=0;
+
+// ── R12: Salle Runique — Futhark cipher, 5 stelae spelling UMBRA ──────────
+// A rune-to-Latin key is revealed by a permanent burn mark; the pillars must
+// be touched in the order that spells the word, using that key.
+const R12x=ROOMS[11].x0;
+const RUNE_KEY={'ᚢ':'U','ᛗ':'M','ᛒ':'B','ᚱ':'R','ᚨ':'A'};
+const RUNE_WORD='UMBRA';
+const RUNE_ORDER=['ᚢ','ᛗ','ᛒ','ᚱ','ᚨ'];// order to touch, spelling U-M-B-R-A
+// pillars placed out of reading order so the player must actually use the key
+const PIL12=[
+  {r:'ᛒ',x:R12x+250,y:250},{r:'ᚨ',x:R12x+650,y:250},
+  {r:'ᚢ',x:R12x+150,y:600},{r:'ᚱ',x:R12x+450,y:620},
+  {r:'ᛗ',x:R12x+750,y:550},
+];
+let r12prog=0,r12ok=false,r12fl=0;
+const R12BURN={x:R12x+450,y:130,r:40};
+
+// ── R13: Apothicairerie — Ogham plants, only one is safe to take ──────────
+const R13x=ROOMS[12].x0;
+// Real ogham tree correspondences. If (Yew), Sureau (Elder raw), Prunellier
+// (Blackthorn) are the toxic/dangerous picks; Aubépine (Hawthorn) is the
+// traditional heart-healing plant — the safe answer.
+const PLANTS13=[
+  {sym:'ᚔ',name:'If',        toxic:true, x:R13x+220,y:350},
+  {sym:'ᚏ',name:'Sureau',    toxic:true, x:R13x+680,y:350},
+  {sym:'ᚎ',name:'Prunellier',toxic:true, x:R13x+220,y:620},
+  {sym:'ᚆ',name:'Aubépine',  toxic:false,x:R13x+680,y:620},// correct
+];
+let r13ok=false,r13fl=0;
+const R13BURN={x:R13x+450,y:150,r:38};
+
+// ── R14: Salle Géomantique — cast the figure "Puella" ──────────────────────
+// Real geomancy: a figure is 4 rows, each row holding one or two points
+// (odd/even). The player must reproduce the target row-pattern exactly.
+const R14x=ROOMS[13].x0;
+// The classic "three daughters" age riddle: product of three ages = 36, their
+// sum is thirteen, and there is a single eldest — which rules out (6,6,1) and
+// leaves (2,2,9) as the only possible answer.
+const R14_TARGET_CODE='229';
+const R14_DOOR={x:R14x+700,y:450};
+let r14ok=false;
+const R14BURN={x:R14x+180,y:450,r:36};
+
+// ── R15: Salle des Sphères — planets in true heliocentric order ───────────
+const R15x=ROOMS[14].x0;
+const R15c={x:R15x+450,y:450},R15R=220;
+const R15_ORDER=['me','ve','ma','ju','sa'];// Mercury, Venus, Mars, Jupiter, Saturn
+function r15pt(deg){const r=deg*Math.PI/180;return[R15c.x+R15R*Math.cos(r),R15c.y+R15R*Math.sin(r)];}
+const R15_ANGLES={me:20,ve:100,ma:200,ju:290,sa:340};// scattered, not in order
+const PLANETS15=Object.keys(R15_ANGLES).map(k=>{const[x,y]=r15pt(R15_ANGLES[k]);
+  const sym={me:'☿',ve:'♀',ma:'♂',ju:'♃',sa:'♄'}[k];
+  const col={me:'#8a9a6a',ve:'#c98a9a',ma:'#a4381e',ju:'#c9a05a',sa:'#5a4a6a'}[k];
+  return{k,sym,col,x,y,hit:false};
+});
+let r15prog=0,r15ok=false,r15fl=0;
+const R15BURN={x:R15c.x,y:R15c.y,r:40};
+
+// ══════════════════ R16: La Balance ══════════════════════════════════════
+// Real alchemical metal weights; player toggles which sit on the left pan
+// until its sum matches the fixed weight riddled on the burn mark.
+const R16x=ROOMS[15].x0;
+const METALS16=[
+  {sym:'🜛',name:'argent',val:5, x:R16x+150,y:560,on:false},
+  {sym:'🜍',name:'fer',   val:3, x:R16x+330,y:560,on:false},
+  {sym:'🜚',name:'or',    val:7, x:R16x+510,y:560,on:false},
+  {sym:'🜕',name:'cuivre',val:2, x:R16x+690,y:560,on:false},
+  {sym:'🜘',name:'plomb', val:11,x:R16x+240,y:680,on:false},
+  {sym:'🜎',name:'étain', val:6, x:R16x+600,y:680,on:false},
+];
+const R16_TARGET=21;// e.g. or(7)+plomb(11)+fer(3), or plomb(11)+étain(6)+cuivre(2)+fer(3)... several paths
+let r16ok=false;
+const R16_PAN={x:R16x+450,y:280};
+const R16BURN={x:R16x+450,y:450,r:36};
+
+// ══════════════════ R17: Le Cryptex ═══════════════════════════════════════
+// Three independent dials (runic / greek / alchemical), each cycled with E,
+// must land on the combination shown in the burnt riddle.
+const R17x=ROOMS[16].x0;
+const RING17_SYMS=[['ᚠ','ᚢ','ᚦ','ᚨ','ᚱ','ᚲ'],['α','β','Γ','Δ','Θ','Σ'],['🜁','🜂','🜃','🜄','🜍','🜚']];
+const RING17_TARGET=[2,0,3];// index into each ring's symbol list
+const RINGS17=[
+  {x:R17x+250,y:450,idx:0,list:RING17_SYMS[0]},
+  {x:R17x+450,y:450,idx:0,list:RING17_SYMS[1]},
+  {x:R17x+650,y:450,idx:0,list:RING17_SYMS[2]},
+];
+let r17ok=false;
+const R17BURN={x:R17x+450,y:220,r:36};
+
+// ══════════════════ R18: Le Carillon ══════════════════════════════════════
+// 4 bells, each a distinct tone; ring them (E) in melodic order.
+const R18x=ROOMS[17].x0;
+const BELLS18=[
+  {x:R18x+180,y:450,col:'#a4381e',pulse:0},
+  {x:R18x+360,y:280,col:'#3a6b3a',pulse:0},
+  {x:R18x+560,y:600,col:'#3a5a7a',pulse:0},
+  {x:R18x+760,y:350,col:'#8a6a9a',pulse:0},
+];
+const BELL18_ORDER=[2,0,3,1];
+let r18prog=0,r18ok=false,r18fl=0;
+const R18BURN={x:R18x+450,y:160,r:36};
+
+// ══════════════════ R19: Le Bassin des Reflets ════════════════════════════
+// A carved mark on the left bank has a fixed angle; the player rotates a
+// token on the right bank (E) until it matches the mirrored angle exactly.
+const R19x=ROOMS[18].x0;
+// R19: Le Bassin des Reflets — a word on the left bank, its mirrored twin-word
+// must be entered on the right. Same principle as the calligram where "arbre"
+// read upside-down/reversed becomes "algue".
+const R19_LEFT_WORD='ARBRE';
+const R19_ANSWER='ALGUE';
+const R19_LEFT_X=R19x+220,R19_MID_X=R19x+450,R19_RIGHT_X=R19x+680;
+const R19_DOOR={x:R19x+680,y:450};
+let r19ok=false;
+
+// ══════════════════ R20: Le Cadran Solaire ════════════════════════════════
+// A gnomon shadow sweeps continuously; press E exactly as it crosses the mark.
+const R20x=ROOMS[19].x0;
+const R20c={x:R20x+450,y:450};
+let r20angle=0,r20angle2=0;
+const R20_TARGET=200*Math.PI/180;// mark position
+const R20_SPEED=0.4;// rad/s — slow hand
+const R20_SPEED2=1.1;// rad/s — fast hand, laps the slow one periodically
+let r20ok=false,r20fl=0;
+
+// ══════════════════ R21: Les Bidons (Die Hard 3) ══════════════════════════
+// Two jugs, 5L and 3L. Fill / empty / pour between them to land on exactly 4L
+// in the big jug — the classic river-crossing measure puzzle.
+const R21x=ROOMS[20].x0;
+let jugBig=0,jugSmall=0;
+const JUG_BIG_CAP=5,JUG_SMALL_CAP=3,JUG_TARGET=4;
+let r21ok=false;
+const JUGS21_STATIONS=[
+  {label:'remplir 5L',   x:R21x+150,y:300,act:'fillBig'},
+  {label:'vider 5L',     x:R21x+150,y:500,act:'emptyBig'},
+  {label:'verser 5L→3L', x:R21x+150,y:650,act:'pourBigSmall'},
+  {label:'remplir 3L',   x:R21x+750,y:300,act:'fillSmall'},
+  {label:'vider 3L',     x:R21x+750,y:500,act:'emptySmall'},
+  {label:'verser 3L→5L', x:R21x+750,y:650,act:'pourSmallBig'},
+];
+function jugAction(act){
+  if(act==='fillBig')jugBig=JUG_BIG_CAP;
+  else if(act==='emptyBig')jugBig=0;
+  else if(act==='fillSmall')jugSmall=JUG_SMALL_CAP;
+  else if(act==='emptySmall')jugSmall=0;
+  else if(act==='pourBigSmall'){const room=JUG_SMALL_CAP-jugSmall;const t=Math.min(room,jugBig);jugBig-=t;jugSmall+=t;}
+  else if(act==='pourSmallBig'){const room=JUG_BIG_CAP-jugBig;const t=Math.min(room,jugSmall);jugSmall-=t;jugBig+=t;}
+  if(jugBig===JUG_TARGET)r21ok=true;
+}
+
+// ══════════════════ R22: La Devinette de Gollum ═══════════════════════════
+// Riddle whose answer is Time. A pedestal reveals the riddle; the answer is
+// entered as a SYMBOL, picked from a large pool, via the code-door.
+const R22x=ROOMS[21].x0;
+const R22_PEDESTAL={x:R22x+200,y:450};
+const R22_DOOR={x:ROOMS[21].x1-60,y:450};
+const SYMBOL_POOL=['☉','☽','☿','♀','♂','♃','♄','⛤','✡','☤','☥','☧','☨','✠','♁','⚮','⚯','⚲','⚱','⚳','⚴','⚵','⚶','⦿','⟁','◈','⁂','⊕','⌖','🜁','🜂','🜃','🜄','⚹','⚷','☍','☌','△','□','⏳','⌛'];
+let r22ok=false,r22doorTouched=false;
+
+// ══════════════════ R23: La Bibliothèque ══════════════════════════════════
+// Three pedestals hold three famous public-domain opening lines. Floor marks
+// give book-cipher codes (book number + letter = position) that spell LIVRE.
+const R23x=ROOMS[22].x0;
+const BOOKS23=[
+  {x:R23x+180,y:280,title:'I',text:'Longtemps, je me suis couché de bonne heure.'},
+  {x:R23x+450,y:600,title:'II',text:"L'année 1866 fut marquée par un événement bizarre, un phénomène inexpliqué."},
+  {x:R23x+720,y:280,title:'III',text:"Le premier lundi du mois d'avril 1625, le bourg de Meung semblait être en pleine révolution."},
+];
+// codes scattered on the floor: [book(1-3), letter(A=1st pos..)] -> spells L,I,V,R,E
+// Book I letters only: L,o,n,g,t,e,m,p,s,j,e,m,e,s,u,i,s,c,o,u,c,h,e,d,e,b,o,n,n,e,h,e,u,r,e
+// Book II letters only: L,a,n,n,e,e,f,u,t,m,a,r,q,u,e,e,p,a,r,u,n,e,v,e,n,e,m,e,n,t...
+const CODES23=[
+  {code:'1A',x:R23x+300,y:450},// book I pos1  = L
+  {code:'1P',x:R23x+380,y:520},// book I pos16 = I
+  {code:'2W',x:R23x+520,y:450},// book II pos23 = V
+  {code:'2L',x:R23x+600,y:520},// book II pos12 = R
+  {code:'1F',x:R23x+450,y:380},// book I pos6  = E
+];
+const LIBRARY_WORD='LIVRE';
+const R23_DOOR={x:ROOMS[22].x1-60,y:450};
+let r23ok=false;
+
+// ── player ─────────────────────────────────────────────────────────────────
+const player={x:ROOMS[0].x0+120,y:450,r:16,speed:240,faceDir:1,moving:false};
+const keys={};
+window.addEventListener('keydown',e=>{if(doorActive){dKey(e);return;}keys[e.key.toLowerCase()]=true;if(e.key.toLowerCase()==='e')interact();});
+window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+
+function tryPilJump(dir){
+  const curIdx=ROOMS.indexOf(roomOf(player.x));
+  const targetIdx=clamp(curIdx+dir*PIL_JUMP,0,ROOMS.length-1);
+  if(!visitedRooms.has(targetIdx)){ pilMsg=2.5; return; } // that page hasn't been read yet
+  const tr=ROOMS[targetIdx],curR=ROOMS[curIdx];
+  player.x=clamp(player.x-curR.x0+tr.x0,tr.x0+player.r+BD+5,tr.x1-player.r-BD-5);
+  visitedRooms.add(targetIdx);
+  showTip(TIPS[targetIdx]||'');
+  lastRI=targetIdx;
+}
+function interact(){
+  const px=player.x,py=player.y;
+  // Pilcrow floor marks — corner fast-travel, jump 5 rooms forward/back
+  const rmc=roomOf(px);
+  const pilTLpos={x:rmc.x0+BD+40,y:BD+40};
+  const pilBLpos={x:rmc.x0+BD+40,y:world.h-BD-40};
+  if(dist(px,py,pilTLpos.x,pilTLpos.y)<50){ tryPilJump(-1); return; }
+  if(dist(px,py,pilBLpos.x,pilBLpos.y)<50){ tryPilJump(1); return; }
+  if(inR(0,px)&&dist(px,py,burn.x,burn.y)<90){burn.wear=Math.min(3,burn.wear+1);if(burn.wear>=3&&!tear)tear={x:burn.x,y:burn.y,r:46};upd();return;}
+  if(inR(1,px)&&dist(px,py,scratch.x,scratch.y)<90){scratch.wear=Math.min(3,scratch.wear+1);if(scratch.wear>=3){if(!erasure)erasure={x:scratch.x,y:scratch.y,r:46};halo=1;}upd();return;}
+  if(inR(2,px)){
+    if(!carryJar&&!jarDone&&dist(px,py,jarSrc.x,jarSrc.y)<70){carryJar=true;jarLvl=1;upd();return;}
+    if(carryJar&&dist(px,py,altar3.x,altar3.y)<90){if(jarLvl>0.08){jarDone=true;carryJar=false;solvedRooms.add(2);}upd();return;}
+    if(dist(px,py,r3burn.x,r3burn.y)<80){r3burn.wear=Math.min(3,r3burn.wear+1);if(r3burn.wear>=3&&!r3tear){r3tear={x:r3burn.x,y:r3burn.y,r:46};backDug=true;}return;}
+  }
+  if(inR(3,px)&&dist(px,py,r3burn.x,r3burn.y)<80){r3burn.wear=Math.min(3,r3burn.wear+1);if(r3burn.wear>=3&&!r3tear){r3tear={x:r3burn.x,y:r3burn.y,r:46};backDug=true;}return;}
+  if(inR(7,px)){for(let i=0;i<PRISMS8.length;i++){if(!PRISMS8[i].fixed&&dist(px,py,PRISMS8[i].x,PRISMS8[i].y)<40){PRISMS8[i].angle=((PRISMS8[i].angle+Math.PI/8)%(Math.PI*2));checkBeam();if(r8ok)solvedRooms.add(7);return;}}return;}
+  if(inR(8,px)){for(let i=0;i<LEVERS9.length;i++){if(dist(px,py,LEVERS9[i].x,LEVERS9[i].y)<55){toggleLever9(i);r9ok=LEVERS9.every(l=>l.state===0);if(r9ok)solvedRooms.add(8);return;}}return;}
+  if(inR(9,px)){
+    for(let i=0;i<PAGES10.length;i++){
+      const pg=PAGES10[i];
+      if(!pg.found&&dist(px,py,pg.x,pg.y)<60){
+        if(i===r10next){pg.found=true;r10next++;r10ok=PAGES10.every(p=>p.found);if(r10ok)solvedRooms.add(9);}
+        else{PAGES10.forEach(p=>p.found=false);r10next=0;} // wrong order: the pages scatter back into hiding
+        return;
+      }
+    }
+    return;
+  }
+  if(inR(10,px)&&!door11Open&&dist(px,py,R11x+860,450)<160){openDoor();return;}
+  if(inR(6,px)&&!carryFireflies&&dist(px,py,FIREFLY_JAR.x,FIREFLY_JAR.y)<70){carryFireflies=true;return;}
+  if(inR(3,px)&&!r4ok){
+    const tx=px+(player.aimX||1)*60,ty=py+(player.aimY||0)*60;
+    const onPath=dPath4(tx,ty)<P4T;
+    shockwaves4.push({x:tx,y:ty,t:0,onPath});
+    if(onPath){
+      if(!stones4.some(s=>dist(s.x,s.y,tx,ty)<20))stones4.push({x:tx,y:ty});
+      if(dist(tx,ty,P4X.x,P4X.y)<50){r4ok=true;solvedRooms.add(3);}
+    }else{
+      ffall=0.4;// a small warning shimmer, not a full fall — the stone tests ground ahead, not underfoot
+    }
+    return;
+  }
+  if(inR(11,px)&&!r12ok){
+    for(const p of PIL12){
+      if(dist(px,py,p.x,p.y)<55){
+        if(p.r===RUNE_ORDER[r12prog]){r12prog++;if(r12prog>=RUNE_ORDER.length)r12ok=true;}
+        else{r12prog=0;r12fl=1;}
+        return;
+      }
+    }
+  }
+  if(inR(12,px)&&!r13ok){
+    for(const pl of PLANTS13){
+      if(dist(px,py,pl.x,pl.y)<60){
+        if(!pl.toxic){r13ok=true;}
+        else{r13fl=1;}// wrong pick: a warning flash, no permanent harm
+        return;
+      }
+    }
+  }
+  if(inR(13,px)&&!r14ok&&dist(px,py,R14_DOOR.x,R14_DOOR.y)<80){
+    openDoorUI({slots:3,alphabet:['1','2','3','4','5','6','7','8','9'],target:R14_TARGET_CODE,
+      title:'☩ Les Trois Filles ☩',prompt:'Le produit fait 36. La somme est treize. Une seule est l\'aînée.',
+      onSolve:()=>{r14ok=true;solvedRooms.add(13);}});
+    return;
+  }
+  if(inR(14,px)&&!r15ok){
+    for(const p of PLANETS15){
+      if(dist(px,py,p.x,p.y)<55){
+        if(p.k===R15_ORDER[r15prog]){r15prog++;if(r15prog>=R15_ORDER.length)r15ok=true;}
+        else{r15prog=0;r15fl=1;}
+        return;
+      }
+    }
+  }
+  // R16 Balance — toggle metals on the left pan
+  if(inR(15,px)&&!r16ok){
+    for(const m of METALS16){
+      if(dist(px,py,m.x,m.y)<55){
+        m.on=!m.on;
+        const sum=METALS16.filter(x=>x.on).reduce((s,x)=>s+x.val,0);
+        if(sum===R16_TARGET)r16ok=true;
+        return;
+      }
+    }
+  }
+  // R17 Cryptex — cycle a ring
+  if(inR(16,px)&&!r17ok){
+    for(const ring of RINGS17){
+      if(dist(px,py,ring.x,ring.y)<60){
+        ring.idx=(ring.idx+1)%ring.list.length;
+        r17ok=RINGS17.every((r,i)=>r.idx===RING17_TARGET[i]);
+        return;
+      }
+    }
+  }
+  // R18 Carillon — ring a bell
+  if(inR(17,px)&&!r18ok){
+    for(let i=0;i<BELLS18.length;i++){
+      const b=BELLS18[i];
+      if(dist(px,py,b.x,b.y)<55){
+        b.pulse=1;
+        if(i===BELL18_ORDER[r18prog]){r18prog++;if(r18prog>=BELL18_ORDER.length)r18ok=true;}
+        else{r18prog=0;r18fl=1;}
+        return;
+      }
+    }
+  }
+  // R19 Bassin — rotate the reflection token
+  if(inR(18,px)&&!r19ok&&dist(px,py,R19_DOOR.x,R19_DOOR.y)<80){
+    openDoorUI({slots:5,alphabet:ALPHA26,target:R19_ANSWER,title:'☩ Le Bassin des Reflets ☩',
+      prompt:'Ce que tu vois à gauche, cherche-le inversé à droite.',
+      onSolve:()=>{r19ok=true;solvedRooms.add(18);}});
+    return;
+  }
+  // R20 Cadran — press at the right moment
+  if(inR(19,px)&&!r20ok){
+    if(dist(px,py,R20c.x,R20c.y)<160){
+      const diff=Math.abs(((r20angle-R20_TARGET+Math.PI)%(Math.PI*2))-Math.PI);
+      const diff2=Math.abs(((r20angle2-R20_TARGET+Math.PI)%(Math.PI*2))-Math.PI);
+      if(diff<0.16&&diff2<0.25)r20ok=true;else r20fl=1;
+      return;
+    }
+  }
+  // R21 Les Bidons
+  if(inR(20,px)&&!r21ok){
+    for(const st of JUGS21_STATIONS){
+      if(dist(px,py,st.x,st.y)<55){jugAction(st.act);if(r21ok)solvedRooms.add(20);return;}
+    }
+  }
+  // R22 Gollum
+  if(inR(21,px)){
+    if(dist(px,py,R22_DOOR.x,R22_DOOR.y)<80&&!r22ok){
+      r22doorTouched=true;
+      openDoorUI({slots:1,alphabet:SYMBOL_POOL,target:'⌛',title:'☩ La Devinette ☩',prompt:'Un seul symbole répond à tout.',
+        onSolve:()=>{r22ok=true;solvedRooms.add(21);}});
+      return;
+    }
+  }
+  // R23 Bibliothèque
+  if(inR(22,px)&&!r23ok&&dist(px,py,R23_DOOR.x,R23_DOOR.y)<80){
+    openDoorUI({slots:5,alphabet:ALPHA26,target:LIBRARY_WORD,title:'☩ La Bibliothèque ☩',prompt:'Trois voix, trois débuts, un seul mot au bout.',
+      onSolve:()=>{r23ok=true;solvedRooms.add(22);}});
+    return;
+  }
+}
+function upd(){
+  document.getElementById('wB').textContent=burn.wear;
+  document.getElementById('wS').textContent=scratch.wear;
+  const ws=document.getElementById('wW'),wb=document.getElementById('wBar');
+  if(jarDone){ws.textContent='✓';wb.style.width='100%';wb.style.background='#3a6b3a';}
+  else if(carryJar){ws.textContent=Math.round(jarLvl*100)+'%';wb.style.width=jarLvl*100+'%';wb.style.background=jarLvl<.3?'#7a2e1e':'#8a7455';}
+  else{ws.textContent='—';wb.style.width='100%';}
+  document.getElementById('wH').textContent=erasure?Math.round(halo*100)+'%':'—';
+  document.getElementById('hBar').style.width=(erasure?halo*100:0)+'%';
+}
+// Generalized code-door system: openDoorUI(cfg) where cfg = {slots, alphabet, onSolve}
+// alphabet: array of characters/symbols to cycle through (default A-Z)
+let doorCfg=null;
+function openDoorUI(cfg){
+  doorCfg=cfg;
+  doorIn=new Array(cfg.slots).fill(cfg.alphabet[0]);
+  doorCur=0;doorActive=true;
+  document.getElementById('doorTitle').textContent=cfg.title||'☩ Sceau ☩';
+  document.getElementById('doorMsg').textContent=cfg.prompt||'Trouve le code.';
+  document.getElementById('doorUI').classList.add('open');renderDoor();
+}
+function closeDoor(){doorActive=false;document.getElementById('doorUI').classList.remove('open');}
+function renderDoor(){document.getElementById('doorSlots').innerHTML=doorIn.map((c,i)=>`<div class="ds${i===doorCur?' cur':''}">${c}</div>`).join('');}
+function dKey(e){
+  e.preventDefault();const k=e.key;const cfg=doorCfg;const A=cfg.alphabet;
+  if(k==='Escape'){closeDoor();return;}
+  if(k==='ArrowLeft')doorCur=clamp(doorCur-1,0,cfg.slots-1);
+  else if(k==='ArrowRight')doorCur=clamp(doorCur+1,0,cfg.slots-1);
+  else if(k==='ArrowUp'){const idx=(A.indexOf(doorIn[doorCur])+1)%A.length;doorIn[doorCur]=A[idx];}
+  else if(k==='ArrowDown'){const idx=(A.indexOf(doorIn[doorCur])-1+A.length)%A.length;doorIn[doorCur]=A[idx];}
+  else if(k.toLowerCase()==='e'){
+    if(doorIn.join('')===cfg.target){closeDoor();cfg.onSolve();}
+    else{document.getElementById('doorMsg').textContent='✗ Faux. Recommence.';doorIn=new Array(cfg.slots).fill(A[0]);doorCur=0;}
+  }
+  renderDoor();
+}
+const ALPHA26=Array.from({length:26},(_,i)=>String.fromCharCode(65+i));
+function openDoor(){
+  openDoorUI({slots:3,alphabet:ALPHA26,target:DOOR_WORD,title:'☩ Sceau de la Porte ☩',prompt:'Un mot traverse toutes les strates.',
+    onSolve:()=>{door11Open=true;solvedRooms.add(10);}});
+}
+
+// ── darkness canvas ────────────────────────────────────────────────────────
+let dkC=null,dkX=null;
+function drawDark(){
+  if(!dkC)dkC=document.createElement('canvas');
+  if(dkC.width!==W||dkC.height!==H){dkC.width=W;dkC.height=H;dkX=dkC.getContext('2d');}
+  const dc=dkX;dc.clearRect(0,0,W,H);dc.fillStyle='#060405';dc.fillRect(0,0,W,H);
+  dc.globalCompositeOperation='destination-out';
+  R3T.forEach(t=>{const[sx,sy]=w2s(t.x,t.y);const r=t.r*DPR*.9;const g=dc.createRadialGradient(sx,sy,0,sx,sy,r);g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,0)');dc.fillStyle=g;dc.beginPath();dc.arc(sx,sy,r,0,Math.PI*2);dc.fill();});
+  const[px,py]=w2s(player.x,player.y);
+  const pr=erasure&&halo>0?(30+halo*90)*DPR:18*DPR;// much smaller personal halo
+  const pg=dc.createRadialGradient(px,py,0,px,py,pr);pg.addColorStop(0,'rgba(0,0,0,1)');pg.addColorStop(1,'rgba(0,0,0,0)');dc.fillStyle=pg;dc.beginPath();dc.arc(px,py,pr,0,Math.PI*2);dc.fill();
+  const[ax,ay]=w2s(altar3.x,altar3.y);const ag=dc.createRadialGradient(ax,ay,0,ax,ay,65*DPR);ag.addColorStop(0,'rgba(0,0,0,.85)');ag.addColorStop(1,'rgba(0,0,0,0)');dc.fillStyle=ag;dc.beginPath();dc.arc(ax,ay,65*DPR,0,Math.PI*2);dc.fill();
+  dc.globalCompositeOperation='source-over';ctx.drawImage(dkC,0,0);
+}
+let dkC7=null,dkX7=null;
+function drawDark7(){
+  if(!dkC7)dkC7=document.createElement('canvas');
+  if(dkC7.width!==W||dkC7.height!==H){dkC7.width=W;dkC7.height=H;dkX7=dkC7.getContext('2d');}
+  const dc=dkX7;dc.clearRect(0,0,W,H);dc.fillStyle='#070604';dc.fillRect(0,0,W,H);
+  dc.globalCompositeOperation='destination-out';
+  // stars are their own light — always a small visible clearing around each
+  STARS7.forEach(st=>{const[sx,sy]=w2s(st.x,st.y);const r=(st.lit?70:34)*DPR;const g=dc.createRadialGradient(sx,sy,0,sx,sy,r);g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,0)');dc.fillStyle=g;dc.beginPath();dc.arc(sx,sy,r,0,Math.PI*2);dc.fill();});
+  const[px,py]=w2s(player.x,player.y);
+  const pr=(carryFireflies?150:20)*DPR;// fireflies give a much wider moving clearing
+  const pg=dc.createRadialGradient(px,py,0,px,py,pr);pg.addColorStop(0,'rgba(0,0,0,1)');pg.addColorStop(1,'rgba(0,0,0,0)');dc.fillStyle=pg;dc.beginPath();dc.arc(px,py,pr,0,Math.PI*2);dc.fill();
+  dc.globalCompositeOperation='source-over';ctx.drawImage(dkC7,0,0);
+}
+
+// ── update ─────────────────────────────────────────────────────────────────
+let lastT=performance.now(),walkC=0,elapsed=0;
+function fmtTime(s){const m=Math.floor(s/60),sec=Math.floor(s%60);return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');}
+function update(dt){
+  elapsed+=dt;document.getElementById('timer').textContent=fmtTime(elapsed);
+  tickTip(dt);
+  let dx=0,dy=0;
+  if(keys['arrowup']||keys['z'])dy-=1;if(keys['arrowdown']||keys['s'])dy+=1;
+  if(keys['arrowleft']||keys['q']||keys['a'])dx-=1;if(keys['arrowright']||keys['d'])dx+=1;
+  const len=Math.hypot(dx,dy)||1;
+  player.moving=!!(dx||dy);if(dx>0.1)player.faceDir=1;else if(dx<-0.1)player.faceDir=-1;
+  if(dx||dy){const l=Math.hypot(dx,dy);player.aimX=dx/l;player.aimY=dy/l;}
+  else if(player.aimX===undefined){player.aimX=1;player.aimY=0;}
+  const nx=player.x+(dx/len)*player.speed*dt,ny=player.y+(dy/len)*player.speed*dt;
+  function col(px,py){
+    if(px<player.r||py<player.r||px>world.w-player.r||py>world.h-player.r)return true;
+    for(const w of walls){
+      if(w.tag==='back'&&backDug)continue;if(w.tag==='levdoor'&&r9ok)continue;if(w.tag==='finaldoor'&&door11Open)continue;if(w.tag==='r22door'&&r22ok)continue;if(w.tag==='r23door'&&r23ok)continue;
+      if(px+player.r>w.x&&px-player.r<w.x+w.w&&py+player.r>w.y&&py-player.r<w.y+w.h)return true;
+    }
+    if(inR(5,px)&&px+player.r>BLOCK6.x&&px-player.r<BLOCK6.x+BLOCK6.w&&py+player.r>BLOCK6.y&&py-player.r<BLOCK6.y+BLOCK6.h)return true;
+    return false;
+  }
+  if(!col(nx,player.y))player.x=nx;if(!col(player.x,ny))player.y=ny;
+  // Sokoban block push in R6
+  if(inR(5,player.x)){
+    const bc={x:BLOCK6.x+BLOCK6.w/2,y:BLOCK6.y+BLOCK6.h/2};
+    const bd=dist(player.x,player.y,bc.x,bc.y);
+    if(bd<player.r+40){// generous contact zone — covers diagonal approach too
+      const edx=bc.x-player.x,edy=bc.y-player.y;
+      const pushX=Math.abs(edx)>Math.abs(edy)?Math.sign(edx):0;
+      const pushY=Math.abs(edx)>Math.abs(edy)?0:Math.sign(edy);
+      const speed=140*dt;// frame-rate independent, noticeably faster
+      const nbx=BLOCK6.x+pushX*speed,nby=BLOCK6.y+pushY*speed;
+      if(!blockCol(nbx,nby)){BLOCK6.x=nbx;BLOCK6.y=nby;}
+      if(!r6ok){const allOk=PIL6.every(p=>{const tip=sTip(p.x,p.y,bc.x,bc.y,140);const goal=sTip(p.x,p.y,BLOCK6_GOAL.x+BLOCK6.w/2,BLOCK6_GOAL.y+BLOCK6.h/2,140);return dist(tip.x,tip.y,goal.x,goal.y)<38;});if(allOk){r6ok=true;solvedRooms.add(5);}}
+    }
+  }
+  // Prism push in R8 — the two movable prisms slide when the player walks into them
+  if(inR(7,player.x)&&!r8ok){
+    PRISMS8.forEach(p=>{
+      if(p.fixed)return;
+      const pd=dist(player.x,player.y,p.x,p.y);
+      if(pd<player.r+22){
+        const edx=p.x-player.x,edy=p.y-player.y,len=Math.hypot(edx,edy)||1;
+        const speed=110*dt;
+        const nx2=clamp(p.x+edx/len*speed,ROOMS[7].x0+BD+15,ROOMS[7].x1-BD-15);
+        const ny2=clamp(p.y+edy/len*speed,BD+15,world.h-BD-15);
+        p.x=nx2;p.y=ny2;checkBeam();
+      }
+    });
+  }
+  // camera lock to room
+  const rm=roomOf(player.x);const rw=rm.x1-rm.x0;
+  if(rw<=innerWidth)camX=rm.x0-(innerWidth-rw)/2;else camX=clamp(player.x-innerWidth/2,rm.x0,rm.x1-innerWidth);
+  camY=clamp(world.h/2-innerHeight/2,0,world.h-innerHeight);
+  const ri=ROOMS.indexOf(rm);if(ri!==lastRI){lastRI=ri;showTip(TIPS[ri]||'');}
+  visitedRooms.add(ri);
+  if(pilMsg>0)pilMsg=Math.max(0,pilMsg-dt*2);
+  // R3 evap
+  if(carryJar){let h=0;R3T.forEach(t=>{const d=dist(player.x,player.y,t.x,t.y);if(d<t.r)h+=(1-d/t.r);});jarLvl=Math.max(0,jarLvl-h*dt*.18);if(jarLvl<=0){carryJar=false;jarLvl=0;}upd();}
+  if(erasure&&halo>0){halo=Math.max(0,halo-dt*.018);upd();}
+  // R4 — illusory floor: straying off the true path (even one you haven't
+  // marked yet) drops you back to the entrance. Stones already placed stay
+  // forever — only your position resets, never your discoveries.
+  if(inR(3,player.x)&&!r4ok){
+    if(dist(player.x,player.y,P4E.x,P4E.y)>50&&dPath4(player.x,player.y)>P4T){
+      player.x=P4E.x;player.y=P4E.y;ffall=1;
+    }
+  }
+  if(ffall>0)ffall=Math.max(0,ffall-dt*2.5);
+  shockwaves4.forEach(s=>s.t+=dt);
+  shockwaves4=shockwaves4.filter(s=>s.t<1.2);
+  // R5 seal
+  if(inR(4,player.x)&&!r5ok){
+    let broke=false;
+    for(const st of R5ST){
+      const near=dist(player.x,player.y,st.x,st.y)<40;
+      if(near&&!st.hit){st.hit=true;if(st.decoy||st.k!==R5ORD[r5prog]){broke=true;break;}else r5prog++;}
+      if(!near)st.hit=false;
+    }
+    if(broke){r5prog=0;r5fl=1;R5ST.forEach(s=>s.hit=false);}
+    if(r5prog>=R5ORD.length){r5ok=true;solvedRooms.add(4);}
+  }
+  if(r5fl>0)r5fl=Math.max(0,r5fl-dt*2.5);
+  if(r12fl>0)r12fl=Math.max(0,r12fl-dt*2.5);
+  if(r13fl>0)r13fl=Math.max(0,r13fl-dt*2.5);
+  if(r15fl>0)r15fl=Math.max(0,r15fl-dt*2.5);
+  if(r18fl>0)r18fl=Math.max(0,r18fl-dt*2.5);
+  if(r20fl>0)r20fl=Math.max(0,r20fl-dt*2.5);
+  BELLS18.forEach(b=>{if(b.pulse>0)b.pulse=Math.max(0,b.pulse-dt*1.4);});
+  if(!r20ok){r20angle=(r20angle+R20_SPEED*dt)%(Math.PI*2);r20angle2=(r20angle2+R20_SPEED2*dt)%(Math.PI*2);}
+  // R7 stars
+  if(inR(6,player.x)&&!r7ok){
+    const now=performance.now();
+    for(const st of STARS7){
+      if(!st.lit&&dist(player.x,player.y,st.x,st.y)<44){
+        if(st.idx===r7prog){st.lit=true;st.ts=now;r7prog++;}
+        else if(st.idx!==r7prog-1){STARS7.forEach(s=>{s.lit=false;s.ts=-1;});r7prog=0;r7fl=1;}
+        break;
+      }
+    }
+    if(STARS7.some(s=>s.lit&&now-s.ts>STAR_FADE)){STARS7.forEach(s=>{s.lit=false;s.ts=-1;});r7prog=0;r7fl=1;}
+    if(r7prog>=STARS7.length){r7ok=true;solvedRooms.add(6);}
+  }
+  if(r7fl>0)r7fl=Math.max(0,r7fl-dt*2);
+  document.getElementById('roomBox').textContent=rm.n;
+}
+
+// ── player draw ────────────────────────────────────────────────────────────
+function drawPlayer(dt){
+  const[sx,sy]=w2s(player.x,player.y);if(dt>0&&player.moving)walkC+=dt*8.5;else walkC*=.9;
+  const s=player.r*DPR,sw=Math.sin(walkC)*(player.moving?1:0);
+  ctx.save();ctx.translate(sx,sy);ctx.scale(player.faceDir,.82);
+  ctx.strokeStyle='#7a2e1e';ctx.fillStyle='rgba(122,46,30,.08)';ctx.lineWidth=Math.max(1,1.3*DPR);ctx.globalAlpha=.9;
+  ctx.save();ctx.globalAlpha=.18;ctx.beginPath();ctx.ellipse(0,s*1.55,s*.9,s*.35,0,0,Math.PI*2);ctx.fillStyle='#2a2016';ctx.fill();ctx.restore();ctx.globalAlpha=.9;
+  const ls=sw*s*.55;ctx.beginPath();ctx.moveTo(-s*.28,s*.6);ctx.lineTo(-s*.28+ls,s*1.5);ctx.moveTo(s*.28,s*.6);ctx.lineTo(s*.28-ls,s*1.5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-s*.5,s*.65);ctx.lineTo(-s*.62,-s*.55);ctx.lineTo(s*.62,-s*.55);ctx.lineTo(s*.5,s*.65);ctx.closePath();ctx.fill();ctx.stroke();
+  const rnd=sr(1);for(let i=0;i<7;i++){const t=i/7,y=-s*.5+t*s*1.1,w=s*(.55-t*.05);hL(-w,y,w,y+s*.05,s*.06,rnd);}
+  const as=-sw*s*.4;ctx.beginPath();ctx.moveTo(-s*.55,-s*.35);ctx.lineTo(-s*.75-as*.3,s*.35+as*.5);ctx.moveTo(s*.55,-s*.35);ctx.lineTo(s*.75+as*.3,s*.35-as*.5);ctx.stroke();
+  ctx.beginPath();ctx.arc(0,-s*.95,s*.4,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-s*1.35);ctx.lineTo(-s*.16,-s*.98);ctx.lineTo(s*.16,-s*.98);ctx.closePath();ctx.fill();ctx.stroke();
+  if(carryJar){ctx.beginPath();ctx.rect(-s*.22,s*.05,s*.44,s*.5);ctx.fillStyle='rgba(90,120,140,.25)';ctx.fill();ctx.stroke();}
+  ctx.restore();ctx.globalAlpha=1;
+}
+function drawGlow(){
+  if(!(erasure&&halo>0))return;
+  const[px,py]=w2s(player.x,player.y);const r=(50+halo*160)*DPR;
+  const g=ctx.createRadialGradient(px,py,0,px,py,r);g.addColorStop(0,'rgba(255,236,190,.5)');g.addColorStop(.4,'rgba(255,220,160,.22)');g.addColorStop(.7,'rgba(255,210,140,.1)');g.addColorStop(1,'rgba(255,210,140,0)');
+  ctx.save();ctx.fillStyle=g;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();ctx.restore();
+}
+
+// ── render ─────────────────────────────────────────────────────────────────
+function render(dt){
+  const ri=ROOMS.indexOf(roomOf(player.x));
+  const bg=ctx.createRadialGradient(W/2,H/2,H*.1,W/2,H/2,H*.75);bg.addColorStop(0,'#efe4c9');bg.addColorStop(1,'#cdbd94');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  ctx.drawImage(paper,0,0);
+  drawDeco(ri);// ambient decoration
+
+  // pilcrow floor marks — corner fast-travel, drawn like other floor glyphs
+  {
+    const rm2=ROOMS[ri];
+    const tlp={x:rm2.x0+BD+40,y:BD+40},blp={x:rm2.x0+BD+40,y:world.h-BD-40};
+    const pilCol='#4a8a8a';// teal — not used anywhere else in the palette
+    [[tlp,-1],[blp,1]].forEach(([p,dir])=>{
+      const targetIdx=clamp(ri+dir*PIL_JUMP,0,ROOMS.length-1);
+      const unlocked=visitedRooms.has(targetIdx);
+      G('¶',p.x,p.y,unlocked?pilCol:'rgba(74,138,138,.35)',26,unlocked?.75:.4);
+      if(dist(player.x,player.y,p.x,p.y)<90)G(unlocked?`[E] → salle ${targetIdx+1}`:'[E] page non lue',p.x,p.y+(dir>0?34:-34),'rgba(201,168,216,.65)',12);
+    });
+    if(pilMsg>0.01){G('cette strate reste scellée',player.x,player.y-56,`rgba(180,80,60,${pilMsg/2.5})`,15);}
+  }
+  walls.forEach((w,i)=>{if(w.tag==='back'&&backDug)return;if(w.tag==='levdoor'&&r9ok)return;if(w.tag==='finaldoor'&&door11Open)return;if(w.tag==='r22door'&&r22ok)return;if(w.tag==='r23door'&&r23ok)return;drawGlyphWall(w,i*23+5);});
+  if(backDug)drawOpening({x:backWall.x+20,y:450,r:55},'burn');
+  ROOMS.slice(1).forEach(r=>{const[sx,sy1]=w2s(r.x0,340),[,sy2]=w2s(r.x0,560);ctx.save();ctx.strokeStyle='rgba(122,46,30,.28)';ctx.setLineDash([4*DPR,6*DPR]);ctx.lineWidth=DPR;ctx.beginPath();ctx.moveTo(sx,sy1);ctx.lineTo(sx,sy2);ctx.stroke();ctx.setLineDash([]);ctx.restore();});
+
+  // R1
+  G('🜂',burn.x,burn.y-70,'#a4381e',34);drawPatch(burn,'burn');if(tear)drawOpening(tear,'burn');
+
+  // R2
+  G('🜍',scratch.x,scratch.y-70,'#5a4a35',34);drawPatch(scratch,'scratch');if(erasure)drawOpening(erasure,'scratch');
+
+  // R3 torches + jar + maze walls shown as glyph walls
+  R3T.forEach(t=>{const[tsx,tsy]=w2s(t.x,t.y);const hg=ctx.createRadialGradient(tsx,tsy,4,tsx,tsy,t.r*DPR);hg.addColorStop(0,'rgba(212,90,20,.3)');hg.addColorStop(1,'rgba(212,90,20,0)');ctx.fillStyle=hg;ctx.beginPath();ctx.arc(tsx,tsy,t.r*DPR,0,Math.PI*2);ctx.fill();G('🜂',t.x,t.y,'#e8a24a',28);});
+  if(!carryJar&&!jarDone)G('🜄',jarSrc.x,jarSrc.y,'#3a5a7a',38);
+  G(jarDone?'🜛':'🜚',altar3.x,altar3.y,jarDone?'#3a6b3a':'#8a7455',38);
+  drawPatch(r3burn,'burn');if(r3tear)drawOpening(r3tear,'burn');
+
+  // R4
+  if(ri===3){
+    ctx.save();
+    stones4.forEach(s=>{
+      const[sx,sy]=w2s(s.x,s.y);
+      ctx.beginPath();ctx.arc(sx,sy,6*DPR,0,Math.PI*2);ctx.fillStyle='rgba(90,74,53,.85)';ctx.fill();
+      ctx.strokeStyle='rgba(212,161,90,.4)';ctx.lineWidth=1*DPR;ctx.stroke();
+    });
+    shockwaves4.forEach(s=>{
+      const rad=s.t*140*DPR,alpha=Math.max(0,1-s.t/1.2);
+      const[sx,sy]=w2s(s.x,s.y);
+      ctx.beginPath();ctx.arc(sx,sy,rad,0,Math.PI*2);
+      ctx.strokeStyle=s.onPath?`rgba(212,161,90,${alpha*.6})`:`rgba(122,46,30,${alpha*.6})`;
+      ctx.lineWidth=2*DPR;ctx.stroke();
+      // briefly reveal the nearby true path segment inside the ripple — only when the stone actually landed true
+      if(alpha>0.05&&s.onPath){
+        ctx.save();ctx.beginPath();ctx.arc(sx,sy,rad,0,Math.PI*2);ctx.clip();
+        ctx.strokeStyle=`rgba(180,210,220,${alpha*.5})`;ctx.lineWidth=6*DPR;
+        ctx.beginPath();path4.forEach((p,i)=>{const[px2,py2]=w2s(p.x,p.y);if(i===0)ctx.moveTo(px2,py2);else ctx.lineTo(px2,py2);});ctx.stroke();
+        ctx.restore();
+      }
+    });
+    ctx.restore();
+    if(dist(player.x,player.y,P4E.x,P4E.y)<400)G('[E] jeter un caillou',player.x,player.y-46,'rgba(201,168,216,.55)',12);
+    G('☿',P4E.x,P4E.y-60,'#5a6b8c',26);G(r4ok?'🜚':'☿',P4X.x,P4X.y,'#5a6b8c',34);
+    if(ffall>.01){ctx.save();ctx.fillStyle=`rgba(122,46,30,${ffall*.35})`;ctx.fillRect(0,0,W,H);ctx.restore();G('le sol se dérobe plus loin…',player.x,player.y-70,`rgba(180,80,60,${ffall})`,13);}
+  }
+
+  // R5 seal — show triangle formed by connections
+  if(ri===4){
+    // draw the forming triangle as lines between touched stations
+    if(r5prog>0){
+      ctx.save();ctx.strokeStyle='rgba(212,161,90,.6)';ctx.lineWidth=2*DPR;ctx.setLineDash([]);
+      for(let i=0;i<r5prog-1;i++){const a=R5ST.find(s=>s.k===R5ORD[i]),b=R5ST.find(s=>s.k===R5ORD[i+1]);if(a&&b){const[ax,ay]=w2s(a.x,a.y),[bx,by]=w2s(b.x,b.y);ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();}}
+      ctx.restore();
+    }
+    if(r5ok){// draw complete downward triangle
+      const[ax,ay]=w2s(R5ST[0].x,R5ST[0].y),[bx,by]=w2s(R5ST[1].x,R5ST[1].y),[cx2,cy2]=w2s(R5ST[2].x,R5ST[2].y);
+      ctx.save();ctx.strokeStyle='rgba(212,161,90,.75)';ctx.lineWidth=2*DPR;ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx2,cy2);ctx.lineTo(ax,ay);ctx.stroke();
+      // inscribed circle
+      const[rsx,rsy]=w2s(R5c.x,R5c.y);ctx.beginPath();ctx.arc(rsx,rsy,R5R*DPR,0,Math.PI*2);ctx.stroke();ctx.restore();
+    }
+    R5ST.forEach(st=>{const done=!st.decoy&&R5ORD.indexOf(st.k)<r5prog;G(st.sym,st.x,st.y,done?'#3a6b3a':st.c,28);});
+    drawOpening({...R5RIDDLE},'burn');
+    if(r5fl>.01){ctx.save();ctx.fillStyle=`rgba(122,46,30,${r5fl*.25})`;ctx.fillRect(0,0,W,H);ctx.restore();}
+  }
+
+  // R6 shadows + Sokoban block
+  if(ri===5){
+    const tk={x:BLOCK6.x+BLOCK6.w/2,y:BLOCK6.y+BLOCK6.h/2};const[tsx,tsy]=w2s(tk.x,tk.y);
+    const tg=ctx.createRadialGradient(tsx,tsy,0,tsx,tsy,250*DPR);tg.addColorStop(0,'rgba(212,90,20,.28)');tg.addColorStop(1,'rgba(212,90,20,0)');ctx.fillStyle=tg;ctx.beginPath();ctx.arc(tsx,tsy,250*DPR,0,Math.PI*2);ctx.fill();
+    // block
+    const[bsx,bsy]=w2s(BLOCK6.x,BLOCK6.y);ctx.save();ctx.fillStyle='rgba(52,38,24,.9)';ctx.fillRect(bsx,bsy,BLOCK6.w*DPR,BLOCK6.h*DPR);ctx.strokeStyle='rgba(90,70,45,.8)';ctx.lineWidth=2*DPR;ctx.strokeRect(bsx,bsy,BLOCK6.w*DPR,BLOCK6.h*DPR);ctx.restore();
+    G('🜂',tk.x,tk.y,'#e8a24a',26);
+    // (no visible goal marker — the player must judge alignment purely from the shadows)
+    // permanent burnt hint: block silhouette casting shadow toward a target mark
+    drawOpening({...R6HINT},'burn');
+    if(dist(player.x,player.y,R6HINT.x,R6HINT.y)<130){
+      const[hx,hy]=w2s(R6HINT.x,R6HINT.y);
+      ctx.save();ctx.fillStyle='rgba(201,168,216,.6)';ctx.fillRect(hx-8*DPR,hy-8*DPR,16*DPR,16*DPR);
+      ctx.strokeStyle='rgba(212,161,90,.5)';ctx.lineWidth=1.5*DPR;ctx.setLineDash([2*DPR,4*DPR]);
+      ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(hx+40*DPR,hy-24*DPR);ctx.stroke();ctx.setLineDash([]);
+      ctx.strokeStyle='rgba(212,161,90,.6)';ctx.beginPath();ctx.arc(hx+40*DPR,hy-24*DPR,5*DPR,0,Math.PI*2);ctx.stroke();
+      ctx.restore();
+      G('pousse la pierre vers son ombre-jumelle',R6HINT.x,R6HINT.y+50,'rgba(201,168,216,.55)',12);
+    }
+    const bc={x:BLOCK6.x+BLOCK6.w/2,y:BLOCK6.y+BLOCK6.h/2};
+    PIL6.forEach((p,i)=>{
+      const[px2,py2]=w2s(p.x,p.y);ctx.fillStyle='rgba(42,32,22,.88)';ctx.beginPath();ctx.arc(px2,py2,12*DPR,0,Math.PI*2);ctx.fill();
+      const tip=sTip(p.x,p.y,bc.x,bc.y,150);const[spx,spy]=w2s(tip.x,tip.y);
+      const ang=Math.atan2(p.y-bc.y,p.x-bc.x);const perp=ang+Math.PI/2;const w2=5*DPR;
+      ctx.beginPath();ctx.moveTo(px2+Math.cos(perp)*w2,py2+Math.sin(perp)*w2);ctx.lineTo(spx,spy);ctx.lineTo(px2-Math.cos(perp)*w2,py2-Math.sin(perp)*w2);ctx.closePath();ctx.fillStyle='rgba(15,10,6,.45)';ctx.fill();
+      const goal=sTip(p.x,p.y,BLOCK6_GOAL.x+BLOCK6.w/2,BLOCK6_GOAL.y+BLOCK6.h/2,150);const[gx2,gy2]=w2s(goal.x,goal.y);
+      const dTip=dist(tip.x,tip.y,goal.x,goal.y);
+      if(dTip<40)G('TERRE'[i],goal.x,goal.y,'rgba(212,161,90,.9)',28);// letter surfaces only at the true landing spot
+    });
+    drawOpening({...R6RIDDLE},'burn');
+    if(dist(player.x,player.y,bc.x,bc.y)<100&&!r6ok)G('[E]',BLOCK6.x+BLOCK6.w/2,BLOCK6.y-38,'rgba(201,168,216,.65)',13);
+  }
+
+  // R7 stars
+  if(ri===6){
+    const now=performance.now();ctx.save();
+    if(!r7ok){ctx.fillStyle='rgba(10,8,6,.25)';ctx.fillRect(0,0,W,H);}// faint mood tint only; real darkness comes from the mask below
+    ctx.strokeStyle='rgba(180,210,220,.3)';ctx.lineWidth=1.5*DPR;
+    for(let i=0;i<r7prog-1;i++){const a=STARS7[i],b=STARS7[i+1];const[ax,ay]=w2s(a.x,a.y),[bx,by]=w2s(b.x,b.y);ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();}
+    STARS7.forEach(st=>{
+      const[sx,sy]=w2s(st.x,st.y);const age=now-st.ts;const fade=st.lit?Math.max(0,1-age/STAR_FADE):0;
+      ctx.beginPath();ctx.arc(sx,sy,6*DPR,0,Math.PI*2);ctx.fillStyle=st.lit?`rgba(200,220,255,${.4+fade*.55})`:'rgba(180,200,220,.11)';ctx.fill();
+      if(st.lit){
+        const g2=ctx.createRadialGradient(sx,sy,0,sx,sy,30*DPR);g2.addColorStop(0,`rgba(180,210,255,${fade*.5})`);g2.addColorStop(1,'rgba(180,210,255,0)');ctx.fillStyle=g2;ctx.beginPath();ctx.arc(sx,sy,30*DPR,0,Math.PI*2);ctx.fill();
+        // shrinking ring = visual countdown before this star fades and resets progress
+        ctx.strokeStyle=`rgba(255,235,200,${.3+fade*.5})`;ctx.lineWidth=2*DPR;
+        ctx.beginPath();ctx.arc(sx,sy,18*DPR*fade+4*DPR,0,Math.PI*2);ctx.stroke();
+      }
+    });
+    if(!carryFireflies&&!r7ok)G('🜄',FIREFLY_JAR.x,FIREFLY_JAR.y,'#8a9a6a',34);
+    if(r7ok){G('🜚',R7x+450,160,'rgba(212,161,90,.85)',44);G('I',R7x+450,210,'rgba(201,168,216,.7)',24);}
+    if(r7fl>.01){ctx.fillStyle=`rgba(90,60,140,${r7fl*.32})`;ctx.fillRect(0,0,W,H);}
+    ctx.restore();
+  }
+
+  // R8 prisms — accurate beam
+  if(ri===7){
+    ctx.save();
+    ctx.fillStyle='rgba(6,5,4,.6)';ctx.fillRect(0,0,W,H);// dim the room to make the beam pop
+    const pts=traceBeam();
+    ctx.strokeStyle='rgba(212,161,90,.22)';ctx.lineWidth=16*DPR;ctx.beginPath();pts.forEach((p,i)=>{const[sx,sy]=w2s(p.x,p.y);if(i===0)ctx.moveTo(sx,sy);else ctx.lineTo(sx,sy);});ctx.stroke();
+    ctx.strokeStyle='rgba(212,161,90,.95)';ctx.lineWidth=2.5*DPR;ctx.beginPath();pts.forEach((p,i)=>{const[sx,sy]=w2s(p.x,p.y);if(i===0)ctx.moveTo(sx,sy);else ctx.lineTo(sx,sy);});ctx.stroke();
+    G('☉',LSRC.x,LSRC.y,'#d4a15a',30);
+    PRISMS8.forEach((p)=>{
+      const[sx,sy]=w2s(p.x,p.y);
+      ctx.save();ctx.translate(sx,sy);ctx.rotate(p.angle);
+      ctx.strokeStyle=p.fixed?'rgba(140,160,170,.5)':'rgba(180,210,220,.9)';ctx.lineWidth=3*DPR;ctx.beginPath();ctx.moveTo(-30*DPR,0);ctx.lineTo(30*DPR,0);ctx.stroke();
+      ctx.restore();
+      if(!p.fixed){
+        // faint target marker for where this prism belongs
+        const[gx,gy]=w2s(p.solX,p.solY);ctx.save();ctx.strokeStyle='rgba(201,168,216,.18)';ctx.lineWidth=1.5*DPR;ctx.setLineDash([3*DPR,6*DPR]);ctx.beginPath();ctx.arc(gx,gy,16*DPR,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+        if(dist(player.x,player.y,p.x,p.y)<50)G('[E] pivoter',p.x,p.y-44,'rgba(201,168,216,.75)',12);
+      }
+    });
+    const[tsx,tsy]=w2s(PTGT.x,PTGT.y);ctx.beginPath();ctx.arc(tsx,tsy,20*DPR,0,Math.PI*2);ctx.strokeStyle=r8ok?'rgba(212,161,90,.9)':'rgba(122,46,30,.5)';ctx.lineWidth=2.5*DPR;ctx.stroke();
+    G(r8ok?'🜚':'⊕',PTGT.x,PTGT.y,r8ok?'#3a6b3a':'#8a7455',34);
+    if(r8ok)G('A',PTGT.x,PTGT.y+60,'rgba(212,161,90,.85)',28);// letter A on floor when solved
+    ctx.restore();
+  }
+
+  // R9 levers — Lights Out style
+  if(ri===8){
+    drawOpening({...R9BURN},'burn');
+    if(dist(player.x,player.y,R9BURN.x,R9BURN.y)<R9BURN.r*1.6){
+      G('un levier entraîne aussi ses voisins',R9BURN.x,R9BURN.y-46,'rgba(201,168,216,.6)',13);
+    }
+    LEVERS9.forEach((lv,i)=>{
+      const[sx,sy]=w2s(lv.x,lv.y);ctx.save();ctx.fillStyle='rgba(58,42,24,.75)';ctx.fillRect(sx-12*DPR,sy-4*DPR,24*DPR,8*DPR);
+      const aY=lv.state?-32*DPR:32*DPR;ctx.strokeStyle=lv.state?'rgba(212,161,90,.9)':'rgba(90,74,53,.7)';ctx.lineWidth=3.5*DPR;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx,sy+aY);ctx.stroke();ctx.fillStyle=lv.state?'rgba(212,161,90,.9)':'rgba(90,74,53,.7)';ctx.beginPath();ctx.arc(sx,sy+aY,7*DPR,0,Math.PI*2);ctx.fill();
+      if(dist(player.x,player.y,lv.x,lv.y)<60){
+        G('[E]',lv.x,lv.y-54,'rgba(201,168,216,.7)',12);
+        // show link lines to neighbors when close
+        [i-1,i+1].forEach(j=>{if(j>=0&&j<LEVERS9.length){const[nx,ny]=w2s(LEVERS9[j].x,LEVERS9[j].y);ctx.strokeStyle='rgba(201,168,216,.25)';ctx.lineWidth=1.5*DPR;ctx.setLineDash([3*DPR,5*DPR]);ctx.beginPath();ctx.moveTo(sx,sy-20*DPR);ctx.lineTo(nx,ny-20*DPR);ctx.stroke();ctx.setLineDash([]);}});
+      }
+      ctx.restore();
+    });
+    if(r9ok){G('✓',R9x+450,240,'#3a6b3a',38);G('R',R9x+450,290,'rgba(201,168,216,.7)',24);}
+  }
+
+  // R10 pages — 3 clear pages with letters
+  if(ri===9){
+    PAGES10.forEach(pg=>{
+      if(pg.found){
+        const[sx,sy]=w2s(pg.x,pg.y);ctx.save();ctx.strokeStyle='rgba(201,168,216,.22)';ctx.lineWidth=DPR;ctx.strokeRect(sx-24*DPR,sy-34*DPR,48*DPR,68*DPR);ctx.restore();
+        G(pg.sym,pg.x,pg.y-18,'rgba(212,161,90,.85)',28);
+        G(pg.letter,pg.x,pg.y+22,'rgba(201,168,216,.9)',28);// BIG letter shown on floor
+      }else{
+        const d=dist(player.x,player.y,pg.x,pg.y);const alpha=Math.max(0,1-d/130)*.8;
+        if(alpha>.02){const[sx,sy]=w2s(pg.x,pg.y);ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle='rgba(122,46,30,.7)';ctx.lineWidth=DPR;ctx.strokeRect(sx-24*DPR,sy-34*DPR,48*DPR,68*DPR);G(pg.sym,pg.x,pg.y-18,'rgba(122,46,30,.9)',24,alpha*.9);G('[E]',pg.x,pg.y+24,'rgba(201,168,216,.7)',12,alpha);ctx.restore();}
+      }
+    });
+    if(r10ok){
+      const cx=R10x+450,cy=280;G('S   E   L',cx,cy,'rgba(201,168,216,.85)',32);
+      G('⛤',R10x+250,cy-60,'rgba(212,161,90,.6)',28);G('✡',R10x+450,cy-60,'rgba(212,161,90,.6)',28);G('☤',R10x+650,cy-60,'rgba(212,161,90,.6)',28);
+    }else G(`${PAGES10.filter(p=>p.found).length} / 3`,R10x+450,140,'rgba(122,46,30,.5)',16);
+  }
+
+  // R11 door
+  if(ri===10){
+    if(!door11Open&&dist(player.x,player.y,R11x+860,450)<170){G('[E] sceau',R11x+800,440,'rgba(201,168,216,.88)',14);}
+    if(door11Open){const[dx,dy]=w2s(R11x+860,BD);ctx.save();ctx.strokeStyle='rgba(212,161,90,.45)';ctx.setLineDash([6*DPR,10*DPR]);ctx.lineWidth=1.5*DPR;ctx.strokeRect(dx,dy,40*DPR,(world.h-2*BD)*DPR);ctx.setLineDash([]);ctx.restore();G('✓',R11x+840,450,'#3a6b3a',44);}
+  }
+
+  // R12 runic stelae
+  if(ri===11){
+    drawOpening({...R12BURN},'burn');
+    PIL12.forEach(p=>{
+      const done=RUNE_ORDER.indexOf(p.r)<r12prog&&!r12ok;
+      G(p.r,p.x,p.y,r12ok?'#3a6b3a':(done?'#3a6b3a':'#8a7455'),42);
+    });
+    if(r12fl>.01){ctx.save();ctx.fillStyle=`rgba(122,46,30,${r12fl*.25})`;ctx.fillRect(0,0,W,H);ctx.restore();}
+    if(r12ok){G('⛤',R12x+450,700,'rgba(212,161,90,.85)',46);G('Le manuscrit se referme…',R12x+450,760,'rgba(201,168,216,.6)',16);}
+  }
+
+  // R13 Apothicairerie
+  if(ri===12){
+    drawOpening({...R13BURN},'burn');
+    PLANTS13.forEach(pl=>{
+      const col=r13ok&&!pl.toxic?'#3a6b3a':'#5a4a35';
+      G(pl.sym,pl.x,pl.y,col,40);
+      if(dist(player.x,player.y,pl.x,pl.y)<110)G(pl.name,pl.x,pl.y+36,'rgba(201,168,216,.55)',13);
+    });
+    if(r13ok){
+      // Chiron — the Healer, the Key — confirms the safe choice
+      G('⚷',R13x+450,620,'rgba(212,161,90,.9)',44);
+      G('la clef du guérisseur',R13x+450,670,'rgba(201,168,216,.6)',14);
+    }
+    if(r13fl>.01){ctx.save();ctx.fillStyle=`rgba(122,46,30,${r13fl*.3})`;ctx.fillRect(0,0,W,H);ctx.restore();G('☠',player.x,player.y-60,`rgba(180,40,20,${r13fl})`,24);}
+  }
+
+  // R14 Salle Géomantique — the three daughters' age riddle
+  if(ri===13){
+    drawOpening({...R14BURN},'burn');
+    const geoCol='#b5766a';// amber-rose — new to the palette
+    // three figures suggesting daughters of different height, near the door
+    [0,1,2].forEach(i=>{
+      const fx=R14_DOOR.x-60+i*60,fy=R14_DOOR.y+70;
+      const h=14+i*6;
+      ctx.save();
+      const[sx,sy]=w2s(fx,fy);
+      ctx.strokeStyle=r14ok?'#3a6b3a':geoCol;ctx.lineWidth=2*DPR;
+      ctx.beginPath();ctx.arc(sx,sy-h*DPR,5*DPR,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(sx,sy-h*DPR+5*DPR);ctx.lineTo(sx,sy);ctx.stroke();
+      ctx.restore();
+    });
+    G(r14ok?'✓':'☩',R14_DOOR.x,R14_DOOR.y,r14ok?'#3a6b3a':'#8a7455',36);
+    if(!r14ok&&dist(player.x,player.y,R14_DOOR.x,R14_DOOR.y)<100)G('[E] leurs âges',R14_DOOR.x,R14_DOOR.y-46,'rgba(201,168,216,.7)',13);
+  }
+
+  // R15 Salle des Sphères
+  if(ri===14){
+    drawOpening({...R15BURN},'burn');
+    // orbit ring, only visible once solved
+    if(r15ok){const[csx,csy]=w2s(R15c.x,R15c.y);ctx.save();ctx.strokeStyle='rgba(212,161,90,.5)';ctx.lineWidth=1.5*DPR;ctx.beginPath();ctx.arc(csx,csy,R15R*DPR,0,Math.PI*2);ctx.stroke();ctx.restore();}
+    PLANETS15.forEach(p=>{
+      const done=!r15ok&&R15_ORDER.indexOf(p.k)<r15prog;
+      G(p.sym,p.x,p.y,r15ok?'#3a6b3a':(done?'#3a6b3a':p.col),36);
+    });
+    if(r15fl>.01){ctx.save();ctx.fillStyle=`rgba(122,46,30,${r15fl*.25})`;ctx.fillRect(0,0,W,H);ctx.restore();}
+  }
+
+  // ── R16 La Balance
+  if(ri===15){
+    drawOpening({...R16BURN},'burn');
+    const sum=METALS16.filter(x=>x.on).reduce((s,x)=>s+x.val,0);
+    const tilt=clamp((sum-R16_TARGET)*3,-40,40);
+    const[psx,psy]=w2s(R16_PAN.x,R16_PAN.y);
+    ctx.save();
+    ctx.strokeStyle='rgba(90,74,53,.7)';ctx.lineWidth=2.5*DPR;
+    ctx.beginPath();ctx.moveTo(psx,psy-60*DPR);ctx.lineTo(psx,psy+60*DPR);ctx.stroke();
+    ctx.save();ctx.translate(psx,psy);ctx.rotate(tilt*Math.PI/180);
+    ctx.beginPath();ctx.moveTo(-90*DPR,0);ctx.lineTo(90*DPR,0);ctx.stroke();
+    ctx.strokeStyle='rgba(90,74,53,.5)';ctx.lineWidth=1.5*DPR;
+    ctx.beginPath();ctx.moveTo(-90*DPR,0);ctx.lineTo(-90*DPR,26*DPR);ctx.moveTo(90*DPR,0);ctx.lineTo(90*DPR,26*DPR);ctx.stroke();
+    ctx.restore();ctx.restore();
+    G(r16ok?'✓':String(sum),R16_PAN.x,R16_PAN.y-90,r16ok?'#3a6b3a':'rgba(201,168,216,.7)',20);
+    METALS16.forEach(m=>{
+      G(m.sym,m.x,m.y,m.on?'#d4a15a':'#5a4a35',36);
+      if(dist(player.x,player.y,m.x,m.y)<80)G(`${m.name} (${m.val})`,m.x,m.y+36,'rgba(201,168,216,.6)',12);
+    });
+  }
+
+  // ── R17 Le Cryptex
+  if(ri===16){
+    drawOpening({...R17BURN},'burn');
+    RINGS17.forEach((ring,i)=>{
+      const done=r17ok||ring.idx===RING17_TARGET[i];
+      G(ring.list[ring.idx],ring.x,ring.y,done?'#3a6b3a':'#8a7455',44);
+      if(dist(player.x,player.y,ring.x,ring.y)<70)G('[E]',ring.x,ring.y-50,'rgba(201,168,216,.65)',12);
+      const[sx,sy]=w2s(ring.x,ring.y);ctx.save();ctx.strokeStyle='rgba(90,74,53,.4)';ctx.lineWidth=1.5*DPR;ctx.beginPath();ctx.arc(sx,sy,50*DPR,0,Math.PI*2);ctx.stroke();ctx.restore();
+    });
+  }
+
+function drawBellIcon(x,y,col,sz){
+  const[sx,sy]=w2s(x,y);const s=sz*DPR;
+  ctx.save();ctx.translate(sx,sy);ctx.strokeStyle=col;ctx.lineWidth=Math.max(1,1.6*DPR);
+  ctx.beginPath();ctx.moveTo(-s*0.06,-s*0.9);ctx.lineTo(-s*0.06,-s*0.7);ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-s*0.5,s*0.35);
+  ctx.quadraticCurveTo(-s*0.5,-s*0.65,0,-s*0.68);
+  ctx.quadraticCurveTo(s*0.5,-s*0.65,s*0.5,s*0.35);
+  ctx.lineTo(s*0.62,s*0.5);ctx.lineTo(-s*0.62,s*0.5);ctx.closePath();ctx.stroke();
+  ctx.beginPath();ctx.arc(0,s*0.68,s*0.1,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+}
+  // ── R18 Le Carillon
+  if(ri===17){
+    drawOpening({...R18BURN},'burn');
+    BELLS18.forEach((b,i)=>{
+      const[sx,sy]=w2s(b.x,b.y);
+      if(b.pulse>0){const g=ctx.createRadialGradient(sx,sy,0,sx,sy,60*DPR*(1-b.pulse)+10*DPR);g.addColorStop(0,hexA(b.col,b.pulse*.5));g.addColorStop(1,hexA(b.col,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(sx,sy,60*DPR,0,Math.PI*2);ctx.fill();}
+      const done=r18ok||BELL18_ORDER.indexOf(i)<r18prog;
+      drawBellIcon(b.x,b.y,done?'#3a6b3a':b.col,38);
+      if(dist(player.x,player.y,b.x,b.y)<70)G('[E]',b.x,b.y-40,'rgba(201,168,216,.65)',12);
+    });
+    if(r18fl>.01){ctx.save();ctx.fillStyle=`rgba(122,46,30,${r18fl*.25})`;ctx.fillRect(0,0,W,H);ctx.restore();}
+  }
+
+  // ── R19 Le Bassin des Reflets
+  if(ri===18){
+    const[midSx]=w2s(R19_MID_X,450);
+    // water strip between banks
+    const[lsx]=w2s(R19_LEFT_X,450),[rsx]=w2s(R19_RIGHT_X,450);
+    ctx.save();ctx.fillStyle='rgba(58,90,122,.14)';ctx.fillRect(lsx+30*DPR,0,rsx-lsx-60*DPR,H);
+    ctx.strokeStyle='rgba(58,90,122,.3)';ctx.lineWidth=1*DPR;
+    ctx.beginPath();ctx.moveTo(lsx+30*DPR,H*0.5);ctx.lineTo(rsx-30*DPR,H*0.5);ctx.stroke();
+    ctx.restore();
+    // the fixed word, engraved, on the left bank
+    ctx.save();ctx.font=`${46*DPR}px 'Cormorant SC',serif`;ctx.fillStyle='#8a7455';ctx.textAlign='center';ctx.textBaseline='middle';
+    const[wlx,wly]=w2s(R19_LEFT_X,300);
+    ctx.fillText(R19_LEFT_WORD,wlx,wly);
+    ctx.restore();
+    // the mirrored reflection of that same word, upside down, across the water line
+    ctx.save();
+    ctx.translate(wlx,H*0.5);ctx.scale(1,-1);ctx.translate(-wlx,-(H*0.5));
+    ctx.font=`${46*DPR}px 'Cormorant SC',serif`;ctx.fillStyle='rgba(138,116,85,.35)';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(R19_LEFT_WORD,wlx,wly);
+    ctx.restore();
+    // the player's own reflection, flipped horizontally across the pool's mid-axis
+    const savedX=player.x,savedFace=player.faceDir;
+    player.x=2*R19_MID_X-player.x;player.faceDir=-player.faceDir;
+    ctx.save();ctx.globalAlpha=0.4;drawPlayer(0);ctx.restore();
+    player.x=savedX;player.faceDir=savedFace;
+    G(r19ok?'✓ '+R19_ANSWER:'☩',R19_DOOR.x,R19_DOOR.y,r19ok?'#3a6b3a':'#8a7455',32);
+    if(!r19ok&&dist(player.x,player.y,R19_DOOR.x,R19_DOOR.y)<100)G('[E] le mot inversé',R19_DOOR.x,R19_DOOR.y-46,'rgba(201,168,216,.7)',13);
+  }
+
+  // ── R20 Le Cadran Solaire
+  if(ri===19){
+    const[csx,csy]=w2s(R20c.x,R20c.y);const R=140*DPR;
+    ctx.save();ctx.strokeStyle='rgba(90,74,53,.5)';ctx.lineWidth=2*DPR;ctx.beginPath();ctx.arc(csx,csy,R,0,Math.PI*2);ctx.stroke();
+    // target mark
+    const tx=csx+Math.cos(R20_TARGET)*R,ty=csy+Math.sin(R20_TARGET)*R;
+    ctx.fillStyle=r20ok?'#3a6b3a':'rgba(212,161,90,.6)';ctx.beginPath();ctx.arc(tx,ty,8*DPR,0,Math.PI*2);ctx.fill();
+    // rotating shadow
+    ctx.strokeStyle=r20ok?'#3a6b3a':'#5a4a35';ctx.lineWidth=4*DPR;
+    ctx.beginPath();ctx.moveTo(csx,csy);ctx.lineTo(csx+Math.cos(r20angle)*R,csy+Math.sin(r20angle)*R);ctx.stroke();
+    ctx.strokeStyle=r20ok?'#3a6b3a':'#8a6a5a';ctx.lineWidth=2.5*DPR;
+    ctx.beginPath();ctx.moveTo(csx,csy);ctx.lineTo(csx+Math.cos(r20angle2)*R*0.62,csy+Math.sin(r20angle2)*R*0.62);ctx.stroke();
+    ctx.restore();
+    G('☉',R20c.x,R20c.y,'#d4a15a',30);
+    if(dist(player.x,player.y,R20c.x,R20c.y)<160)G('[E] au bon moment',R20c.x,R20c.y-170,'rgba(201,168,216,.65)',13);
+    if(r20fl>.01){ctx.save();ctx.fillStyle=`rgba(122,46,30,${r20fl*.25})`;ctx.fillRect(0,0,W,H);ctx.restore();}
+    if(r20ok)G('✓',R20c.x,R20c.y+170,'#3a6b3a',30);
+  }
+
+  // ── R21 Les Bidons
+  if(ri===20){
+    // big jug
+    const bx=R21x+150,by=450;
+    ctx.save();
+    const[bsx,bsy]=w2s(bx,by);
+    ctx.strokeStyle='rgba(90,74,53,.7)';ctx.lineWidth=2.5*DPR;
+    ctx.strokeRect(bsx-40*DPR,bsy-100*DPR,80*DPR,140*DPR);
+    const bfillH=140*(jugBig/JUG_BIG_CAP);
+    ctx.fillStyle='rgba(58,90,122,.4)';ctx.fillRect(bsx-40*DPR,bsy+40*DPR-bfillH*DPR,80*DPR,bfillH*DPR);
+    ctx.restore();
+    G(`5L (${jugBig}L)`,bx,by-120,'rgba(201,168,216,.7)',14);
+    // small jug
+    const sxp=R21x+750,syp=450;
+    ctx.save();
+    const[ssx,ssy]=w2s(sxp,syp);
+    ctx.strokeStyle='rgba(90,74,53,.7)';ctx.lineWidth=2.5*DPR;
+    ctx.strokeRect(ssx-30*DPR,ssy-70*DPR,60*DPR,100*DPR);
+    const sfillH=100*(jugSmall/JUG_SMALL_CAP);
+    ctx.fillStyle='rgba(58,90,122,.4)';ctx.fillRect(ssx-30*DPR,ssy+30*DPR-sfillH*DPR,60*DPR,sfillH*DPR);
+    ctx.restore();
+    G(`3L (${jugSmall}L)`,sxp,syp-90,'rgba(201,168,216,.7)',14);
+    JUGS21_STATIONS.forEach(st=>{
+      const near=dist(player.x,player.y,st.x,st.y)<75;
+      G(near?`[E] ${st.label}`:st.label,st.x,st.y-30,near?'rgba(201,168,216,.85)':'rgba(201,168,216,.45)',near?13:12);
+      G('◆',st.x,st.y,near?'#d4a15a':'rgba(90,74,53,.6)',16);
+    });
+    G(r21ok?'✓ 4L exactement':`cible : ${JUG_TARGET}L`,R21x+450,180,r21ok?'#3a6b3a':'rgba(201,168,216,.6)',18);
+  }
+
+function drawBookIcon(x,y,col,sz){
+  const[sx,sy]=w2s(x,y);const s=sz*DPR;
+  ctx.save();ctx.translate(sx,sy);ctx.strokeStyle=col;ctx.lineWidth=Math.max(1,1.5*DPR);
+  ctx.beginPath();ctx.moveTo(0,-s*0.5);ctx.quadraticCurveTo(-s*0.5,-s*0.62,-s*0.55,-s*0.4);ctx.lineTo(-s*0.55,s*0.5);ctx.quadraticCurveTo(-s*0.5,s*0.38,0,s*0.5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-s*0.5);ctx.quadraticCurveTo(s*0.5,-s*0.62,s*0.55,-s*0.4);ctx.lineTo(s*0.55,s*0.5);ctx.quadraticCurveTo(s*0.5,s*0.38,0,s*0.5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-s*0.5);ctx.lineTo(0,s*0.5);ctx.stroke();
+  ctx.restore();
+}
+function drawHourglassIcon(x,y,col,sz){
+  const[sx,sy]=w2s(x,y);const s=sz*DPR;
+  ctx.save();ctx.translate(sx,sy);ctx.strokeStyle=col;ctx.lineWidth=Math.max(1,1.6*DPR);
+  ctx.beginPath();ctx.moveTo(-s*0.4,-s*0.55);ctx.lineTo(s*0.4,-s*0.55);ctx.lineTo(s*0.08,0);ctx.lineTo(s*0.4,s*0.55);ctx.lineTo(-s*0.4,s*0.55);ctx.lineTo(-s*0.08,0);ctx.closePath();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-s*0.4,-s*0.55);ctx.lineTo(s*0.4,-s*0.55);ctx.moveTo(-s*0.4,s*0.55);ctx.lineTo(s*0.4,s*0.55);ctx.stroke();
+  ctx.restore();
+}
+  // ── R22 La Devinette de Gollum
+  if(ri===21){
+    drawOpening({x:R22_PEDESTAL.x,y:R22_PEDESTAL.y,r:36},'burn');
+    drawBookIcon(R22_PEDESTAL.x,R22_PEDESTAL.y-60,'#8a7455',36);
+    if(dist(player.x,player.y,R22_PEDESTAL.x,R22_PEDESTAL.y)<160){
+      const lines=['"Cette chose toutes choses dévore : oiseaux, bêtes, arbres, fleurs ;','ronge le fer, mord l\'acier ; réduit les pierres d\'une pièce en poussière ;','tue les rois, ruine les villes et abat les hautes montagnes."'];
+      lines.forEach((l,i)=>G(l,R22_PEDESTAL.x,R22_PEDESTAL.y+56+i*30,'rgba(201,168,216,.75)',16));
+    }
+    drawHourglassIcon(R22_DOOR.x,R22_DOOR.y,r22ok?'#3a6b3a':'#8a7455',36);
+    if(!r22ok&&dist(player.x,player.y,R22_DOOR.x,R22_DOOR.y)<100)G('[E] répondre',R22_DOOR.x,R22_DOOR.y-40,'rgba(201,168,216,.7)',13);
+  }
+
+  // ── R23 La Bibliothèque
+  if(ri===22){
+    BOOKS23.forEach(b=>{
+      drawOpening({x:b.x,y:b.y,r:30},'burn');
+      G(b.title,b.x,b.y-46,'#8a7455',22);
+      if(dist(player.x,player.y,b.x,b.y)<150){
+        const words=b.text.split(' ');const mid=Math.ceil(words.length/2);
+        const line1=words.slice(0,mid).join(' '),line2=words.slice(mid).join(' ');
+        G(`"${line1}`,b.x,b.y+42,'rgba(201,168,216,.8)',15);
+        G(`${line2}"`,b.x,b.y+66,'rgba(201,168,216,.8)',15);
+      }
+      else if(dist(player.x,player.y,b.x,b.y)<240)G('[E] lire',b.x,b.y-76,'rgba(201,168,216,.5)',13);
+    });
+    CODES23.forEach(c=>{
+      const d=dist(player.x,player.y,c.x,c.y);
+      const a=d<90?.85:.15;
+      G(c.code,c.x,c.y,`rgba(212,161,90,${a})`,20);
+    });
+    G(r23ok?'✓':'☩',R23_DOOR.x,R23_DOOR.y,r23ok?'#3a6b3a':'#8a7455',36);
+    if(!r23ok&&dist(player.x,player.y,R23_DOOR.x,R23_DOOR.y)<100)G('[E] le mot',R23_DOOR.x,R23_DOOR.y-40,'rgba(201,168,216,.7)',13);
+  }
+
+  drawGlow();drawPlayer(dt);
+  if(ri===2&&!jarDone)drawDark();
+  if(ri===6&&!r7ok)drawDark7();
+  // R1 negative inside tear
+  if(ri===0&&tear&&dist(player.x,player.y,tear.x,tear.y)<tear.r*.82){
+    drawNegative(null);
+    const rm1=roomOf(player.x);
+    const[cx0]=w2s(rm1.x0+BD,0),[cx1]=w2s(rm1.x1-BD,0),[,cy0]=w2s(0,BD),[,cy1]=w2s(0,world.h-BD);
+    ctx.save();ctx.beginPath();ctx.rect(Math.max(0,cx0),Math.max(0,cy0),Math.min(W,cx1)-Math.max(0,cx0),Math.min(H,cy1)-Math.max(0,cy0));ctx.clip();
+    const px0=cx0+(cx1-cx0)*.12,py0=cy0+(cy1-cy0)*.56,px1=cx0+(cx1-cx0)*.88,py1=cy0+(cy1-cy0)*.93;
+    function mp(x,y){const nx=(x-R3x)/W0,ny=(y-BD)/(world.h-2*BD);return[px0+nx*(px1-px0),py0+ny*(py1-py0)];}
+    R3T.forEach(t=>{const[tx,ty]=mp(t.x,t.y);ctx.strokeStyle='rgba(212,161,90,.65)';ctx.lineWidth=1.5*DPR;ctx.beginPath();ctx.arc(tx,ty,9*DPR,0,Math.PI*2);ctx.stroke();ctx.save();ctx.font=`${13*DPR}px serif`;ctx.fillStyle='rgba(230,160,70,.88)';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🜂',tx,ty);ctx.restore();});
+    // 3 baffle walls matching the actual maze
+    [[220,BD,586],[370,280,world.h-280-BD],[520,BD,586],[670,280,world.h-280-BD]].forEach(([wx,wy,wh])=>{
+      const[x1,y1]=mp(R3x+wx,wy),[,y2]=mp(R3x+wx,wy+wh);
+      ctx.strokeStyle='rgba(201,168,216,.45)';ctx.lineWidth=2.5*DPR;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x1,y2);ctx.stroke();
+    });
+    const[jx,jy]=mp(jarSrc.x,jarSrc.y),[ax,ay]=mp(altar3.x,altar3.y);
+    ctx.fillStyle='#8fb6d8';ctx.beginPath();ctx.arc(jx,jy,5*DPR,0,Math.PI*2);ctx.fill();ctx.fillStyle='#d4a15a';ctx.beginPath();ctx.arc(ax,ay,5*DPR,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+  if(ri===4&&dist(player.x,player.y,R5RIDDLE.x,R5RIDDLE.y)<R5RIDDLE.r*.82)
+    drawNegative(['"Je coule plus facilement que la plupart des rimes ;',"j'adore tomber mais je ne peux pas grimper."]);
+  if(ri===5&&dist(player.x,player.y,R6RIDDLE.x,R6RIDDLE.y)<R6RIDDLE.r*.82)
+    drawNegative(["Je suis le plus lourd des quatre frères, immobile et froid par nature.","Un triangle pointant vers le bas, barré d'un trait horizontal.","Matrice des richesses, réceptacle final du Grand Œuvre.","Je donne une forme solide aux esprits volatils."]);
+  if(ri===11&&dist(player.x,player.y,R12BURN.x,R12BURN.y)<R12BURN.r*.85)
+    drawNegative(['ᚢ = U    ᛗ = M    ᛒ = B','ᚱ = R    ᚨ = A','Trace en runes le mot latin de l\'ombre.']);
+  if(ri===12&&dist(player.x,player.y,R13BURN.x,R13BURN.y)<R13BURN.r*.85)
+    drawNegative(["L'if garde son poison dans chaque aiguille.","Le sureau cru trouble le sang qui l'avale.","Le prunellier griffe et corrompt la plaie.","Une seule fleur d'épine blanche apaise le cœur sans jamais le trahir."]);
+  if(ri===13&&dist(player.x,player.y,R14BURN.x,R14BURN.y)<R14BURN.r*.85)
+    drawNegative(['Le produit de leurs âges fait trente-six.','Leur somme fait treize.','Il y a une aînée — une seule.']);
+  if(ri===14&&dist(player.x,player.y,R15BURN.x,R15BURN.y)<R15BURN.r*.85)
+    drawNegative(['Le messager précède toujours les rois.','Puis vient celle qui aime, le guerrier rouge,','le roi généreux, et le vieillard aux anneaux.']);
+  if(ri===15&&dist(player.x,player.y,R16BURN.x,R16BURN.y)<R16BURN.r*.85)
+    drawNegative(['Le plateau exige vingt et une parts justes.','Aucun métal seul n\'y suffit — il faut en marier plusieurs.']);
+  if(ri===16&&dist(player.x,player.y,R17BURN.x,R17BURN.y)<R17BURN.r*.85)
+    drawNegative(['Le premier cercle : la troisième rune.','Le second : la première lettre grecque.','Le troisième : le quatrième signe.']);
+  if(ri===17&&dist(player.x,player.y,R18BURN.x,R18BURN.y)<R18BURN.r*.85)
+    drawNegative(['La cloche bleue chante la première.','Puis la rouge, puis la mauve, puis la verte.']);
+  if(ri===8&&dist(player.x,player.y,R9BURN.x,R9BURN.y)<R9BURN.r*.85)
+    drawNegative(['Chaque geste répond à ses voisins immédiats.','Trouve la combinaison qui rend le silence total.']);
+
+  const vg=ctx.createRadialGradient(W/2,H/2,H*.32,W/2,H/2,H*.85);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(30,20,10,.35)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+}
+function loop(now){const dt=Math.min(.033,(now-lastT)/1e3);lastT=now;update(dt);render(dt);requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+setTimeout(()=>showTip(TIPS[0]),900);
+upd();
+</script>
+</body>
+</html>

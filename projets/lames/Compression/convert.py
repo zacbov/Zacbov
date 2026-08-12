@@ -168,9 +168,15 @@ class _ManualDZ:
             self.level_tiles.append((math.ceil(lw/tile_size), math.ceil(lh/tile_size)))
 
     def _best(self, dz_lvl):
+        # plus petite source dont la largeur >= cible : downscale minimal (evite les
+        # lectures gigantesques quand la source manque de niveaux de pyramide).
         lw = self.level_dimensions[dz_lvl][0]
-        return min(range(self._slide.level_count),
-                   key=lambda i: abs(self._slide.level_dimensions[i][0] - lw))
+        cands = [i for i in range(self._slide.level_count)
+                 if self._slide.level_dimensions[i][0] >= lw]
+        if cands:
+            return min(cands, key=lambda i: self._slide.level_dimensions[i][0])
+        return max(range(self._slide.level_count),
+                   key=lambda i: self._slide.level_dimensions[i][0])
 
     def get_tile(self, level, address):
         col, row = address
@@ -221,6 +227,9 @@ class ConvertResult:
     levels:     int   = 0
     duration:   float = 0.0
     error:      str   = ""
+    stem:       str   = ""       # nom de fichier sans extension
+    mpp:        float = None     # µm par pixel (métadonnées de la lame)
+    objective:  int   = None     # grossissement de numérisation (ex. 20, 40)
 
     @property
     def ratio(self) -> float:
@@ -230,6 +239,133 @@ class ConvertResult:
     def src_mb(self) -> str: return f"{self.src_size/1e6:.1f}"
     @property
     def dst_mb(self) -> str: return f"{self.dst_size/1e6:.1f}"
+
+
+def _dzsave_vips(src, out_dir, stem, opts, progress_cb=None):
+    """Genere la pyramide DZI via libvips (dzsave) : lecture en flux, memoire bornee,
+    bien plus rapide que le generateur Python. Lit SVS/NDPI/MRXS si la libvips
+    installee inclut openslide, sinon TIFF/BigTIFF/PNG/JPEG.
+    Retourne True si reussi, False sinon (-> repli sur le generateur de secours)."""
+    try:
+        import pyvips
+    except Exception:
+        return False
+    try:
+        if progress_cb: progress_cb(0.03, "libvips : lecture en flux...")
+        img = pyvips.Image.new_from_file(str(src), access="sequential")
+        if img.hasalpha():
+            img = img.flatten(background=255)
+        ext = opts.fmt.lower()
+        suffix = ".webp[Q=%d]" % opts.quality if ext == "webp" else ".jpg[Q=%d]" % opts.quality
+        img.dzsave(str(out_dir / stem), suffix=suffix,
+                   tile_size=opts.tile_size, overlap=opts.overlap, layout="dz")
+        vp = out_dir / (stem + "_files") / "vips-properties.xml"
+        if vp.exists():
+            try: vp.unlink()
+            except Exception: pass
+        if progress_cb: progress_cb(1.0, "Termine (libvips)")
+        return True
+    except Exception as e:
+        print("  [VIPS] %s : non pris en charge par libvips (%s) -> generateur de secours" % (src.name, e))
+        return False
+
+
+def _read_slide_meta(src):
+    """Retourne (mpp, objective) depuis les métadonnées de la lame, ou (None, None).
+    mpp = micrometres par pixel a pleine resolution ; objective = grossissement de scan.
+    N'echoue jamais : renvoie (None, None) si l'info est absente."""
+    src = str(src)
+    # 1) OpenSlide (le plus fiable : SVS/NDPI/MRXS)
+    try:
+        import openslide
+        sl = openslide.OpenSlide(src)
+        try:
+            p = sl.properties
+            mpp = p.get(getattr(openslide, "PROPERTY_NAME_MPP_X", "openslide.mpp-x"))
+            obj = p.get(getattr(openslide, "PROPERTY_NAME_OBJECTIVE_POWER", "openslide.objective-power"))
+            mpp = float(mpp) if mpp else None
+            obj = int(round(float(obj))) if obj else None
+            if mpp or obj:
+                return (round(mpp, 4) if mpp else None, obj)
+        finally:
+            sl.close()
+    except Exception:
+        pass
+    # 2) pyvips (loader openslide interne, sinon resolution TIFF)
+    try:
+        import pyvips
+        img = pyvips.Image.new_from_file(src)
+        fields = set(img.get_fields())
+        def gf(k):
+            try: return img.get(k) if k in fields else None
+            except Exception: return None
+        mpp = gf("openslide.mpp-x")
+        obj = gf("openslide.objective-power")
+        mpp = float(mpp) if mpp else None
+        obj = int(round(float(obj))) if obj else None
+        if not mpp:
+            xres = gf("xres")               # pixels par mm chez libvips
+            if xres and float(xres) > 0:
+                cand = 1000.0 / float(xres)  # -> µm par pixel
+                if 0.05 <= cand <= 5:        # garde-fou : plage WSI plausible
+                    mpp = cand
+        if mpp or obj:
+            return (round(mpp, 4) if mpp else None, obj)
+    except Exception:
+        pass
+    return (None, None)
+
+
+def _slug(name):
+    import unicodedata, re
+    s = unicodedata.normalize("NFD", str(name)).encode("ascii", "ignore").decode()
+    s = re.sub(r"[^a-zA-Z0-9]+", "_", s).strip("_").lower()
+    return s or "lame"
+
+
+def write_viewer_manifest(out_dir, results):
+    """Ecrit/complete un manifest.json pret pour le viewer dans le dossier PARENT
+    de out_dir (a cote de index.html), avec chemins relatifs 'out_name/stem.dzi'.
+    Conserve les champs pedagogiques deja saisis (nom, coloration, tissu,
+    annotations) pour les lames existantes ; met a jour mpp/objective/chemin."""
+    manifest_path = out_dir.parent / "manifest.json"
+    data = {"titre": "PharmAtlas — Lames numériques", "slides": []}
+    existing = {}
+    if manifest_path.exists():
+        try:
+            data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            for s in data.get("slides", []):
+                existing[s.get("id")] = s
+        except Exception:
+            data = {"titre": "PharmAtlas — Lames numériques", "slides": []}
+            existing = {}
+    order = list(existing.keys())
+    for res in results:
+        if getattr(res, "error", ""):
+            continue
+        stem = getattr(res, "stem", "") or ""
+        if not stem or not (out_dir / f"{stem}.dzi").exists():
+            continue
+        sid = _slug(stem)
+        entry = existing.get(sid) or {
+            "id": sid,
+            "nom": stem.replace("_", " "),
+            "coloration": "",
+            "tissu": "",
+        }
+        entry["dzi"] = f"{out_dir.name}/{stem}.dzi"          # chemin relatif au viewer
+        mpp = getattr(res, "mpp", None)
+        obj = getattr(res, "objective", None)
+        if mpp: entry["mpp"] = mpp
+        if obj:
+            entry["objective"] = obj
+            entry.setdefault("scan", obj)
+        existing[sid] = entry
+        if sid not in order:
+            order.append(sid)
+    data["slides"] = [existing[k] for k in order if k in existing]
+    manifest_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return manifest_path
 
 
 def convert_slide(
@@ -246,6 +382,8 @@ def convert_slide(
     t0  = time.time()
     res = ConvertResult(name=src.name, src_size=src.stat().st_size)
     stem = src.stem
+    res.stem = stem
+    res.mpp, res.objective = _read_slide_meta(src)
 
     dzi_path  = out_dir / f"{stem}.dzi"
     tiles_dir = out_dir / f"{stem}_files"
@@ -255,6 +393,16 @@ def convert_slide(
         res.dst_size = sum(f.stat().st_size for f in tiles_dir.rglob("*") if f.is_file())
         return res
 
+    # ── Voie rapide libvips (recommandée) : streaming, mémoire bornée ─────────
+    if _dzsave_vips(src, out_dir, stem, opts, progress_cb):
+        res.dst_size = sum(f.stat().st_size for f in tiles_dir.rglob("*") if f.is_file())
+        res.n_tiles  = sum(1 for f in tiles_dir.rglob("*")
+                           if f.suffix.lower() in (".webp", ".jpg", ".jpeg"))
+        res.levels   = sum(1 for d in tiles_dir.iterdir()
+                           if d.is_dir() and d.name.isdigit()) if tiles_dir.exists() else 0
+        res.duration = time.time() - t0
+        return res
+
     try:
         slide = open_slide(src)
     except Exception as e:
@@ -262,6 +410,9 @@ def convert_slide(
         return res
 
     dz    = _make_dz(slide, tile_size=opts.tile_size, overlap=opts.overlap)
+    if isinstance(slide, _TifffileSlide) and max(slide.dimensions) > 8000:
+        print("  [ATTENTION] %s : converti sans libvips ni OpenSlide -> lecture memoire lourde. "
+              "Installez libvips (avec openslide) pour une conversion fiable des grandes lames." % src.name)
     ext   = opts.fmt.lower()   # "webp" ou "jpeg"
     pil_fmt = "WEBP" if ext == "webp" else "JPEG"
 
@@ -415,6 +566,11 @@ def cmd_convert(args):
     manifest_path = out / f"{src.stem}.manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print(f"  Manifest : {manifest_path}")
+    mp = write_viewer_manifest(out, [res])
+    meta = []
+    if res.mpp: meta.append(f"mpp={res.mpp}")
+    if res.objective: meta.append(f"objectif={res.objective}x")
+    print(f"  Manifest viewer : {mp}" + (f"  ({', '.join(meta)})" if meta else "  (mpp/objectif non trouvés dans la lame)"))
 
 def cmd_batch(args):
     path  = Path(args.path)
@@ -458,6 +614,9 @@ def cmd_batch(args):
             f.write(f"{r.name},{r.src_size/1e6:.1f},{r.dst_size/1e6:.1f},"
                     f"{r.ratio:.1f},{r.n_tiles},{r.levels},{r.duration:.1f},{r.error}\n")
     print(f"\n  Rapport CSV : {csv_path}\n")
+    mp = write_viewer_manifest(out, results)
+    n_meta = sum(1 for r in results if not r.error and (r.mpp or r.objective))
+    print(f"  Manifest viewer : {mp}  ({n_meta}/{len(ok)} lames avec métadonnées mpp/objectif)\n")
 
 CONVERTER_HTML = r"""<!DOCTYPE html>
 <html lang="fr">

@@ -1,0 +1,1952 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0a0908">
+<title>CENDRELAME — Les Fosses de Vhalmar</title>
+<style>
+:root{
+  --noir:#080706; --fosse:#0e0c0a; --suie:#161311; --pierre:#211c18;
+  --os:#d9cdba; --cendre:#8f8377; --brume:#5c534b;
+  --or:#c9a227; --or-mat:#8a721c; --sang:#8c1c22; --sang-vif:#c62f2a;
+  --braise:#e0641a; --verdegris:#5c8073; --spectre:#7d8fb0;
+  --bord:rgba(201,162,39,.22);
+  --disp:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --ui:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%;background:#000;overscroll-behavior:none}
+body{font-family:var(--disp);color:var(--os);display:flex;align-items:center;justify-content:center}
+#app{position:relative;width:100vw;height:100dvh;max-width:min(100vw,calc(100dvh*0.5625));
+  background:var(--fosse);overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 0 80px #000 inset}
+#grain,#embers{position:absolute;inset:0;pointer-events:none;z-index:60}
+#grain{opacity:.055;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>")}
+#vig{position:absolute;inset:0;pointer-events:none;z-index:59;
+  background:radial-gradient(120% 78% at 50% 42%,transparent 34%,rgba(0,0,0,.72) 100%)}
+
+/* ---------- HUD ---------- */
+#hud{position:relative;z-index:20;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;
+  background:linear-gradient(#0b0a09,#0e0c0acc);border-bottom:1px solid var(--bord)}
+.hudtop{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--ui);
+  font-size:9.5px;letter-spacing:.18em;color:var(--brume);text-transform:uppercase}
+.hudtop b{color:var(--or);font-weight:400}
+.zones{display:flex;gap:6px;margin-top:7px}
+.zone{flex:1;position:relative;height:20px;background:#000;border:1px solid #2a2320;overflow:hidden}
+.zone i{position:absolute;inset:0;transform-origin:left;transition:transform .45s cubic-bezier(.2,.9,.3,1);
+  background:linear-gradient(90deg,#5d1216,#a8262a)}
+.zone.hurt i{background:linear-gradient(90deg,#6b3a10,#c4671a)}
+.zone.crit i{background:linear-gradient(90deg,#7a1015,#e03b2c);animation:pulse .9s infinite}
+@keyframes pulse{50%{opacity:.55}}
+.zone span{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;
+  padding:0 5px;font-family:var(--ui);font-size:8.5px;letter-spacing:.12em;color:#e8ddcb;
+  text-shadow:0 1px 2px #000;text-transform:uppercase}
+.bars{display:flex;gap:6px;margin-top:6px}
+.bar{flex:1;height:6px;background:#000;border:1px solid #241f1c;position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0;transform-origin:left;transition:transform .3s}
+#bEnd i{background:linear-gradient(90deg,#4c6b3a,#8fbb52)}
+#bFoc i{background:linear-gradient(90deg,#2f4a63,#6e93bd)}
+.hudbot{display:flex;justify-content:space-between;margin-top:7px;font-family:var(--ui);
+  font-size:10px;letter-spacing:.1em;color:var(--cendre)}
+.hudbot b{color:var(--or)}
+.status{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;min-height:0}
+.st{font-family:var(--ui);font-size:8px;letter-spacing:.1em;padding:2px 5px;border:1px solid;
+  text-transform:uppercase}
+.st.saign{color:#e2585c;border-color:#5d1a1e;background:#1a0b0c}
+.st.poison{color:#8fbb52;border-color:#31461f;background:#0e1408}
+.st.buff{color:var(--or);border-color:var(--or-mat);background:#1a1408}
+.st.malus{color:#9c8fb0;border-color:#3b3350;background:#100d16}
+
+/* ---------- SCENE ---------- */
+#scene{position:relative;flex:0 0 auto;height:31%;min-height:150px;overflow:hidden;background:#000;
+  border-bottom:1px solid var(--bord)}
+.kbw{position:absolute;inset:0;will-change:transform;animation:kb 26s ease-in-out infinite alternate}
+@keyframes kb{from{transform:scale(1.04) translate(0,0)}to{transform:scale(1.16) translate(-2%,-2.5%)}}
+#art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:contrast(1.1) saturate(.72) brightness(.82)}
+#fx{position:absolute;inset:0;width:100%;height:100%}
+#sceneShade{position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:linear-gradient(transparent 42%,rgba(14,12,10,.55) 78%,var(--fosse) 100%)}
+#loc{position:absolute;left:0;right:0;bottom:8px;z-index:4;text-align:center;
+  font-family:var(--ui);font-size:9px;letter-spacing:.34em;color:var(--or);text-transform:uppercase;
+  text-shadow:0 2px 8px #000}
+#depth{position:absolute;top:8px;left:10px;z-index:4;font-family:var(--ui);font-size:9px;
+  letter-spacing:.2em;color:var(--brume);text-shadow:0 1px 4px #000}
+
+/* ---------- TEXTE ---------- */
+#body{flex:1;overflow-y:auto;padding:16px 16px 6px;-webkit-overflow-scrolling:touch;position:relative;z-index:10}
+#body::-webkit-scrollbar{width:3px}#body::-webkit-scrollbar-thumb{background:#332b25}
+h2.title{font-size:19px;font-weight:400;letter-spacing:.04em;margin:0 0 10px;color:var(--os);
+  line-height:1.25}
+h2.title::after{content:"";display:block;width:38px;height:1px;background:var(--or-mat);margin-top:9px}
+p.txt{font-size:14.5px;line-height:1.68;color:#c3b7a6;margin:0 0 12px;text-align:justify;
+  hyphens:auto}
+p.txt:first-letter{}
+p.txt.lead:first-letter{float:left;font-size:44px;line-height:.82;padding:4px 8px 0 0;color:var(--or);
+  font-weight:400}
+.whisper{font-style:italic;color:var(--brume);font-size:13px;border-left:1px solid var(--or-mat);
+  padding-left:11px;margin:0 0 12px;line-height:1.6}
+.sysline{font-family:var(--ui);font-size:10.5px;letter-spacing:.06em;color:var(--cendre);
+  margin:0 0 6px;padding-left:12px;position:relative}
+.sysline::before{content:"▸";position:absolute;left:0;color:var(--or-mat)}
+.sysline.good{color:#9fc46a}.sysline.bad{color:#e2585c}.sysline.gold{color:var(--or)}
+
+/* ---------- CHOIX ---------- */
+#acts{position:relative;z-index:20;padding:8px 12px calc(env(safe-area-inset-bottom) + 12px);
+  background:linear-gradient(transparent,#0b0a09 22%);display:flex;flex-direction:column;gap:7px;
+  max-height:46%;overflow-y:auto}
+#acts::-webkit-scrollbar{width:0}
+.act{position:relative;display:block;width:100%;text-align:left;padding:11px 13px 11px 34px;
+  background:linear-gradient(#191512,#100e0c);border:1px solid #2c2622;color:var(--os);
+  font-family:var(--disp);font-size:14px;line-height:1.3;cursor:pointer;transition:.16s;
+  clip-path:polygon(0 0,calc(100% - 9px) 0,100% 9px,100% 100%,9px 100%,0 calc(100% - 9px))}
+.act::before{content:"◆";position:absolute;left:13px;top:50%;transform:translateY(-50%);
+  color:var(--or-mat);font-size:8px;transition:.16s}
+.act:active{background:linear-gradient(#241d16,#171310);border-color:var(--or-mat);transform:translateX(2px)}
+.act:active::before{color:var(--or)}
+.act small{display:block;font-family:var(--ui);font-size:9px;letter-spacing:.1em;color:var(--brume);
+  margin-top:3px;text-transform:uppercase}
+.act.danger{border-color:#4a1d1f}.act.danger::before{color:var(--sang)}
+.act.danger small{color:#9c5a5c}
+.act.gold{border-color:var(--or-mat)}.act.gold::before{color:var(--or)}
+.act.exit{border-color:#3d5546}.act.exit::before{content:"⌂";color:var(--verdegris)}
+.act.exit small{color:var(--verdegris)}
+.act[disabled]{opacity:.34;pointer-events:none}
+.actrow{display:flex;gap:7px}.actrow .act{flex:1}
+
+/* ---------- DÉ ---------- */
+#dice{position:absolute;inset:0;z-index:80;display:none;align-items:center;justify-content:center;
+  flex-direction:column;background:rgba(4,3,3,.9);backdrop-filter:blur(3px)}
+#dice.on{display:flex}
+#dcv,#dcv3{width:min(66vw,230px);height:min(66vw,230px)}
+#dcv3{display:none}
+#dice.d3 #dcv{display:none}
+#dice.d3 #dcv3{display:block}
+#dLbl{font-family:var(--ui);font-size:10px;letter-spacing:.3em;color:var(--brume);
+  text-transform:uppercase;margin-bottom:6px;text-align:center;padding:0 20px}
+#dRes{font-family:var(--ui);font-size:12px;letter-spacing:.14em;margin-top:10px;height:20px;
+  color:var(--os);text-align:center}
+#dRes.hit{color:#9fc46a}#dRes.miss{color:#e2585c}#dRes.crit{color:var(--or);font-size:14px}
+
+/* ---------- OVERLAY / PANELS ---------- */
+.ov{position:absolute;inset:0;z-index:70;background:#0b0a09;display:none;flex-direction:column}
+.ov.on{display:flex;animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.ovh{display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top) + 12px) 14px 10px;border-bottom:1px solid var(--bord)}
+.ovh h3{margin:0;font-size:15px;font-weight:400;letter-spacing:.2em;text-transform:uppercase;color:var(--or)}
+.ovc{flex:1;overflow-y:auto;padding:12px 14px calc(env(safe-area-inset-bottom) + 14px)}
+.close{background:none;border:1px solid #2c2622;color:var(--cendre);font-family:var(--ui);
+  font-size:11px;padding:6px 11px;cursor:pointer;letter-spacing:.1em}
+.tabs{display:flex;gap:0;border-bottom:1px solid #241f1c}
+.tab{flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;
+  color:var(--brume);font-family:var(--ui);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+.tab.on{color:var(--or);border-bottom-color:var(--or)}
+.sect{font-family:var(--ui);font-size:9px;letter-spacing:.24em;color:var(--brume);
+  text-transform:uppercase;margin:16px 0 8px;display:flex;align-items:center;gap:8px}
+.sect::after{content:"";flex:1;height:1px;background:#241f1c}
+.sect:first-child{margin-top:4px}
+
+/* items */
+.it{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px solid #241f1c;
+  background:#100e0c;margin-bottom:6px;cursor:pointer}
+.it:active{background:#171310;border-color:var(--or-mat)}
+.it .gl{width:30px;height:30px;flex:0 0 30px;display:flex;align-items:center;justify-content:center;
+  font-size:17px;background:#080706;border:1px solid #241f1c}
+.it .nm{flex:1;min-width:0}
+.it .nm b{display:block;font-weight:400;font-size:13.5px;color:var(--os)}
+.it .nm small{display:block;font-family:var(--ui);font-size:9px;color:var(--brume);letter-spacing:.06em;margin-top:2px;line-height:1.45}
+.it .vl{font-family:var(--ui);font-size:10px;color:var(--or);text-align:right;flex:0 0 auto;padding-top:2px}
+.it.eq{border-color:var(--or-mat);background:#151107}
+.it.eq .vl{color:var(--verdegris)}
+.rar1{color:var(--cendre)!important}.rar2{color:#7d9fb0!important}.rar3{color:#c9a227!important}.rar4{color:#c0682f!important}
+.empty{font-family:var(--ui);font-size:10px;color:#3f3833;letter-spacing:.1em;text-align:center;padding:24px 0}
+.pact{border:1px dashed #4a3f5e;background:#0e0b14}
+.pact .gl{border-color:#4a3f5e;color:#9c8fb0}
+.slotgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px}
+.slot{aspect-ratio:1;background:#0a0908;border:1px dashed #2c2622;display:flex;align-items:center;
+  justify-content:center;font-size:19px;cursor:pointer;position:relative}
+.slot.full{border-style:solid;border-color:#3a322c;background:#100e0c}
+.slot.pactslot{border-color:#4a3f5e}
+.btn{width:100%;padding:11px;background:linear-gradient(#191512,#100e0c);border:1px solid var(--or-mat);
+  color:var(--or);font-family:var(--ui);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+  cursor:pointer;margin-top:8px}
+.btn:active{background:#241d16}
+.btn.sub{border-color:#2c2622;color:var(--cendre)}
+.btn[disabled]{opacity:.3;pointer-events:none}
+.stat{display:flex;justify-content:space-between;font-family:var(--ui);font-size:11px;
+  padding:7px 0;border-bottom:1px solid #1b1715;color:var(--cendre);letter-spacing:.08em}
+.stat b{color:var(--os);font-weight:400}
+.desc{font-size:12.5px;line-height:1.6;color:#a2988c;margin:0 0 10px}
+
+/* ---------- CARTE ---------- */
+#mapwrap{padding:6px 0}
+.mrow{display:flex;align-items:center;gap:9px;padding:7px 4px;position:relative}
+.mrow::before{content:"";position:absolute;left:19px;top:0;bottom:0;width:1px;background:#241f1c}
+.mrow:first-child::before{top:50%}.mrow:last-child::before{bottom:50%}
+.mnode{width:30px;height:30px;flex:0 0 30px;border:1px solid #2c2622;background:#0a0908;
+  display:flex;align-items:center;justify-content:center;font-size:14px;position:relative;z-index:2;
+  border-radius:50%}
+.mrow.done .mnode{border-color:#3a4a3a;color:#4d5c4d;background:#0d1109}
+.mrow.now .mnode{border-color:var(--or);color:var(--or);box-shadow:0 0 12px rgba(201,162,39,.35);
+  animation:pulse 1.8s infinite}
+.mrow.fut .mnode{opacity:.42}
+.mtxt{font-family:var(--ui);font-size:10px;letter-spacing:.12em;color:var(--brume);text-transform:uppercase}
+.mrow.now .mtxt{color:var(--os)}
+.mrow.done .mtxt{color:#3f4a3f;text-decoration:line-through}
+
+/* ---------- TITRE ---------- */
+#title{position:absolute;inset:0;z-index:90;background:#000;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:26px;text-align:center}
+#tbg{position:absolute;inset:0;width:100%;height:100%;opacity:.42}
+#title .in{position:relative;z-index:2}
+#title h1{font-size:clamp(30px,10vw,46px);font-weight:400;letter-spacing:.16em;margin:0;
+  color:var(--os);text-shadow:0 0 34px rgba(224,100,26,.32)}
+#title .sub{font-family:var(--ui);font-size:9.5px;letter-spacing:.42em;color:var(--or-mat);
+  margin-top:12px;text-transform:uppercase}
+#title .ep{font-style:italic;color:var(--brume);font-size:13px;margin:24px auto 30px;max-width:290px;line-height:1.7}
+#toast{position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:95;pointer-events:none;
+  font-family:var(--ui);font-size:11px;letter-spacing:.14em;color:var(--or);text-align:center;
+  text-shadow:0 2px 10px #000;opacity:0;transition:.3s;padding:0 20px}
+#toast.on{opacity:1;top:34%}
+#flash{position:absolute;inset:0;z-index:58;pointer-events:none;background:#c62f2a;opacity:0;
+  transition:opacity .35s}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="scene"><div class="kbw"><canvas id="fx"></canvas></div>
+    <div id="sceneShade"></div><div id="depth"></div><div id="loc"></div></div>
+  <div id="hud"></div>
+  <div id="body"></div>
+  <div id="acts"></div>
+  <div id="vig"></div><div id="grain"></div><canvas id="embers"></canvas>
+  <div id="flash"></div><div id="toast"></div>
+  <div id="dice"><div id="dLbl"></div><canvas id="dcv"></canvas><canvas id="dcv3"></canvas><div id="dRes"></div></div>
+  <div class="ov" id="ovInv"></div>
+  <div class="ov" id="ovHold"></div>
+  <div id="title"><canvas id="tbg"></canvas><div class="in">
+    <h1>CENDRELAME</h1>
+    <div class="sub">Les Fosses de Vhalmar</div>
+    <p class="ep">« Le feu ne meurt pas. Il change de propriétaire. »</p>
+    <div id="tacts"></div>
+  </div></div>
+</div>
+<script>
+/* ============================================================
+   CENDRELAME — moteur roguelike d'extraction / dark fantasy
+   Fichier unique, aucune dépendance externe.
+   ============================================================ */
+'use strict';
+const $=(s)=>document.querySelector(s), $$=(s)=>[...document.querySelectorAll(s)];
+const R=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=R(0,i);[a[i],a[j]]=[a[j],a[i]]}return a};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ---------------- OBJETS ---------------- */
+const ITEMS={
+/* ---- ARMES ---- */
+lame_ebrechee:{n:"Lame ébréchée",t:"arme",g:"🗡",r:1,v:40,dmg:[4,9],end:2,sc:"FOR",d:"Une épée de garnison, rongée par le sel. Elle a tué, mais sans conviction."},
+hache_bourreau:{n:"Hache du Bourreau",t:"arme",g:"🪓",r:2,v:180,dmg:[7,15],end:3,sc:"FOR",tr:["lourde"],d:"Le tranchant est noir de suif. Lente à lever, définitive à l'abattre."},
+rapiere_cendree:{n:"Rapière cendrée",t:"arme",g:"🤺",r:2,v:170,dmg:[3,8],end:1,sc:"DEX",tr:["preste","perce"],d:"Trois coups avant qu'un autre n'en porte un. Cherche les jointures."},
+masse_penitente:{n:"Masse pénitente",t:"arme",g:"🔨",r:2,v:200,dmg:[6,13],end:3,sc:"FOR",tr:["brise"],d:"Cloutée de prières. Elle ne coupe pas l'armure : elle la plie avec l'homme dedans."},
+faux_du_suif:{n:"Faux du Suif",t:"arme",g:"⚔",r:3,v:420,dmg:[6,14],end:3,sc:"DEX",tr:["saigne"],d:"Un outil de moisson reforgé. Ce qu'elle ouvre ne se referme plus."},
+lame_maudite:{n:"Cendrelame",t:"arme",g:"🔥",r:4,v:900,dmg:[9,18],end:3,sc:"FOI",tr:["braise","vorace"],d:"Elle brûle sans consumer. Chaque coup porté te prend deux gouttes de sang en péage."},
+epieu_noye:{n:"Épieu noyé",t:"arme",g:"🔱",r:2,v:150,dmg:[5,11],end:2,sc:"DEX",tr:["allonge"],d:"Repêché dans la citerne, encore vert d'algues. Tient l'ennemi à distance."},
+poing_de_fer:{n:"Poings de fer",t:"arme",g:"🥊",r:1,v:60,dmg:[3,7],end:1,sc:"FOR",tr:["preste"],d:"Deux gantelets de mineur. Bon marché, jamais désarmé."},
+
+/* ---- ARMURES ---- */
+haillons:{n:"Haillons de pèlerin",t:"armure",g:"🧵",r:1,v:20,arm:1,d:"De la toile et de la foi. Surtout de la toile."},
+cuir_cloute:{n:"Cuir clouté",t:"armure",g:"🧥",r:1,v:110,arm:3,d:"Souple, silencieux, honnête."},
+maille_rouillee:{n:"Maille rouillée",t:"armure",g:"⛓",r:2,v:260,arm:5,end:-1,d:"Chaque anneau est une petite prière contre la lame."},
+plastron_cierge:{n:"Plastron du Cierge",t:"armure",g:"🛡",r:3,v:520,arm:7,end:-1,d:"Cire durcie sur acier. Les flammes glissent dessus."},
+plate_noire:{n:"Plate noire de Vhalmar",t:"armure",g:"🖤",r:4,v:1100,arm:10,end:-2,d:"Portée par les Gardes-Braise. Ils n'en sont jamais ressortis."},
+
+/* ---- CONSOMMABLES ---- */
+fiole_sang:{n:"Fiole de sang tiède",t:"conso",g:"🧪",r:1,v:70,use:"heal",amt:30,d:"Rend 30 PV répartis sur les blessures les plus graves."},
+grande_fiole:{n:"Grande fiole",t:"conso",g:"🍷",r:2,v:190,use:"heal",amt:70,d:"Rend 70 PV. Le goût est celui d'une pièce de cuivre."},
+onguent_lie:{n:"Onguent de lie",t:"conso",g:"🫙",r:1,v:60,use:"cure",d:"Arrête l'hémorragie et neutralise le venin."},
+pierre_aiguiser:{n:"Pierre à aiguiser",t:"conso",g:"🪨",r:1,v:80,use:"sharp",d:"+3 aux dégâts jusqu'à la fin du raid."},
+encens_gris:{n:"Encens gris",t:"conso",g:"🕯",r:1,v:65,use:"stam",d:"Restaure toute l'endurance et 2 de Focus."},
+pain_cendre:{n:"Pain de cendre",t:"conso",g:"🍞",r:1,v:35,use:"heal",amt:14,d:"Dur comme un galet. Rend 14 PV."},
+sel_noir:{n:"Sel noir",t:"conso",g:"🧂",r:2,v:150,use:"ward",d:"+4 de Garde jusqu'à la fin du combat suivant."},
+fiole_ivresse:{n:"Fiole d'ivresse",t:"conso",g:"🍺",r:2,v:130,use:"rage",d:"+5 dégâts, −3 Garde, pour un combat."},
+
+/* ---- RELIQUES (passifs, équipables) ---- */
+anneau_ver:{n:"Anneau du Ver blanc",t:"relique",g:"💍",r:2,v:300,mod:{end:3},d:"+3 Endurance maximale."},
+oeil_verre:{n:"Œil de verre",t:"relique",g:"👁",r:2,v:280,mod:{cha:2},d:"+2 Chance. Le monde te montre ses coutures."},
+coeur_suif:{n:"Cœur de suif",t:"relique",g:"🫀",r:3,v:480,mod:{pv:25},d:"+25 PV au torse. Il bat encore, doucement."},
+sceau_pacte:{n:"Sceau du Pacte",t:"relique",g:"🔮",r:4,v:1200,mod:{pact:1},d:"+1 emplacement dans la Poche du Pacte. Permanent."},
+dent_loup:{n:"Dent de loup-cendre",t:"relique",g:"🦷",r:2,v:240,mod:{dmg:2},d:"+2 dégâts à toutes les armes."},
+clou_martyr:{n:"Clou du Martyr",t:"relique",g:"📌",r:3,v:560,mod:{arm:2},d:"+2 Armure. Enfoncé dans l'omoplate, comme il se doit."},
+lanterne_creuse:{n:"Lanterne creuse",t:"relique",g:"🏮",r:3,v:500,mod:{foc:2},d:"+2 Focus maximal. Éclaire ce qu'on préférerait ignorer."},
+
+/* ---- TRÉSORS (valeur pure) ---- */
+dent_or:{n:"Dent en or",t:"tresor",g:"🦷",r:1,v:90,d:"Encore attachée à un peu de gencive."},
+calice_terni:{n:"Calice terni",t:"tresor",g:"🏆",r:2,v:230,d:"Le fond est noir. Ce n'était pas du vin."},
+larme_sel:{n:"Larme de sel",t:"tresor",g:"💧",r:2,v:280,d:"Un cristal en forme de goutte. Tiède au toucher."},
+couronne_fondue:{n:"Couronne fondue",t:"tresor",g:"👑",r:3,v:650,d:"L'or a coulé sur le front de quelqu'un."},
+grimoire_moisi:{n:"Grimoire moisi",t:"tresor",g:"📕",r:3,v:520,d:"Illisible. Les collectionneurs paient la moisissure."},
+oeuf_braise:{n:"Œuf de braise",t:"tresor",g:"🥚",r:4,v:1400,d:"Chaud. Quelque chose bouge dedans. Ne le fais pas éclore."},
+os_saint:{n:"Phalange de saint",t:"tresor",g:"🦴",r:2,v:200,d:"Le doigt qui a désigné le coupable."},
+piece_vhalmar:{n:"Écu de Vhalmar",t:"tresor",g:"🪙",r:1,v:120,d:"Une monnaie qui n'achète plus rien, ici."},
+
+/* ---- CLÉS / QUÊTE ---- */
+cle_rouille:{n:"Clé rouillée",t:"cle",g:"🗝",r:2,v:0,d:"Ouvre une porte des Fosses. Une seule."},
+braise_pure:{n:"Braise pure",t:"cle",g:"🔆",r:4,v:2000,d:"Le feu à l'état de graine. On dit qu'elle rachète une âme."}
+};
+const RAR=["","rar1","rar2","rar3","rar4"];
+
+/* ---------------- PROFONDEURS ---------------- */
+const DEPTHS=[
+ {id:1,nom:"Le Bastion Noyé",pal:"eau",cendres:[24,48],
+  intro:"L'eau saumâtre monte aux chevilles. Les torches des sentinelles brûlent encore, mais les sentinelles, non.",
+  pool:["rat_charnier","garde_noye","mendiant_creux","chien_sel"],elite:["sergent_noye"],
+  loot:["dent_or","piece_vhalmar","fiole_sang","pain_cendre","cuir_cloute","os_saint","lame_ebrechee","onguent_lie"]},
+ {id:2,nom:"La Nécropole de Sel",pal:"sel",cendres:[45,90],
+  intro:"Le sel a tout conservé : les corps, les gestes, le dernier cri. Rien ne pourrit ici. Rien ne repose non plus.",
+  pool:["momie_saline","pleureuse","chien_sel","garde_noye","fossoyeur"],elite:["archiviste_sel"],
+  loot:["larme_sel","calice_terni","grande_fiole","maille_rouillee","anneau_ver","rapiere_cendree","dent_loup","sel_noir","pierre_aiguiser","epieu_noye"]},
+ {id:3,nom:"Les Jardins de Suif",pal:"suif",cendres:[80,160],
+  intro:"Des cierges hauts comme des arbres. La cire coule depuis si longtemps qu'elle a formé un sous-bois. Ça respire.",
+  pool:["cierge_vivant","greffon","pleureuse","chevalier_fondu","fossoyeur"],elite:["jardinier_cire"],
+  loot:["grimoire_moisi","couronne_fondue","plastron_cierge","coeur_suif","faux_du_suif","lanterne_creuse","clou_martyr","masse_penitente","fiole_ivresse","encens_gris"]},
+ {id:4,nom:"Le Cœur de Braise",pal:"braise",cendres:[150,300],
+  intro:"Plus de pierre. Plus d'eau. Une chaleur qui pense. C'est ici que le Premier Feu a été mis en cage.",
+  pool:["chevalier_fondu","greffon","garde_braise","cierge_vivant"],elite:["garde_braise"],
+  boss:"roi_cendre",
+  loot:["oeuf_braise","plate_noire","lame_maudite","sceau_pacte","couronne_fondue","braise_pure","grande_fiole"]}
+];
+
+/* ---------------- BESTIAIRE ---------------- */
+const MOBS={
+rat_charnier:{n:"Rat de charnier",g:"🐀",z:{tete:12,torse:26},garde:9,dmg:[3,7],init:3,cen:[8,16],
+  d:"Gros comme un chien. Il a mangé mieux que toi ce mois-ci."},
+garde_noye:{n:"Garde noyé",g:"💀",z:{tete:22,torse:58},garde:12,dmg:[5,11],init:1,arm:2,cen:[18,34],
+  d:"L'eau lui sort de la bouche quand il parle. Il parle quand même."},
+mendiant_creux:{n:"Mendiant creux",g:"🫥",z:{tete:16,torse:40},garde:10,dmg:[4,9],init:2,cen:[12,24],
+  tr:["horde"],d:"Il tend la main. Il n'y a plus rien à mettre dedans, ni personne pour prendre."},
+chien_sel:{n:"Chien de sel",g:"🐕",z:{tete:18,torse:34},garde:13,dmg:[5,10],init:5,cen:[14,28],
+  tr:["saigne"],d:"Le pelage cristallisé craque à chaque foulée. Rapide."},
+sergent_noye:{n:"Sergent de la Citerne",g:"⚓",z:{tete:30,torse:84},garde:13,dmg:[7,13],init:2,arm:3,cen:[55,95],
+  tr:["brise"],el:1,d:"Il tient encore le registre des vivants. Ton nom n'y est pas. Pas encore."},
+momie_saline:{n:"Conservé",g:"🧟",z:{tete:24,torse:62},garde:11,dmg:[5,11],init:1,arm:2,cen:[28,50],
+  d:"Le sel l'a gardé intact. Personne ne lui a dit qu'il pouvait s'arrêter."},
+pleureuse:{n:"Pleureuse",g:"👻",z:{tete:20,torse:50},garde:14,dmg:[5,11],init:4,cen:[30,58],
+  tr:["poison"],d:"Ses larmes tombent avant elle et rongent la pierre."},
+fossoyeur:{n:"Fossoyeur aveugle",g:"⛏",z:{tete:26,torse:66},garde:12,dmg:[6,12],init:2,arm:2,cen:[32,60],
+  tr:["saigne"],d:"Il creuse depuis quarante ans. Il n'a jamais eu de mal à trouver du travail."},
+archiviste_sel:{n:"Archiviste de Sel",g:"📜",z:{tete:36,torse:98},garde:15,dmg:[8,15],init:3,arm:3,cen:[80,140],
+  tr:["poison","malediction"],el:1,d:"Il récite ta vie à voix haute pendant qu'il te tue. Il n'oublie rien."},
+cierge_vivant:{n:"Cierge vivant",g:"🕯",z:{tete:24,torse:60},garde:12,dmg:[6,12],init:2,arm:2,cen:[38,68],
+  tr:["braise"],d:"Une flamme au sommet d'une colonne de cire humaine."},
+greffon:{n:"Greffon",g:"🫁",z:{tete:28,torse:74},garde:13,dmg:[7,14],init:3,arm:3,cen:[48,86],
+  tr:["horde","saigne"],d:"Trois hommes cousus dans un seul manteau de cire. Ils ne sont pas d'accord."},
+chevalier_fondu:{n:"Chevalier fondu",g:"🛡",z:{tete:36,torse:96},garde:15,dmg:[9,17],init:2,arm:5,cen:[70,120],
+  tr:["brise"],d:"L'armure et l'homme ont coulé ensemble. On ne sait plus lequel tient l'autre debout."},
+jardinier_cire:{n:"Le Jardinier",g:"🌿",z:{tete:48,torse:128},garde:16,dmg:[10,18],init:3,arm:5,cen:[120,200],
+  tr:["saigne","horde"],el:1,d:"Il taille les cierges. Il taille tout ce qui pousse trop droit."},
+garde_braise:{n:"Garde-Braise",g:"🔥",z:{tete:42,torse:112},garde:16,dmg:[10,19],init:3,arm:6,cen:[110,190],
+  tr:["braise","brise"],el:1,d:"Le dernier ordre donné leur ordonnait de rester. Ils sont restés."},
+roi_cendre:{n:"ALDRICH, LE ROI DE CENDRE",g:"👑",z:{tete:56,torse:168},garde:17,dmg:[12,21],init:4,arm:6,
+  cen:[400,600],tr:["braise","brise","saigne","malediction"],boss:1,
+  d:"Il a mis le Feu en cage il y a mille ans. Il est resté pour tenir la clé. Il n'a plus de mains."}
+};
+
+/* ---------------- ÉTAT ---------------- */
+const NEWMETA=()=>({
+  cendres:150, cache:[], pact:[], pactMax:2,
+  forge:0, autel:0, coffre:1, pacteLvl:0,
+  base:{FOR:3,DEX:3,FOI:1,CHA:1},
+  raids:0, morts:0, best:0, tue:0, boss:0, dice3d:false,
+  seen:{}, first:true
+});
+let META=NEWMETA();
+let P=null;            // personnage en raid
+let RUN=null;          // état du raid
+let BUSY=false;
+
+/* ---------------- PERSISTANCE (3 niveaux) ---------------- */
+const MEM={};
+const STORE={
+  async get(k){
+    try{ if(window.storage){const r=await window.storage.get(k);return r?r.value:null} }catch(e){}
+    try{ const v=localStorage.getItem(k); if(v!==null)return v }catch(e){}
+    return MEM[k]!==undefined?MEM[k]:null;
+  },
+  async set(k,v){
+    MEM[k]=v;
+    try{ if(window.storage){await window.storage.set(k,v);return} }catch(e){}
+    try{ localStorage.setItem(k,v) }catch(e){}
+  }
+};
+async function save(){ try{ await STORE.set('cendrelame_v1',JSON.stringify(META)) }catch(e){} }
+async function load(){
+  try{ const raw=await STORE.get('cendrelame_v1'); if(raw){ META=Object.assign(NEWMETA(),JSON.parse(raw)) } }catch(e){}
+}
+
+/* ---------------- CANVAS : SCÈNE PROCÉDURALE ---------------- */
+const fx=$('#fx'), fctx=fx.getContext('2d');
+let SCENE={pal:'eau',t:0,parts:[],raf:0,seed:1};
+const PAL={
+  eau:{sky:['#0b1417','#132229','#1d3138'],stone:'#0d1518',glow:'#2f6b73',ember:'#5fb0b8',fog:'rgba(90,140,150,'},
+  sel:{sky:['#12100e','#221d19','#37302a'],stone:'#141110',glow:'#8a7c62',ember:'#d8c9a4',fog:'rgba(180,168,140,'},
+  suif:{sky:['#100d09','#1e1710','#332616'],stone:'#120e0a',glow:'#b57b28',ember:'#f0b45a',fog:'rgba(190,140,70,'},
+  braise:{sky:['#140705','#2a0c06','#48160a'],stone:'#160806',glow:'#e0641a',ember:'#ff9a3c',fog:'rgba(220,90,30,'},
+  sanct:{sky:['#0a0c0e','#141a1c','#1f2a28'],stone:'#0c0f10',glow:'#c9a227',ember:'#e8c65a',fog:'rgba(150,140,110,'},
+  mort:{sky:['#0a0505','#180808','#2a0d0d'],stone:'#0b0505',glow:'#8c1c22',ember:'#c62f2a',fog:'rgba(140,30,30,'}
+};
+function rnd(s){SCENE.seed=(SCENE.seed*16807)%2147483647;return SCENE.seed/2147483647}
+function sizeFX(){const r=fx.getBoundingClientRect();const d=Math.min(devicePixelRatio||1,2);
+  fx.width=r.width*d;fx.height=r.height*d;fctx.setTransform(d,0,0,d,0,0);SCENE.w=r.width;SCENE.h=r.height}
+function setScene(pal,seed,kind,mob){
+  SCENE.pal=pal;SCENE.seed=(seed||R(1,99999))+1;SCENE.kind=kind||'salle';SCENE.mob=mob||null;SCENE.t=0;
+  sizeFX();buildScene();
+}
+function buildScene(){
+  const w=SCENE.w,h=SCENE.h,p=PAL[SCENE.pal];SCENE.geo=[];
+  // colonnes / arches
+  const cols=R(3,6);
+  for(let i=0;i<cols;i++){
+    const x=rnd()*w, cw=8+rnd()*26, top=h*(0.05+rnd()*0.3);
+    SCENE.geo.push({t:'col',x,w:cw,top,d:0.3+rnd()*0.7});
+  }
+  // silhouettes de fond (ruines dentelées)
+  SCENE.ridge=[];let x=-20;
+  while(x<w+20){const y=h*(0.30+rnd()*0.34);SCENE.ridge.push([x,y]);x+=8+rnd()*26}
+  // particules
+  SCENE.parts=[];const n=SCENE.pal==='braise'?46:30;
+  for(let i=0;i<n;i++)SCENE.parts.push({x:Math.random()*w,y:Math.random()*h,
+    vy:-(0.12+Math.random()*0.5),vx:(Math.random()-0.5)*0.28,r:0.5+Math.random()*1.7,a:0.2+Math.random()*0.7,ph:Math.random()*6.3});
+}
+/* --- silhouettes : tout est dessiné en noir avec un liseré de lumière --- */
+function silh(path,rim){
+  fctx.save();
+  fctx.fillStyle='#050404';fctx.globalAlpha=.93;path();fctx.fill();
+  fctx.globalAlpha=1;fctx.lineWidth=1.1;fctx.strokeStyle=rim;path();fctx.stroke();
+  fctx.restore();
+}
+function drawPlayer(x,y,h,rim){
+  const t=SCENE.t*.001, bob=Math.sin(t*1.2)*h*.012;
+  const w=h*.34;
+  y+=bob;
+  // cape + corps
+  silh(()=>{
+    fctx.beginPath();
+    fctx.moveTo(x-w*.5,y);
+    fctx.quadraticCurveTo(x-w*.62,y-h*.45,x-w*.30,y-h*.72);
+    fctx.quadraticCurveTo(x-w*.26,y-h*.92,x,y-h*.94);       // capuche
+    fctx.quadraticCurveTo(x+w*.26,y-h*.92,x+w*.30,y-h*.72);
+    fctx.quadraticCurveTo(x+w*.62,y-h*.45,x+w*.5,y);
+    fctx.closePath();
+  },rim);
+  // arme tenue basse, pointe au sol
+  fctx.save();fctx.strokeStyle=rim;fctx.globalAlpha=.75;fctx.lineWidth=1.6;
+  fctx.beginPath();fctx.moveTo(x+w*.42,y-h*.52);fctx.lineTo(x+w*1.05,y+h*.02);fctx.stroke();
+  fctx.globalAlpha=1;fctx.restore();
+  // œil sous la capuche
+  fctx.fillStyle=rim;fctx.globalAlpha=.55+.35*Math.sin(t*2);
+  fctx.fillRect(x-w*.10,y-h*.80,w*.20,1.4);fctx.globalAlpha=1;
+}
+function drawEnemy(x,y,h,rim,boss){
+  const t=SCENE.t*.001, sway=Math.sin(t*.9)*h*.02;
+  const w=h*(boss?.62:.40);
+  silh(()=>{
+    fctx.beginPath();
+    fctx.moveTo(x-w*.5+sway,y);
+    fctx.lineTo(x-w*.44+sway,y-h*.55);
+    fctx.quadraticCurveTo(x-w*.5+sway,y-h*.80,x-w*.20+sway,y-h*.86);
+    fctx.lineTo(x-w*.16+sway,y-h*.98);                       // épaule/corne
+    fctx.lineTo(x+sway,y-h*.90);
+    fctx.lineTo(x+w*.16+sway,y-h*.98);
+    fctx.quadraticCurveTo(x+w*.5+sway,y-h*.80,x+w*.44+sway,y-h*.55);
+    fctx.lineTo(x+w*.5+sway,y);
+    fctx.closePath();
+  },rim);
+  if(boss){ // couronne
+    fctx.strokeStyle=rim;fctx.lineWidth=1.4;fctx.beginPath();
+    for(let i=-2;i<=2;i++){fctx.moveTo(x+i*w*.13+sway,y-h*.90);fctx.lineTo(x+i*w*.13+sway,y-h*1.02)}
+    fctx.stroke();
+  }
+  // yeux
+  const blink=Math.sin(t*3)>-.9?1:0;
+  fctx.fillStyle=rim;fctx.globalAlpha=.9*blink;
+  fctx.fillRect(x-w*.17+sway,y-h*.80,w*.11,1.8);
+  fctx.fillRect(x+w*.06+sway,y-h*.80,w*.11,1.8);
+  fctx.globalAlpha=1;
+}
+function drawProp(kind,x,y,h,rim){
+  const t=SCENE.t*.001;
+  if(kind==='tresor'){
+    const w=h*.9;
+    silh(()=>{fctx.beginPath();fctx.rect(x-w/2,y-h*.55,w,h*.55);
+      fctx.moveTo(x-w/2,y-h*.55);fctx.quadraticCurveTo(x,y-h*.95,x+w/2,y-h*.55);fctx.closePath()},rim);
+    fctx.fillStyle=rim;fctx.globalAlpha=.8;fctx.fillRect(x-w*.06,y-h*.60,w*.12,h*.16);fctx.globalAlpha=1;
+  }
+  if(kind==='repos'){
+    const w=h*.7;
+    silh(()=>{fctx.beginPath();fctx.moveTo(x-w*.5,y-h*.42);fctx.lineTo(x+w*.5,y-h*.42);
+      fctx.lineTo(x+w*.28,y);fctx.lineTo(x-w*.28,y);fctx.closePath();
+      fctx.rect(x-w*.10,y-h*.42,w*.20,-h*.04)},rim);
+    for(let i=0;i<5;i++){const f=Math.sin(t*3+i)*.5+.5;
+      fctx.globalAlpha=.25+f*.5;fctx.fillStyle=rim;
+      fctx.beginPath();fctx.ellipse(x+(i-2)*w*.14,y-h*.52-f*h*.22,w*.07,h*.13*(0.6+f*.6),0,0,6.3);fctx.fill()}
+    fctx.globalAlpha=1;
+  }
+  if(kind==='autel'){
+    const w=h*.44;
+    silh(()=>{fctx.beginPath();fctx.rect(x-w*.5,y-h*.95,w,h*.95);
+      fctx.moveTo(x-w*.72,y-h*.95);fctx.lineTo(x+w*.72,y-h*.95);fctx.lineTo(x+w*.5,y-h*.86);fctx.lineTo(x-w*.5,y-h*.86);fctx.closePath()},rim);
+    // main tendue
+    fctx.strokeStyle=rim;fctx.lineWidth=1.3;fctx.globalAlpha=.85;
+    fctx.beginPath();fctx.moveTo(x+w*.5,y-h*.60);fctx.lineTo(x+w*1.0,y-h*.55);fctx.stroke();
+    for(let i=0;i<4;i++){fctx.beginPath();fctx.moveTo(x+w*1.0,y-h*.55);
+      fctx.lineTo(x+w*(1.16+i*.04),y-h*(.60+i*.025));fctx.stroke()}
+    fctx.globalAlpha=1;
+  }
+  if(kind==='porte'){
+    const w=h*1.0;
+    fctx.save();
+    const g=fctx.createLinearGradient(0,y-h,0,y);
+    g.addColorStop(0,rim+'00');g.addColorStop(1,rim+'44');
+    fctx.fillStyle=g;fctx.beginPath();
+    fctx.moveTo(x-w*.4,y);fctx.lineTo(x-w*.4,y-h*.55);
+    fctx.quadraticCurveTo(x,y-h*1.0,x+w*.4,y-h*.55);fctx.lineTo(x+w*.4,y);fctx.closePath();fctx.fill();
+    fctx.strokeStyle=rim;fctx.lineWidth=1.4;fctx.globalAlpha=.7;fctx.stroke();fctx.restore();
+    fctx.globalAlpha=1;
+  }
+  if(kind==='event'){
+    for(let i=0;i<3;i++){
+      const lx=x+(i-1)*h*.55, ly=y-h*(.9+Math.sin(t*.8+i)*.04);
+      fctx.strokeStyle=rim;fctx.globalAlpha=.35;fctx.lineWidth=1;
+      fctx.beginPath();fctx.moveTo(lx,y-h*1.5);fctx.lineTo(lx,ly);fctx.stroke();
+      silh(()=>{fctx.beginPath();fctx.rect(lx-h*.09,ly,h*.18,h*.22)},rim);
+      fctx.globalAlpha=.4+.4*Math.sin(t*2+i);fctx.fillStyle=rim;
+      fctx.beginPath();fctx.arc(lx,ly+h*.11,h*.05,0,6.3);fctx.fill();fctx.globalAlpha=1;
+    }
+  }
+}
+function drawActors(){
+  const w=SCENE.w,h=SCENE.h,p=PAL[SCENE.pal],rim=p.ember;
+  const ground=h*.94;
+  // sol
+  const gg=fctx.createLinearGradient(0,ground-h*.12,0,h);
+  gg.addColorStop(0,'rgba(0,0,0,0)');gg.addColorStop(1,'rgba(0,0,0,.75)');
+  fctx.fillStyle=gg;fctx.fillRect(0,ground-h*.12,w,h*.14);
+  const k=SCENE.kind;
+  if(k==='combat'||k==='boss'){
+    const m=SCENE.mob&&MOBS[SCENE.mob];
+    const boss=!!(m&&m.boss);
+    drawEnemy(w*.70,ground,h*(boss?.82:m&&m.el?.62:.52),rim,boss);
+  } else if(k&&k!=='salle'&&k!=='sanct'){
+    drawProp(k,w*.70,ground,h*.42,rim);
+  }
+  if(SCENE.pal!=='sanct'&&SCENE.pal!=='mort')drawPlayer(w*.24,ground,h*.50,rim);
+  // ombres portées
+  fctx.globalAlpha=.4;fctx.fillStyle='#000';
+  fctx.beginPath();fctx.ellipse(w*.24,ground+1,h*.10,h*.018,0,0,6.3);fctx.fill();
+  if(k==='combat'||k==='boss'){fctx.beginPath();fctx.ellipse(w*.70,ground+1,h*.13,h*.022,0,0,6.3);fctx.fill()}
+  fctx.globalAlpha=1;
+}
+function drawScene(){
+  const w=SCENE.w,h=SCENE.h,p=PAL[SCENE.pal],t=SCENE.t;
+  if(!w)return;
+  const g=fctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,p.sky[0]);g.addColorStop(.55,p.sky[1]);g.addColorStop(1,p.sky[2]);
+  fctx.fillStyle=g;fctx.fillRect(0,0,w,h);
+  // halo central
+  const rg=fctx.createRadialGradient(w*.5,h*.62,4,w*.5,h*.62,w*.7);
+  rg.addColorStop(0,p.glow+'55');rg.addColorStop(.4,p.glow+'18');rg.addColorStop(1,'transparent');
+  fctx.fillStyle=rg;fctx.fillRect(0,0,w,h);
+  // crête de ruines
+  fctx.beginPath();fctx.moveTo(-20,h);
+  SCENE.ridge.forEach(pt=>fctx.lineTo(pt[0],pt[1]));
+  fctx.lineTo(w+20,h);fctx.closePath();
+  fctx.fillStyle=p.stone;fctx.globalAlpha=.72;fctx.fill();fctx.globalAlpha=1;
+  // colonnes
+  SCENE.geo.forEach(c=>{
+    fctx.globalAlpha=.5+c.d*.4;
+    fctx.fillStyle=p.stone;
+    fctx.fillRect(c.x,c.top,c.w,h-c.top);
+    fctx.fillStyle='rgba(0,0,0,.5)';fctx.fillRect(c.x,c.top,c.w*.34,h-c.top);
+    // chapiteau
+    fctx.fillRect(c.x-c.w*.16,c.top,c.w*1.32,4);
+  });
+  fctx.globalAlpha=1;
+  // brume en bandes
+  for(let i=0;i<3;i++){
+    const y=h*(.55+i*.15)+Math.sin(t*.0006+i)*6;
+    const fg=fctx.createLinearGradient(0,y-26,0,y+30);
+    fg.addColorStop(0,p.fog+'0)');fg.addColorStop(.5,p.fog+(0.10-i*.02)+')');fg.addColorStop(1,p.fog+'0)');
+    fctx.fillStyle=fg;fctx.fillRect(0,y-26,w,58);
+  }
+  drawActors();
+  // particules
+  SCENE.parts.forEach(pt=>{
+    pt.y+=pt.vy;pt.x+=pt.vx+Math.sin(t*.001+pt.ph)*.22;
+    if(pt.y<-4){pt.y=h+4;pt.x=Math.random()*w}
+    if(pt.x<-4)pt.x=w+4;if(pt.x>w+4)pt.x=-4;
+    const a=pt.a*(.55+.45*Math.sin(t*.003+pt.ph));
+    fctx.globalAlpha=a;fctx.fillStyle=p.ember;
+    fctx.beginPath();fctx.arc(pt.x,pt.y,pt.r,0,6.3);fctx.fill();
+  });
+  fctx.globalAlpha=1;
+  // scanline de gravure
+  fctx.globalAlpha=.06;fctx.fillStyle='#000';
+  for(let y=0;y<h;y+=3)fctx.fillRect(0,y,w,1);
+  fctx.globalAlpha=1;
+  SCENE.t+=16;
+}
+function loopFX(){drawScene();SCENE.raf=requestAnimationFrame(loopFX)}
+addEventListener('resize',()=>{sizeFX();buildScene();sizeEmbers()});
+
+/* --- braises d'ambiance sur toute l'appli --- */
+const emb=$('#embers'),ectx=emb.getContext('2d');let EP=[];
+function sizeEmbers(){const d=Math.min(devicePixelRatio||1,2);emb.width=innerWidth*d;emb.height=innerHeight*d;
+  ectx.setTransform(d,0,0,d,0,0);emb.style.width=innerWidth+'px';emb.style.height=innerHeight+'px';
+  EP=[];for(let i=0;i<22;i++)EP.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,
+    vy:-(0.08+Math.random()*0.3),r:0.4+Math.random()*1.2,a:0.06+Math.random()*0.22,ph:Math.random()*6})}
+function loopEmb(){ectx.clearRect(0,0,innerWidth,innerHeight);const t=Date.now();
+  EP.forEach(p=>{p.y+=p.vy;p.x+=Math.sin(t*.0006+p.ph)*.16;if(p.y<-3){p.y=innerHeight+3;p.x=Math.random()*innerWidth}
+    ectx.globalAlpha=p.a*(.5+.5*Math.sin(t*.002+p.ph));ectx.fillStyle='#e0641a';
+    ectx.beginPath();ectx.arc(p.x,p.y,p.r,0,6.3);ectx.fill()});
+  ectx.globalAlpha=1;requestAnimationFrame(loopEmb)}
+
+/* ---------------- HUD ---------------- */
+function totalPV(){return P.hp}
+function maxPV(){return P.hpM}
+function drawHUD(){
+  if(!P){$('#hud').innerHTML='';return}
+  const hr=P.hp/P.hpM, hcls=hr<.25?'crit':hr<.55?'hurt':'';
+  const z=`<div class="zone ${hcls}"><i style="transform:scaleX(${Math.max(0,hr)})"></i>
+      <span><em style="font-style:normal">VITALITÉ</em>${Math.max(0,Math.ceil(P.hp))}/${P.hpM}</span></div>`;
+  const sts=P.st.map(s=>`<div class="st ${s.c}">${s.n}${s.t?' '+s.t:''}</div>`).join('');
+  $('#hud').innerHTML=`
+   <div class="hudtop"><div>${RUN?'RAID EN COURS':'SANCTUAIRE'}</div><div><b>${P.name}</b></div></div>
+   <div class="zones">${z}</div>
+   <div class="bars">
+     <div class="bar" id="bEnd"><i style="transform:scaleX(${P.end/P.endM})"></i></div>
+     <div class="bar" id="bFoc"><i style="transform:scaleX(${P.foc/P.focM})"></i></div>
+   </div>
+   <div class="hudbot">
+     <div>END <b>${Math.floor(P.end)}/${P.endM}</b> · FOC <b>${P.foc}/${P.focM}</b></div>
+     <div>◈ <b>${RUN?RUN.cendres:META.cendres}</b></div>
+   </div>
+   <div class="status">${sts}</div>`;
+}
+function toast(t,ms){const el=$('#toast');el.textContent=t;el.classList.add('on');
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),ms||1500)}
+function flash(col,a){const f=$('#flash');f.style.background=col||'#c62f2a';f.style.opacity=a||.28;
+  setTimeout(()=>f.style.opacity=0,90)}
+function shake(n){const a=$('#app');a.animate([{transform:'translate(0,0)'},{transform:`translate(${n||5}px,${-n||-3}px)`},
+  {transform:`translate(${-n||-4}px,${n||2}px)`},{transform:'translate(0,0)'}],{duration:220})}
+
+/* ---------------- RENDU TEXTE / CHOIX ---------------- */
+function render({loc,depth,title,text,sys,choices,pal,seed}){
+  if(pal)setScene(pal,seed);
+  $('#loc').textContent=loc||'';
+  $('#depth').textContent=depth||'';
+  let h='';
+  if(title)h+=`<h2 class="title">${title}</h2>`;
+  (text||[]).forEach((t,i)=>{
+    if(t.startsWith('>'))h+=`<p class="whisper">${t.slice(1).trim()}</p>`;
+    else h+=`<p class="txt${i===0&&!title?' lead':''}">${t}</p>`});
+  (sys||[]).forEach(s=>{
+    const c=s.startsWith('+')?'good':s.startsWith('-')?'bad':s.startsWith('*')?'gold':'';
+    h+=`<div class="sysline ${c}">${s.replace(/^[+\-*]\s?/,'')}</div>`});
+  $('#body').innerHTML=h;$('#body').scrollTop=0;
+  drawActs(choices||[]);
+  drawHUD();
+}
+function drawActs(list){
+  const a=$('#acts');a.innerHTML='';
+  list.forEach(c=>{
+    if(c.row){const d=document.createElement('div');d.className='actrow';
+      c.row.forEach(x=>d.appendChild(mkAct(x)));a.appendChild(d);return}
+    a.appendChild(mkAct(c));
+  });
+}
+function mkAct(c){
+  const b=document.createElement('button');
+  b.className='act '+(c.cls||'');
+  b.innerHTML=`${c.t}${c.s?`<small>${c.s}</small>`:''}`;
+  if(c.off)b.disabled=true;
+  b.onclick=()=>{if(BUSY)return;c.f&&c.f()};
+  return b;
+}
+
+/* ---------------- DÉ DE BRAISE ---------------- */
+const dcv=$('#dcv'),dctx=dcv.getContext('2d');
+function sizeDie(){const d=Math.min(devicePixelRatio||1,2);const s=dcv.clientWidth||220;
+  dcv.width=s*d;dcv.height=s*d;dctx.setTransform(d,0,0,d,0,0);dcv._s=s}
+function drawDie(val,spin,heat,faces){
+  const s=dcv._s||220,c=s/2,rr=s*0.36;
+  dctx.clearRect(0,0,s,s);
+  // halo
+  const g=dctx.createRadialGradient(c,c,rr*.3,c,c,rr*1.9);
+  g.addColorStop(0,`rgba(224,100,26,${0.30*heat})`);g.addColorStop(1,'transparent');
+  dctx.fillStyle=g;dctx.fillRect(0,0,s,s);
+  dctx.save();dctx.translate(c,c);dctx.rotate(spin);
+  const N=faces===6?4:5;
+  const pts=[];for(let i=0;i<N;i++){const a=-Math.PI/2+i*2*Math.PI/N;pts.push([Math.cos(a)*rr,Math.sin(a)*rr])}
+  // corps
+  dctx.beginPath();pts.forEach((p,i)=>i?dctx.lineTo(p[0],p[1]):dctx.moveTo(p[0],p[1]));dctx.closePath();
+  const bg=dctx.createLinearGradient(0,-rr,0,rr);
+  bg.addColorStop(0,'#2b241d');bg.addColorStop(1,'#0d0b09');
+  dctx.fillStyle=bg;dctx.fill();
+  dctx.lineWidth=1.6;dctx.strokeStyle=`rgba(224,100,26,${0.25+0.6*heat})`;dctx.stroke();
+  // facettes internes
+  dctx.lineWidth=1;dctx.strokeStyle=`rgba(201,162,39,${0.16+0.3*heat})`;
+  const inner=[];for(let i=0;i<N;i++){const a=-Math.PI/2+(i+0.5)*2*Math.PI/N;inner.push([Math.cos(a)*rr*0.46,Math.sin(a)*rr*0.46])}
+  dctx.beginPath();inner.forEach((p,i)=>i?dctx.lineTo(p[0],p[1]):dctx.moveTo(p[0],p[1]));dctx.closePath();dctx.stroke();
+  for(let i=0;i<N;i++){dctx.beginPath();dctx.moveTo(pts[i][0],pts[i][1]);dctx.lineTo(inner[i][0],inner[i][1]);dctx.stroke()}
+  dctx.restore();
+  // valeur
+  dctx.fillStyle=heat>.6?'#f0c04a':'#d9cdba';
+  dctx.font=`${s*0.22}px ui-monospace,monospace`;
+  dctx.textAlign='center';dctx.textBaseline='middle';
+  dctx.shadowColor='rgba(224,100,26,.8)';dctx.shadowBlur=14*heat;
+  dctx.fillText(String(val),c,c+1);dctx.shadowBlur=0;
+}
+/* ============ DÉ 3D (Three.js r128, chargé à la demande) ============ */
+let D3=null,D3fail=false;
+function loadThree(){
+  return new Promise((res,rej)=>{
+    if(window.THREE)return res();
+    const sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    sc.onload=()=>res();sc.onerror=()=>rej(new Error('cdn'));
+    document.head.appendChild(sc);
+  });
+}
+function faceAtlas(){
+  const cv=document.createElement('canvas');cv.width=1024;cv.height=820;
+  const c=cv.getContext('2d');
+  c.fillStyle='#1a1510';c.fillRect(0,0,1024,820);
+  for(let i=0;i<20;i++){
+    const cx=(i%5)*204.8,cy=Math.floor(i/5)*205;
+    const g=c.createLinearGradient(cx,cy,cx,cy+205);
+    g.addColorStop(0,'#2e2620');g.addColorStop(1,'#100d0a');
+    c.fillStyle=g;c.fillRect(cx+3,cy+3,198,199);
+    c.strokeStyle='rgba(201,162,39,.35)';c.lineWidth=3;c.strokeRect(cx+6,cy+6,192,193);
+    c.fillStyle='#e8d9b8';c.font='bold 104px ui-monospace,monospace';
+    c.textAlign='center';c.textBaseline='middle';
+    c.fillText(String(i+1),cx+102,cy+112);
+  }
+  const t=new THREE.CanvasTexture(cv);t.anisotropy=4;return t;
+}
+async function init3D(){
+  if(D3)return D3;
+  await loadThree();
+  const cv=document.getElementById('dcv3');
+  const rd=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+  const S=cv.clientWidth||230;
+  rd.setPixelRatio(Math.min(devicePixelRatio||1,2));rd.setSize(S,S,false);
+  const sc=new THREE.Scene();
+  const cam=new THREE.PerspectiveCamera(38,1,.1,60);cam.position.set(0,0,7.2);
+  const geo=new THREE.IcosahedronGeometry(2,0);
+  const pos=geo.attributes.position, nf=pos.count/3;
+  const uv=new Float32Array(pos.count*2), normals=[];
+  for(let f=0;f<nf;f++){
+    const col=f%5,row=Math.floor(f/5);
+    const u0=col/5,v0=1-(row+1)/4,uw=1/5,vh=1/4;
+    const tri=[[.5,.88],[.08,.12],[.92,.12]];
+    for(let k=0;k<3;k++){uv[(f*3+k)*2]=u0+tri[k][0]*uw;uv[(f*3+k)*2+1]=v0+tri[k][1]*vh}
+    const v=[0,1,2].map(k=>new THREE.Vector3().fromBufferAttribute(pos,f*3+k));
+    normals.push(v[0].clone().add(v[1]).add(v[2]).normalize());
+  }
+  geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+  const mat=new THREE.MeshPhongMaterial({map:faceAtlas(),shininess:24,specular:0x554433,
+    emissive:0x2a1004,emissiveIntensity:.9,flatShading:true});
+  const die=new THREE.Mesh(geo,mat);sc.add(die);
+  sc.add(new THREE.AmbientLight(0x50423a,1.1));
+  const l1=new THREE.PointLight(0xe0641a,1.5,40);l1.position.set(4,3,6);sc.add(l1);
+  const l2=new THREE.PointLight(0x7d8fb0,.7,40);l2.position.set(-5,-2,4);sc.add(l2);
+  D3={rd,sc,cam,die,normals,l1};
+  return D3;
+}
+async function roll3D(faces,label,val){
+  let d;
+  try{ d=await init3D() }catch(e){ D3fail=true; return null }
+  $('#dLbl').textContent=label||'';$('#dRes').textContent='';$('#dRes').className='';
+  $('#dice').classList.add('on','d3');
+  const S=document.getElementById('dcv3').clientWidth||230;
+  d.rd.setSize(S,S,false);d.cam.aspect=1;d.cam.updateProjectionMatrix();
+  const target=new THREE.Quaternion().setFromUnitVectors(d.normals[(val-1)%d.normals.length],new THREE.Vector3(0,0,1));
+  const start=new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.random()*6.3,Math.random()*6.3,Math.random()*6.3));
+  const spinAxis=new THREE.Vector3(Math.random()-.5,1,Math.random()-.5).normalize();
+  const t0=Date.now(),dur=1150;
+  await new Promise(res=>{
+    (function anim(){
+      const e=Math.min(1,(Date.now()-t0)/dur);
+      const ease=1-Math.pow(1-e,4);
+      const spin=new THREE.Quaternion().setFromAxisAngle(spinAxis,(1-ease)*22);
+      d.die.quaternion.copy(start).slerp(target,ease).multiply(spin);
+      d.die.position.y=Math.sin(e*Math.PI)*.9;
+      d.l1.intensity=1.5+Math.sin(e*12)*.5*(1-e);
+      d.rd.render(d.sc,d.cam);
+      if(e<1)requestAnimationFrame(anim);else res();
+    })();
+  });
+  return true;
+}
+
+function rollDie2D(faces,label,v){
+  return new Promise(res=>{
+    $('#dLbl').textContent=label||'';$('#dRes').textContent='';$('#dRes').className='';
+    $('#dice').classList.add('on');sizeDie();
+    const t0=Date.now(),dur=880;
+    (function anim(){
+      const e=(Date.now()-t0)/dur;
+      if(e<1){
+        const ease=1-Math.pow(1-e,3);
+        drawDie(e<.82?R(1,faces):v,ease*Math.PI*7,Math.min(1,e*1.6));
+        requestAnimationFrame(anim);
+      } else { drawDie(v,Math.PI*7,1); res(v) }
+    })();
+  });
+}
+async function rollDie(faces,label){
+  const v=R(1,faces);
+  if(META.dice3d&&!D3fail&&faces===20){
+    const ok=await roll3D(faces,label,v);
+    if(ok)return v;
+  }
+  $('#dice').classList.remove('d3');
+  return rollDie2D(faces,label,v);
+}
+function dieResult(txt,cls){$('#dRes').textContent=txt;$('#dRes').className=cls||''}
+const hideDie=()=>$('#dice').classList.remove('on','d3');
+
+/* jet de compétence : d20 + bonus vs SD */
+async function check(stat,sd,label){
+  const b=bonus(stat);
+  const v=await rollDie(20,`${label} — ${stat} · SD ${sd}`);
+  const tot=v+b, ok=v===20||(v!==1&&tot>=sd);
+  dieResult(`${v} ${b>=0?'+':''}${b} = ${tot}  ·  ${v===20?'RÉUSSITE PARFAITE':v===1?'ÉCHEC CRITIQUE':ok?'RÉUSSITE':'ÉCHEC'}`,
+    v===20?'crit':ok?'hit':'miss');
+  await sleep(950);hideDie();
+  return {ok,v,tot,crit:v===20,fumble:v===1};
+}
+function bonus(s){return Math.floor((P.s[s]||0)/1.5)}
+
+/* ---------------- PERSONNAGE ---------------- */
+const CLASSES=[
+ {id:'deserteur',n:"Déserteur",g:"🗡",d:"Il a fui une guerre qu'on a perdue de toute façon. Solide, direct, sans illusion.",
+  s:{FOR:6,DEX:3,FOI:1,CHA:2},pv:{tete:32,torse:78},end:14,foc:2,
+  kit:['lame_ebrechee','cuir_cloute','fiole_sang','fiole_sang','pain_cendre']},
+ {id:'braconnier',n:"Braconnier",g:"🏹",d:"Il connaît les Fosses comme d'autres connaissent un bois. Rapide, chanceux, opportuniste.",
+  s:{FOR:3,DEX:6,FOI:1,CHA:4},pv:{tete:28,torse:64},end:18,foc:2,
+  kit:['rapiere_cendree','haillons','fiole_sang','onguent_lie','pierre_aiguiser','dent_or']},
+ {id:'penitent',n:"Pénitent",g:"🕯",d:"Il descend pour expier. On ne lui a jamais dit de quoi. Frappe fort, encaisse mal.",
+  s:{FOR:4,DEX:2,FOI:6,CHA:1},pv:{tete:30,torse:70},end:12,foc:5,
+  kit:['masse_penitente','haillons','grande_fiole','encens_gris']},
+ {id:'fossoyeur_pj',n:"Ancien fossoyeur",g:"⛏",d:"Vingt ans à enterrer les autres. Il sait où on cache les choses de valeur.",
+  s:{FOR:5,DEX:4,FOI:2,CHA:3},pv:{tete:30,torse:74},end:15,foc:3,
+  kit:['hache_bourreau','cuir_cloute','fiole_sang','cle_rouille','calice_terni']}
+];
+function mkChar(cls){
+  const c=CLASSES.find(x=>x.id===cls);
+  const mod={pv:0,end:0,foc:0,cha:0,dmg:0,arm:0,pact:0};
+  P={
+    name:c.n,cls:c.id,g:c.g,
+    s:{FOR:c.s.FOR+META.base.FOR-3,DEX:c.s.DEX+META.base.DEX-3,FOI:c.s.FOI+META.base.FOI-1,CHA:c.s.CHA+META.base.CHA-1},
+    hpM:c.pv.tete+c.pv.torse+META.autel*12, hp:0,
+    endM:c.end+META.autel, end:0, focM:c.foc, foc:0,
+    st:[], arme:null, armure:null, rel:[], sac:[], mod, sharp:0
+  };
+  P.hp=P.hpM;P.end=P.endM;P.foc=P.focM;
+  return c;
+}
+function applyMods(){
+  const m={pv:0,end:0,foc:0,cha:0,dmg:0,arm:0,pact:0};
+  P.rel.forEach(id=>{const it=ITEMS[id];if(it&&it.mod)for(const k in it.mod)m[k]+=it.mod[k]});
+  P.mod=m;
+}
+function armorVal(){return (P.armure?ITEMS[P.armure].arm:0)+P.mod.arm+(P.ward||0)*0}
+function gardeVal(){return 10+Math.floor(P.s.DEX/2)+(P.ward||0)+(P.rage?-3:0)}
+function endMax(){return P.endM+P.mod.end+(P.armure&&ITEMS[P.armure].end?ITEMS[P.armure].end:0)}
+function focMax(){return P.focM+P.mod.foc}
+function pactMax(){return META.pactMax+META.pacteLvl+P.mod.pact}
+
+/* dégâts sur zones vitales */
+function hurt(dmg){P.hp=Math.max(0,P.hp-dmg)}
+function heal(amt){P.hp=Math.min(P.hpM,P.hp+amt)}
+const dead=()=>P.hp<=0;
+
+/* statuts */
+function addSt(n,c,t){const e=P.st.find(s=>s.n===n);if(e){e.t=Math.max(e.t,t)}else P.st.push({n,c,t})}
+function tickSt(log){
+  P.st=P.st.filter(s=>{
+    if(s.n==='SAIGNEMENT'){hurt(4);log&&log('- Le sang coule. −4 PV.')}
+    if(s.n==='VENIN'){hurt(3);P.end=Math.max(0,P.end-2);log&&log('- Le venin brûle. −3 PV, −2 END.')}
+    if(s.n==='BRAISE'){hurt(6);log&&log('- La braise ronge. −6 PV.')}
+    s.t--;return s.t>0;
+  });
+  if(!P.st.some(x=>x.n==='CENDRE'||x.n==='SEL NOIR'))P.ward=0;
+  if(!P.st.some(x=>x.n==='IVRESSE'))P.rage=0;
+}
+
+/* ============================================================
+   COMBAT — 5 phases : Initiative · Jet d'attaque · Localisation
+              · Résolution · Riposte
+   ============================================================ */
+let C=null;
+const eDead=()=>C.hp<=0;
+
+function startFight(mobId,after,ctx){
+  const m=MOBS[mobId];
+  C={id:mobId,m,hp:m.z.tete+m.z.torse,hpM:m.z.tete+m.z.torse,log:[],turn:1,after,ctx:ctx||{},guard:0,stunned:0,st:[]};
+  setScene(DEPTHS[RUN?RUN.depth-1:0].pal,R(1,99999),'combat',mobId);
+  clog(`<b>${m.n}</b> — ${m.d}`);
+  drawFight();
+}
+function clog(t,c){C.log.push({t,c});if(C.log.length>60)C.log.shift()}
+function eBar(){
+  const er=Math.max(0,C.hp/C.hpM);
+  const f=`<div class="zone ${er<.25?'crit':er<.55?'hurt':''}"><i style="transform:scaleX(${er})"></i>
+      <span><em style="font-style:normal">VITALITÉ</em>${Math.max(0,Math.ceil(C.hp))}/${C.hpM}</span></div>`;
+  const sts=C.st.map(s=>`<div class="st ${s.c}">${s.n}</div>`).join('');
+  return `<div style="margin:-4px 0 12px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+      <div style="font-size:16px">${C.m.g} ${C.m.n}</div>
+      <div style="font-family:var(--ui);font-size:9px;letter-spacing:.14em;color:var(--brume)">GARDE ${C.m.garde}${C.m.arm?' · ARM '+C.m.arm:''}</div>
+    </div>
+    <div class="zones">${f}</div>
+    <div class="status">${sts}</div></div>`;
+}
+function drawFight(){
+  const l=C.log.map(e=>e.c==='p'?`<p class="txt">${e.t}</p>`:`<div class="sysline ${e.c||''}">${e.t}</div>`).join('');
+  $('#body').innerHTML=eBar()+l;
+  $('#body').scrollTop=$('#body').scrollHeight;
+  $('#loc').textContent='COMBAT';
+  const w=P.arme?ITEMS[P.arme]:null;
+  const cost=w?w.end:1;
+  const acts=[
+   {row:[
+     {t:'Frapper',s:`${w?w.n:'Mains nues'} · ${cost} END`,f:()=>act('atk')},
+     {t:'Parer',s:'2 END · riposte',f:()=>act('parry')}
+   ]},
+   {row:[
+     {t:'Esquiver',s:'2 END · +5 Garde',f:()=>act('dodge')},
+     {t:'Souffler',s:'+6 END',f:()=>act('rest')}
+   ]},
+  ];
+  if(P.foc>0)acts.push({t:'Invoquer',s:`Focus ${P.foc}/${focMax()}`,cls:'gold',f:()=>focusMenu()});
+  acts.push({row:[
+    {t:'Besace',s:'objet',f:()=>openInv(true)},
+    {t:'Fuir',s:'DEX · risqué',cls:'danger',f:()=>act('flee')}
+  ]});
+  drawActs(acts);
+  drawHUD();
+}
+async function act(a){
+  if(BUSY)return;BUSY=true;
+  C.log=[];P.dodge=0;P.parry=0;
+  try{
+    if(a==='rest'){P.end=Math.min(endMax(),P.end+6);clog('Tu recules d\'un pas et reprends ton souffle. <b>+6 END</b>','good')}
+    if(a==='dodge'){if(P.end<2){clog('Plus assez de souffle pour esquiver.','bad')}else{P.end-=2;P.dodge=1;clog('Tu te places de biais, poids sur la jambe arrière. <b>+5 Garde</b>','good')}}
+    if(a==='parry'){if(P.end<2){clog('Tes bras tremblent trop pour parer.','bad')}else{P.end-=2;P.parry=1;clog('Lame haute, coude bas. Tu attends le coup.','good')}}
+    if(a==='flee'){await tryFlee();if(!C)return}
+    if(a==='atk'){await playerAttack();if(eDead()){await victory();return}}
+    if(!C)return;
+    await enemyTurn();
+    if(!C)return;
+    tickSt(t=>clog(t,'bad'));
+    if(dead()){await death();return}
+    C.turn++;P.end=Math.min(endMax(),P.end+2);
+    drawFight();
+  } finally { BUSY=false }
+}
+
+async function playerAttack(){
+  const w=P.arme?ITEMS[P.arme]:{n:'Mains nues',dmg:[2,5],end:1,sc:'FOR',tr:[]};
+  const tr=w.tr||[];
+  if(P.end<w.end){
+    clog('Tu frappes à bout de souffle — le coup part mou.','bad');
+    var weak=true;P.end=0;
+  } else { P.end-=w.end }
+  const b=bonus(w.sc)+(tr.includes('preste')?2:0)+(tr.includes('lourde')?-1:0)+(tr.includes('allonge')?1:0);
+  const v=await rollDie(20,`ATTAQUE — ${w.sc} · Garde ${C.m.garde}`);
+  const tot=v+b;
+  const crit=v===20, hit=crit||(v!==1&&tot>=C.m.garde);
+  dieResult(`${v} ${b>=0?'+':''}${b} = ${tot} · ${crit?'COUP FATAL':hit?'TOUCHÉ':'MANQUÉ'}`,crit?'crit':hit?'hit':'miss');
+  await sleep(820);hideDie();
+  if(!hit){clog(`${v===1?'Ta lame ripe sur la pierre. Tu perds l\'équilibre.':'Il se dérobe. Ton coup fend l\'air.'}`,'bad');
+    if(v===1){P.end=Math.max(0,P.end-3);clog('- Déséquilibre : −3 END')}return}
+  // dégâts
+  let d=R(w.dmg[0],w.dmg[1])+Math.floor(P.s[w.sc]/2)+P.mod.dmg+P.sharp+(P.rage?5:0)+((META.upg&&P.arme&&META.upg[P.arme])||0)*2;
+  if(weak)d=Math.floor(d*0.5);
+  let arm=C.m.arm||0;
+  if(tr.includes('brise'))arm=Math.floor(arm/2);
+  if(tr.includes('perce'))arm=Math.max(0,arm-3);
+  d=Math.max(1,d-arm);
+  const ouv=!crit&&tot>=C.m.garde+6;
+  if(crit)d=Math.round(d*2.1);else if(ouv)d=Math.round(d*1.5);
+  C.hp-=d;
+  flash('#c9a227',crit?.3:.16);shake(crit?7:4);
+  clog(crit?`Il s'ouvre entièrement. Tu frappes à fond — <b>${d}</b> dégâts.`:ouv?`Une ouverture. Tu t'y engouffres — <b>${d}</b> dégâts.`:`Tu ouvres la chair — <b>${d}</b> dégâts.`,'good');
+  if(tr.includes('saigne')&&R(1,100)<=45){C.st.push({n:'SAIGNE',c:'saign',t:3});clog('* La plaie ne se referme pas.','gold')}
+  if(tr.includes('braise')){C.hp-=5;clog('* La braise mord la chair. −5 supplémentaires.','gold')}
+  if(tr.includes('vorace')){hurt(2);clog('- Cendrelame prélève son péage : −2 PV.','bad')}
+  if(C.st.some(s=>s.n==='SAIGNE')){C.hp-=5;clog('- Il saigne. −5.','')}
+}
+
+async function enemyTurn(){
+  if(eDead())return;
+  const m=C.m,tr=m.tr||[];
+  C.st=C.st.filter(s=>{s.t--;return s.t>0});
+  if(C.stunned>0){C.stunned--;clog(`${m.n} chancelle et perd son tour.`,'good');return}
+  const swings=(tr.includes('horde')&&R(1,100)<=35)?2:1;
+  if(swings===2)clog(`${m.n} enchaîne deux attaques.`,'bad');
+  for(let i=0;i<swings;i++){
+    if(dead())return;
+    const g=gardeVal()+(P.dodge?5:0);
+    const v=await rollDie(20,`${m.n.toUpperCase()} ATTAQUE — ta Garde ${g}`);
+    const tot=v+Math.floor(m.init/2)+2;
+    const crit=v===20,hit=crit||(v!==1&&tot>=g);
+    dieResult(`${v} + ${Math.floor(m.init/2)+2} = ${tot} · ${hit?(crit?'COUP FATAL':'TOUCHÉ'):'ESQUIVÉ'}`,hit?(crit?'miss':'miss'):'hit');
+    await sleep(760);hideDie();
+    if(!hit){
+      if(P.parry){
+        clog('Tu détournes la lame — <b>riposte</b>.','good');
+        const d=R(4,10)+Math.floor(P.s.FOR/2)+P.mod.dmg;C.hp-=d;
+        C.stunned=1;clog(`Riposte : <b>${d}</b> dégâts, il est déséquilibré.`,'good');
+        if(eDead())return;
+      } else clog('Le coup passe à côté.','good');
+      continue;
+    }
+    let d=R(m.dmg[0],m.dmg[1]);
+    if(crit)d=Math.round(d*1.8);else if(tot>=g+6)d=Math.round(d*1.35);
+    let arm=armorVal();
+    if(tr.includes('brise'))arm=Math.floor(arm/2);
+    if(P.parry){d=Math.round(d*0.4);clog('Ta parade absorbe l\'essentiel.','good')}
+    d=Math.max(1,d-arm);
+    hurt(d);
+    flash('#c62f2a',.3);shake(7);
+    clog(`${m.n} ${crit?'te cueille en pleine ouverture':'te frappe'} — <b>−${d} PV</b>.`,'bad');
+    if(tr.includes('saigne')&&R(1,100)<=40){addSt('SAIGNEMENT','saign',3);clog('- Tu saignes.','bad')}
+    if(tr.includes('poison')&&R(1,100)<=40){addSt('VENIN','poison',3);clog('- Le venin entre.','bad')}
+    if(tr.includes('braise')&&R(1,100)<=35){addSt('BRAISE','buff',2);clog('- Tes vêtements prennent feu.','bad')}
+    if(tr.includes('malediction')&&R(1,100)<=25){P.endM=Math.max(6,P.endM-1);addSt('MALÉDICTION','malus',5);clog('- Ton souffle se raccourcit. END max −1.','bad')}
+  }
+}
+
+async function tryFlee(){
+  const m=C.m;
+  if(m.boss){clog('Il n\'y a pas de porte derrière toi. Il n\'y en a jamais eu.','bad');return}
+  const r=await check('DEX',13,'FUITE');
+  if(r.ok){
+    clog('Tu décroches et disparais dans le noir.','good');
+    const perte=Math.min(RUN.cendres,Math.floor(RUN.cendres*0.15));
+    RUN.cendres-=perte;
+    await sleep(400);
+    const after=C.after;C=null;
+    render({loc:'REPLI',title:'Tu as reculé',
+      text:['Le couloir se referme derrière toi. Tu entends encore ses pas, plus lents, qui renoncent.',
+            'Fuir coûte toujours quelque chose. Ici, ça se paie en cendres tombées de ta besace.'],
+      sys:[`- ${perte} cendres perdues dans la course`],
+      choices:[{t:'Reprendre la descente',f:()=>nextNode()}]});
+    BUSY=false;
+  } else {
+    clog('Il te rattrape avant le troisième pas.','bad');
+    C.free=1;
+  }
+}
+
+async function victory(){
+  const m=C.m;
+  const cen=R(m.cen[0],m.cen[1]);
+  RUN.cendres+=cen;META.tue++;
+  const drops=[];
+  const D=DEPTHS[RUN.depth-1];
+  const nDrop=m.boss?4:(m.el?2:(R(1,100)<=55?1:0));
+  for(let i=0;i<nDrop;i++)drops.push(pick(D.loot));
+  if(m.boss)drops.push('braise_pure');
+  drops.forEach(id=>RUN.sac.push(id));
+  const after=C.after;C=null;BUSY=false;
+  setScene(D.pal,R(1,9999),'salle');
+  render({loc:'SILENCE',depth:`PROFONDEUR ${RUN.depth} · ${D.nom.toUpperCase()}`,
+    title:`${m.n} ne se relève pas`,
+    text:[pick([
+      'Le corps s\'affaisse comme un sac de sable. Quelque chose d\'invisible te traverse la poitrine et s\'installe : chaud, sale, agréable.',
+      'Ça met un temps ridiculement long à mourir. Puis plus rien, et le silence revient si vite qu\'on croirait qu\'il n\'a jamais bougé.',
+      'Tu essuies ta lame sur ce qui lui reste de manteau. C\'est un geste d\'artisan. Tu ne te souviens pas de l\'avoir appris.'])],
+    sys:[`* ${cen} cendres absorbées`].concat(drops.map(id=>`+ ${ITEMS[id].n} récupéré`)),
+    choices:[{t:'Continuer',f:()=>{after?after():nextNode()}},
+             {t:'Ouvrir la besace',s:`${RUN.sac.length} objets`,f:()=>openInv(false)}]});
+  await save();
+}
+
+/* ---- Invocations (Focus) ---- */
+function focusMenu(){
+  const opts=[
+    {t:'Étincelle',s:'1 FOC · 12-22 dégâts directs',off:P.foc<1,f:()=>castSpell('etin')},
+    {t:'Vœu de chair',s:'2 FOC · rend 35 PV',off:P.foc<2,f:()=>castSpell('voeu')},
+    {t:'Cendre protectrice',s:'1 FOC · +6 Garde, 3 tours',off:P.foc<1,f:()=>castSpell('cendre')},
+    {t:'← Revenir',cls:'sub',f:()=>drawFight()}
+  ];
+  drawActs(opts);
+}
+async function castSpell(s){
+  if(BUSY)return;BUSY=true;C.log=[];
+  try{
+    if(s==='etin'){P.foc--;const d=R(12,22)+P.s.FOI;C.hp-=d;
+      clog(`Tu ouvres la main. Une étincelle part, sans bruit. <b>${d}</b> dégâts.`,'gold');
+      flash('#e0641a',.24);shake(5);
+      if(eDead()){await victory();return}}
+    if(s==='voeu'){P.foc-=2;heal(35);clog('Ta peau se recoud en tirant. Ça fait mal, mais dans le bon sens. <b>+35 PV</b>','good')}
+    if(s==='cendre'){P.foc--;P.ward=6;addSt('CENDRE','buff',3);clog('Une poussière chaude tourne autour de toi. <b>+6 Garde</b>','good')}
+    await enemyTurn();if(!C)return;
+    tickSt(t=>clog(t,'bad'));
+    if(dead()){await death();return}
+    C.turn++;P.end=Math.min(endMax(),P.end+2);
+    if(!P.st.some(x=>x.n==='CENDRE'))P.ward=0;
+    drawFight();
+  } finally{BUSY=false}
+}
+
+/* ============================================================
+   LE RAID — génération, nœuds, extraction
+   ============================================================ */
+const NODE_ICONS={combat:'⚔',elite:'☠',tresor:'📦',event:'❔',autel:'🕯',repos:'🔥',porte:'🚪',boss:'👑'};
+const NODE_NAMES={combat:'Rencontre',elite:'Présence',tresor:'Trouvaille',event:'Passage',
+  autel:'Autel éteint',repos:'Braisier',porte:'Seuil',boss:'Le Cœur'};
+
+function genDepth(d){
+  const D=DEPTHS[d-1];
+  const n=6+d;
+  const bag=[];
+  for(let i=0;i<n-1;i++){
+    const r=R(1,100);
+    bag.push(r<=40?'combat':r<=58?'event':r<=72?'tresor':r<=84?'repos':r<=93?'elite':'autel');
+  }
+  // garantit au moins 1 repos et 1 trésor
+  if(!bag.includes('repos'))bag[R(0,bag.length-1)]='repos';
+  if(!bag.includes('tresor'))bag[R(0,bag.length-1)]='tresor';
+  const nodes=shuf(bag);
+  nodes.push(D.boss?'boss':'porte');
+  return nodes.map((t,i)=>({t,i,done:false,seed:R(1,99999)}));
+}
+function startRaid(d){
+  RUN={depth:d,nodes:genDepth(d),idx:-1,cendres:0,sac:[],deep:RUN?RUN.deep:0};
+  RUN.deep=d;
+  META.raids++;META.deepest=Math.max(META.deepest||1,d);save();
+  const D=DEPTHS[d-1];
+  setScene(D.pal,R(1,9999));
+  render({loc:'DESCENTE',depth:`PROFONDEUR ${d}`,title:D.nom,
+    text:[D.intro,
+      d===1?'Derrière toi, la trappe se referme. Ce n\'est pas un bruit de porte : c\'est un bruit de couvercle.':
+            'Tu ne remontes pas. Personne ne remonte. On descend jusqu\'à ce qu\'on trouve une sortie, ou jusqu\'à ce qu\'on arrête de chercher.',
+      '>Ce que tu ramasses ici ne t\'appartient qu\'une fois franchi le Seuil. Avant ça, tu ne fais que le porter.'],
+    choices:[{t:'Avancer',cls:'gold',f:()=>nextNode()},
+             {t:'Vérifier la besace',s:`Poche du Pacte : ${META.pact.length}/${pactMax()}`,f:()=>openInv(false)}]});
+}
+function nextNode(){
+  if(C)return;
+  RUN.idx++;
+  if(RUN.idx>=RUN.nodes.length){return doorNode()}
+  const nd=RUN.nodes[RUN.idx];
+  const D=DEPTHS[RUN.depth-1];
+  setScene(D.pal,nd.seed,nd.t==='elite'?'combat':nd.t);
+  switch(nd.t){
+    case 'combat': return nodeCombat(false);
+    case 'elite':  return nodeCombat(true);
+    case 'tresor': return nodeTresor();
+    case 'event':  return nodeEvent();
+    case 'repos':  return nodeRepos();
+    case 'autel':  return nodeAutel();
+    case 'boss':   return nodeBoss();
+    default:       return doorNode();
+  }
+}
+function hdr(){const D=DEPTHS[RUN.depth-1];return `PROFONDEUR ${RUN.depth} · ${D.nom.toUpperCase()} · ${RUN.idx+1}/${RUN.nodes.length}`}
+function canExtract(){return RUN.idx>=3}
+function baseChoices(extra){
+  const c=(extra||[]).slice();
+  c.push({row:[
+    {t:'Besace',s:`${RUN.sac.length} objets · ◈ ${RUN.cendres}`,f:()=>openInv(false)},
+    {t:'Carte',s:'les Fosses',f:()=>openMap()}
+  ]});
+  return c;
+}
+
+/* ---- COMBAT NODE ---- */
+function nodeCombat(elite){
+  const D=DEPTHS[RUN.depth-1];
+  const id=elite?pick(D.elite):pick(D.pool);
+  const m=MOBS[id];
+  setScene(D.pal,R(1,9999),'combat',id);
+  render({loc:elite?'PRÉSENCE':'RENCONTRE',depth:hdr(),
+    title:elite?`Quelque chose t'attendait`:`${m.n}`,
+    text:[pick([
+      'Le couloir s\'élargit. Au fond, une forme qui ne devrait plus tenir debout tient debout.',
+      'Tu l\'entends avant de le voir. Un raclement régulier, patient, comme une meule.',
+      'Il ne te charge pas. Il se tourne, simplement, comme on répond à quelqu\'un qui frappe.'])
+      ,m.d],
+    sys:[`Garde ${m.garde} · Vitalité ${m.z.tete+m.z.torse}${m.arm?' · Armure '+m.arm:''}`],
+    choices:baseChoices([
+      {t:'Engager',cls:'danger',s:'combat',f:()=>startFight(id)},
+      {t:'Tenter de le contourner',s:`DEX · SD ${10+RUN.depth*2}`,f:async()=>{
+        BUSY=true;const r=await check('DEX',10+RUN.depth*2,'DISCRÉTION');BUSY=false;
+        if(r.ok){render({loc:'PASSÉ',depth:hdr(),title:'Il ne t\'a pas vu',
+          text:['Tu longes le mur, pied contre pied. Son souffle passe à un bras de ton visage et continue son chemin.'],
+          sys:['+ Aucun combat. Aucune cendre.'],choices:baseChoices([{t:'Poursuivre',f:()=>nextNode()}])});}
+        else {toast('Repéré.');startFight(id)}
+      }}
+    ])});
+}
+function nodeBoss(){
+  setScene('braise',R(1,9999),'boss','roi_cendre');
+  render({loc:'LE CŒUR',depth:hdr(),title:'La cage',
+    text:['La salle est ronde et n\'a pas de plafond : au-dessus, il y a du feu, tenu là par rien de visible.',
+      'Au centre, agenouillé, un homme en couronne. Ses avant-bras s\'arrêtent aux poignets. Il tient la cage sans mains depuis mille ans.',
+      '>« Enfin. Prends-la. Je suis fatigué. »'],
+    choices:[{t:'Accepter la couronne',cls:'danger',s:'affronter Aldrich',f:()=>startFight('roi_cendre',()=>endBoss())},
+             {t:'Reculer vers le Seuil',cls:'exit',s:'renoncer, garder le butin',f:()=>extract()}]});
+}
+function endBoss(){
+  META.boss++;save();
+  render({loc:'FIN',depth:hdr(),title:'La cage s\'ouvre',
+    text:['Le feu descend lentement, comme un rideau qu\'on décroche. Il ne brûle pas. Il regarde.',
+      'Tu comprends, trop tard, que la couronne n\'était pas une récompense. C\'était un poste.',
+      '>« Le feu ne meurt pas. Il change de propriétaire. »'],
+    sys:['* Braise pure obtenue','* Tu peux encore ressortir. Personne ne t\'y oblige.'],
+    choices:[{t:'Franchir le Seuil',cls:'exit',f:()=>extract()}]});
+}
+
+/* ---- TRÉSOR ---- */
+function nodeTresor(){
+  const D=DEPTHS[RUN.depth-1];
+  const kind=pick(['coffre','cadavre','niche']);
+  const txt={coffre:['Un coffre bardé de fer, à moitié enfoncé dans le sol. La serrure a déjà été forcée — mal.'],
+    cadavre:['Un cadavre en armure, assis contre un pilier, jambes croisées. Il a eu le temps de s\'installer.'],
+    niche:['Une niche dans le mur, à hauteur d\'épaule. Quelqu\'un y a rangé quelque chose et n\'est jamais revenu.']}[kind];
+  render({loc:'TROUVAILLE',depth:hdr(),title:{coffre:'Un coffre',cadavre:'Un prédécesseur',niche:'Une niche'}[kind],
+    text:txt.concat([pick(['Tout ce qui traîne ici a appartenu à quelqu\'un de plus prudent que toi.',
+      'Les Fosses ne cachent rien. Elles laissent traîner. C\'est plus efficace.'])]),
+    choices:baseChoices([
+      {t:'Fouiller',cls:'gold',s:'CHA · le butin dépend du jet',f:async()=>{
+        BUSY=true;const r=await check('CHA',9,'FOUILLE');BUSY=false;
+        let n=r.crit?3:r.ok?2:1;const got=[];
+        for(let i=0;i<n;i++)got.push(pick(D.loot));
+        const cen=R(D.cendres[0],D.cendres[1]);
+        got.forEach(id=>RUN.sac.push(id));RUN.cendres+=cen;
+        let piege=null;
+        if(r.fumble){piege=R(8,18);hurt(piege);flash('#c62f2a',.3);shake(6)}
+        render({loc:'TROUVAILLE',depth:hdr(),title:r.crit?'Le fond du coffre':'Tu prends ce qu\'il y a',
+          text:[r.fumble?'Un fil tendu, une lame de ressort. Vieux, mais toujours de bonne humeur.':
+                r.crit?'Sous la doublure, un second compartiment. Le propriétaire ne se méfiait pas de ses amis, il se méfiait de tout le monde.':
+                'Tu rafles sans regarder. On trie au Sanctuaire, pas dans le noir.'],
+          sys:[`* ${cen} cendres`].concat(got.map(id=>`+ ${ITEMS[id].n}`)).concat(piege?[`- Piège : −${piege} PV`]:[]),
+          choices:baseChoices([{t:'Poursuivre',f:()=>afterNode()}])});
+        if(dead())death();
+      }},
+      {t:'Passer sans toucher',s:'prudence',f:()=>afterNode()}
+    ])});
+}
+
+/* ---- REPOS ---- */
+function nodeRepos(){
+  render({loc:'BRAISIER',depth:hdr(),title:'Un feu que personne n\'a éteint',
+    text:['Un brasero encore tiède, entouré de quatre pierres posées à la main. Quelqu\'un s\'est assis là et a décidé de continuer.',
+      'Tu peux t\'asseoir aussi. Ça coûte du temps, et le temps, ici, s\'entend de loin.'],
+    choices:baseChoices([
+      {t:'Se reposer',cls:'gold',s:'+35 PV, END et Focus pleins',f:()=>{
+        heal(35);P.end=endMax();P.foc=focMax();P.st=[];
+        const amb=R(1,100)<=28;
+        if(amb){toast('Quelque chose a vu la lumière.');
+          setTimeout(()=>startFight(pick(DEPTHS[RUN.depth-1].pool)),700);
+          render({loc:'BRAISIER',depth:hdr(),title:'On t\'a vu',
+            text:['Tu te relèves reposé. Et pas seul.'],sys:['+ Soins appliqués','- Embuscade'],choices:[]});
+        } else {
+          render({loc:'BRAISIER',depth:hdr(),title:'Le feu tient',
+            text:['Tu comptes tes objets, tu resserres tes lanières. Pendant quelques minutes, les Fosses te laissent tranquille.',
+              '>C\'est le genre de gentillesse qu\'on paie plus tard.'],
+            sys:['+ 35 PV','+ Endurance et Focus restaurés','+ Blessures nettoyées'],
+            choices:baseChoices([{t:'Repartir',f:()=>afterNode()}])});
+        }
+      }},
+      {t:'Prendre les braises',s:'+cendres, pas de soins',f:()=>{
+        const c=R(30,70)*RUN.depth;RUN.cendres+=c;
+        render({loc:'BRAISIER',depth:hdr(),title:'Tu éteins le feu',
+          text:['Tu rafles les braises dans un linge. Le noir revient d\'un coup, plus dense qu\'avant.',
+            '>Le prochain qui passera ici n\'aura rien.'],
+          sys:[`* ${c} cendres`],choices:baseChoices([{t:'Repartir',f:()=>afterNode()}])});
+      }}
+    ])});
+}
+
+/* ---- AUTEL ---- */
+function nodeAutel(){
+  render({loc:'AUTEL ÉTEINT',depth:hdr(),title:'Une main tendue dans le mur',
+    text:['Une statue sans visage, la paume ouverte à hauteur de poitrine. La pierre est polie à cet endroit précis : beaucoup de gens ont essayé.',
+      'On dit qu\'elle rend ce qu\'on lui donne, en mieux. On dit aussi beaucoup de choses.'],
+    choices:baseChoices([
+      {t:'Offrir des cendres',s:`${Math.max(50,RUN.cendres>>1)} ◈ · FOI`,off:RUN.cendres<50,f:async()=>{
+        const cost=Math.max(50,RUN.cendres>>1);RUN.cendres-=cost;
+        BUSY=true;const r=await check('FOI',11,'OFFRANDE');BUSY=false;
+        let sys=[`- ${cost} cendres offertes`];
+        if(r.crit){P.hpM+=12;P.hp+=12;P.focM+=1;P.foc+=1;sys.push('+ La main se referme sur la tienne. +12 PV max, +1 Focus max')}
+        else if(r.ok){const it=pick(['grande_fiole','sel_noir','pierre_aiguiser','encens_gris',pick(DEPTHS[RUN.depth-1].loot)]);
+          RUN.sac.push(it);heal(25);sys.push('+ 25 PV',`+ ${ITEMS[it].n}`)}
+        else {addSt('MALÉDICTION','malus',99);P.endM=Math.max(6,P.endM-2);sys.push('- La paume se referme sur du vide. END max −2, malédiction')}
+        render({loc:'AUTEL ÉTEINT',depth:hdr(),title:r.ok?'Elle accepte':'Elle refuse',
+          text:[r.ok?'Quelque chose passe de la pierre à ta paume, comme une poignée de main d\'un mort poli.':
+            'Rien. Puis un froid qui monte du poignet à l\'épaule et s\'installe.'],
+          sys,choices:baseChoices([{t:'Poursuivre',f:()=>afterNode()}])});
+      }},
+      {t:'Offrir du sang',s:'−20 PV · relique possible',f:async()=>{
+        hurt(20);flash('#8c1c22',.3);
+        BUSY=true;const r=await check('FOI',12,'SAIGNÉE');BUSY=false;
+        let sys=['- 20 PV versés'];
+        if(r.ok){const rel=pick(['anneau_ver','oeil_verre','dent_loup','clou_martyr','lanterne_creuse','coeur_suif']);
+          RUN.sac.push(rel);sys.push(`+ ${ITEMS[rel].n}`)}
+        else sys.push('- Le sang coule dans une rainure et disparaît. Rien d\'autre.');
+        if(dead())return death();
+        render({loc:'AUTEL ÉTEINT',depth:hdr(),title:r.ok?'La paume se referme':'Rien ne vient',
+          text:[r.ok?'La main de pierre se referme sur ta blessure et te rend quelque chose de dur, de tiède, d\'ancien.':
+            'Tu attends. Longtemps. Le sang sèche.'],
+          sys,choices:baseChoices([{t:'Poursuivre',f:()=>afterNode()}])});
+      }},
+      {t:'Passer',f:()=>afterNode()}
+    ])});
+}
+
+/* ---- ÉVÉNEMENTS ---- */
+const EVENTS=[
+{n:'Le marchand sans mâchoire',
+ t:['Il est assis sur un tas de tissu, un panier entre les genoux. Il n\'a plus de mâchoire inférieure ; il montre ses articles du menton, faute de mieux.',
+    '>Il ne parle pas. Il tape deux fois sur le panier quand tu regardes trop longtemps.'],
+ c:s=>{
+  const stock=[pick(['grande_fiole','sel_noir','pierre_aiguiser','encens_gris','fiole_ivresse','onguent_lie']),
+               pick(DEPTHS[RUN.depth-1].loot)];
+  return stock.map(id=>{const pr=Math.round(ITEMS[id].v*1.4);
+    return {t:`Acheter ${ITEMS[id].n}`,s:`${pr} ◈`,cls:'gold',off:RUN.cendres<pr,f:()=>{
+      RUN.cendres-=pr;RUN.sac.push(id);toast(ITEMS[id].n+' acheté');afterNode()}}})
+   .concat([{t:'Le voler',cls:'danger',s:'DEX · SD 14',f:async()=>{
+      BUSY=true;const r=await check('DEX',14,'VOL');BUSY=false;
+      if(r.ok){for(let i=0;i<3;i++)RUN.sac.push(pick(DEPTHS[RUN.depth-1].loot));
+        evEnd('Il ne bouge pas','Tu prends le panier entier. Il ne se retourne pas. Ce détail te suivra un moment.',['+ 3 objets volés']);}
+      else {evEnd('Le panier mord','Ce n\'était pas un panier.','- Il te manque un doigt. −18 PV'.split('|'));hurt(18);flash('#c62f2a',.3)}
+    }},{t:'Passer sans rien dire',f:()=>afterNode()}])
+ }},
+{n:'Le puits qui répond',
+ t:['Un puits carré, sans margelle. Tu lâches un caillou et comptes. À sept, quelque chose remonte : le même caillou, ou un très ressemblant.',
+    '>« Encore. »'],
+ c:()=>[
+  {t:'Descendre dans le puits',cls:'danger',s:'FOR · SD 12',f:async()=>{
+    BUSY=true;const r=await check('FOR',12,'DESCENTE');BUSY=false;
+    if(r.ok){const g=[pick(DEPTHS[RUN.depth-1].loot),pick(DEPTHS[RUN.depth-1].loot)];g.forEach(i=>RUN.sac.push(i));
+      RUN.cendres+=R(60,140);evEnd('Le fond','Il y a une chambre sèche au fond, et des affaires bien rangées. Personne dedans.',g.map(i=>'+ '+ITEMS[i].n))}
+    else{hurt(R(14,26));flash('#c62f2a',.3);evEnd('La corde','Elle ne casse pas. Elle se détache — c\'est différent, et c\'est pire.',['- Chute violente'])}
+  }},
+  {t:'Jeter une offrande',s:'50 ◈',f:()=>{
+    if(RUN.cendres<50){toast('Pas assez de cendres');return}
+    RUN.cendres-=50;const it=pick(['grande_fiole','larme_sel','os_saint','sel_noir']);RUN.sac.push(it);
+    evEnd('Ça remonte','Quelque chose remonte à la place. Tiède.',[`- 50 cendres`,`+ ${ITEMS[it].n}`])}},
+  {t:'S\'éloigner',f:()=>afterNode()}]},
+{n:'La procession',
+ t:['Onze silhouettes en file indienne traversent la salle sans te voir. Elles portent un douzième corps sur les épaules. Le corps bouge encore un peu.',
+    'Elles ne t\'attaqueront pas. Sauf si tu entres dans la file.'],
+ c:()=>[
+  {t:'Prendre la place du douzième',cls:'danger',s:'FOI · SD 13',f:async()=>{
+    BUSY=true;const r=await check('FOI',13,'PROCESSION');BUSY=false;
+    if(r.ok){P.focM++;P.foc=focMax();heal(20);const it=pick(['os_saint','grimoire_moisi','calice_terni']);RUN.sac.push(it);
+      evEnd('On te repose','Elles te portent trois cents pas et te reposent sur un seuil que tu n\'aurais pas trouvé seul.',['+ Focus max +1','+ 20 PV',`+ ${ITEMS[it].n}`])}
+    else{addSt('MALÉDICTION','malus',99);hurt(R(10,20));evEnd('Elles serrent','Elles t\'ont accepté. Elles ne comptaient pas te reposer.',['- Malédiction','- Blessure à la tête'])}
+  }},
+  {t:'Voler le corps porté',cls:'danger',s:'DEX · SD 15',f:async()=>{
+    BUSY=true;const r=await check('DEX',15,'LARCIN');BUSY=false;
+    if(r.ok){RUN.cendres+=R(120,260);const it=pick(DEPTHS[RUN.depth-1].loot);RUN.sac.push(it);
+      evEnd('Léger','Tu coupes les liens. Le corps tombe dans tes bras, plus léger qu\'un corps.',[`+ ${ITEMS[it].n}`,'* Beaucoup de cendres'])}
+    else{startFight(pick(DEPTHS[RUN.depth-1].pool));toast('La file s\'arrête.')}
+  }},
+  {t:'Attendre qu\'elles passent',f:()=>afterNode()}]},
+{n:'Le miroir de sel',
+ t:['Une plaque de sel poli, haute comme un homme. Ton reflet a une seconde de retard sur toi. Il finit toujours par te rattraper.',
+    '>Puis il s\'arrête de te rattraper, et te regarde.'],
+ c:()=>[
+  {t:'Toucher le reflet',cls:'gold',s:'FOI · SD 11',f:async()=>{
+    BUSY=true;const r=await check('FOI',11,'REFLET');BUSY=false;
+    if(r.ok){const st=pick(['FOR','DEX','FOI','CHA']);P.s[st]++;evEnd('Il te rend quelque chose','Ta main traverse. Ce que tu retires n\'est pas ta main, mais ça y ressemble assez.',[`+ ${st} +1 (permanent pour ce raid)`])}
+    else{P.s[pick(['FOR','DEX'])]--;evEnd('Il prend','Il te tient le poignet une seconde de trop.',['- Une caractéristique diminuée'])}
+  }},
+  {t:'Le briser',s:'FOR · butin',f:async()=>{
+    BUSY=true;const r=await check('FOR',10,'BRIS');BUSY=false;
+    if(r.ok){for(let i=0;i<2;i++)RUN.sac.push(pick(['larme_sel','larme_sel','dent_or','os_saint']));
+      evEnd('Éclats','Le sel se fend en larmes. Elles valent cher.',['+ 2 objets'])}
+    else{hurt(R(8,16));flash('#c62f2a',.28);evEnd('Il ne casse pas','Ton poing casse en premier.',['- Blessure'])}
+  }},
+  {t:'Ne pas s\'attarder',f:()=>afterNode()}]},
+{n:'Le pendu bavard',
+ t:['Un homme pend par les chevilles à une poutre, à trois mètres du sol. Il a l\'air d\'être là depuis longtemps et de très bien s\'en accommoder.',
+    '>« Je peux te dire ce qu\'il y a devant. Ça se paie. Pas en cendres. »'],
+ c:()=>[
+  {t:'Payer en sang',s:'−15 PV · révèle la suite',f:()=>{
+    hurt(15);const rest=RUN.nodes.slice(RUN.idx+1).map(n=>NODE_NAMES[n.t]);
+    RUN.revealed=true;
+    evEnd('Il parle','Il récite, tête en bas, sans reprendre son souffle. Il ne ment pas. C\'est le pire.',
+      ['- 15 PV'].concat(rest.map(r=>'* Devant : '+r)))}},
+  {t:'Le décrocher',cls:'gold',s:'CHA · SD 12',f:async()=>{
+    BUSY=true;const r=await check('CHA',12,'CORDE');BUSY=false;
+    if(r.ok){const it=pick(['grande_fiole','sel_noir',pick(DEPTHS[RUN.depth-1].loot)]);RUN.sac.push(it);RUN.cendres+=R(80,180);
+      evEnd('Il tombe bien','Il se relève, s\'époussette, te donne ce qu\'il a et repart en marchant au plafond.',[`+ ${ITEMS[it].n}`,'* Cendres'])}
+    else{startFight(pick(DEPTHS[RUN.depth-1].pool));toast('Il ne voulait pas descendre.')}
+  }},
+  {t:'Le laisser pendre',f:()=>afterNode()}]},
+{n:'Le champ de lanternes',
+ t:['Des centaines de petites lampes posées à même le sol, sur une salle entière. Toutes allumées. Aucune ne fume.',
+    'Chacune porte un nom gravé. Tu trouves le tien à peu près au milieu.'],
+ c:()=>[
+  {t:'Souffler ta lanterne',cls:'danger',s:'irréversible',f:()=>{
+    P.hpM=Math.round(P.hpM*1.35);P.hp=P.hpM;
+    P.focM=Math.max(0,P.focM-2);P.foc=Math.min(P.foc,focMax());
+    evEnd('Le noir te va bien','Sans ta lampe, les Fosses te voient moins bien. Toi non plus.',
+      ['+ Vitalité maximale +35%','- Focus maximal −2'])}},
+  {t:'Voler une autre lanterne',s:'CHA',f:async()=>{
+    BUSY=true;const r=await check('CHA',12,'LARCIN');BUSY=false;
+    if(r.ok){P.foc=focMax();RUN.cendres+=R(90,200);RUN.sac.push('lanterne_creuse');
+      evEnd('Quelqu\'un s\'éteint ailleurs','Tu ne sauras jamais qui. C\'est peut-être ce qui rend ça facile.',['+ Lanterne creuse','* Cendres'])}
+    else{hurt(R(10,22));evEnd('Toutes s\'éteignent en même temps','Sauf la tienne. Le silence qui suit est franchement hostile.',['- Blessure'])}
+  }},
+  {t:'Traverser sans rien toucher',f:()=>afterNode()}]},
+{n:'L\'escalier qui descend trop',
+ t:['Un escalier en colimaçon, taillé dans le roc. Tu comptes les marches par réflexe. À la deux-centième, tu arrêtes de compter.',
+    'Il continue. Il descend clairement plus bas que la profondeur où tu te trouves.'],
+ c:()=>[
+  {t:'Descendre à fond',cls:'danger',s:'gros butin, gros risque',f:async()=>{
+    BUSY=true;const r=await check('FOR',13,'ENDURANCE');BUSY=false;
+    const dd=Math.min(4,RUN.depth+1);
+    if(r.ok){for(let i=0;i<3;i++)RUN.sac.push(pick(DEPTHS[dd-1].loot));RUN.cendres+=R(150,320);
+      evEnd('Une réserve oubliée','Une salle basse, sèche, pleine de choses qui n\'ont rien à faire à cette profondeur.',['+ 3 objets d\'une profondeur inférieure','* Beaucoup de cendres'])}
+    else{P.end=1;startFight(pick(DEPTHS[dd-1].pool));toast('Quelque chose montait.')}
+  }},
+  {t:'Remonter les marches',f:()=>afterNode()}]},
+{n:'Les mains dans le mur',
+ t:['Sur vingt pas, le mur est constitué de mains. Pas de sculptures : des mains, prises dans la pierre jusqu\'au poignet, qui bougent quand tu passes.',
+    '>Certaines tiennent quelque chose.'],
+ c:()=>[
+  {t:'Prendre ce qu\'elles offrent',cls:'gold',s:'CHA · SD 10',f:async()=>{
+    BUSY=true;const r=await check('CHA',10,'ÉCHANGE');BUSY=false;
+    if(r.ok){const g=[pick(DEPTHS[RUN.depth-1].loot),pick(['fiole_sang','onguent_lie','pain_cendre'])];g.forEach(i=>RUN.sac.push(i));
+      evEnd('Elles lâchent prise','Une à une, sans rancune.',g.map(i=>'+ '+ITEMS[i].n))}
+    else{hurt(R(12,22));addSt('SAIGNEMENT','saign',3);evEnd('Elles serrent','Trois d\'entre elles t\'ont attrapé l\'avant-bras. Il faut tirer fort.',['- Blessure','- Saignement'])}
+  }},
+  {t:'Leur donner un objet',s:'sacrifier 1 objet du sac',off:!RUN||!RUN.sac.length,f:()=>{
+    const i=R(0,RUN.sac.length-1);const lost=RUN.sac.splice(i,1)[0];
+    const cen=R(140,300);RUN.cendres+=cen;heal(25);
+    evEnd('Elles referment le poing','Elles emportent ça dans la pierre. Le mur se lisse.',[`- ${ITEMS[lost].n} donné`,`* ${cen} cendres`,'+ 25 PV'])}},
+  {t:'Longer l\'autre mur',f:()=>afterNode()}]}
+];
+function evEnd(title,txt,sys){
+  render({loc:'PASSAGE',depth:hdr(),title,text:[txt],sys,
+    choices:baseChoices([{t:'Poursuivre',f:()=>afterNode()}])});
+  if(dead())death();
+}
+function nodeEvent(){
+  const e=pick(EVENTS);
+  render({loc:'PASSAGE',depth:hdr(),title:e.n,text:e.t,
+    choices:baseChoices(e.c())});
+}
+
+/* ---- APRÈS UN NŒUD : proposer l'extraction ---- */
+function afterNode(){
+  if(!canExtract()||RUN.idx>=RUN.nodes.length-1)return nextNode();
+  const D=DEPTHS[RUN.depth-1];
+  const val=RUN.sac.reduce((a,id)=>a+ITEMS[id].v,0)+RUN.cendres;
+  render({loc:'CARREFOUR',depth:hdr(),
+    title:'Un courant d\'air froid',
+    text:['Le couloir se divise. À gauche, la pierre est plus claire et l\'air sent la surface — un Seuil, quelque part au bout.',
+      'À droite, ça descend encore.',
+      '>Tout ce que tu portes ne t\'appartient qu\'une fois le Seuil franchi.'],
+    sys:[`Butin transporté : ${RUN.sac.length} objets · ${RUN.cendres} cendres · valeur estimée ${val} ◈`],
+    choices:baseChoices([
+      {t:'Chercher le Seuil',cls:'exit',s:'sécuriser le butin, terminer le raid',f:()=>extract()},
+      {t:'Continuer à descendre',cls:'danger',s:'plus de butin, plus de risque',f:()=>nextNode()}
+    ])});
+}
+
+/* ---- SEUIL ---- */
+function doorNode(){
+  const nxt=RUN.depth<4;
+  render({loc:'SEUIL',depth:hdr(),title:'La Porte de Cendres',
+    text:['Une arche basse, marquée d\'une empreinte de main noire. Derrière, un escalier qui remonte. Au sol, à côté, une bouche plus étroite qui descend.',
+      nxt?'Descendre, c\'est doubler la mise avec le butin déjà en poche. Personne ne t\'oblige à jouer.':
+          'Il n\'y a plus rien en dessous. Enfin — plus rien qui ait un nom.'],
+    choices:[
+      {t:'Franchir le Seuil',cls:'exit',s:'extraire le butin',f:()=>extract()},
+      nxt?{t:`Descendre à la profondeur ${RUN.depth+1}`,cls:'danger',s:DEPTHS[RUN.depth].nom,f:()=>{
+        const keep={cendres:RUN.cendres,sac:RUN.sac};
+        startRaid(RUN.depth+1);RUN.cendres=keep.cendres;RUN.sac=keep.sac;
+      }}:null,
+      {t:'Besace',s:`${RUN.sac.length} objets`,f:()=>openInv(false)}
+    ].filter(Boolean)});
+}
+async function extract(){
+  BUSY=true;
+  render({loc:'SEUIL',depth:hdr(),title:'Remonter',
+    text:['Tu poses la main dans l\'empreinte. La pierre est tiède.','Il reste toujours quelque chose entre toi et la sortie.'],
+    choices:[]});
+  await sleep(700);
+  const r=await check('CHA',9,'PASSAGE DU SEUIL');
+  BUSY=false;
+  if(!r.ok){
+    render({loc:'SEUIL',depth:hdr(),title:'Un gardien du Seuil',
+      text:['Quelque chose s\'est assis devant la porte pendant que tu descendais. Ça attendait de savoir si tu reviendrais chargé.'],
+      choices:[{t:'Se frayer un chemin',cls:'danger',f:()=>startFight(pick(DEPTHS[RUN.depth-1].elite.concat(DEPTHS[RUN.depth-1].pool)),()=>finishExtract())}]});
+    return;
+  }
+  finishExtract();
+}
+function finishExtract(){
+  const val=RUN.sac.reduce((a,id)=>a+ITEMS[id].v,0);
+  RUN.sac.forEach(id=>META.cache.push(id));
+  if(P&&P.sac)P.sac.forEach(id=>META.cache.push(id));
+  if(P){if(P.arme)META.cache.push(P.arme);if(P.armure)META.cache.push(P.armure);P.rel.forEach(id=>META.cache.push(id));P.arme=null;P.armure=null;P.rel=[];P.sac=[]}
+  META.cendres+=RUN.cendres;
+  if(val+RUN.cendres>META.best)META.best=val+RUN.cendres;
+  const n=RUN.sac.length,cen=RUN.cendres,d=RUN.depth;
+  RUN=null;save();
+  setScene('sanct',R(1,9999));
+  render({loc:'SURFACE',title:'Le Seuil est derrière toi',
+    text:['L\'air du dessus a un goût de métal froid. Tu t\'assieds sur la première marche et tu comptes, parce que c\'est la seule chose qui rend la descente supportable.',
+      'Ce que tu as ramené est à toi. Définitivement. C\'est tout ce que ce monde accorde encore comme certitude.'],
+    sys:[`* Profondeur atteinte : ${d}`,`+ ${n} objets déposés dans la Cachette`,`* ${cen} cendres`,
+      `* Valeur du butin : ${val} ◈`],
+    choices:[{t:'Rejoindre le Sanctuaire',cls:'gold',f:()=>sanctuary()}]});
+}
+
+/* ---- MORT ---- */
+async function death(){
+  BUSY=true;C=null;
+  flash('#8c1c22',.55);shake(10);
+  setScene('mort',R(1,9999));
+  await sleep(500);
+  const perdu=RUN?RUN.sac.length:0, cen=RUN?RUN.cendres:0;
+  const sauve=META.pact.slice();
+  META.pact.forEach(id=>META.cache.push(id));
+  META.pact=[];
+  META.morts++;
+  const d=RUN?RUN.depth:1;
+  RUN=null;await save();
+  BUSY=false;
+  render({loc:'FIN',title:'Tu ne te relèves pas',
+    text:[pick(['Ça ne fait pas mal longtemps. C\'est la seule bonne nouvelle des Fosses.',
+      'Tu vois le plafond. Il est plus haut que tu ne croyais. Puis il descend.',
+      'Le dernier bruit est celui de ta besace qui s\'ouvre.']),
+      'Quelque part au-dessus, dans une cave sèche, une poche scellée s\'ouvre toute seule et rend ce qu\'on lui avait confié.',
+      '>Le feu ne meurt pas. Toi, si. Aussi souvent qu\'il faudra.'],
+    sys:[`- Profondeur ${d} · besace perdue (${perdu} objets, ${cen} cendres)`]
+      .concat(sauve.length?sauve.map(id=>`+ ${ITEMS[id].n} sauvé par la Poche du Pacte`):['- La Poche du Pacte était vide.']),
+    choices:[{t:'Se réveiller au Sanctuaire',cls:'gold',f:()=>sanctuary()}]});
+}
+
+/* ---- CARTE ---- */
+function openMap(){
+  const ov=$('#ovHold');
+  const rows=RUN.nodes.map((n,i)=>{
+    const cls=i<RUN.idx?'done':i===RUN.idx?'now':'fut';
+    const known=i<=RUN.idx||RUN.revealed||i===RUN.nodes.length-1;
+    return `<div class="mrow ${cls}"><div class="mnode">${known?NODE_ICONS[n.t]:'·'}</div>
+      <div class="mtxt">${known?NODE_NAMES[n.t]:'inconnu'}</div></div>`}).join('');
+  ov.innerHTML=`<div class="ovh"><h3>Les Fosses</h3><button class="close" onclick="closeOv()">Fermer</button></div>
+    <div class="ovc"><div class="sect">Profondeur ${RUN.depth} — ${DEPTHS[RUN.depth-1].nom}</div>
+    <div id="mapwrap">${rows}</div>
+    <div class="sect">Butin transporté</div>
+    <div class="stat"><span>Objets</span><b>${RUN.sac.length}</b></div>
+    <div class="stat"><span>Cendres</span><b>${RUN.cendres} ◈</b></div>
+    <div class="stat"><span>Valeur estimée</span><b>${RUN.sac.reduce((a,id)=>a+ITEMS[id].v,0)} ◈</b></div>
+    <div class="stat"><span>Poche du Pacte</span><b>${META.pact.length}/${pactMax()}</b></div></div>`;
+  ov.classList.add('on');
+}
+function closeOv(){$$('.ov').forEach(o=>o.classList.remove('on'))}
+
+/* ============================================================
+   BESACE (en raid) — sac perdu à la mort, Poche du Pacte conservée
+   ============================================================ */
+function itemRow(id,extra,cls){
+  const it=ITEMS[id];
+  return `<div class="it ${cls||''}" ${extra||''}>
+    <div class="gl">${it.g}</div>
+    <div class="nm"><b class="${RAR[it.r]}">${it.n}</b><small>${it.d}</small></div>
+    <div class="vl">${it.v?it.v+' ◈':''}</div></div>`;
+}
+let INV_CB=null;
+function openInv(inCombat){
+  const ov=$('#ovInv');
+  const eq=[];
+  if(P.arme)eq.push(['arme',P.arme]);
+  if(P.armure)eq.push(['armure',P.armure]);
+  P.rel.forEach(r=>eq.push(['relique',r]));
+  const pw=pactMax();
+  let h=`<div class="ovh"><h3>Besace</h3><button class="close" onclick="closeOv()">Fermer</button></div><div class="ovc">`;
+  h+=`<div class="sect">Équipé</div>`;
+  h+= eq.length?eq.map(([k,id])=>itemRow(id,'','eq')).join(''):'<div class="empty">Rien d\'équipé</div>';
+  h+=`<div class="sect">Poche du Pacte — ${META.pact.length}/${pw}</div>`;
+  h+=`<div class="desc" style="font-size:11.5px">Scellée à la cire. Son contenu revient au Sanctuaire même si tu meurs. Ce que tu y mets, tu ne peux plus l'utiliser pendant le raid.</div>`;
+  h+= META.pact.length?META.pact.map((id,i)=>itemRow(id,`onclick="pactOut(${i})"`,'pact')).join(''):'<div class="empty">Vide — tu paries tout</div>';
+  h+=`<div class="sect">Sac — ${P.sac.length+(RUN?RUN.sac.length:0)} objets</div>`;
+  const all=(RUN?RUN.sac:[]).map((id,i)=>['run',i,id]).concat(P.sac.map((id,i)=>['p',i,id]));
+  h+= all.length?all.map(([src,i,id])=>{
+    const it=ITEMS[id];
+    const act=it.t==='conso'?`useItem('${src}',${i})`:
+              (it.t==='arme'||it.t==='armure'||it.t==='relique')?`equipItem('${src}',${i})`:
+              `pactIn('${src}',${i})`;
+    return `<div class="it" onclick="${act}"><div class="gl">${it.g}</div>
+      <div class="nm"><b class="${RAR[it.r]}">${it.n}</b><small>${it.d}</small>
+      <small style="color:var(--or)">${it.t==='conso'?'▸ Utiliser':(it.t==='arme'||it.t==='armure'||it.t==='relique')?'▸ Équiper':'▸ Mettre au Pacte'}${META.pact.length<pw?'  ·  <span onclick="event.stopPropagation();pactIn(\''+src+'\','+i+')">▸ Pacte</span>':''}</small></div>
+      <div class="vl">${it.v} ◈</div></div>`}).join('')
+    :'<div class="empty">Sac vide</div>';
+  h+=`</div>`;
+  ov.innerHTML=h;ov.classList.add('on');
+  INV_CB=inCombat;
+}
+function grab(src,i){return src==='run'?RUN.sac[i]:P.sac[i]}
+function rm(src,i){return src==='run'?RUN.sac.splice(i,1)[0]:P.sac.splice(i,1)[0]}
+function pactIn(src,i){
+  if(META.pact.length>=pactMax()){toast('Poche du Pacte pleine');return}
+  const id=rm(src,i);META.pact.push(id);save();
+  toast(ITEMS[id].n+' scellé');openInv(INV_CB);drawHUD();
+}
+function pactOut(i){
+  const id=META.pact.splice(i,1)[0];
+  (RUN?RUN.sac:P.sac).push(id);save();
+  toast(ITEMS[id].n+' repris');openInv(INV_CB);
+}
+function equipItem(src,i){
+  const id=grab(src,i),it=ITEMS[id];
+  if(it.t==='relique'&&P.rel.length>=3){toast('3 reliques maximum');return}
+  rm(src,i);
+  if(it.t==='arme'){if(P.arme)(RUN?RUN.sac:P.sac).push(P.arme);P.arme=id}
+  else if(it.t==='armure'){if(P.armure)(RUN?RUN.sac:P.sac).push(P.armure);P.armure=id}
+  else P.rel.push(id);
+  applyMods();P.end=Math.min(P.end,endMax());
+  toast(it.n+' équipé');openInv(INV_CB);drawHUD();
+}
+function useItem(src,i){
+  const id=grab(src,i),it=ITEMS[id];
+  let msg='';
+  if(it.use==='heal'){heal(it.amt);msg=`+${it.amt} PV`}
+  if(it.use==='cure'){P.st=P.st.filter(s=>s.n!=='SAIGNEMENT'&&s.n!=='VENIN'&&s.n!=='BRAISE');msg='Blessures nettoyées'}
+  if(it.use==='sharp'){P.sharp+=3;msg='+3 dégâts pour le raid'}
+  if(it.use==='stam'){P.end=endMax();P.foc=Math.min(focMax(),P.foc+2);msg='Souffle retrouvé'}
+  if(it.use==='ward'){P.ward=4;addSt('SEL NOIR','buff',3);msg='+4 Garde'}
+  if(it.use==='rage'){P.rage=1;addSt('IVRESSE','malus',4);msg='+5 dégâts, −3 Garde'}
+  rm(src,i);toast(msg);
+  if(INV_CB&&C){closeOv();C.log.push({t:`Tu utilises <b>${it.n}</b>. ${msg}.`,c:'good'});drawFight();
+    // l'objet consomme le tour
+    (async()=>{BUSY=true;await enemyTurn();if(C){tickSt(t=>clog(t,'bad'));
+      if(dead()){BUSY=false;return death()}C.turn++;P.end=Math.min(endMax(),P.end+2);drawFight()}BUSY=false})();
+    return}
+  openInv(INV_CB);drawHUD();
+}
+
+/* ============================================================
+   SANCTUAIRE
+   ============================================================ */
+function sanctuary(){
+  C=null;RUN=null;
+  if(!P||!P.cls)mkChar(META.cls||'deserteur');
+  P.hp=P.hpM;P.end=endMax();P.foc=focMax();P.st=[];P.sharp=0;P.ward=0;P.rage=0;
+  setScene('sanct',R(1,9999));
+  const v=META.cache.reduce((a,id)=>a+ITEMS[id].v,0);
+  render({loc:'LE SANCTUAIRE',title:'Une cave sous une chapelle brûlée',
+    text:['Quatre murs secs, une table, un coffre, un autel sans dieu et une forge qui tire mal. C\'est peu. C\'est à toi.',
+      'Tout ce qui est ici a survécu à une descente. C\'est le seul critère de valeur qui vaille encore.'],
+    sys:[`* ${META.cendres} cendres`,`* ${META.cache.length} objets en réserve (${v} ◈)`,
+      `* Poche du Pacte : ${pactMax()} emplacement${pactMax()>1?'s':''}`,
+      `Raids : ${META.raids} · Morts : ${META.morts} · Profondeur atteinte : ${META.deepest||1}`],
+    choices:[
+      {t:'Préparer une descente',cls:'gold',s:'choisir l\'équipement et la profondeur',f:()=>prepRaid()},
+      {row:[{t:'Cachette',s:`${META.cache.length} objets`,f:()=>openCache()},
+            {t:'Autel',s:'améliorer',f:()=>openAutel()}]},
+      {row:[{t:'Forge',s:'vendre / affûter',f:()=>openForge()},
+            {t:'Chroniques',s:'stats',f:()=>openChron()}]},
+      {t:'Options',s:`Dés : ${META.dice3d?'3D':'gravure 2D'}`,cls:'sub',f:()=>openOpts()}
+    ]});
+  save();
+}
+
+/* --- CACHETTE --- */
+function openCache(){
+  const ov=$('#ovHold');
+  const groups={arme:[],armure:[],relique:[],conso:[],tresor:[],cle:[]};
+  META.cache.forEach((id,i)=>groups[ITEMS[id].t].push([id,i]));
+  const lbl={arme:'Armes',armure:'Armures',relique:'Reliques',conso:'Consommables',tresor:'Trésors',cle:'Clés & reliquats'};
+  let h=`<div class="ovh"><h3>Cachette</h3><button class="close" onclick="closeOv()">Fermer</button></div><div class="ovc">`;
+  let any=false;
+  for(const k in groups){ if(!groups[k].length)continue;any=true;
+    h+=`<div class="sect">${lbl[k]} — ${groups[k].length}</div>`;
+    h+=groups[k].map(([id])=>itemRow(id)).join('');}
+  if(!any)h+='<div class="empty">La cachette est vide. Il faut redescendre.</div>';
+  h+=`</div>`;ov.innerHTML=h;ov.classList.add('on');
+}
+
+/* --- AUTEL : améliorations permanentes --- */
+const UPG=[
+ {k:'FOR',n:'Force',d:'Dégâts des armes lourdes, portes, prises.',c:s=>120+s*110},
+ {k:'DEX',n:'Dextérité',d:'Garde, discrétion, armes prestes, fuite.',c:s=>120+s*110},
+ {k:'FOI',n:'Foi',d:'Invocations, autels, Cendrelame.',c:s=>140+s*130},
+ {k:'CHA',n:'Chance',d:'Fouilles, seuils, marchands, hasard.',c:s=>100+s*90}
+];
+function openAutel(){
+  const ov=$('#ovHold');
+  let h=`<div class="ovh"><h3>Autel</h3><button class="close" onclick="closeOv()">Fermer</button></div><div class="ovc">
+   <p class="desc">L'autel n'a pas de dieu. Il a un tarif. Les cendres que tu y verses ne redescendent jamais avec toi — elles restent dans tes os.</p>
+   <div class="stat"><span>Cendres disponibles</span><b>${META.cendres} ◈</b></div>`;
+  h+=`<div class="sect">Caractéristiques</div>`;
+  UPG.forEach(u=>{const s=META.base[u.k],c=u.c(s);
+    h+=`<div class="it" onclick="buyStat('${u.k}',${c})"><div class="gl">◈</div>
+      <div class="nm"><b>${u.n} — niveau ${s}</b><small>${u.d}</small>
+      <small style="color:${META.cendres>=c?'var(--or)':'#5c534b'}">▸ Élever pour ${c} ◈</small></div></div>`});
+  const vc=200+META.autel*180;
+  h+=`<div class="sect">Vitalité</div>
+   <div class="it" onclick="buyVita(${vc})"><div class="gl">🫀</div>
+     <div class="nm"><b>Chair épaissie — niveau ${META.autel}</b><small>+12 PV maximum, +1 Endurance max.</small>
+     <small style="color:${META.cendres>=vc?'var(--or)':'#5c534b'}">▸ Élever pour ${vc} ◈</small></div></div>`;
+  const pc=600+META.pacteLvl*900;
+  h+=`<div class="sect">Le Pacte</div>
+   <p class="desc" style="font-size:11.5px">Chaque emplacement supplémentaire est un objet de plus qui survivra à ta prochaine mort. C'est l'amélioration la plus chère, et la seule qui compte vraiment.</p>
+   <div class="it pact" onclick="buyPact(${pc})"><div class="gl">🔒</div>
+     <div class="nm"><b>Sceller un emplacement — ${pactMax()} actuellement</b><small>+1 emplacement permanent dans la Poche du Pacte.</small>
+     <small style="color:${META.cendres>=pc?'var(--or)':'#5c534b'}">▸ Sceller pour ${pc} ◈</small></div></div>`;
+  h+='</div>';ov.innerHTML=h;ov.classList.add('on');
+}
+function buyStat(k,c){if(META.cendres<c){toast('Pas assez de cendres');return}
+  META.cendres-=c;META.base[k]++;save();toast(k+' élevé');mkChar(META.cls);openAutel();drawHUD()}
+function buyVita(c){if(META.cendres<c){toast('Pas assez de cendres');return}
+  META.cendres-=c;META.autel++;save();toast('Chair épaissie');mkChar(META.cls);openAutel();drawHUD()}
+function buyPact(c){if(META.cendres<c){toast('Pas assez de cendres');return}
+  META.cendres-=c;META.pacteLvl++;save();toast('Un emplacement de plus');openAutel()}
+
+/* --- FORGE : vendre / affûter --- */
+function openForge(){
+  const ov=$('#ovHold');
+  let h=`<div class="ovh"><h3>Forge</h3><button class="close" onclick="closeOv()">Fermer</button></div><div class="ovc">
+   <p class="desc">Le forgeron est mort il y a longtemps. Le feu, non. Il accepte les trésors : il les fond, il ne demande pas d'où ils viennent.</p>
+   <div class="stat"><span>Cendres</span><b>${META.cendres} ◈</b></div>`;
+  const tres=META.cache.map((id,i)=>[id,i]).filter(([id])=>ITEMS[id].t==='tresor');
+  h+=`<div class="sect">Fondre les trésors</div>`;
+  if(tres.length){
+    h+=`<div class="it" onclick="meltAll()"><div class="gl">🔥</div><div class="nm"><b>Tout fondre</b>
+      <small>${tres.length} trésors</small><small style="color:var(--or)">▸ +${tres.reduce((a,[id])=>a+ITEMS[id].v,0)} ◈</small></div></div>`;
+    h+=tres.map(([id,i])=>`<div class="it" onclick="melt(${i})"><div class="gl">${ITEMS[id].g}</div>
+      <div class="nm"><b class="${RAR[ITEMS[id].r]}">${ITEMS[id].n}</b><small>${ITEMS[id].d}</small>
+      <small style="color:var(--or)">▸ Fondre pour ${ITEMS[id].v} ◈</small></div></div>`).join('');
+  } else h+='<div class="empty">Aucun trésor en réserve</div>';
+  const armes=[...new Set(META.cache.filter(id=>ITEMS[id].t==='arme'))];
+  h+=`<div class="sect">Affûter une arme</div>
+    <p class="desc" style="font-size:11.5px">+2 dégâts permanents par niveau, pour toutes les copies de cette arme.</p>`;
+  h+= armes.length?armes.map(id=>{const lv=(META.upg&&META.upg[id])||0,c=180+lv*260;
+    return `<div class="it" onclick="sharpenW('${id}',${c})"><div class="gl">${ITEMS[id].g}</div>
+      <div class="nm"><b class="${RAR[ITEMS[id].r]}">${ITEMS[id].n} +${lv}</b><small>${ITEMS[id].dmg[0]+lv*2}–${ITEMS[id].dmg[1]+lv*2} dégâts · ${ITEMS[id].sc}</small>
+      <small style="color:${META.cendres>=c?'var(--or)':'#5c534b'}">▸ Affûter pour ${c} ◈</small></div></div>`}).join('')
+    :'<div class="empty">Aucune arme en réserve</div>';
+  h+='</div>';ov.innerHTML=h;ov.classList.add('on');
+}
+function melt(i){const id=META.cache.splice(i,1)[0];META.cendres+=ITEMS[id].v;save();toast('+'+ITEMS[id].v+' ◈');openForge()}
+function meltAll(){let g=0;META.cache=META.cache.filter(id=>{if(ITEMS[id].t==='tresor'){g+=ITEMS[id].v;return false}return true});
+  META.cendres+=g;save();toast('+'+g+' ◈');openForge()}
+function sharpenW(id,c){if(META.cendres<c){toast('Pas assez de cendres');return}
+  META.upg=META.upg||{};META.cendres-=c;META.upg[id]=(META.upg[id]||0)+1;save();toast(ITEMS[id].n+' affûtée');openForge()}
+
+function openOpts(){
+  const ov=$('#ovHold');
+  ov.innerHTML=`<div class="ovh"><h3>Options</h3><button class="close" onclick="closeOv()">Fermer</button></div>
+  <div class="ovc">
+   <div class="sect">Le dé</div>
+   <p class="desc">Le dé 3D charge Three.js depuis un CDN au premier jet : il faut une connexion. En cas d'échec, le jeu repasse automatiquement au dé gravé en 2D, qui fonctionne hors ligne.</p>
+   <div class="it ${META.dice3d?'eq':''}" onclick="setDice(true)"><div class="gl">🎲</div>
+     <div class="nm"><b>Dé de braise — 3D</b><small>Icosaèdre texturé, il tombe sur la face jouée.</small></div>
+     <div class="vl">${META.dice3d?'✓':''}</div></div>
+   <div class="it ${!META.dice3d?'eq':''}" onclick="setDice(false)"><div class="gl">◆</div>
+     <div class="nm"><b>Dé gravé — 2D</b><small>Dessiné au canvas. Aucune dépendance, plus rapide.</small></div>
+     <div class="vl">${!META.dice3d?'✓':''}</div></div>
+   <div class="sect">Aperçu</div>
+   <button class="btn" onclick="testDie()">Lancer un dé</button>
+  </div>`;
+  ov.classList.add('on');
+}
+function setDice(v){META.dice3d=v;D3fail=false;save();openOpts();toast(v?'Dé 3D activé':'Dé gravé activé')}
+async function testDie(){
+  if(BUSY)return;BUSY=true;
+  const v=await rollDie(20,'ESSAI');
+  dieResult(String(v),v===20?'crit':v===1?'miss':'hit');
+  await sleep(1000);hideDie();BUSY=false;
+}
+function openChron(){
+  const ov=$('#ovHold');
+  ov.innerHTML=`<div class="ovh"><h3>Chroniques</h3><button class="close" onclick="closeOv()">Fermer</button></div>
+  <div class="ovc">
+   <div class="sect">Le porteur</div>
+   <div class="stat"><span>Nom</span><b>${P.name}</b></div>
+   <div class="stat"><span>Force</span><b>${P.s.FOR}</b></div>
+   <div class="stat"><span>Dextérité</span><b>${P.s.DEX}</b></div>
+   <div class="stat"><span>Foi</span><b>${P.s.FOI}</b></div>
+   <div class="stat"><span>Chance</span><b>${P.s.CHA}</b></div>
+   <div class="stat"><span>Vitalité</span><b>${P.hpM} PV</b></div>
+   <div class="stat"><span>Endurance</span><b>${endMax()}</b></div>
+   <div class="stat"><span>Garde</span><b>${gardeVal()}</b></div>
+   <div class="sect">Les Fosses</div>
+   <div class="stat"><span>Descentes</span><b>${META.raids}</b></div>
+   <div class="stat"><span>Morts</span><b>${META.morts}</b></div>
+   <div class="stat"><span>Créatures abattues</span><b>${META.tue}</b></div>
+   <div class="stat"><span>Profondeur maximale</span><b>${META.deepest||1}</b></div>
+   <div class="stat"><span>Meilleure extraction</span><b>${META.best} ◈</b></div>
+   <div class="stat"><span>Aldrich vaincu</span><b>${META.boss?'oui, '+META.boss+'×':'jamais'}</b></div>
+   <button class="btn sub" onclick="wipe()">Tout effacer et recommencer</button>
+  </div>`;
+  ov.classList.add('on');
+}
+async function wipe(){
+  if(!confirm('Effacer la cachette, les cendres et toutes les améliorations ?'))return;
+  META=NEWMETA();await save();closeOv();location.reload();
+}
+
+/* ============================================================
+   PRÉPARATION DE LA DESCENTE
+   ============================================================ */
+let LOAD=null;
+function prepRaid(){
+  LOAD={arme:null,armure:null,rel:[],obj:[]};
+  drawPrep();
+}
+function drawPrep(){
+  const ov=$('#ovHold');
+  const idx={};META.cache.forEach((id,i)=>{idx[i]=id});
+  const taken=new Set([LOAD.arme,LOAD.armure,...LOAD.rel,...LOAD.obj].filter(x=>x!==null));
+  const list=(type,slot,max)=>{
+    const items=META.cache.map((id,i)=>[id,i]).filter(([id,i])=>ITEMS[id].t===type&&!taken.has(i));
+    if(!items.length)return '<div class="empty">Rien de ce type en réserve</div>';
+    return items.map(([id,i])=>`<div class="it" onclick="pickLoad('${slot}',${i},${max})">
+      <div class="gl">${ITEMS[id].g}</div><div class="nm"><b class="${RAR[ITEMS[id].r]}">${ITEMS[id].n}${type==='arme'&&META.upg&&META.upg[id]?' +'+META.upg[id]:''}</b>
+      <small>${ITEMS[id].d}</small></div><div class="vl">▸</div></div>`).join('');
+  };
+  const chosen=(slot,arr)=>arr.length?arr.map(i=>`<div class="it eq" onclick="dropLoad('${slot}',${i})">
+      <div class="gl">${ITEMS[META.cache[i]].g}</div><div class="nm"><b class="${RAR[ITEMS[META.cache[i]].r]}">${ITEMS[META.cache[i]].n}</b>
+      <small style="color:var(--verdegris)">▸ Retirer</small></div></div>`).join('')
+    :'<div class="empty">Aucun</div>';
+  const maxD=Math.min(4,(META.deepest||1));
+  let h=`<div class="ovh"><h3>Descente</h3><button class="close" onclick="closeOv()">Annuler</button></div><div class="ovc">
+   <p class="desc">Ce que tu emportes descend avec toi. Ce que tu emportes se perd avec toi. Le reste attend ici, en sécurité.</p>
+   <div class="sect">Chargement</div>
+   ${chosen('arme',LOAD.arme!==null?[LOAD.arme]:[])}
+   ${chosen('armure',LOAD.armure!==null?[LOAD.armure]:[])}
+   ${chosen('rel',LOAD.rel)}
+   ${chosen('obj',LOAD.obj)}
+   <div class="sect">Armes</div>${list('arme','arme',1)}
+   <div class="sect">Armures</div>${list('armure','armure',1)}
+   <div class="sect">Reliques — ${LOAD.rel.length}/3</div>${list('relique','rel',3)}
+   <div class="sect">Objets — ${LOAD.obj.length}/6</div>${list('conso','obj',6)}
+   ${META.cache.some(id=>ITEMS[id].t==='cle')?'<div class="sect">Clés</div>'+list('cle','obj',6):''}
+   <div class="sect">Profondeur de départ</div>
+   <p class="desc" style="font-size:11.5px">Tu ne peux redescendre directement qu'aux profondeurs déjà atteintes.</p>`;
+  for(let d=1;d<=4;d++){
+    const lock=d>maxD;
+    h+=`<div class="it" ${lock?'style="opacity:.32"':`onclick="launch(${d})"`}>
+      <div class="gl">${lock?'🔒':'▼'}</div><div class="nm"><b>${d}. ${DEPTHS[d-1].nom}</b>
+      <small>${lock?'Non atteinte':DEPTHS[d-1].intro.slice(0,72)+'…'}</small></div></div>`;
+  }
+  h+='</div>';ov.innerHTML=h;ov.classList.add('on');
+}
+function pickLoad(slot,i,max){
+  if(slot==='arme'||slot==='armure'){LOAD[slot]=i}
+  else{if(LOAD[slot].length>=max){toast('Emplacements pleins');return}LOAD[slot].push(i)}
+  drawPrep();
+}
+function dropLoad(slot,i){
+  if(slot==='arme'||slot==='armure')LOAD[slot]=null;
+  else LOAD[slot]=LOAD[slot].filter(x=>x!==i);
+  drawPrep();
+}
+function launch(d){
+  mkChar(META.cls);
+  const used=[LOAD.arme,LOAD.armure,...LOAD.rel,...LOAD.obj].filter(x=>x!==null).sort((a,b)=>b-a);
+  if(LOAD.arme!==null)P.arme=META.cache[LOAD.arme];
+  if(LOAD.armure!==null)P.armure=META.cache[LOAD.armure];
+  P.rel=LOAD.rel.map(i=>META.cache[i]);
+  P.sac=LOAD.obj.map(i=>META.cache[i]);
+  used.forEach(i=>META.cache.splice(i,1));
+  applyMods();P.hp=P.hpM;P.end=endMax();P.foc=focMax();
+  closeOv();save();
+  startRaid(d);
+}
+
+/* ============================================================
+   ÉCRAN-TITRE & CRÉATION
+   ============================================================ */
+const tbg=$('#tbg'),tctx=tbg.getContext('2d');
+function titleBG(){
+  const d=Math.min(devicePixelRatio||1,2);
+  const w=tbg.clientWidth||innerWidth,h=tbg.clientHeight||innerHeight;
+  tbg.width=w*d;tbg.height=h*d;tctx.setTransform(d,0,0,d,0,0);
+  const t=Date.now();
+  tctx.clearRect(0,0,w,h);
+  const g=tctx.createRadialGradient(w/2,h*.62,10,w/2,h*.62,h*.8);
+  g.addColorStop(0,'rgba(224,100,26,.30)');g.addColorStop(.35,'rgba(140,28,34,.14)');g.addColorStop(1,'transparent');
+  tctx.fillStyle=g;tctx.fillRect(0,0,w,h);
+  // arche
+  tctx.strokeStyle='rgba(201,162,39,.16)';tctx.lineWidth=1.4;
+  for(let i=0;i<5;i++){
+    const r=h*(.18+i*.09)+Math.sin(t*.0004+i)*4;
+    tctx.beginPath();tctx.arc(w/2,h*.72,r,Math.PI,0);tctx.stroke();
+  }
+  requestAnimationFrame(titleBG);
+}
+function titleScreen(){
+  const has=META.cls&&(META.raids>0||META.cache.length);
+  const acts=[];
+  if(has)acts.push({t:'Redescendre',cls:'gold',s:`${META.cendres} ◈ · ${META.cache.length} objets en réserve`,f:()=>{$('#title').style.display='none';sanctuary()}});
+  acts.push({t:has?'Recommencer une lignée':'Commencer',cls:has?'sub':'gold',s:has?'efface tout':'choisir un porteur',f:()=>{if(has&&!confirm('Effacer la cachette et recommencer une nouvelle lignée ?'))return;chooseClass()}});
+  const c=document.createElement('div');
+  $('#tacts').innerHTML='';
+  acts.forEach(a=>$('#tacts').appendChild(mkAct(a)));
+}
+function chooseClass(){
+  $('#title').style.display='none';
+  P=null;
+  setScene('sanct',R(1,9999));
+  $('#hud').innerHTML='';
+  const choices=CLASSES.map(c=>({t:`${c.g}  ${c.n}`,s:`FOR ${c.s.FOR} · DEX ${c.s.DEX} · FOI ${c.s.FOI} · CHA ${c.s.CHA}`,
+    f:()=>confirmClass(c)}));
+  render({loc:'AVANT LA PREMIÈRE DESCENTE',title:'Qui descend ?',
+    text:['Il n\'y a jamais eu de héros dans les Fosses de Vhalmar. Il y a des gens qui avaient une raison, et des gens qui n\'avaient plus rien.',
+      'Les deux ressortent aussi rarement.'],
+    choices});
+  // descriptions sous chaque bouton
+  setTimeout(()=>{$$('#acts .act').forEach((b,i)=>{
+    if(CLASSES[i])b.innerHTML+=`<small style="color:var(--brume);text-transform:none;letter-spacing:0;font-family:var(--disp);font-size:12px;margin-top:6px">${CLASSES[i].d}</small>`})},0);
+}
+async function confirmClass(c){
+  META=NEWMETA();META.cls=c.id;META.deepest=1;
+  mkChar(c.id);
+  c.kit.forEach(id=>META.cache.push(id));
+  await save();
+  setScene('sanct',R(1,9999));
+  render({loc:'LE SANCTUAIRE',title:c.n,
+    text:[c.d,
+      'On t\'a indiqué une cave sous une chapelle brûlée, à cent pas de la trappe. Il y a un coffre. Il est vide, mais il ferme.',
+      '>« Tout ce que tu remontes est à toi. Tout ce que tu portes en bas ne l\'est pas encore. »'],
+    sys:['+ Équipement de départ déposé dans la Cachette',`* ${META.cendres} cendres`,
+      `* Poche du Pacte : ${pactMax()} emplacements — leur contenu survit à ta mort`],
+    choices:[{t:'Entrer dans le Sanctuaire',cls:'gold',f:()=>sanctuary()}]});
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+(async function boot(){
+  sizeEmbers();loopEmb();
+  sizeFX();setScene('braise',R(1,9999));loopFX();
+  titleBG();
+  await load();
+  if(META.cls&&!P)mkChar(META.cls);
+  titleScreen();
+})();
+document.addEventListener('gesturestart',e=>e.preventDefault());
+</script>
+</body>
+</html>

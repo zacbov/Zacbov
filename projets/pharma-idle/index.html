@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLACEBO S.A. — laboratoire incrémental</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;600;700&family=Archivo:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --papier:#E7EDEF; --alu:#B4C0C7; --alu-clair:#D6DFE3;
+  --encre:#0F1E28; --encre-2:#41565F;
+  --gelule:#D8324B; --gelule-2:#1C6FA6; --alerte:#D98A1F; --vert:#2E7D62;
+  --trait:rgba(15,30,40,.16);
+  --ombre:0 1px 0 rgba(255,255,255,.7), 0 2px 10px rgba(15,30,40,.10);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--papier);
+  background-image:repeating-linear-gradient(0deg,rgba(15,30,40,.035) 0 1px,transparent 1px 4px);
+  color:var(--encre);font-family:"Archivo",system-ui,sans-serif;font-size:15px;line-height:1.45;
+  padding:18px 16px 60px}
+h1,h2,h3{font-family:"Archivo Narrow",system-ui,sans-serif;margin:0;letter-spacing:.02em}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+
+header{max-width:1320px;margin:0 auto 16px;border:1.5px solid var(--encre);background:#fff;box-shadow:var(--ombre)}
+.bandeau{display:flex;flex-wrap:wrap;align-items:baseline;gap:14px;padding:11px 16px;border-bottom:1.5px solid var(--encre)}
+.bandeau h1{font-size:27px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.bandeau .sous{font-family:"IBM Plex Mono",monospace;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--encre-2)}
+.bandeau .outils{margin-left:auto;display:flex;gap:6px;align-items:center}
+.mini{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  border:1px solid var(--trait);background:#fff;padding:5px 8px;cursor:pointer;color:var(--encre-2)}
+.mini:hover{border-color:var(--encre);color:var(--encre)}
+.compteurs{display:grid;grid-template-columns:repeat(5,1fr)}
+.compteur{padding:9px 14px;border-right:1px solid var(--trait)}
+.compteur:last-child{border-right:0}
+.compteur .lbl{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--encre-2)}
+.compteur .val{font-family:"Archivo Narrow",sans-serif;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
+.compteur .taux{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--encre-2)}
+.compteur .barre{margin-top:4px}
+
+main{max-width:1320px;margin:0 auto;display:grid;grid-template-columns:308px 1fr 348px;gap:16px;align-items:start}
+.carte{background:#fff;border:1.5px solid var(--encre);box-shadow:var(--ombre);margin-bottom:16px}
+.carte>h2{font-size:13px;text-transform:uppercase;letter-spacing:.16em;padding:8px 12px;border-bottom:1.5px solid var(--encre);font-weight:700}
+.corps{padding:12px}
+
+.plaquette{background:linear-gradient(150deg,#F2F5F6,#C9D4DA 55%,#EDF1F3);border:1px solid var(--alu);padding:10px;
+  display:grid;grid-template-columns:repeat(5,1fr);gap:7px;cursor:pointer;user-select:none}
+.plaquette:focus-visible{outline:3px solid var(--gelule-2);outline-offset:2px}
+.alveole{position:relative;aspect-ratio:1/1.5;border-radius:40% 40% 45% 45%/30% 30% 55% 55%;
+  background:radial-gradient(120% 90% at 30% 20%,#fff,#DCE4E8 60%,#AEBBC3);
+  border:1px solid rgba(15,30,40,.18);overflow:hidden}
+.alveole .pilule{position:absolute;inset:14% 18%;border-radius:999px;
+  background:linear-gradient(180deg,var(--gelule) 0 50%,#F6F7F8 50% 100%);
+  box-shadow:inset 0 0 0 1px rgba(15,30,40,.2);transform:scale(0);transition:transform .18s ease}
+.alveole.pleine .pilule{transform:scale(1)}
+.plaquette:active{transform:translateY(1px)}
+.bouton-pipette{width:100%;margin-top:10px;border:1.5px solid var(--encre);background:var(--encre);color:#fff;
+  font-family:"Archivo Narrow",sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.12em;font-size:13px;padding:10px;cursor:pointer}
+.bouton-pipette:hover{background:var(--gelule-2)}
+.note{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--encre-2);margin-top:8px}
+.note.att{color:var(--gelule)}
+
+.ligne{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px solid var(--trait);background:#FBFCFC;
+  margin-bottom:7px;cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit}
+.ligne:hover:not(:disabled){border-color:var(--encre);background:#fff}
+.ligne:disabled{opacity:.45;cursor:not-allowed}
+.ligne .nom{font-family:"Archivo Narrow",sans-serif;font-weight:700;font-size:15px;letter-spacing:.02em}
+.ligne .desc{font-size:12px;color:var(--encre-2);line-height:1.3}
+.ligne .droite{margin-left:auto;text-align:right;flex:0 0 auto}
+.prix{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600}
+.qte{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--encre-2)}
+.roi{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--vert)}
+
+.onglets{display:flex;border-bottom:1.5px solid var(--encre);flex-wrap:wrap}
+.onglet{flex:1;min-width:64px;padding:9px 4px;background:#E7EDEF;border:0;border-right:1px solid var(--trait);
+  font-family:"Archivo Narrow",sans-serif;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.07em;cursor:pointer;color:var(--encre-2)}
+.onglet:last-child{border-right:0}
+.onglet[aria-selected="true"]{background:#fff;color:var(--encre);box-shadow:inset 0 -3px 0 var(--gelule)}
+.pastille{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gelule);margin-left:4px;vertical-align:middle}
+
+.lots{display:flex;gap:4px;margin-bottom:10px}
+.lots button{flex:1;padding:6px 2px;border:1px solid var(--trait);background:#F3F6F7;cursor:pointer;
+  font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;color:var(--encre-2)}
+.lots button[aria-pressed="true"]{background:var(--encre);color:#fff;border-color:var(--encre)}
+
+.molecule{border:1px solid var(--trait);padding:10px;margin-bottom:8px;background:#FBFCFC}
+.molecule .titre{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.molecule .titre .nom{font-family:"Archivo Narrow",sans-serif;font-weight:700;font-size:17px}
+.etiquette{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border:1px solid currentColor}
+.et-amm{color:var(--vert)} .et-essai{color:var(--gelule-2)} .et-gen{color:var(--encre-2)}
+.et-retire{color:var(--gelule)} .et-branche{color:var(--alerte)}
+.barre{height:9px;background:var(--alu-clair);border:1px solid var(--trait);margin-top:7px;overflow:hidden}
+.barre span{display:block;height:100%;background:var(--gelule-2);width:0%;transition:width .2s linear}
+.barre.brevet span{background:var(--vert)} .barre.risque span{background:var(--gelule)}
+.barre.stock span{background:var(--gelule-2)} .barre.defiance span{background:var(--alerte)}
+.barre.mini{height:6px;margin-top:3px}
+
+.protocole{border:1px solid var(--encre);padding:10px;background:#fff;margin-bottom:8px}
+.pchoix{margin-bottom:8px}
+.pchoix .lbl{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--encre-2);margin-bottom:4px}
+.pchoix .opts{display:flex;gap:5px}
+.pchoix button{flex:1;padding:7px 4px;border:1px solid var(--trait);background:#F7F9FA;cursor:pointer;
+  font-family:"Archivo Narrow",sans-serif;font-size:12.5px;font-weight:600;line-height:1.2;color:var(--encre-2)}
+.pchoix button[aria-pressed="true"]{background:var(--gelule-2);color:#fff;border-color:var(--gelule-2)}
+.recap{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0;text-align:center}
+.recap div{border:1px solid var(--trait);padding:6px 2px}
+.recap .k{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--encre-2)}
+.recap .v{font-family:"Archivo Narrow",sans-serif;font-size:19px;font-weight:700}
+.gros{width:100%;padding:11px;border:1.5px solid var(--encre);background:var(--encre);color:#fff;cursor:pointer;
+  font-family:"Archivo Narrow",sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:13px}
+.gros:hover:not(:disabled){background:var(--gelule-2)}
+.gros:disabled{opacity:.4;cursor:not-allowed}
+
+.succes{display:flex;gap:9px;align-items:flex-start;padding:8px 9px;border:1px solid var(--trait);margin-bottom:6px;background:#FBFCFC}
+.succes.ok{background:#F1F7F4;border-color:var(--vert)}
+.succes .ic{font-family:"IBM Plex Mono",monospace;font-weight:600;color:var(--encre-2)}
+.succes.ok .ic{color:var(--vert)}
+.succes .n{font-family:"Archivo Narrow",sans-serif;font-weight:700;font-size:14px}
+.succes .d{font-size:11.5px;color:var(--encre-2);line-height:1.3}
+
+#journal{max-height:260px;overflow:auto;font-family:"IBM Plex Mono",monospace;font-size:11.5px;line-height:1.6}
+#journal div{padding:4px 0;border-bottom:1px dotted var(--trait)}
+#journal .h{color:var(--encre-2)}
+.evt-bon{color:var(--vert)} .evt-mauvais{color:var(--gelule)} .evt-neutre{color:var(--gelule-2)}
+
+.voile{position:fixed;inset:0;background:rgba(15,30,40,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.voile.ouvert{display:flex}
+.modale{background:#fff;border:2px solid var(--encre);max-width:480px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3);max-height:88vh;overflow:auto}
+.modale h3{padding:10px 14px;border-bottom:2px solid var(--encre);font-size:15px;text-transform:uppercase;letter-spacing:.1em}
+.modale .txt{padding:14px}
+.modale .choix{display:flex;gap:8px;padding:0 14px 14px;flex-wrap:wrap}
+.modale button{flex:1;min-width:140px;padding:10px;border:1.5px solid var(--encre);background:#fff;cursor:pointer;font:inherit;font-weight:600}
+.modale button:hover{background:var(--encre);color:#fff}
+.modale textarea{width:100%;height:110px;font-family:"IBM Plex Mono",monospace;font-size:10.5px}
+
+.flottant{position:fixed;pointer-events:none;font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;color:var(--gelule-2);animation:monte .8s ease-out forwards;z-index:30}
+@keyframes monte{to{transform:translateY(-38px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.flottant{animation:none;opacity:0}.alveole .pilule,.barre span{transition:none}}
+@media(max-width:1120px){main{grid-template-columns:1fr}.compteurs{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bandeau">
+    <h1>Placebo S.A.</h1>
+    <span class="sous" id="sousTitre">Laboratoire — notice d'exploitation</span>
+    <span class="outils">
+      <button class="mini" id="btnSave">Sauvegarder</button>
+      <button class="mini" id="btnExport">Exporter</button>
+      <button class="mini" id="btnReset">Effacer</button>
+    </span>
+  </div>
+  <div class="compteurs">
+    <div class="compteur"><div class="lbl">Stock de principe actif</div><div class="val mono" id="cPA">0 µg</div>
+      <div class="taux mono" id="cPAs">+0 µg/s</div><div class="barre stock mini"><span id="bStock"></span></div></div>
+    <div class="compteur"><div class="lbl">Trésorerie</div><div class="val mono" id="cEuro">0 €</div><div class="taux mono" id="cEuros">+0 €/s</div></div>
+    <div class="compteur"><div class="lbl">Demande du marché</div><div class="val mono" id="cDem">0 µg/s</div><div class="taux mono" id="cDemD">—</div></div>
+    <div class="compteur"><div class="lbl">Défiance de l'agence</div><div class="val mono" id="cDef">0 %</div>
+      <div class="taux mono" id="cDefD">surveillance de routine</div><div class="barre defiance mini"><span id="bDef"></span></div></div>
+    <div class="compteur"><div class="lbl">Points de brevet</div><div class="val mono" id="cPB">0</div><div class="taux mono" id="cPBd">—</div></div>
+  </div>
+</header>
+
+<main>
+  <div>
+    <section class="carte">
+      <h2>Paillasse</h2>
+      <div class="corps">
+        <div class="plaquette" id="plaquette" tabindex="0" role="button" aria-label="Pipeter une dose"></div>
+        <button class="bouton-pipette" id="btnPipette">Pipeter</button>
+        <div class="note" id="notePipette"></div>
+      </div>
+    </section>
+    <section class="carte">
+      <h2>Affectation de la production</h2>
+      <div class="corps">
+        <label class="note" for="curseurRD" style="margin:0">Part dirigée vers la recherche</label>
+        <input type="range" id="curseurRD" min="0" max="100" value="0" step="5" style="width:100%;margin:8px 0 2px">
+        <div class="note" id="noteRD"></div>
+        <div id="zoneEntrepot" style="margin-top:10px"></div>
+      </div>
+    </section>
+  </div>
+
+  <div>
+    <section class="carte">
+      <h2>Développement clinique</h2>
+      <div class="corps"><div id="rdZone"></div></div>
+    </section>
+    <section class="carte">
+      <h2>Portefeuille commercialisé</h2>
+      <div class="corps"><div id="molecules"></div></div>
+    </section>
+  </div>
+
+  <section class="carte">
+    <div class="onglets" role="tablist">
+      <button class="onglet" role="tab" aria-selected="true" data-tab="prod">Production</button>
+      <button class="onglet" role="tab" aria-selected="false" data-tab="influ">Influence</button>
+      <button class="onglet" role="tab" aria-selected="false" data-tab="succes">Succès</button>
+      <button class="onglet" role="tab" aria-selected="false" data-tab="prestige">Rachat</button>
+      <button class="onglet" role="tab" aria-selected="false" data-tab="journal">Journal</button>
+    </div>
+    <div class="corps">
+      <div id="tab-prod"><div class="lots" id="lots"></div><div id="listeProd"></div></div>
+      <div id="tab-influ" hidden></div>
+      <div id="tab-succes" hidden></div>
+      <div id="tab-prestige" hidden></div>
+      <div id="tab-journal" hidden><div id="journal"></div></div>
+    </div>
+  </section>
+</main>
+
+<div class="voile" id="voile"><div class="modale">
+  <h3 id="mTitre">Évènement</h3>
+  <div class="txt" id="mTexte"></div>
+  <div class="choix" id="mChoix"></div>
+</div></div>
+
+<script>
+"use strict";
+/* ==================== format ==================== */
+const SUF=["","k","M","Md","T","Pd","Ed","Zd"];
+function f(n){
+  if(!isFinite(n))return "∞";
+  if(n<0)return "−"+f(-n);
+  if(n<1000)return (n<10&&n%1!==0)?n.toFixed(1).replace(".",","):Math.floor(n).toString();
+  let i=0;while(n>=1000&&i<SUF.length-1){n/=1000;i++;}
+  return n.toFixed(n<10?2:n<100?1:0).replace(".",",")+" "+SUF[i];
+}
+const eur=n=>f(n)+" €", ug=n=>f(n)+" µg", pct=n=>Math.round(n)+" %";
+const mult=n=>"×"+n.toFixed(n<10?2:1).replace(".",",");
+function duree(s){
+  if(s<60)return Math.ceil(s)+" s";
+  if(s<3600)return Math.floor(s/60)+" min "+Math.floor(s%60)+" s";
+  return Math.floor(s/3600)+" h "+Math.floor((s%3600)/60)+" min";
+}
+
+/* ==================== données ==================== */
+const EQUIPEMENTS=[
+ {id:"agit",nom:"Agitateur magnétique",desc:"Remue pendant que vous faites autre chose.",base:10,pa:0.2},
+ {id:"centri",nom:"Centrifugeuse",desc:"Sépare le surnageant, sans vous.",base:120,pa:1.2},
+ {id:"robot",nom:"Robot de pipetage",desc:"96 puits, zéro pause déjeuner.",base:900,pa:7},
+ {id:"chromato",nom:"Chaîne HPLC préparative",desc:"Purifie en continu.",base:7000,pa:38},
+ {id:"bio",nom:"Bioréacteur 2000 L",desc:"Culture cellulaire à l'échelle industrielle.",base:60000,pa:210},
+ {id:"conditio",nom:"Ligne de conditionnement",desc:"Blisters, notices, cartons, palettes.",base:520000,pa:1300},
+ {id:"usine",nom:"Site de production sous-traité",desc:"Coût unitaire imbattable, audits rares.",base:4.2e6,pa:8200},
+ {id:"ia",nom:"Criblage haut débit piloté par IA",desc:"Génère et teste pendant la nuit.",base:4.5e7,pa:62000},
+ {id:"flow",nom:"Chimie en flux continu",desc:"L'usine ne s'arrête jamais.",base:6e8,pa:5.2e5}
+];
+const AMELIORATIONS=[
+ {id:"micropip",nom:"Micropipette calibrée",desc:"Pipetage ×3.",cout:200,eff:"clic3"},
+ {id:"multi8",nom:"Pipette multicanaux",desc:"Pipetage ×5.",cout:12000,eff:"clic5"},
+ {id:"ergo",nom:"Poste ergonomique",desc:"Pipetage ×8.",cout:850000,eff:"clic8"},
+ {id:"qualite",nom:"Assurance qualité",desc:"Production ×2.",cout:25000,eff:"prod2"},
+ {id:"lean",nom:"Lean manufacturing",desc:"Production ×3.",cout:1.5e6,eff:"prod3"},
+ {id:"vertical",nom:"Intégration verticale",desc:"Production ×4.",cout:9e7,eff:"prod4"},
+ {id:"packprem",nom:"Conditionnement premium",desc:"Prix de vente ×1,8.",cout:60000,eff:"prix18"},
+ {id:"valeur",nom:"Tarification à la valeur",desc:"Prix de vente ×2,5.",cout:6e6,eff:"prix25"},
+ {id:"pharmacov",nom:"Service de pharmacovigilance",desc:"Défiance de l'agence −0,25 %/s.",cout:180000,eff:"vigil"},
+ {id:"conformite",nom:"Direction de la conformité",desc:"Défiance −0,5 %/s supplémentaire.",cout:2.4e7,eff:"conf"}
+];
+const EFFETS={clic3:g=>g.clicMult*=3,clic5:g=>g.clicMult*=5,clic8:g=>g.clicMult*=8,
+  prod2:g=>g.prodMult*=2,prod3:g=>g.prodMult*=3,prod4:g=>g.prodMult*=4,
+  prix18:g=>g.prixMult*=1.8,prix25:g=>g.prixMult*=2.5,
+  vigil:g=>g.vigilance+=0.25,conf:g=>g.vigilance+=0.5};
+
+/* --- arbre des molécules : 5 branches thérapeutiques --- */
+const BRANCHES=[
+ {id:"ant",nom:"Antalgiques",bonus:"Demande de base +25 %",eff:"dem"},
+ {id:"inf",nom:"Anti-infectieux",bonus:"Essais 20 % plus rapides",eff:"vite"},
+ {id:"car",nom:"Cardiovasculaire",bonus:"Durée de brevet +35 %",eff:"brevet"},
+ {id:"onc",nom:"Oncologie",bonus:"Prix de vente ×1,6",eff:"prix"},
+ {id:"bio",nom:"Biothérapies",bonus:"Production ×1,5",eff:"prod"}
+];
+const MOLECULES=[
+ {b:"ant",t:0,nom:"Décoction d'écorce de saule",rd:0,prix:0.5,dem:7,brev:0.6},
+ {b:"ant",t:1,nom:"Acide salicylique",rd:150,prix:1.8,dem:4.8,brev:0.8},
+ {b:"ant",t:2,nom:"Aspirine",rd:1800,prix:6,dem:6.6,brev:1},
+ {b:"ant",t:3,nom:"Paracétamol",rd:22000,prix:22,dem:9,brev:1.1},
+
+ {b:"inf",t:0,nom:"Sulfamide antibactérien",rd:8000,prix:14,dem:6,brev:1},
+ {b:"inf",t:1,nom:"Pénicilline G",rd:9e4,prix:55,dem:8.4,brev:1.1},
+ {b:"inf",t:2,nom:"Céphalosporine de 3e génération",rd:1.1e6,prix:260,dem:10.8,brev:1.2},
+ {b:"inf",t:3,nom:"Trithérapie antirétrovirale",rd:1.4e7,prix:1400,dem:12,brev:1.4},
+
+ {b:"car",t:0,nom:"Digitaline",rd:3e4,prix:30,dem:6,brev:1},
+ {b:"car",t:1,nom:"Bêtabloquant",rd:3.5e5,prix:140,dem:9,brev:1.2},
+ {b:"car",t:2,nom:"Statine de synthèse",rd:4e6,prix:700,dem:12.6,brev:1.4},
+ {b:"car",t:3,nom:"Anticoagulant oral direct",rd:5e7,prix:3600,dem:15,brev:1.6},
+
+ {b:"onc",t:0,nom:"Méthotrexate",rd:2e6,prix:900,dem:3.6,brev:1.1},
+ {b:"onc",t:1,nom:"Taxane",rd:2.5e7,prix:5000,dem:4.5,brev:1.3},
+ {b:"onc",t:2,nom:"Inhibiteur de tyrosine kinase",rd:3e8,prix:30000,dem:5.4,brev:1.5},
+ {b:"onc",t:3,nom:"CAR-T autologue",rd:4e9,prix:2.2e5,dem:3,brev:1.8},
+
+ {b:"bio",t:0,nom:"Insuline recombinante",rd:1e5,prix:90,dem:10.5,brev:1.1},
+ {b:"bio",t:1,nom:"Anticorps monoclonal",rd:1.2e7,prix:2500,dem:6.6,brev:1.4},
+ {b:"bio",t:2,nom:"Vaccin à ARN messager",rd:2e9,prix:4e4,dem:18,brev:1.6},
+ {b:"bio",t:3,nom:"Thérapie génique AAV",rd:3e10,prix:1.5e6,dem:1.8,brev:2}
+];
+const PHASES=[
+ {nom:"Phase I",coutR:0.05,dureeR:16,p:0.86,txt:"tolérance sur volontaires sains"},
+ {nom:"Phase II",coutR:0.18,dureeR:26,p:0.70,txt:"efficacité sur une petite cohorte"},
+ {nom:"Phase III",coutR:0.6,dureeR:40,p:0.55,txt:"essai multicentrique randomisé"}
+];
+/* --- protocole : trois arbitrages --- */
+const PROTO={
+ cohorte:{lbl:"Taille de cohorte",opts:[
+   {id:"petite",nom:"100 patients",cout:0.55,duree:0.75,p:-0.10,prix:0.85,note:"faible puissance statistique"},
+   {id:"moyenne",nom:"800 patients",cout:1,duree:1,p:0,prix:1,note:"puissance conventionnelle"},
+   {id:"large",nom:"4 000 patients",cout:3.2,duree:1.6,p:+0.13,prix:1.2,note:"détecte les petits effets"}]},
+ compar:{lbl:"Comparateur",opts:[
+   {id:"placebo",nom:"Placebo",cout:0.8,duree:0.85,p:+0.12,prix:0.7,note:"supériorité facile, valeur ajoutée faible",def:6},
+   {id:"actif",nom:"Traitement de référence",cout:1.3,duree:1.15,p:-0.11,prix:1.6,note:"exigé pour un prix élevé",def:0}]},
+ critere:{lbl:"Critère de jugement",opts:[
+   {id:"inter",nom:"Critère intermédiaire",cout:0.8,duree:0.65,p:+0.08,prix:0.75,note:"biomarqueur, rapide à mesurer",def:5},
+   {id:"dur",nom:"Critère clinique dur",cout:1.4,duree:1.5,p:-0.07,prix:1.45,note:"morbi-mortalité, incontestable",def:0}]}
+};
+const PERMANENTES=[
+ {id:"pStart",nom:"Capital d'amorçage",desc:"Démarrer avec 40 000 € × niveau.",cout:1,max:10},
+ {id:"pProd",nom:"Automatisation héritée",desc:"+25 % de production par niveau.",cout:2,max:12},
+ {id:"pEssai",nom:"Affaires réglementaires",desc:"Essais 10 % plus rapides par niveau.",cout:3,max:8},
+ {id:"pReussite",nom:"Design d'essai adaptatif",desc:"+4 points de réussite par niveau.",cout:4,max:6},
+ {id:"pPrix",nom:"Notoriété de marque",desc:"+30 % de prix de vente par niveau.",cout:3,max:10},
+ {id:"pBrevet",nom:"Prolongation pédiatrique",desc:"+40 % de durée de brevet par niveau.",cout:5,max:5},
+ {id:"pStock",nom:"Logistique héritée",desc:"+60 % de capacité d'entrepôt par niveau.",cout:2,max:8},
+ {id:"pAgence",nom:"Relations institutionnelles",desc:"−15 % de défiance générée par niveau.",cout:4,max:5}
+];
+const SUCCES=[
+ {id:"s1",nom:"Première AMM",d:"Faire approuver une molécule.",bonus:"prix",v:0.05,c:g=>g.molecules.length>1},
+ {id:"s2",nom:"Trois produits au catalogue",d:"Trois AMM valides simultanément.",bonus:"prod",v:0.08,c:g=>g.molecules.filter(m=>m.etat==="amm").length>=3},
+ {id:"s3",nom:"Générique subi",d:"Laisser un brevet expirer.",bonus:"prod",v:0.05,c:g=>g.molecules.some(m=>m.etat==="generique")},
+ {id:"s4",nom:"Échec assumé",d:"Rater trois essais cliniques.",bonus:"reussite",v:0.03,c:g=>g.statEchecs>=3},
+ {id:"s5",nom:"Preuve solide",d:"Obtenir une AMM avec comparateur actif et critère dur.",bonus:"prix",v:0.15,c:g=>g.statSolide>=1},
+ {id:"s6",nom:"Deux branches ouvertes",d:"Développer des molécules dans deux aires thérapeutiques.",bonus:"dem",v:0.10,c:g=>brachesTouchees()>=2},
+ {id:"s7",nom:"Aire complète",d:"Terminer les quatre paliers d'une branche.",bonus:"prod",v:0.15,c:g=>BRANCHES.some(b=>brancheFinie(b.id))},
+ {id:"s8",nom:"Entrepôt saturé",d:"Perdre un lot faute de capacité.",bonus:"stock",v:0.25,c:g=>g.statPertes>=1},
+ {id:"s9",nom:"Premier million",d:"Franchir 1 M€ de chiffre d'affaires cumulé.",bonus:"prod",v:0.10,c:g=>g.totalEuro>=1e6},
+ {id:"s10",nom:"Inspection surmontée",d:"Subir une inspection de l'agence.",bonus:"reussite",v:0.04,c:g=>g.statInspections>=1},
+ {id:"s11",nom:"Sous les radars",d:"Atteindre 10 M€ de CA sans dépasser 20 % de défiance.",bonus:"prix",v:0.20,c:g=>g.totalEuro>=1e7&&g.defMax<=20},
+ {id:"s12",nom:"Cession",d:"Céder l'entreprise une première fois.",bonus:"prod",v:0.20,c:g=>g.exercice>1}
+];
+
+/* ==================== état ==================== */
+let g;
+function etatNeuf(perm,pb,exercice,succes,stats){
+  const P=perm||{},S=stats||{};
+  return {
+    v:2,
+    pa:0,euro:40000*(P.pStart||0),totalEuro:0,pb:pb||0,perm:P,exercice:exercice||1,
+    clicMult:1,prodMult:1,prixMult:1,vigilance:0,
+    equip:Object.fromEntries(EQUIPEMENTS.map(e=>[e.id,0])),
+    achats:{},entrepot:0,partRD:0,
+    marketing:0,lobbying:0,defiance:0,defMax:0,
+    molecules:[{i:0,etat:"amm",brevet:Infinity,brevetMax:Infinity,prixMult:1}],
+    faites:{0:1},
+    essai:null,
+    demandeEvt:1,demandeEvtFin:0,tempsEvt:80,
+    succes:succes||{},
+    statEchecs:S.statEchecs||0,statSolide:S.statSolide||0,statPertes:S.statPertes||0,statInspections:S.statInspections||0,
+    tMaj:Date.now(),lot:1
+  };
+}
+g=etatNeuf();
+
+/* ==================== calculs ==================== */
+const permN=id=>g.perm[id]||0;
+function bonusSucces(type){let s=1;SUCCES.forEach(x=>{if(g.succes[x.id]&&x.bonus===type)s+=x.v;});return s;}
+function brancheFinie(b){return MOLECULES.filter(m=>m.b===b).every((m,i)=>g.faites[MOLECULES.indexOf(m)]);}
+function brachesTouchees(){const s=new Set();MOLECULES.forEach((m,i)=>{if(g.faites[i])s.add(m.b);});return s.size;}
+function bonusBranche(eff){let v=1;BRANCHES.forEach(b=>{if(b.eff===eff&&brancheFinie(b.id))v*= (eff==="dem"?1.25:eff==="vite"?0.8:eff==="brevet"?1.35:eff==="prix"?1.6:1.5);});return v;}
+
+function coutEquip(e,n){ // coût de n exemplaires
+  const k=g.equip[e.id],r=1.15;
+  return Math.ceil(e.base*Math.pow(r,k)*(Math.pow(r,n)-1)/(r-1));
+}
+function maxAchetable(e){
+  let n=0,c=0;const r=1.15;
+  while(n<1000){const suiv=Math.ceil(e.base*Math.pow(r,g.equip[e.id]+n));if(c+suiv>g.euro)break;c+=suiv;n++;}
+  return n;
+}
+function paParSec(){
+  let s=0;EQUIPEMENTS.forEach(e=>s+=g.equip[e.id]*e.pa);
+  return s*g.prodMult*(1+0.25*permN("pProd"))*bonusSucces("prod")*bonusBranche("prod");
+}
+function paParClic(){return g.clicMult*(1+paParSec()*0.01);}
+function capacite(){return 2500*Math.pow(2.3,g.entrepot)*(1+0.6*permN("pStock"))*bonusSucces("stock");}
+function actives(){return g.molecules.filter(m=>m.etat==="amm"||m.etat==="generique");}
+function demandeTotale(){
+  let d=0;actives().forEach(m=>d+=MOLECULES[m.i].dem*(m.etat==="generique"?1.4:1));
+  return d*(1+0.5*g.marketing)*g.demandeEvt*bonusSucces("dem")*bonusBranche("dem");
+}
+function prixMoyen(){
+  let num=0,den=0;
+  actives().forEach(m=>{
+    const d=MOLECULES[m.i],w=d.dem*(m.etat==="generique"?1.4:1);
+    const p=(m.etat==="generique"?d.prix*0.2:d.prix)*m.prixMult;
+    num+=w*p;den+=w;
+  });
+  if(!den)return 0;
+  return (num/den)*g.prixMult*(1+0.3*permN("pPrix"))*bonusSucces("prix")*bonusBranche("prix")*(g.defiance>65?0.8:1);
+}
+function ventesParSec(){return Math.min(demandeTotale(),paParSec()*(1-g.partRD/100)+ (g.pa>0?1e9:0));}
+function euroParSec(){return Math.min(demandeTotale(),Math.max(0,paParSec()*(1-g.partRD/100)))*prixMoyen();}
+
+function coutEssai(ph,mi,cfg){
+  const base=PHASES[ph].coutR*(MOLECULES[mi].rd*MOLECULES[mi].prix*0.05+3000);
+  return base*facteur(cfg,"cout");
+}
+function facteur(cfg,champ){
+  let v=1;
+  for(const k in PROTO){const o=PROTO[k].opts.find(o=>o.id===cfg[k]);if(o)v*=o[champ];}
+  return v;
+}
+function defiancePro(cfg){let v=0;for(const k in PROTO){const o=PROTO[k].opts.find(o=>o.id===cfg[k]);if(o&&o.def)v+=o.def;}return v;}
+function dureeEssai(ph,cfg){
+  return PHASES[ph].dureeR*facteur(cfg,"duree")*(1-0.10*permN("pEssai"))*(1-0.04*g.lobbying)
+    *bonusBranche("vite")*(g.defiance>40?1.25:1);
+}
+function chanceEssai(ph,cfg){
+  let p=PHASES[ph].p;
+  for(const k in PROTO){const o=PROTO[k].opts.find(o=>o.id===cfg[k]);if(o)p+=o.p;}
+  p+=0.04*permN("pReussite")+0.025*g.lobbying+(bonusSucces("reussite")-1);
+  return Math.max(0.05,Math.min(0.97,p));
+}
+function dureeBrevet(mi){return 300*MOLECULES[mi].brev*(1+0.4*permN("pBrevet"))*bonusBranche("brevet");}
+function coutMarketing(){return 800*Math.pow(2.3,g.marketing);}
+function coutLobbying(){return 12000*Math.pow(3.1,g.lobbying);}
+function coutEntrepot(){return 1200*Math.pow(3.0,g.entrepot);}
+function pbGagnes(){return Math.floor(Math.pow(g.totalEuro/2e6,0.42));}
+function defiancePar(x){return x*(1-0.15*permN("pAgence"));}
+function dispoMolecule(i){
+  const m=MOLECULES[i];
+  if(g.faites[i])return false;
+  if(m.t===0)return true;
+  const prec=MOLECULES.findIndex(x=>x.b===m.b&&x.t===m.t-1);
+  return !!g.faites[prec];
+}
+
+/* ==================== journal ==================== */
+const jrn=document.getElementById("journal");
+let alerteJournal=false;
+function log(txt,cls){
+  const d=document.createElement("div");
+  d.innerHTML='<span class="h">·</span> <span class="'+(cls||"")+'">'+txt+'</span>';
+  jrn.prepend(d);
+  while(jrn.children.length>70)jrn.lastChild.remove();
+  if(document.getElementById("tab-journal").hidden){alerteJournal=true;majOnglets();}
+}
+
+/* ==================== sauvegarde ==================== */
+const CLE="placebo_sa_v2";
+let stockageOK=true;
+function sauver(silencieux){
+  g.tMaj=Date.now();
+  try{localStorage.setItem(CLE,JSON.stringify(g));if(!silencieux)log("Partie sauvegardée.","evt-neutre");}
+  catch(e){stockageOK=false;if(!silencieux)log("Sauvegarde impossible dans cet environnement — utilisez « Exporter ».","evt-mauvais");}
+}
+function charger(){
+  let brut=null;
+  try{brut=localStorage.getItem(CLE);}catch(e){stockageOK=false;return false;}
+  if(!brut)return false;
+  try{
+    const d=JSON.parse(brut);
+    if(d.v!==2)return false;
+    g=Object.assign(etatNeuf(d.perm,d.pb,d.exercice,d.succes,d),d);
+    EQUIPEMENTS.forEach(e=>{if(typeof g.equip[e.id]!=="number")g.equip[e.id]=0;});
+    g.molecules.forEach(m=>{if(m.brevet===null)m.brevet=Infinity;if(!isFinite(m.brevetMax))m.brevetMax=Infinity;});
+    return true;
+  }catch(e){return false;}
+}
+function rapportHorsLigne(){
+  const dt=Math.min((Date.now()-(g.tMaj||Date.now()))/1000,4*3600);
+  if(dt<60)return;
+  const rend=0.6;
+  const prod=paParSec()*dt*rend;
+  const versRD=prod*g.partRD/100, versStock=prod-versRD;
+  if(g.essai&&g.essai.enCours)g.essai.t=Math.max(0,g.essai.t-dt);
+  g.rdProgres=(g.rdProgres||0)+versRD;
+  const vendable=Math.min(demandeTotale()*dt,versStock+g.pa);
+  const rec=vendable*prixMoyen();
+  g.pa=Math.min(capacite(),g.pa+versStock-vendable);
+  g.euro+=rec;g.totalEuro+=rec;
+  g.molecules.forEach(m=>{if(m.etat==="amm"&&isFinite(m.brevet)){m.brevet-=dt;if(m.brevet<=0)m.etat="generique";}});
+  g.defiance=Math.max(0,g.defiance-g.vigilance*dt);
+  modale("Rapport d'activité",
+    "L'usine a tourné <b>"+duree(dt)+"</b> en votre absence (rendement réduit à 60 %, personne ne pipette la nuit).<br><br>"+
+    "Chiffre d'affaires : <b>"+eur(rec)+"</b><br>"+
+    "Principe actif dirigé vers la recherche : <b>"+ug(versRD)+"</b><br>"+
+    "Stock en entrepôt : <b>"+ug(g.pa)+"</b>",
+    [{l:"Reprendre",f:()=>{}}]);
+}
+
+/* ==================== boucle ==================== */
+let dernier=performance.now(),autoSave=0;
+function boucle(now){
+  const dt=Math.min((now-dernier)/1000,.5);dernier=now;
+  const prod=paParSec()*dt;
+  const versRD=prod*g.partRD/100;
+  g.rdProgres=(g.rdProgres||0)+versRD;
+  let stock=g.pa+prod-versRD;
+  if(stock>capacite()){
+    const perte=stock-capacite();stock=capacite();
+    g.pertesRecentes=(g.pertesRecentes||0)+perte;
+    if(!g.statPertes){g.statPertes=1;}
+  }
+  // vente limitée par la demande
+  const vendu=Math.min(demandeTotale()*dt,stock);
+  stock-=vendu;g.pa=stock;
+  const rec=vendu*prixMoyen();
+  g.euro+=rec;g.totalEuro+=rec;
+
+  g.molecules.forEach(m=>{
+    if(m.etat==="amm"&&isFinite(m.brevet)){
+      m.brevet-=dt;
+      if(m.brevet<=0){m.etat="generique";log("Brevet expiré : <b>"+MOLECULES[m.i].nom+"</b> tombe dans le domaine public.","evt-mauvais");}
+    }
+  });
+  if(g.essai&&g.essai.enCours){
+    g.essai.t-=dt;
+    if(g.essai.t<=0)resoudreEssai();
+  }
+  // défiance
+  g.defiance=Math.max(0,Math.min(100,g.defiance-g.vigilance*dt+(g.marketing>4?0.02*(g.marketing-4)*dt:0)));
+  g.defMax=Math.max(g.defMax,g.defiance);
+  if(g.defiance>85){
+    g.retraitTimer=(g.retraitTimer||0)+dt;
+    if(g.retraitTimer>30){g.retraitTimer=0;retraitAMM();}
+  }
+  if(g.demandeEvtFin>0){g.demandeEvtFin-=dt;if(g.demandeEvtFin<=0){g.demandeEvt=1;log("Le pic de demande retombe.","evt-neutre");}}
+  g.tempsEvt-=dt;
+  if(g.tempsEvt<=0&&!voile.classList.contains("ouvert")){g.tempsEvt=70+Math.random()*70;evenement();}
+
+  verifierSucces();
+  autoSave+=dt;if(autoSave>15){autoSave=0;sauver(true);}
+  rendu();
+  requestAnimationFrame(boucle);
+}
+function retraitAMM(){
+  const c=g.molecules.filter(m=>m.etat==="amm"&&isFinite(m.brevet));
+  if(!c.length)return;
+  const m=c[Math.floor(Math.random()*c.length)];
+  m.etat="retire";
+  g.defiance=Math.max(0,g.defiance-25);
+  log("<b>Retrait d'AMM</b> : l'agence suspend "+MOLECULES[m.i].nom+". Défiance retombée de 25 points.","evt-mauvais");
+}
+
+/* ==================== pipetage ==================== */
+function pipeter(ev){
+  const q=paParClic();
+  g.pa=Math.min(capacite(),g.pa+q);
+  if(ev){
+    const s=document.createElement("div");s.className="flottant";s.textContent="+"+ug(q);
+    s.style.left=(ev.clientX||window.innerWidth/4)+"px";s.style.top=(ev.clientY||200)+"px";
+    document.body.appendChild(s);setTimeout(()=>s.remove(),800);
+  }
+}
+document.getElementById("btnPipette").addEventListener("click",pipeter);
+const plaq=document.getElementById("plaquette");
+plaq.addEventListener("click",pipeter);
+plaq.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();pipeter();}});
+for(let i=0;i<20;i++){const a=document.createElement("div");a.className="alveole";a.innerHTML='<div class="pilule"></div>';plaq.appendChild(a);}
+document.getElementById("curseurRD").addEventListener("input",e=>{g.partRD=+e.target.value;});
+
+/* ==================== R&D, protocole, essais ==================== */
+function ouvrirDossier(i){
+  const m=MOLECULES[i];
+  if((g.rdProgres||0)+g.pa<m.rd)return;
+  let reste=m.rd;
+  const dePA=Math.min(g.pa,reste);g.pa-=dePA;reste-=dePA;
+  g.rdProgres=(g.rdProgres||0)-reste;
+  g.essai={mi:i,phase:0,enCours:false,echecs:0,
+    cfg:{cohorte:"moyenne",compar:"placebo",critere:"inter"},prixMult:1};
+  log("Dossier ouvert : <b>"+m.nom+"</b>. Reste à concevoir le protocole de Phase I.","evt-neutre");
+}
+function lancerPhase(){
+  const e=g.essai;if(!e||e.enCours)return;
+  const c=coutEssai(e.phase,e.mi,e.cfg);
+  if(g.euro<c)return;
+  g.euro-=c;
+  e.t=dureeEssai(e.phase,e.cfg);e.tMax=e.t;e.enCours=true;
+  const d=defiancePar(defiancePro(e.cfg)*0.4);
+  g.defiance=Math.min(100,g.defiance+d);
+  log(PHASES[e.phase].nom+" lancée sur "+MOLECULES[e.mi].nom+" ("+eur(c)+").","evt-neutre");
+}
+function resoudreEssai(){
+  const e=g.essai,ph=PHASES[e.phase],mol=MOLECULES[e.mi];
+  e.enCours=false;
+  if(Math.random()<chanceEssai(e.phase,e.cfg)){
+    e.prixMult*=facteur(e.cfg,"prix");
+    if(e.phase===2){
+      const pm=e.prixMult;
+      g.molecules.push({i:e.mi,etat:"amm",brevet:dureeBrevet(e.mi),brevetMax:dureeBrevet(e.mi),prixMult:pm});
+      g.faites[e.mi]=1;
+      if(e.cfg.compar==="actif"&&e.cfg.critere==="dur")g.statSolide=(g.statSolide||0)+1;
+      log("<b>AMM accordée</b> pour "+mol.nom+" — prix négocié "+mult(pm)+".","evt-bon");
+      if(brancheFinie(mol.b)){
+        const b=BRANCHES.find(x=>x.id===mol.b);
+        log("Aire thérapeutique complète : <b>"+b.nom+"</b> — "+b.bonus+".","evt-bon");
+      }
+      g.essai=null;
+    }else{
+      e.phase++;
+      log(ph.nom+" validée. Concevez le protocole de "+PHASES[e.phase].nom+".","evt-bon");
+    }
+  }else{
+    e.echecs++;g.statEchecs=(g.statEchecs||0)+1;
+    log("Échec en "+ph.nom+" ("+mol.nom+") : le critère n'est pas atteint. Le protocole doit être revu.","evt-mauvais");
+  }
+}
+function abandonner(){
+  if(!g.essai)return;
+  log("Dossier "+MOLECULES[g.essai.mi].nom+" abandonné. Le principe actif est perdu.","evt-mauvais");
+  g.essai=null;
+}
+
+/* ==================== évènements ==================== */
+const voile=document.getElementById("voile");
+function modale(titre,texte,choix){
+  document.getElementById("mTitre").textContent=titre;
+  document.getElementById("mTexte").innerHTML=texte;
+  const z=document.getElementById("mChoix");z.innerHTML="";
+  choix.forEach(c=>{
+    const b=document.createElement("button");b.textContent=c.l;
+    b.onclick=()=>{voile.classList.remove("ouvert");c.f();};
+    z.appendChild(b);
+  });
+  voile.classList.add("ouvert");
+}
+function evenement(){
+  const pool=[];
+  pool.push(()=>{g.demandeEvt=3.5;g.demandeEvtFin=45;log("<b>Épidémie</b> : demande ×3,5 pendant 45 s. Si l'entrepôt est vide, elle passera sans vous.","evt-bon");});
+  pool.push(()=>{
+    const s=Math.max(8000,euroParSec()*90);
+    modale("Appel à projets public",
+      "Une agence propose "+eur(s)+" contre l'engagement d'un prix encadré sur le prochain lot.",
+      [{l:"Accepter",f:()=>{g.euro+=s;g.defiance=Math.max(0,g.defiance-8);log("Subvention encaissée : "+eur(s)+". Défiance −8.","evt-bon");}},
+       {l:"Refuser",f:()=>{g.prixMult*=1.06;log("Liberté tarifaire conservée : prix ×1,06.","evt-neutre");}}]);
+  });
+  if(g.molecules.length>1)pool.push(()=>{
+    const amende=g.euro*0.2;
+    modale("Signal de pharmacovigilance",
+      "Un registre hospitalier associe une de vos molécules à un effet indésirable rare.",
+      [{l:"Rappeler le lot ("+eur(amende)+")",f:()=>{g.euro-=amende;g.defiance=Math.max(0,g.defiance-15);log("Rappel assumé : "+eur(amende)+", défiance −15.","evt-neutre");}},
+       {l:"Contester l'étude",f:()=>{g.defiance=Math.min(100,g.defiance+defiancePar(18));
+         if(Math.random()<0.55){g.prixMult*=1.1;log("L'étude est enterrée. Prix ×1,1, défiance en hausse.","evt-bon");}
+         else{const p=g.euro*0.45;g.euro-=p;log("Action de groupe : "+eur(p)+" d'indemnités et défiance en hausse.","evt-mauvais");}}}]);
+  });
+  pool.push(()=>{
+    const c=Math.max(30000,euroParSec()*120);
+    modale("Biotech à vendre",
+      "Un petit laboratoire détient une molécule concurrente plus efficace que la vôtre. Prix : "+eur(c)+".",
+      [{l:"Racheter et enterrer",f:()=>{
+        if(g.euro>=c){g.euro-=c;g.molecules.forEach(m=>{if(m.etat==="amm"&&isFinite(m.brevet))m.brevet+=70;});
+          g.defiance=Math.min(100,g.defiance+defiancePar(10));
+          log("Rachat conclu. Brevets +70 s, défiance +10.","evt-bon");}
+        else log("Trésorerie insuffisante.","evt-mauvais");}},
+       {l:"Laisser passer",f:()=>{g.demandeEvt=0.7;g.demandeEvtFin=40;log("Le concurrent lance sa molécule : demande ×0,7 pendant 40 s.","evt-mauvais");}}]);
+  });
+  if(g.defiance>35)pool.push(()=>{
+    g.statInspections=(g.statInspections||0)+1;
+    const c=g.euro*0.15;
+    modale("Inspection de l'agence",
+      "Vos pratiques ont attiré l'attention. Un audit sur site est programmé.",
+      [{l:"Coopérer pleinement ("+eur(c)+")",f:()=>{g.euro-=c;g.defiance=Math.max(0,g.defiance-30);log("Audit passé, dossiers en règle. Défiance −30.","evt-bon");}},
+       {l:"Retarder l'accès aux données",f:()=>{g.defiance=Math.min(100,g.defiance+15);g.demandeEvt=0.8;g.demandeEvtFin=30;log("L'obstruction est notée. Défiance +15.","evt-mauvais");}}]);
+  });
+  pool.push(()=>{
+    const m=g.molecules.filter(x=>x.etat==="amm"&&isFinite(x.brevet))[0];
+    if(!m){g.euro*=1.05;log("Marché calme. Placement de trésorerie : +5 %.","evt-neutre");return;}
+    const c=coutLobbying()*0.5;
+    modale("Contentieux brevet",
+      "Un génériqueur attaque le brevet de <b>"+MOLECULES[m.i].nom+"</b>. Les avocats demandent "+eur(c)+".",
+      [{l:"Financer la défense",f:()=>{if(g.euro>=c){g.euro-=c;m.brevet+=100;log("Brevet défendu : +100 s.","evt-bon");}else log("Pas de quoi payer les avocats.","evt-mauvais");}},
+       {l:"Ne rien faire",f:()=>{m.brevet=Math.min(m.brevet,15);log("Brevet fragilisé : expiration imminente.","evt-mauvais");}}]);
+  });
+  pool[Math.floor(Math.random()*pool.length)]();
+}
+
+/* ==================== succès ==================== */
+function verifierSucces(){
+  SUCCES.forEach(s=>{
+    if(!g.succes[s.id]&&s.c(g)){g.succes[s.id]=1;log("Succès débloqué : <b>"+s.nom+"</b>.","evt-bon");}
+  });
+}
+
+/* ==================== prestige ==================== */
+function restructurer(){
+  const gain=pbGagnes();if(gain<1)return;
+  modale("Rachat par un fonds",
+    "Vous cédez Placebo S.A. et repartez d'une paillasse. Vous conservez <b>"+gain+" points de brevet</b> (total "+(g.pb+gain)+"), vos succès et vos avantages permanents.",
+    [{l:"Signer la cession",f:()=>{
+        const st={statEchecs:g.statEchecs,statSolide:g.statSolide,statPertes:g.statPertes,statInspections:g.statInspections};
+        g=etatNeuf(g.perm,g.pb+gain,g.exercice+1,g.succes,st);
+        document.getElementById("curseurRD").value=0;
+        log("Exercice "+g.exercice+" ouvert. +"+gain+" points de brevet.","evt-bon");
+        sauver(true);
+     }},
+     {l:"Continuer encore un peu",f:()=>{}}]);
+}
+function acheterPerm(p){
+  const n=permN(p.id);if(n>=p.max)return;
+  const c=p.cout*(n+1);if(g.pb<c)return;
+  g.pb-=c;g.perm[p.id]=n+1;
+  if(p.id==="pStart")g.euro+=40000;
+  log("Avantage permanent : "+p.nom+" niveau "+(n+1)+".","evt-bon");
+}
+
+/* ==================== achats ==================== */
+let lotAchat=1;
+function acheterEquip(e){
+  const n=lotAchat==="max"?maxAchetable(e):lotAchat;
+  if(n<1)return;
+  const c=coutEquip(e,n);if(g.euro<c)return;
+  g.euro-=c;g.equip[e.id]+=n;
+}
+function acheterAmelio(a){
+  if(g.achats[a.id]||g.euro<a.cout)return;
+  g.euro-=a.cout;g.achats[a.id]=1;EFFETS[a.eff](g);
+  log("Amélioration installée : "+a.nom+".","evt-bon");
+}
+
+/* ==================== rendu ==================== */
+const $=id=>document.getElementById(id);
+let ongletActif="prod";
+document.querySelectorAll(".onglet").forEach(b=>{
+  b.dataset.libelle=b.textContent;
+  b.onclick=()=>{ongletActif=b.dataset.tab;if(ongletActif==="journal")alerteJournal=false;majOnglets();};
+});
+function majOnglets(){
+  document.querySelectorAll(".onglet").forEach(b=>{
+    const a=b.dataset.tab===ongletActif;
+    b.setAttribute("aria-selected",a);
+    $("tab-"+b.dataset.tab).hidden=!a;
+    b.innerHTML=b.dataset.libelle+((b.dataset.tab==="journal"&&alerteJournal)?'<span class="pastille"></span>':"");
+  });
+}
+majOnglets();
+
+const cacheLignes={};
+function maj(container,items){
+  items.forEach((it,ordre)=>{
+    const cle=container.id+"|"+it.key;
+    let b=cacheLignes[cle];
+    if(!b){
+      b=document.createElement(it.action?"button":"div");
+      b.className=it.classe||"ligne";
+      if(it.action)b.addEventListener("click",()=>{if(b._a)b._a();});
+      if(!it.classe)b.innerHTML='<div><div class="nom"></div><div class="desc"></div></div>'+
+        '<div class="droite"><div class="prix"></div><div class="qte"></div><div class="roi"></div></div>';
+      cacheLignes[cle]=b;
+    }
+    b._a=it.action;
+    if(it.classe){if(b.innerHTML!==it.nom)b.innerHTML=it.nom;}
+    else{
+      const q=(s,v)=>{const el=b.querySelector(s);if(el&&el.innerHTML!==v)el.innerHTML=v;};
+      q(".nom",it.nom);q(".desc",it.desc||"");q(".prix",it.droite||"");q(".qte",it.sous||"");q(".roi",it.roi||"");
+      if("disabled" in b)b.disabled=!it.dispo;
+    }
+    if(container.children[ordre]!==b)container.insertBefore(b,container.children[ordre]||null);
+  });
+  while(container.children.length>items.length)container.lastChild.remove();
+}
+const note=(txt,key)=>({key:key,classe:"note",nom:txt});
+
+/* --- boutons de lot --- */
+["1","10","100","max"].forEach(v=>{
+  const b=document.createElement("button");b.textContent=v==="max"?"MAX":"×"+v;
+  b.onclick=()=>{lotAchat=v==="max"?"max":+v;majLots();};
+  b.dataset.v=v;$("lots").appendChild(b);
+});
+function majLots(){[...$("lots").children].forEach(b=>b.setAttribute("aria-pressed",String(lotAchat)===b.dataset.v||(lotAchat==="max"&&b.dataset.v==="max")));}
+majLots();
+
+let dernierRendu=0;
+function rendu(){
+  const t=performance.now();
+  const cap=capacite(),prod=paParSec(),dem=demandeTotale(),pm=prixMoyen();
+  const ventes=Math.min(dem,prod*(1-g.partRD/100)+(g.pa>0?dem:0));
+  $("cPA").textContent=ug(g.pa);
+  $("cPAs").textContent="+"+ug(prod)+"/s · "+ug(paParClic())+"/clic";
+  $("bStock").style.width=Math.min(100,g.pa/cap*100)+"%";
+  $("cEuro").textContent=eur(g.euro);
+  $("cEuros").textContent="+"+eur(ventes*pm)+"/s";
+  $("cDem").textContent=ug(dem)+"/s";
+  $("cDemD").textContent=(prod*(1-g.partRD/100)<dem&&g.pa<=0)?"rupture de stock — production insuffisante":(pm?f(pm)+" €/µg moyen":"aucun produit vendable");
+  $("cDef").textContent=pct(g.defiance);
+  $("bDef").style.width=g.defiance+"%";
+  $("cDefD").textContent=g.defiance>85?"retrait d'AMM imminent":g.defiance>65?"prix sous pression (−20 %)":g.defiance>40?"essais rallongés (+25 %)":"surveillance de routine";
+  $("cPB").textContent=f(g.pb);
+  $("cPBd").textContent="cession : "+(pbGagnes()>0?"+"+pbGagnes()+" pts":"pas encore rentable");
+  $("sousTitre").textContent="Exercice "+g.exercice+" · "+actives().length+" produit(s) au catalogue"+(stockageOK?"":" · sauvegarde indisponible");
+  $("notePipette").textContent=ug(paParClic())+" par pipetage · entrepôt "+ug(g.pa)+" / "+ug(cap);
+
+  const cases=plaq.children,rempli=Math.round(Math.min(1,g.pa/cap)*20);
+  for(let i=0;i<20;i++)cases[i].classList.toggle("pleine",i<rempli);
+
+  if(t-dernierRendu<150)return;dernierRendu=t;
+
+  // --- affectation R&D
+  $("noteRD").innerHTML=g.partRD+" % vers la recherche ("+ug(prod*g.partRD/100)+"/s) · "+
+    (100-g.partRD)+" % vers l'entrepôt · réserve de recherche : <b>"+ug(g.rdProgres||0)+"</b>"+
+    (g.pertesRecentes>0?'<br><span class="att">Entrepôt saturé : '+ug(g.pertesRecentes)+" perdus.</span>":"");
+  maj($("zoneEntrepot"),[{key:"ent",nom:"Agrandir l'entrepôt",desc:"Capacité ×2,3. Sans capacité, la production déborde et se perd.",
+    droite:eur(coutEntrepot()),sous:"capacité "+ug(cap),dispo:g.euro>=coutEntrepot(),
+    action:()=>{const c=coutEntrepot();if(g.euro>=c){g.euro-=c;g.entrepot++;g.pertesRecentes=0;}}}]);
+
+  // --- développement clinique
+  const rdZ=$("rdZone");
+  if(g.essai){
+    const e=g.essai,ph=PHASES[e.phase],m=MOLECULES[e.mi];
+    let box=$("boxEssai");
+    if(!box){
+      rdZ.innerHTML='<div id="boxEssai"><div class="molecule"><div class="titre"><span class="nom"></span><span class="etiquette et-essai"></span><span class="qte" id="essaiPrix" style="margin-left:auto"></span></div><div class="desc" id="essaiTxt" style="font-size:12px;color:var(--encre-2)"></div><div class="barre risque"><span></span></div></div><div class="protocole" id="proto"></div></div>';
+      box=$("boxEssai");
+      const p=$("proto");
+      for(const k in PROTO){
+        const bloc=document.createElement("div");bloc.className="pchoix";
+        bloc.innerHTML='<div class="lbl">'+PROTO[k].lbl+'</div><div class="opts"></div>';
+        PROTO[k].opts.forEach(o=>{
+          const btn=document.createElement("button");btn.innerHTML=o.nom;btn.dataset.k=k;btn.dataset.o=o.id;
+          btn.onclick=()=>{if(g.essai&&!g.essai.enCours){g.essai.cfg[k]=o.id;dernierRendu=0;}};
+          bloc.querySelector(".opts").appendChild(btn);
+        });
+        p.appendChild(bloc);
+      }
+      const rec=document.createElement("div");rec.className="recap";rec.id="recapProto";
+      rec.innerHTML='<div><div class="k">Réussite</div><div class="v" id="rP"></div></div>'+
+        '<div><div class="k">Durée</div><div class="v" id="rD"></div></div>'+
+        '<div><div class="k">Coût</div><div class="v" id="rC"></div></div>';
+      p.appendChild(rec);
+      const nt=document.createElement("div");nt.className="note";nt.id="protoNote";p.appendChild(nt);
+      const go=document.createElement("button");go.className="gros";go.id="btnLancer";go.style.marginTop="10px";
+      go.onclick=lancerPhase;p.appendChild(go);
+      const ab=document.createElement("button");ab.className="mini";ab.id="btnAbandon";ab.style.marginTop="8px";ab.style.width="100%";
+      ab.textContent="Abandonner le dossier";ab.onclick=abandonner;p.appendChild(ab);
+    }
+    box.querySelector(".nom").textContent=m.nom;
+    box.querySelector(".etiquette").textContent=ph.nom;
+    $("essaiPrix").textContent="prix négocié courant "+mult(e.prixMult);
+    $("essaiTxt").textContent=ph.txt+(e.echecs?" · "+e.echecs+" échec(s) sur ce dossier":"");
+    box.querySelector(".barre span").style.width=e.enCours?((1-e.t/e.tMax)*100).toFixed(1)+"%":"0%";
+    const c=coutEssai(e.phase,e.mi,e.cfg);
+    $("rP").textContent=pct(chanceEssai(e.phase,e.cfg)*100);
+    $("rD").textContent=duree(dureeEssai(e.phase,e.cfg));
+    $("rC").textContent=eur(c);
+    $("protoNote").textContent=PROTO.cohorte.opts.find(o=>o.id===e.cfg.cohorte).note+" · "+
+      PROTO.compar.opts.find(o=>o.id===e.cfg.compar).note+" · "+
+      PROTO.critere.opts.find(o=>o.id===e.cfg.critere).note+
+      " · prix final "+mult(e.prixMult*facteur(e.cfg,"prix"))+" si succès";
+    $("proto").querySelectorAll("button[data-k]").forEach(b=>{
+      b.setAttribute("aria-pressed",e.cfg[b.dataset.k]===b.dataset.o);
+      b.disabled=e.enCours;
+    });
+    const go=$("btnLancer");
+    go.textContent=e.enCours?("Essai en cours — "+duree(e.t)+" restantes"):("Lancer "+ph.nom+" · "+eur(c));
+    go.disabled=e.enCours||g.euro<c;
+    $("btnAbandon").hidden=e.enCours;
+  }else{
+    if($("boxEssai"))rdZ.innerHTML="";
+    const items=[];
+    BRANCHES.forEach(br=>{
+      const dispos=MOLECULES.map((m,i)=>({m,i})).filter(x=>x.m.b===br.id&&dispoMolecule(x.i));
+      const finie=brancheFinie(br.id);
+      items.push(note("<b>"+br.nom+"</b> — "+br.bonus+(finie?" · <span class='evt-bon'>acquis</span>":""),"h"+br.id));
+      dispos.forEach(x=>{
+        const dispo=(g.rdProgres||0)+g.pa>=x.m.rd;
+        items.push({key:"m"+x.i,nom:"Palier "+(x.m.t+1)+" · "+x.m.nom,
+          desc:"Prix catalogue "+f(x.m.prix)+" €/µg · demande "+f(x.m.dem)+" µg/s · brevet "+duree(dureeBrevet(x.i)),
+          droite:ug(x.m.rd),sous:"principe actif requis",dispo:dispo,action:()=>ouvrirDossier(x.i)});
+      });
+      if(!dispos.length&&!finie)items.push(note("palier suivant verrouillé","v"+br.id));
+    });
+    maj(rdZ,items);
+  }
+
+  // --- portefeuille
+  const zone=$("molecules");zone.innerHTML="";
+  if(actives().length===0)zone.innerHTML='<div class="note">Aucun produit commercialisé.</div>';
+  [...g.molecules].reverse().forEach(m=>{
+    const d=MOLECULES[m.i],el=document.createElement("div");el.className="molecule";
+    const et=m.etat,lbl=et==="generique"?"générique":et==="retire"?"AMM retirée":"AMM";
+    const cls=et==="generique"?"et-gen":et==="retire"?"et-retire":"et-amm";
+    const p=(et==="generique"?d.prix*0.2:d.prix)*m.prixMult*g.prixMult*(1+0.3*permN("pPrix"))*bonusSucces("prix")*bonusBranche("prix");
+    let html='<div class="titre"><span class="nom">'+d.nom+'</span><span class="etiquette '+cls+'">'+lbl+'</span>'+
+      '<span class="qte" style="margin-left:auto">'+(et==="retire"?"—":f(p)+" €/µg · "+f(d.dem)+" µg/s")+'</span></div>';
+    if(et==="amm"&&isFinite(m.brevet))
+      html+='<div class="barre brevet"><span style="width:'+(m.brevet/m.brevetMax*100).toFixed(1)+'%"></span></div>'+
+            '<div class="qte">brevet : '+duree(m.brevet)+' restantes</div>';
+    el.innerHTML=html;zone.appendChild(el);
+  });
+
+  // --- production
+  const itemsP=[];
+  EQUIPEMENTS.forEach((e,i)=>{
+    if(i>0&&g.equip[EQUIPEMENTS[i-1].id]===0&&g.equip[e.id]===0)return;
+    const n=lotAchat==="max"?Math.max(1,maxAchetable(e)):lotAchat;
+    const c=coutEquip(e,n);
+    const gainEuro=e.pa*n*g.prodMult*(1+0.25*permN("pProd"))*bonusSucces("prod")*bonusBranche("prod")*pm;
+    itemsP.push({key:e.id,nom:e.nom+" ×"+n,desc:e.desc,droite:eur(c),dispo:g.euro>=c&&n>0,
+      sous:g.equip[e.id]+" en service · "+f(e.pa*g.prodMult*(1+0.25*permN("pProd")))+" µg/s pièce",
+      roi:pm>0?("+"+eur(gainEuro)+"/s · rentabilisé en "+duree(c/Math.max(gainEuro,1e-9))):"",
+      action:()=>acheterEquip(e)});
+  });
+  const dispoAm=AMELIORATIONS.filter(a=>!g.achats[a.id]&&g.euro>=a.cout*0.3);
+  if(dispoAm.length){
+    itemsP.push(note("AMÉLIORATIONS","hAm"));
+    dispoAm.forEach(a=>itemsP.push({key:a.id,nom:a.nom,desc:a.desc,droite:eur(a.cout),dispo:g.euro>=a.cout,action:()=>acheterAmelio(a)}));
+  }
+  maj($("listeProd"),itemsP);
+
+  // --- influence
+  const cm=coutMarketing(),cl=coutLobbying();
+  maj($("tab-influ"),[
+    {key:"mkt",nom:"Campagne de sensibilisation",desc:"+50 % de demande. Au-delà du niveau 4, l'agence s'agace.",
+      droite:eur(cm),sous:"niveau "+g.marketing,dispo:g.euro>=cm,
+      action:()=>{const c=coutMarketing();if(g.euro>=c){g.euro-=c;g.marketing++;log("Campagne lancée : demande "+ug(demandeTotale())+"/s.","evt-bon");}}},
+    {key:"lob",nom:"Groupe d'influence",desc:"Essais 4 % plus rapides et +2,5 points de réussite par niveau. Défiance +12.",
+      droite:eur(cl),sous:"niveau "+g.lobbying,dispo:g.euro>=cl,
+      action:()=>{const c=coutLobbying();if(g.euro>=c){g.euro-=c;g.lobbying++;g.defiance=Math.min(100,g.defiance+defiancePar(12));
+        log("Un rapport parlementaire vous est soudain favorable. Défiance en hausse.","evt-neutre");}}},
+    {key:"trans",nom:"Publication des données brutes",desc:"Défiance −20 points, prix ×0,95 pendant l'exercice.",
+      droite:eur(Math.max(15000,g.euro*0.1)),sous:"défiance "+pct(g.defiance),dispo:g.defiance>5&&g.euro>=Math.max(15000,g.euro*0.1),
+      action:()=>{const c=Math.max(15000,g.euro*0.1);if(g.euro>=c){g.euro-=c;g.defiance=Math.max(0,g.defiance-20);g.prixMult*=0.95;
+        log("Données publiées. Défiance −20, prix ×0,95.","evt-bon");}}},
+    note("Réussite Phase III au protocole courant : "+pct(chanceEssai(2,{cohorte:"moyenne",compar:"placebo",critere:"inter"})*100)+
+      " · défiance "+pct(g.defiance)+" · décroissance "+f(g.vigilance)+" pts/s","info")
+  ]);
+
+  // --- succès
+  const S=$("tab-succes");S.innerHTML="";
+  SUCCES.forEach(s=>{
+    const ok=!!g.succes[s.id],el=document.createElement("div");
+    el.className="succes"+(ok?" ok":"");
+    const lbl={prix:"prix de vente",prod:"production",dem:"demande",reussite:"réussite des essais",stock:"capacité d'entrepôt"}[s.bonus];
+    el.innerHTML='<div class="ic">'+(ok?"✓":"○")+'</div><div><div class="n">'+s.nom+'</div><div class="d">'+s.d+
+      ' <b>+'+Math.round(s.v*100)+' % '+lbl+'</b></div></div>';
+    S.appendChild(el);
+  });
+
+  // --- rachat
+  const itemsR=[{key:"cede",nom:"Céder l'entreprise",desc:"Réinitialise l'exercice. Conserve points de brevet, succès et avantages permanents.",
+    droite:"+"+pbGagnes()+" pts",sous:"CA cumulé "+eur(g.totalEuro),dispo:pbGagnes()>0,action:restructurer},
+    note("AVANTAGES PERMANENTS · "+g.pb+" points disponibles","hPerm")];
+  PERMANENTES.forEach(p=>{
+    const nv=permN(p.id),c=p.cout*(nv+1),max=nv>=p.max;
+    itemsR.push({key:p.id,nom:p.nom,desc:p.desc,droite:max?"max":c+" pts",sous:"niveau "+nv+" / "+p.max,
+      dispo:!max&&g.pb>=c,action:()=>acheterPerm(p)});
+  });
+  maj($("tab-prestige"),itemsR);
+}
+
+/* ==================== outils de sauvegarde ==================== */
+$("btnSave").onclick=()=>sauver(false);
+$("btnReset").onclick=()=>modale("Effacer la partie","Toute la progression, y compris les points de brevet et les succès, sera perdue.",
+  [{l:"Effacer définitivement",f:()=>{try{localStorage.removeItem(CLE);}catch(e){}g=etatNeuf();$("curseurRD").value=0;log("Nouvelle partie.","evt-neutre");}},
+   {l:"Annuler",f:()=>{}}]);
+$("btnExport").onclick=()=>{
+  const code=btoa(unescape(encodeURIComponent(JSON.stringify(g))));
+  modale("Exporter / importer",
+    "Copiez ce code pour conserver la partie, ou collez-en un autre puis validez.<br><textarea id='zoneExport'></textarea>",
+    [{l:"Importer le contenu",f:()=>{}},{l:"Fermer",f:()=>{}}]);
+  const z=$("zoneExport");z.value=code;z.select();
+  const boutons=$("mChoix").children;
+  boutons[0].onclick=()=>{
+    try{
+      const d=JSON.parse(decodeURIComponent(escape(atob($("zoneExport").value.trim()))));
+      if(d.v!==2)throw 0;
+      g=Object.assign(etatNeuf(d.perm,d.pb,d.exercice,d.succes,d),d);
+      $("curseurRD").value=g.partRD;
+      voile.classList.remove("ouvert");log("Partie importée.","evt-bon");sauver(true);
+    }catch(e){log("Code d'import invalide.","evt-mauvais");}
+  };
+};
+
+/* ==================== démarrage ==================== */
+if(charger()){
+  $("curseurRD").value=g.partRD||0;
+  log("Partie restaurée (exercice "+g.exercice+").","evt-neutre");
+  rapportHorsLigne();
+}else{
+  log("Paillasse ouverte. Une pipette, un bécher, aucune autorisation.","evt-neutre");
+}
+window.addEventListener("beforeunload",()=>sauver(true));
+requestAnimationFrame(boucle);
+
+</script>
+</body>
+</html>

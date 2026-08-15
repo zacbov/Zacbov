@@ -1,0 +1,917 @@
+{
+  "Minéraux": [
+    {
+      "file": "lithium_carbonate.glb",
+      "name": "Carbonate de lithium",
+      "formula": "Li₂CO₃",
+      "molar": "73,89 g/mol",
+      "physical": "Poudre cristalline blanche, légèrement soluble dans l'eau",
+      "color": "Blanc",
+      "desc": "Sel de lithium thymorégulateur de référence",
+      "mineral_type": "Sel thérapeutique",
+      "cation": "Li⁺",
+      "anion": "CO₃²⁻",
+      "therapeutic": "Trouble bipolaire (manie, dépression bipolaire), prévention des récidives suicidaires, potentialisation des antidépresseurs",
+      "mechanism": "Li⁺ inhibe la GSK-3β (glycogène synthase kinase 3β), l'inositol monophosphatase (cycle des phosphoinositides), et module la signalisation Wnt/β-caténine. Réduit la sensibilisation des récepteurs dopaminergiques. Neuroprotecteur (BDNF↑).",
+      "toxicity": "Marge thérapeutique TRÈS ÉTROITE : 0,6–1,2 mmol/L (taux sériques). Toxicité > 1,5 mmol/L : tremblements, polyurie, confusion. > 2 mmol/L : encéphalopathie, arythmies. > 3 mmol/L : risque vital. Antidote : hémodialyse.",
+      "uses": "Traitement de référence du trouble bipolaire depuis 1949. Seul médicament démontrant une réduction du risque suicidaire. Usage psychiatrique uniquement sous contrôle lithiémique régulier.",
+      "pk": {
+        "demi_vie": "18–36 h (adulte sain) ; jusqu'à 72 h en IRC",
+        "vd": "~0,7–1,0 L/kg (eau corporelle totale — distribué comme le sodium)",
+        "biodispo": "~100% per os",
+        "pp": "Non lié aux protéines plasmatiques (<5%)",
+        "cyp": [
+          {
+            "enzyme": "Non métabolisé",
+            "role": "Élimination rénale exclusive (filtration glomérulaire)",
+            "note": "Réabsorbé avec Na⁺ au tubule proximal — compétition avec Na⁺"
+          },
+          {
+            "enzyme": "Transporteurs Na⁺ (tubulaires)",
+            "role": "Réabsorption couplée au sodium",
+            "note": "Déshydratation, régime sans sel, diurétiques thiazidiques → lithiémie ↑↑ → toxicité"
+          }
+        ],
+        "pk_note": "Surveillance lithiémie obligatoire (prélèvement 12h post-dose). AINS : réduisent FG → lithiémie ↑. Régime hyposodé → réabsorption Li⁺ ↑ → toxicité. Rein diabétique insipide néphrogénique à long terme (traitement : amiloride)."
+      },
+      "pubchem_cid": 11125,
+      "cas": "554-13-2",
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/11125",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/11125#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/11125#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/11125#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/11125#section=Mass-Spectrometry",
+        "nist": "https://webbook.nist.gov/cgi/cbook.cgi?ID=554-13-2&Units=SI",
+        "sdbs": "https://sdbs.db.aist.go.jp/sdbs/cgi-bin/cre_index.cgi?lang=en&indx=sdbs&key=CASNO&val=554132"
+      },
+      "smiles": "[Li+].[Li+].[O-]C([O-])=O"
+    },
+    {
+      "file": "magnesium_sulfate.glb",
+      "name": "Sulfate de magnésium",
+      "formula": "MgSO₄ · 7H₂O",
+      "molar": "246,47 g/mol (heptahydrate)",
+      "physical": "Cristaux blancs efflorescents, très solubles dans l'eau (sel d'Epsom)",
+      "color": "Blanc",
+      "desc": "Sel minéral aux propriétés anticonvulsivantes et laxatives",
+      "mineral_type": "Sel thérapeutique",
+      "cation": "Mg²⁺",
+      "anion": "SO₄²⁻",
+      "therapeutic": "Éclampsie et pré-éclampsie (anticonvulsivant), prématurité (tocolyse, neuroprotection fœtale), hypomagnésémie, laxatif osmotique, torsades de pointes",
+      "mechanism": "Mg²⁺ est antagoniste naturel du récepteur NMDA (bloque le canal via site Mg²⁺) → anticonvulsivant. Inhibiteur de la libération d'acétylcholine à la JNM → tocolytique. Cofacteur de >300 enzymes (ATP-ases, kinases). Laxatif par osmose colique (SO₄²⁻ non absorbé).",
+      "toxicity": "IV : surveillance réflexes ostéo-tendineux (disparaissent à 5 mmol/L) et FR (dépression à 6 mmol/L). Antidote : gluconate de calcium IV. Per os : laxatif à faible toxicité systémique.",
+      "uses": "Standard of care éclampsie (protocole Pritchard/Zuspan). Prématurité 24–32 SA : neuroprotection fœtale. Laxatif osmotique préopératoire. Traitement hypomagnésémie sévère (malabsorption, alcoolisme).",
+      "pk": {
+        "demi_vie": "~4 h (IV) ; persistance d'action anticonvulsivante 4–6 h",
+        "vd": "~0,2 L/kg (espace extracellulaire + osseux)",
+        "biodispo": "~35–40% per os ; ~100% IV",
+        "pp": "~30% (albumine)",
+        "cyp": [
+          {
+            "enzyme": "Non métabolisé",
+            "role": "Filtration glomérulaire + réabsorption tubulaire (anse de Henlé)",
+            "note": "Excrétion urinaire de Mg²⁺ régulée par PTH, calcitriol, aldostérone"
+          },
+          {
+            "enzyme": "Calcineurine / TRPM7",
+            "role": "Transport entérocytaire actif (absorption intestinale)",
+            "note": "Compétition avec Ca²⁺ pour l'absorption"
+          }
+        ],
+        "pk_note": "Magnésémie normale : 0,75–0,95 mmol/L. Hyperagnésémie IV : ROT abolis (5 mmol/L), arrêt respiratoire (6–7 mmol/L). Calcium gluconate 1g IV : antidote. Furosémide : augmente l'excrétion magnésique."
+      },
+      "pubchem_cid": 24083,
+      "cas": "7487-88-9",
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/24083",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/24083#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/24083#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/24083#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/24083#section=Mass-Spectrometry",
+        "nist": "https://webbook.nist.gov/cgi/cbook.cgi?ID=7487-88-9&Units=SI",
+        "sdbs": "https://sdbs.db.aist.go.jp/sdbs/cgi-bin/cre_index.cgi?lang=en&indx=sdbs&key=CASNO&val=7487889"
+      },
+      "smiles": "[Mg+2].[O-]S(=O)(=O)[O-]"
+    },
+    {
+      "file": "sodium_chloride.glb",
+      "name": "Chlorure de sodium",
+      "formula": "NaCl",
+      "molar": "58,44 g/mol",
+      "physical": "Cristaux cubiques blancs inodores, très solubles dans l'eau (36 g/100 mL à 20°C)",
+      "color": "Blanc",
+      "desc": "Sel minéral essentiel, principal osmolyte du milieu extracellulaire",
+      "mineral_type": "Sel thérapeutique",
+      "cation": "Na⁺",
+      "anion": "Cl⁻",
+      "therapeutic": "Remplissage vasculaire (sérum physiologique 0,9%), hyponatrémie, déshydratation extracellulaire, solvant de médicaments IV, décontamination oculaire/nasale",
+      "mechanism": "Na⁺ principal cation extracellulaire — régule l'osmolarité plasmatique (280–295 mOsm/kg), le volume circulant et la pression artérielle. Cl⁻ : anion associé, équilibre acido-basique. Pompe Na⁺/K⁺-ATPase : gradient électrochimique essentiel à tous les potentiels d'action.",
+      "toxicity": "Hypernatrémie (NaCl 0,9% en excès) : déshydratation cellulaire, encéphalopathie. Acidose hyperchlorémique (NaCl 0,9% en grandes quantités). Correction hyponatrémie trop rapide → myélinolyse pontine (limite : ≤10 mEq/L/24h).",
+      "uses": "NaCl 0,9% (isotonique) : solvant universel, remplissage. NaCl 3% (hypertonique) : hyponatrémie sévère symptomatique. NaCl 20% : préparation hospitalière concentrée. Alimentaire : conservateur, assaisonnement. Industriel : électrolyse → Cl₂ + NaOH (procédé chlore-soude).",
+      "pk": {
+        "demi_vie": "Variable selon l'état d'hydratation ; Na⁺ régulé à l'heure",
+        "vd": "~14 L (espace extracellulaire) pour le NaCl exogène",
+        "biodispo": "~100% per os",
+        "pp": "Non applicable (ion libre)",
+        "cyp": [
+          {
+            "enzyme": "Non métabolisé",
+            "role": "Régulation rénale : aldostérone → réabsorption Na⁺ au tubule collecteur",
+            "note": "ANP (peptide natriurétique) → natriurèse (excrétion Na⁺)"
+          },
+          {
+            "enzyme": "Pompe Na⁺/K⁺-ATPase (ubiquitaire)",
+            "role": "Gradient transmembranaire → potentiels d'action, transport actif",
+            "note": "Inhibée par digitale (digoxine) → effet inotrope"
+          }
+        ],
+        "pk_note": "Natrémie normale : 135–145 mEq/L. Rein régule la natrémie à la minute près via ADH (osmolarité) et aldostérone (volémie). Correction hyponatrémie chronique : max 8–10 mEq/L/24h (risque myélinolyse centropontine)."
+      },
+      "pubchem_cid": 5234,
+      "cas": "7647-14-5",
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/5234",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/5234#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/5234#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/5234#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/5234#section=Mass-Spectrometry",
+        "nist": "https://webbook.nist.gov/cgi/cbook.cgi?ID=7647-14-5&Units=SI",
+        "sdbs": "https://sdbs.db.aist.go.jp/sdbs/cgi-bin/cre_index.cgi?lang=en&indx=sdbs&key=CASNO&val=7647145"
+      },
+      "smiles": "[Na+].[Cl-]"
+    },
+    {
+      "file": "potassium_chloride.glb",
+      "name": "Chlorure de potassium",
+      "formula": "KCl",
+      "molar": "74,55 g/mol",
+      "physical": "Cristaux blancs très solubles dans l'eau, inodores",
+      "color": "Blanc",
+      "desc": "Sel de potassium essentiel à la fonction cardiaque et musculaire",
+      "mineral_type": "Sel thérapeutique",
+      "cation": "K⁺",
+      "anion": "Cl⁻",
+      "therapeutic": "Hypokaliémie (toutes causes), prévention toxicité digitalique, remplacement en alcalose métabolique hypochlorémique",
+      "mechanism": "K⁺ principal cation intracellulaire (140 mEq/L ICF vs 3,5–5 mEq/L ECF). Détermine le potentiel de repos membranaire (Nernst). Hypokaliémie : hyperpolarisation → arythmies, faiblesse musculaire. Pompe Na⁺/K⁺-ATPase : 2 K⁺ pour 3 Na⁺ éjectés.",
+      "toxicity": "Administration IV RAPIDE INTERDITE (arrêt cardiaque en diastole). IV : max 10 mEq/h voie périphérique, 20 mEq/h voie centrale avec monitoring ECG. Hyperkaliémie → onde T pointue → BAV → asystole.",
+      "uses": "Correction hypokaliémie post-diurétiques. Supplémentation orale (gélules LP). Solutions polyioniques (Ringer, Hartmann). Perfusions parentérales. Dernier repas du condamné : exécution (injection létale KCl).",
+      "pk": {
+        "demi_vie": "Variable (régulation rénale continue)",
+        "vd": "Majoritairement intracellulaire (98% du K⁺ total est intracellulaire)",
+        "biodispo": "~90–100% per os",
+        "pp": "Non applicable (ion libre)",
+        "cyp": [
+          {
+            "enzyme": "Non métabolisé",
+            "role": "Excrétion rénale active (tubule collecteur, canal ROMK)",
+            "note": "Aldostérone → excrétion K⁺ ↑ (échangeur Na⁺/K⁺)"
+          },
+          {
+            "enzyme": "Na⁺/K⁺-ATPase",
+            "role": "Redistribution ICF/ECF : insuline, β2-mimétiques → K⁺ intracellulaire ↑",
+            "note": "Alcalose → K⁺ entre dans cellule (H⁺ sort)"
+          }
+        ],
+        "pk_note": "Kaliémie normale : 3,5–5,0 mEq/L. Hypokaliémie < 3,5 : risque arythmies (surtout sous digitalique). Correction : 40 mEq de KCl ↑ kaliémie d'env. 0,25–0,5 mEq/L (si pas de fuites). Spironolactone : économiseur de K⁺."
+      },
+      "pubchem_cid": 4873,
+      "cas": "7447-40-7",
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/4873",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/4873#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/4873#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/4873#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/4873#section=Mass-Spectrometry",
+        "nist": "https://webbook.nist.gov/cgi/cbook.cgi?ID=7447-40-7&Units=SI",
+        "sdbs": "https://sdbs.db.aist.go.jp/sdbs/cgi-bin/cre_index.cgi?lang=en&indx=sdbs&key=CASNO&val=7447407"
+      },
+      "smiles": "[K+].[Cl-]"
+    },
+    {
+      "file": "calcium_gluconate.glb",
+      "name": "Gluconate de calcium",
+      "formula": "Ca(C₆H₁₁O₇)₂",
+      "molar": "430,37 g/mol",
+      "physical": "Poudre blanche cristalline, soluble dans l'eau à chaud",
+      "color": "Blanc",
+      "desc": "Sel de calcium hydrosoluble, antidote des hypocalcémies et hypermagnesémies",
+      "mineral_type": "Sel thérapeutique",
+      "cation": "Ca²⁺",
+      "anion": "Gluconate⁻",
+      "therapeutic": "Hypocalcémie symptomatique (tétanie, post-parathyroïdectomie), antidote hypermagnesémie, antidote hyperkaliémie (stabilisation membranaire), antidote acide fluorhydrique",
+      "mechanism": "Ca²⁺ : second messager universel (contraction musculaire, neurotransmission, coagulation facteurs II/VII/IX/X). Antidote HMg : Ca²⁺ antagonise directement l'effet dépresseur du Mg²⁺ au niveau neuromusculaire. Antidote HK : Ca²⁺ stabilise le potentiel de repos membranaire sans modifier la kaliémie.",
+      "toxicity": "Extravasation IV : nécrose tissulaire (mieux toléré que le CaCl₂). Hypercalcémie : nausées, polyurie, calculs rénaux, troubles cognition. Arrêt cardiaque si injection IV trop rapide.",
+      "uses": "Antidote urgences (hyperkaliémie, hypermagnesémie, hypocalcémie). Antidote brûlures HF (acide fluorhydrique). Supplémentation calcique oral (ostéoporose). Préparations pédiatriques.",
+      "pk": {
+        "demi_vie": "Redistribution rapide (minutes) ; Ca²⁺ osseux : échanges sur semaines",
+        "vd": "~0,16 L/kg (espace extracellulaire)",
+        "biodispo": "~30–35% per os (dépend de vit D, âge, pH gastrique)",
+        "pp": "~45% (albumine) — seule la fraction ionisée (Ca²⁺ libre, ~50%) est active",
+        "cyp": [
+          {
+            "enzyme": "Non métabolisé",
+            "role": "Absorption intestinale active (canaux TRPV6, calbidinD9k) + passive",
+            "note": "Régulée par calcitriol (1,25-OH-D₃) et PTH"
+          },
+          {
+            "enzyme": "Réabsorption tubulaire rénale",
+            "role": "60–70% anse ascendante, 10–15% tubule distal (PTH-dépendant)",
+            "note": "Furosémide : ↑ calciurie. Thiazidiques : ↓ calciurie"
+          }
+        ],
+        "pk_note": "Calcémie totale normale : 2,2–2,6 mmol/L. Calcémie ionisée (active) : 1,15–1,35 mmol/L. Hypoalbuminémie : fausse hypocalcémie (correction : Ca corrigé = Ca mesuré + 0,8 × (4 – albumine g/dL)). PTH et calcitriol co-régulent le Ca²⁺."
+      },
+      "pubchem_cid": 23683,
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/23683",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/23683#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/23683#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/23683#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/23683#section=Mass-Spectrometry"
+      },
+      "cas": "299-28-5",
+      "smiles": "[Ca+2].OC[C@@H](O)[C@@H](O)[C@H](O)[C@@H](O)C([O-])=O.OC[C@@H](O)[C@@H](O)[C@H](O)[C@@H](O)C([O-])=O"
+    },
+    {
+      "file": "sodium_bicarbonate.glb",
+      "name": "Bicarbonate de sodium",
+      "formula": "NaHCO₃",
+      "molar": "84,01 g/mol",
+      "physical": "Poudre blanche cristalline, soluble dans l'eau (9 g/100 mL), libère CO₂ en milieu acide",
+      "color": "Blanc",
+      "desc": "Sel tampon essentiel de l'équilibre acido-basique",
+      "mineral_type": "Sel thérapeutique",
+      "cation": "Na⁺",
+      "anion": "HCO₃⁻",
+      "therapeutic": "Acidose métabolique sévère (pH < 7,1), alcalinisation urinaire (lithiase urique, intoxication salicylés/TCA), arrêt cardiaque (hypothermie, intoxication antidépresseurs tricycliques)",
+      "mechanism": "HCO₃⁻ + H⁺ → H₂CO₃ → H₂O + CO₂ (tampon Henderson-Hasselbalch). Alcalinisation systémique. Alcalinisation urinaire : ionisation des acides faibles (salicylates, phénobarbital) → piégeage ionique → élimination urinaire ↑↑. Antidote ADT : Na⁺ restaure le canal Nav (bloqué par ADT).",
+      "toxicity": "Alcalose métabolique (surcharge en HCO₃⁻). Hypokaliémie (K⁺ entre dans cellule). Hypocalcémie (Ca²⁺ précipite en milieu alcalin). Hypernatrémie. Surcharge sodée en ICC.",
+      "uses": "Urgences réanimatoires (acidose sévère). Antidote intoxication ADT (1–2 mEq/kg IV direct). Alcalinisation urinaire (salicylés, barbituriques). Antiacide per os. Levure chimique (alimentaire). Dialyse (bain de bicarbonate).",
+      "pk": {
+        "demi_vie": "Variable (équilibre acido-basique dynamique)",
+        "vd": "~14 L (espace extracellulaire)",
+        "biodispo": "~100% per os (neutralisé en partie par HCl gastrique → CO₂ éructé)",
+        "pp": "Non applicable (ion libre)",
+        "cyp": [
+          {
+            "enzyme": "Non métabolisé",
+            "role": "Réabsorption tubulaire rénale (80% tubule proximal, 15% anse Henlé)",
+            "note": "Régulée par PCO₂, aldostérone, angiotensine II"
+          },
+          {
+            "enzyme": "Anhydrase carbonique (CAII/CAIV)",
+            "role": "HCO₃⁻ + H⁺ ↔ H₂CO₃ ↔ CO₂ + H₂O (catalyse bidirectionnelle)",
+            "note": "Inhibée par acétazolamide → alcalinisation urinaire + acidose métabolique"
+          }
+        ],
+        "pk_note": "Bicarbonatémie normale : 22–26 mEq/L. Équation d'Henderson-Hasselbalch : pH = 6,1 + log([HCO₃⁻]/0,03×PCO₂). Dose corrective : mEq HCO₃⁻ = 0,3 × poids (kg) × déficit base."
+      },
+      "pubchem_cid": 516892,
+      "cas": "144-55-8",
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/516892",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/516892#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/516892#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/516892#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/516892#section=Mass-Spectrometry",
+        "nist": "https://webbook.nist.gov/cgi/cbook.cgi?ID=144-55-8&Units=SI",
+        "sdbs": "https://sdbs.db.aist.go.jp/sdbs/cgi-bin/cre_index.cgi?lang=en&indx=sdbs&key=CASNO&val=144558"
+      },
+      "smiles": "[Na+].OC([O-])=O"
+    },
+    {
+      "file": "bismuth_subcitrate.glb",
+      "name": "Sous-citrate de bismuth",
+      "formula": "C₆H₅BiO₇ (tripotassique)",
+      "molar": "704,45 g/mol (sel tripotassique)",
+      "physical": "Poudre blanche jaunâtre, peu soluble dans l'eau froide",
+      "color": "Blanc jaunâtre",
+      "desc": "Sel de bismuth gastroprotecteur et anti-Helicobacter pylori",
+      "mineral_type": "Sel thérapeutique",
+      "cation": "Bi³⁺",
+      "anion": "Citrate³⁻",
+      "therapeutic": "Éradication H. pylori (quadrithérapie bismuthée), ulcère gastroduodénal, gastrite, protection muqueuse gastrique, diarrhée du voyageur (bismuth sous-salicylate)",
+      "mechanism": "Bi³⁺ : précipite sur les ulcères (complexes Bi-protéines) → film protecteur. Inhibe urease de H. pylori → ↓ NH₃ → acidification locale létale pour H. pylori. Inhibe adhésion de H. pylori à l'épithélium. Stimule sécrétion de prostaglandines et mucus. Efflux pump inhibitor (surmonte résistance clarithromycine).",
+      "toxicity": "Systémique faible (< 1% absorption). Coloration noire des selles et de la langue (sulfure de bismuth — inoffensif). Encéphalopathie bismuthique (absorption prolongée excessive : historique avec bismuth sous-gallate). Bismuthémie à surveiller si traitement > 4 semaines.",
+      "uses": "Protocole BHCC (Bismuth-IPP-Clarithromycine-Métronidazole). Quadrithérapie bismuthée (Pylera®). Diarrhée du voyageur (Pepto-Bismol® = sous-salicylate). Alternative en cas de résistance à clarithromycine.",
+      "pk": {
+        "demi_vie": "~5–11 jours (Bi³⁺ tissulaire) ; élimination prolongée",
+        "vd": "Faible distribution systémique ; accumulation locale gastrique",
+        "biodispo": "<1% per os (Bi³⁺ pratiquement non absorbé)",
+        "pp": "Bi³⁺ plasmatique : lié aux protéines si absorbé (~70%)",
+        "cyp": [
+          {
+            "enzyme": "Non métabolisé (Bi³⁺ ionique)",
+            "role": "Réaction locale (précipitation + chélation protéines) → élimination fécale",
+            "note": "Fraction absorbée (<1%) : élimination rénale"
+          },
+          {
+            "enzyme": "Uréase H. pylori (cible thérapeutique)",
+            "role": "Inhibition enzymatique directe → mort bactérienne",
+            "note": ""
+          }
+        ],
+        "pk_note": "Selles noires inévitables (à prévenir le patient). Bismuthémie à doser si insuffisance rénale. Ne pas utiliser > 8 semaines en continu. Aspirine : éviter bismuth sous-salicylate (double exposition salicylate)."
+      },
+      "cas": "57644-54-9",
+      "pubchem_cid": 16683003
+    },
+    {
+      "file": "zinc_sulfate.glb",
+      "name": "Sulfate de zinc",
+      "formula": "ZnSO₄ · 7H₂O",
+      "molar": "287,54 g/mol",
+      "physical": "Cristaux incolores ou poudre blanche, très solubles dans l'eau",
+      "color": "Blanc (incolore en solution)",
+      "desc": "Sel de zinc hépatoprotecteur, antioxydant et immunostimulant",
+      "mineral_type": "Sel thérapeutique",
+      "cation": "Zn²⁺",
+      "anion": "SO₄²⁻",
+      "therapeutic": "Déficit en zinc (diarrhée infantile, dénutrition), maladie de Wilson (antagonisme Cu), acrodermatite entéropathique (déficit ADR), cicatrisation, diarrhée de l'enfant (OMS)",
+      "mechanism": "Zn²⁺ cofacteur de >300 métalloenzymes (anhydrase carbonique, ARN polymérase, Cu/Zn-SOD, carboxypeptidase A). Stabilise les structures en doigt de zinc (facteurs de transcription). Induit métalloprotéines (métallothionéines) → chélation Cu²⁺ (Wilson). Inhibe entrée du Cu²⁺ entérocytaire (antagonisme Cu/Zn).",
+      "toxicity": "Excès chronique : carence en cuivre (anémie, leucopénie). Nausées/vomissements per os (surtout à jeun). Inhalation ZnO fumées : fièvre des fondeurs. Dose toxique aiguë : 100–200 mg Zn²⁺.",
+      "uses": "OMS/UNICEF : 10–20 mg/j Zn chez enfant avec diarrhée (↓ mortalité 50%). Maladie de Wilson (alternative pénicillamine). Acrodermatite entéropathique. Collyres antiseptiques (ZnSO₄ 0,25%). Peintures antirouille, galvanisation (Zn métal).",
+      "pk": {
+        "demi_vie": "~12,5 jours (turnover biologique du zinc corporel total)",
+        "vd": "~2,4 L/kg (majorité intracellulaire, foie, muscle, os)",
+        "biodispo": "~20–40% per os (variable : phytates ↓, protéines animales ↑)",
+        "pp": "~98% (albumine 75% + α2-macroglobuline 20%)",
+        "cyp": [
+          {
+            "enzyme": "ZIP4 / ZnT1 (transporteurs entérocytaires)",
+            "role": "Absorption duodénale active + exportation basolatérale",
+            "note": "Déficit ZIP4 : acrodermatite entéropathique"
+          },
+          {
+            "enzyme": "Métallothionéines (MT-I/II)",
+            "role": "Stockage intracellulaire (foie, intestin) ; régulées par Zn et inflammation",
+            "note": "Induites par Zn²⁺ → captent Cu²⁺ → effet antagoniste Wilson"
+          }
+        ],
+        "pk_note": "Zincémie normale : 12–18 µmol/L (plasmatique) — peu fiable (redistribution). Marqueurs fonctionnels : phosphatase alcaline, protéine vectrice rétinol. Correction : 0,8 mg/kg/j élémental. Prendre à distance des repas (phytates bloquent l'absorption)."
+      },
+      "pubchem_cid": 24424,
+      "cas": "7733-02-0",
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/24424",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/24424#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/24424#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/24424#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/24424#section=Mass-Spectrometry",
+        "nist": "https://webbook.nist.gov/cgi/cbook.cgi?ID=7733-02-0&Units=SI",
+        "sdbs": "https://sdbs.db.aist.go.jp/sdbs/cgi-bin/cre_index.cgi?lang=en&indx=sdbs&key=CASNO&val=7733020"
+      },
+      "smiles": "[Zn+2].[O-]S(=O)(=O)[O-]"
+    },
+    {
+      "file": "selenium.glb",
+      "name": "Sélénium",
+      "formula": "Se / Na₂SeO₃ (sélénite de sodium)",
+      "molar": "78,96 g/mol (Se)",
+      "physical": "Se élémentaire : solide gris métallique. Sélénite de Na : poudre cristalline blanche soluble",
+      "color": "Gris métallique (Se) / Blanc (sel)",
+      "desc": "Oligoélément essentiel, antioxydant majeur via les sélénoprotéines",
+      "mineral_type": "Oligoélément",
+      "cation": "Se²⁻ (séléniure) / SeO₃²⁻ (sélénite)",
+      "anion": "—",
+      "therapeutic": "Prévention des carences (nutrition parentérale totale, maladie de Keshan), antioxydant (défense contre le stress oxydant), prévention cancer (données controversées), thyroïdite auto-immune",
+      "mechanism": "Sélénocystéine (21e acide aminé, codé par UGA stop recodé) : composant actif des sélénoprotéines. Glutathion peroxydases (GPx1-4) : H₂O₂ + ROOH → H₂O (antioxydant majeur). Thiorédoxine réductase (TrxR) : réduction Trx oxydée → régulation redox. Iodothyronine déiodinases (DIO1-3) : T4 → T3 (activation hormones thyroïdiennes).",
+      "toxicity": "Apport recommandé : 55 µg/j (adulte). Carence : maladie de Keshan (cardiomyopathie, Chine), maladie de Kashin-Beck (ostéoarthropathie). Toxicité (sélénose > 400 µg/j) : ongles cassants, alopécie, haleine à l'ail (diméthylséléniure exhalé), neuropathie.",
+      "uses": "Nutrition parentérale totale (prévention carence). Compléments alimentaires (sélénométhionine +++ biodispo). Levain sélénié (Se organique). Verre, semi-conducteurs (Se industriel). Dandruff shampoos (sulfure de sélénium).",
+      "pk": {
+        "demi_vie": "~100 jours (sélénoprotéines tissulaires)",
+        "vd": "~0,5 L/kg (distribution organique : thyroïde +++, foie, rein)",
+        "biodispo": "~80–90% (sélénométhionine organique) ; ~50–70% (sélénite inorganique)",
+        "pp": "~95% (albumine, sélénoprotéines P circulante — marqueur statut Se)",
+        "cyp": [
+          {
+            "enzyme": "Méthionine synthase (voie organique)",
+            "role": "Sélénométhionine → incorporation non-spécifique dans protéines (stockage)",
+            "note": "Voie de stockage ne dépend pas du statut Se"
+          },
+          {
+            "enzyme": "Voie de la sélénocystéine (UGA-recodage)",
+            "role": "Se inorganique → sélénoprotéines via ARNt[Sec] spécifique",
+            "note": "Contrôlée par SECISBP2 (coiffage SECIS) — mutations → phénotype hypothyroïdie/myopathie"
+          }
+        ],
+        "pk_note": "Sélénoprotéine P (SePP1) : marqueur fonctionnel du statut sélénium (reflet du pool hépatique). Sélénémie : 60–120 µg/L. Interaction iode : carence Se → accumulation H₂O₂ dans thyroïde → destruction follicules (thyroïdite)."
+      },
+      "cas": "7782-49-2",
+      "pubchem_cid": 24934,
+      "smiles": "[Se]"
+    },
+    {
+      "file": "iron_sulfate.glb",
+      "name": "Fer (sulfate ferreux)",
+      "formula": "FeSO₄ · 7H₂O",
+      "molar": "278,01 g/mol",
+      "physical": "Cristaux bleu-vert, très solubles dans l'eau, s'oxydent à l'air en Fe³⁺ (rouille)",
+      "color": "Bleu-vert (FeSO₄) / Rouille (Fe₂O₃ oxydé)",
+      "desc": "Principal sel de fer thérapeutique pour le traitement des anémies ferriprives",
+      "mineral_type": "Oligoélément",
+      "cation": "Fe²⁺ (ferreux, absorbable)",
+      "anion": "SO₄²⁻",
+      "therapeutic": "Anémie ferriprive (carence martiale), prématurité, grossesse, malabsorption, saignements chroniques, carence fonctionnelle (anémie inflammatoire)",
+      "mechanism": "Fe²⁺ absorbé → Fe³⁺ stocké (ferritine) ou incorporé dans : Hémoglobine (65% du fer corporel, transporteur O₂), Myoglobine (10%), enzymes hémiques (cytochromes, catalase, peroxydases), enzymes non-hémiques (ribonucléotide réductase, aconitase). Transferrine : transport plasmatique Fe³⁺ → cellules (récepteur TfR1).",
+      "toxicity": "Surdosage aigu (enfant) : nécrose GI → choc hémorragique → insuffisance hépatique → décès. Antidote : déféroxamine (chélateur). Chronique : hémosidérose (hémochromatose héréditaire HFE). Per os : constipation, nausées, selles noires.",
+      "uses": "Traitement standard anémie ferriprive (80 mg/j Fe élémentaire). Prévention carence (grossesse, prématurés). IV : fer-dextran, fer-sucrose, ferricarboxymaltose (malabsorption, ERI, dialyse). Chélateurs (déféroxamine, déférasirox) : surcharge martiale.",
+      "pk": {
+        "demi_vie": "~120 jours (érythrocyte = cycle de l'Hb) ; fer non recyclé : faible excrétion",
+        "vd": "~3 L/kg (majorité Hb + ferritine tissulaire)",
+        "biodispo": "~10–30% per os (Fe²⁺ > Fe³⁺). Augmentée par vitamine C (réductrice), diminuée par phytates, Ca²⁺, thé, IPP",
+        "pp": "Fe³⁺ : 100% lié à la transferrine (2 sites/molécule) en conditions normales",
+        "cyp": [
+          {
+            "enzyme": "DMT1 (Divalent Metal Transporter 1)",
+            "role": "Absorption Fe²⁺ duodénale apicale",
+            "note": "Régulée par hepcidine (hormone hépatique) ↑ → ↓ DMT1 et ferroportine → carence fonctionnelle"
+          },
+          {
+            "enzyme": "Ferroportine (FPN1 / SLC40A1)",
+            "role": "Export Fe²⁺ basolatéral entérocyte + macrophages",
+            "note": "Cible de l'hepcidine (dégradation ubiquitine-médiée) → blocage exportation → séquestration}"
+          }
+        ],
+        "pk_note": "Ferritine sérique : marqueur des réserves (< 30 µg/L = carence). Saturation transferrine (CST) < 20% = carence fonctionnelle. Hepcidine haute (inflammation) : bloque l'absorption → traitement par Fe IV préférable. Réticulocytes hypochromes et CHr : meilleurs marqueurs dynamiques."
+      },
+      "cas": "7720-78-7",
+      "pubchem_cid": 24393,
+      "smiles": "[Fe+2].[O-]S(=O)(=O)[O-]"
+    },
+    {
+      "file": "potassium_iodide.glb",
+      "name": "Iodure de potassium",
+      "formula": "KI",
+      "molar": "166,00 g/mol",
+      "physical": "Cristaux blancs cubiques très solubles dans l'eau, stables à l'air sec",
+      "color": "Blanc",
+      "desc": "Sel d'iode essentiel à la synthèse des hormones thyroïdiennes",
+      "mineral_type": "Oligoélément",
+      "cation": "K⁺",
+      "anion": "I⁻",
+      "therapeutic": "Carence iodée (goitre, crétinisme), préparation chirurgie thyroïdienne (effet Wolff-Chaikoff), urgence nucléaire (blocage thyroïdien), hyperthyroïdie (solution de Lugol), antiseptique (polyvidone iodée)",
+      "mechanism": "I⁻ capté par symporteur NIS (Na⁺/I⁻) thyroïdien → oxydé par TPO (thyroperoxydase) → incorporation dans thyroglobuline (MIT, DIT) → T₃, T₄. Effet Wolff-Chaikoff : excès I⁻ inhibe temporairement TPO → blocage temporaire de la synthèse hormonale (protection nucléaire). Effet Plummer : réduction vascularisation thyroïde (pré-opératoire).",
+      "toxicity": "Excès chronique : goitre iodé paradoxal (Jod-Basedow) chez sujets prédisposés. Allergie à l'iode (rash, œdème). Sialadenopathie (parotidite). Goût métallique. Contre-indication grossesse à fortes doses prolongées.",
+      "uses": "Sel iodé (prévention endémique). KI comprimés (130 mg) : distribution en urgence nucléaire (Fukushima, Tchernobyl — protection thyroïde I-131). Lugol 5% : préparation thyroïdectomie. SSKI (Strong Solution KI) : dermatomycoses profondes, expectorant. Polyvidone iodée (PVP-I) : antiseptique chirurgical.",
+      "pk": {
+        "demi_vie": "~6 h (I⁻ plasmatique) ; I lié à l'Hb : ~120 jours ; pool thyroïdien : semaines",
+        "vd": "~0,3 L/kg (ECF + captation thyroïdienne active)",
+        "biodispo": "~100% per os",
+        "pp": "Non applicable (I⁻ libre en plasma)",
+        "cyp": [
+          {
+            "enzyme": "NIS (Na⁺/I⁻ symporter, SLC5A5)",
+            "role": "Captation I⁻ thyroïdienne (gradient Na⁺) — concentration ×20–100 vs plasma",
+            "note": "Cible diagnostique (scintigraphie 99mTc) et thérapeutique (I-131 cancer thyroïde)"
+          },
+          {
+            "enzyme": "Thyroperoxydase (TPO)",
+            "role": "Oxydation I⁻ → I₂ → iodation thyroglobuline",
+            "note": "Inhibée par propylthiouracile (PTU) et méthimazole (antithyroïdiens)"
+          }
+        ],
+        "pk_note": "Apport recommandé : 150 µg/j (adulte), 250 µg/j (grossesse). Iodémie : 0,05–0,10 µg/mL. Iodurie 24h : meilleur reflet de l'apport. Iode radioactif I-131 (t½ = 8 jours) : traitement cancer thyroïde différencié et hyperthyroïdie."
+      },
+      "pubchem_cid": 4875,
+      "cas": "7681-11-0",
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/4875",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/4875#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/4875#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/4875#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/4875#section=Mass-Spectrometry",
+        "nist": "https://webbook.nist.gov/cgi/cbook.cgi?ID=7681-11-0&Units=SI",
+        "sdbs": "https://sdbs.db.aist.go.jp/sdbs/cgi-bin/cre_index.cgi?lang=en&indx=sdbs&key=CASNO&val=7681110"
+      },
+      "smiles": "[K+].[I-]"
+    },
+    {
+      "file": "copper_sulfate.glb",
+      "name": "Sulfate de cuivre",
+      "formula": "CuSO₄ · 5H₂O",
+      "molar": "249,68 g/mol",
+      "physical": "Cristaux bleus tricliniques, très solubles dans l'eau (pentahydrate)",
+      "color": "Bleu (pentahydrate) / Blanc (anhydre)",
+      "desc": "Sel de cuivre aux propriétés antifongiques, algicides et thérapeutiques (maladie de Wilson)",
+      "mineral_type": "Oligoélément",
+      "cation": "Cu²⁺",
+      "anion": "SO₄²⁻",
+      "therapeutic": "Maladie de Wilson (diagnostic et traitement d'entretien par zinc), carence en cuivre (nutrition parentérale), algicide (bouillie bordelaise)",
+      "mechanism": "Cu²⁺ cofacteur de : Cytochrome c oxydase (complexe IV, chaîne respiratoire), Cu/Zn-SOD (antioxydant), Céruloplasmine (ferroxydase, transport Fe), Lysyl oxydase (réticulation collagène/élastine), Dopamine β-hydroxylase (noradrénaline), Tyrosinase (mélanine). Maladie de Wilson : déficit ATP7B (exportateur Cu hépatique) → accumulation Cu foie/cerveau/cornée (anneau de Kayser-Fleischer).",
+      "toxicity": "Ingestion > 30 mg/kg : vomissements, nécrose hépatique, hémolyse intravasculaire, insuffisance rénale aiguë. Intoxication chronique professionnelle : hépatite cuprique. Antidote : D-pénicillamine, trientine, zinc (chélation/compétition).",
+      "uses": "Bouillie bordelaise (CuSO₄ + Ca(OH)₂) : fongicide viticulture biologique (oïdium, mildiou). Diagnostic maladie de Wilson (cuprémie, cuprémie non céruloplasminémique). Algicide pisciculture. Mordant teinture. Électrolyse (galvanoplastie cuivre).",
+      "pk": {
+        "demi_vie": "~26 jours (Cu total corporel, turnover)",
+        "vd": "~1,8 L/kg (foie +++, cerveau, cœur, rein)",
+        "biodispo": "~25–60% per os (variable selon forme chimique et statut Cu)",
+        "pp": "~95% (céruloplasmine 60–65% + albumine 30% + transcupreïne 5%)",
+        "cyp": [
+          {
+            "enzyme": "CTR1 (Copper Transporter 1, SLC31A1)",
+            "role": "Captation Cu⁺ apicale entérocyte (Cu²⁺ réduit en Cu⁺ par réductases)",
+            "note": "Saturable à forte dose"
+          },
+          {
+            "enzyme": "ATP7B (Wilson) / ATP7A (Menkes)",
+            "role": "Export Cu intracellulaire : ATP7B (foie→bile) ; ATP7A (intestin, cerveau)",
+            "note": "Déficit ATP7B → Wilson. Déficit ATP7A → Menkes (lié X, léthal)"
+          }
+        ],
+        "pk_note": "Cuprémie normale : 12–22 µmol/L (80% sous forme céruloplasmine). Céruloplasmine < 20 mg/dL + Cu urinaire 24h > 100 µg/j → suspicion Wilson. Anneau Kayser-Fleischer (dépôt Cu cornéen) : pathognomonique. Traitement Wilson : D-pénicillamine, trientine ou zinc selon le stade."
+      },
+      "pubchem_cid": 24463,
+      "cas": "7758-99-8",
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/24463",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/24463#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/24463#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/24463#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/24463#section=Mass-Spectrometry",
+        "nist": "https://webbook.nist.gov/cgi/cbook.cgi?ID=7758-99-8&Units=SI",
+        "sdbs": "https://sdbs.db.aist.go.jp/sdbs/cgi-bin/cre_index.cgi?lang=en&indx=sdbs&key=CASNO&val=7758998"
+      },
+      "smiles": "[Cu+2].[O-]S(=O)(=O)[O-]"
+    },
+    {
+      "file": "sodium_fluoride.glb",
+      "name": "Fluorure de sodium",
+      "formula": "NaF",
+      "molar": "41,99 g/mol",
+      "physical": "Poudre blanche cristalline, soluble dans l'eau (4 g/100 mL à 20°C)",
+      "color": "Blanc",
+      "desc": "Sel de fluor, agent préventif des caries dentaires et marqueur du métabolisme osseux",
+      "mineral_type": "Oligoélément",
+      "cation": "Na⁺",
+      "anion": "F⁻",
+      "therapeutic": "Prévention caries dentaires, fluoration eau (OMS 0,5–1 mg/L), traitement ostéoporose (fluorure de sodium à libération prolongée), diagnostic PET-scan (¹⁸F-NaF → métastases osseuses)",
+      "mechanism": "F⁻ remplace OH⁻ dans l'hydroxyapatite → fluorapatite [Ca₅(PO₄)₃F] : résistance à l'acide bactérien ×10. Inhibe enzymes glycolytiques bactériennes (F-ATPase, énolase) → ↓ acide lactique. Stimule les ostéoblastes (à faible dose). ¹⁸F : analogue du glucose dans os (PET osseux).",
+      "toxicity": "Fluorose dentaire (taches blanches/marron) si > 2 mg/L chronique (enfance). Fluorose squelettique > 8 mg/L (pays en développement). Aiguë : NaF ingéré > 5 mg/kg → hypocalcémie tétanique, arythmies, convulsions (F⁻ chélate Ca²⁺). DL50 rat ~50 mg/kg.",
+      "uses": "Dentifrices (1000–1500 ppm F), bains de bouche (0,05–0,2% NaF), vernis fluoré (22600 ppm). Fluoration eau collective. Insecticide historique. Conservation de sang (inhibe énolase → ↓ glycolyse in vitro). Tubes NaF/EDTA : prélèvements glycémie.",
+      "pk": {
+        "demi_vie": "~2–9 h (plasma) ; stockage osseux : années",
+        "vd": "~0,5–0,7 L/kg (ECF + incorporation osseuse)",
+        "biodispo": "~80–90% per os (réduite par Ca²⁺ : précipitation CaF₂ insoluble)",
+        "pp": "~50% (albumine faiblement)",
+        "cyp": [
+          {
+            "enzyme": "Non métabolisé",
+            "role": "Filtration glomérulaire + réabsorption tubulaire pH-dépendante",
+            "note": "Acidose urinaire → ↑ réabsorption F⁻ (HF non ionisé)"
+          },
+          {
+            "enzyme": "Incorporation osseuse (échangeur cristallin)",
+            "role": "OH⁻ → F⁻ dans hydroxyapatite (irréversible, long terme)",
+            "note": "Os = réservoir lent de fluor (turn-over années)"
+          }
+        ],
+        "pk_note": "Fluorurie 24h : reflet de l'exposition (norme < 4 mg/j). CaF₂ insoluble (avec Ca²⁺ alimentaire) → chélation → éviter lait 2h avant/après fluor thérapeutique. Tubes NaF pour glycémie : F⁻ inhibe l'énolase (glycolyse) → stabilise le glucose 24–48h."
+      },
+      "pubchem_cid": 23985,
+      "cas": "7681-49-4",
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/23985",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/23985#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/23985#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/23985#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/23985#section=Mass-Spectrometry",
+        "nist": "https://webbook.nist.gov/cgi/cbook.cgi?ID=7440-57-5&Units=SI",
+        "sdbs": "https://sdbs.db.aist.go.jp/sdbs/cgi-bin/cre_index.cgi?lang=en&indx=sdbs&key=CASNO&val=7440575"
+      },
+      "smiles": "[Na+].[F-]"
+    },
+    {
+      "file": "manganese_chloride.glb",
+      "name": "Chlorure de manganèse",
+      "formula": "MnCl₂ · 4H₂O",
+      "molar": "197,91 g/mol",
+      "physical": "Cristaux roses (tétrahydrate), très solubles dans l'eau",
+      "color": "Rose (hydraté) / Blanc (anhydre)",
+      "desc": "Sel de manganèse, oligoélément cofacteur de la Mn-SOD mitochondriale",
+      "mineral_type": "Oligoélément",
+      "cation": "Mn²⁺",
+      "anion": "Cl⁻",
+      "therapeutic": "Carence en manganèse (rare, nutrition parentérale totale prolongée), agent de contraste IRM (MnDPDP = mangafodipir : hépatique), cofacteur enzymatique (arginase, glutamine synthétase)",
+      "mechanism": "Mn²⁺ cofacteur de : Mn-SOD mitochondriale (MnSOD2 — antioxydant mitochondrial majeur), Arginase (cycle de l'urée, L-arg → urée + ornithine), Glutamine synthétase (SNC), Pyruvate carboxylase (gluconéogenèse). Mn²⁺ est aussi cofacteur de la glycosyltransférase (synthèse protéoglycanes).",
+      "toxicity": "Manganisme (intoxication chronique professionnelle : mineurs, soudeurs) : syndrome parkinsonien irréversible (accumulation dans ganglions de la base → destruction DAergique). IRM : signal T1 hyperintense globus pallidus. Antidote : chélation (EDTA, PAS). Nutrition parentérale : ↓ apport Mn chez hépatopathes (excrété biliaire).",
+      "uses": "Nutrition parentérale totale (oligo-élément). Agent de contraste IRM hépatique (mangafodipir — retiré du marché). Batteries Li-ion (MnO₂). Acier (ferroManganèse). Engrais (carences agricoles). Fongicide (manèbe, mancozèbe).",
+      "pk": {
+        "demi_vie": "~40 jours (Mn osseux) ; Mn plasmatique : redistribution rapide",
+        "vd": "~2 L/kg (accumulation : foie, os, glandes surrénales, pancréas, SNC)",
+        "biodispo": "~5–10% per os (faible, compétition avec Fe²⁺ sur DMT1)",
+        "pp": "~80% (β1-globuline = transmanganine + albumine)",
+        "cyp": [
+          {
+            "enzyme": "DMT1 (partage avec Fe²⁺)",
+            "role": "Absorption intestinale (compétition Fe/Mn — carence Fe → absorption Mn ↑)",
+            "note": "Anémie ferriprive → absorption Mn ↑ → risque manganisme si exposition industrielle"
+          },
+          {
+            "enzyme": "Excrétion biliaire principale (>90%)",
+            "role": "Foie → bile → selles (cycle entérohépatique partiel)",
+            "note": "Cirrhose/hépatite → accumulation Mn → manganisme hépatique (IRM globus pallidus)"
+          }
+        ],
+        "pk_note": "Manganèse sanguin : 4–14 µg/L (érythrocytes). Manganisme : IRM cerveau (T1 hypersignal pallidum) + neurologie (syndrome parkinsonien pur). Pas de bonne chélation connue : prévention ++. L-DOPA peu efficace (lésion présynaptique)."
+      },
+      "pubchem_cid": 24439,
+      "cas": "7773-01-5",
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/24439",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/24439#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/24439#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/24439#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/24439#section=Mass-Spectrometry",
+        "nist": "https://webbook.nist.gov/cgi/cbook.cgi?ID=10043-83-1&Units=SI",
+        "sdbs": "https://sdbs.db.aist.go.jp/sdbs/cgi-bin/cre_index.cgi?lang=en&indx=sdbs&key=CASNO&val=10043831"
+      },
+      "smiles": "[Mn+2].[Cl-].[Cl-]"
+    },
+    {
+      "file": "cisplatin.glb",
+      "name": "Cisplatine",
+      "formula": "Pt(NH₃)₂Cl₂ (cis)",
+      "molar": "300,05 g/mol",
+      "physical": "Poudre cristalline jaune pâle, peu soluble dans l'eau (2,5 mg/mL), soluble en NaCl 0,9%",
+      "color": "Jaune pâle",
+      "desc": "Complexe de platine (II), anticancéreux alkylant de l'ADN",
+      "mineral_type": "Catalyseur métallique",
+      "cation": "Pt²⁺ (platine)",
+      "anion": "Cl⁻ / NH₃ (ligands)",
+      "therapeutic": "Cancers testiculaires (référence, >95% guérison), ovaire, vessel, cerveau, poumon, col utérin, tête et cou, carcinomes épidermoïdes",
+      "mechanism": "Platine (II) : complexe plan-carré. En milieu aqueux intracellulaire (faible Cl⁻) : substitution des Cl⁻ par H₂O → espèce aqueuse électrophile active. Alkyle l'ADN : adduits intrabrins Pt-N7 (GG 65%, AG 25%) → distorsion majeure de l'ADN → inhibition réplication + transcription → apoptose (p53-dépendant). Résistance : diminution import (CTR1), augmentation export (MRP2), réparation adduits (NER).",
+      "toxicity": "NÉPHROTOXICITÉ dose-limitante (nécrose tubulaire proximale) → hyperhydratation obligatoire. NEUROTOXICITÉ cumulative (neuropathie périphérique irréversible). Ototoxicité (surtout enfant). Vomissements sévères (sétrons + corticoïdes). Myélosuppression modérée. Hypomagnesémie chronique (tubule distal).",
+      "uses": "Protocoles BEPOX (cancer testis), carboplatine-taxol (ovaire), FOLFOX (colo : oxaliplatine), cisplatine-5FU (tête-cou, œsophage). Référence historique (Barnett Rosenberg, 1965). Carboplatine : analogue moins néphro/neurotoxique. Oxaliplatine : adduits interstrand, neurotoxicité spécifique (froid).",
+      "pk": {
+        "demi_vie": "Phase α : ~14–49 min (platine libre) ; phase β : ~58–73 h (Pt lié ADN/protéines) ; élimination terminale : plusieurs semaines",
+        "vd": "~7 L/kg (large : liaison irréversible aux protéines tissulaires)",
+        "biodispo": "0% per os (dégradé) ; IV exclusivement",
+        "pp": ">90% (liaison irréversible aux protéines plasmatiques après activation)",
+        "cyp": [
+          {
+            "enzyme": "CTR1 (transporteur Cu, importe Pt²⁺)",
+            "role": "Entrée cellulaire du cisplatine (transport actif + passif)",
+            "note": "Résistance cisplatine : ↓ CTR1 (mutations, downrégulation)"
+          },
+          {
+            "enzyme": "MRP2 / ABCC2 (efflux pump)",
+            "role": "Export glutathion-conjugués du Pt → résistance",
+            "note": "GSH + Pt → glutathion-Pt (détoxification) → export MRP2"
+          },
+          {
+            "enzyme": "NER (Nucleotide Excision Repair)",
+            "role": "Réparation des adduits Pt-ADN → résistance acquise",
+            "note": "ERCC1 élevé → résistance cisplatine (marqueur prédictif)"
+          }
+        ],
+        "pk_note": "Hyperhydratation obligatoire (2–3 L NaCl avant+pendant+après) → diurèse forcée (furosémide) → prévention néphrotoxicité. Magnésémie à surveiller (perte tubulaire chronique : supplémenter MgSO₄). Platine dans urines et sang détectable des semaines après la cure. ERCC1 : biomarqueur prédictif de résistance."
+      },
+      "pubchem_cid": 84691,
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/84691",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/84691#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/84691#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/84691#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/84691#section=Mass-Spectrometry"
+      },
+      "cas": "15663-27-1",
+      "smiles": "N.N.Cl[Pt]Cl"
+    },
+    {
+      "file": "carboplatin.glb",
+      "name": "Carboplatine",
+      "formula": "C₆H₁₂N₂O₄Pt",
+      "molar": "371,25 g/mol",
+      "physical": "Poudre cristalline blanche, soluble dans l'eau (~14 mg/mL)",
+      "color": "Blanc",
+      "desc": "Complexe de platine (II) de 2e génération, analogue moins toxique du cisplatine",
+      "mineral_type": "Catalyseur métallique",
+      "cation": "Pt²⁺",
+      "anion": "Cyclobutane-1,1-dicarboxylate²⁻ (CBDCA)",
+      "therapeutic": "Cancer ovaire (1er ligne avec taxol), cancer poumon CBPC, cancer testis (alternative cisplatine), cancer tête-cou, tumeurs cérébrales",
+      "mechanism": "Même mécanisme que le cisplatine : activation par substitution du CBDCA par H₂O → espèce Pt²⁺ électrophile → adduits Pt-N7(GG) sur ADN → apoptose. Ligand CBDCA : plus stable que Cl⁻ → activation plus lente → moins néphrotoxique mais plus myélosuppresseur.",
+      "toxicity": "MYÉLOSUPPRESSION dose-limitante (thrombopénie +++, nadir J21). Moins néphrotoxique que cisplatine (pas d'hyperhydratation obligatoire). Moins neurotoxique, moins ototoxique. Hypersensibilité (réactions anaphylactoïdes à partir du 7e cycle : risque ++).",
+      "uses": "Protocole carbo-taxol (ovaire, poumon). Dosage par formule de Calvert : Dose (mg) = AUC × (DFG + 25). AUC-based dosing (évite toxicité par accumulation). Alternative cisplatine chez sujet âgé ou insuffisant rénal.",
+      "pk": {
+        "demi_vie": "Phase α : ~1,1–2 h ; phase β : ~3–6 h (carboplatine libre) ; Pt total : jours",
+        "vd": "~0,26 L/kg (moins lipophile que cisplatine)",
+        "biodispo": "IV exclusivement",
+        "pp": "~24% (formes libres) → liaison covalente protéines 85–90% au fil du temps",
+        "cyp": [
+          {
+            "enzyme": "Filtration glomérulaire (principale)",
+            "role": "Élimination du Pt libre proportionnelle au DFG",
+            "note": "Formule Calvert : dose = AUC × (DFG + 25) — individualisée sur la fonction rénale"
+          },
+          {
+            "enzyme": "CTR1 / MRP2 (mêmes que cisplatine)",
+            "role": "Import/export cellulaire",
+            "note": "Résistance croisée cisplatine-carboplatine partielle (adduits identiques)"
+          }
+        ],
+        "pk_note": "Formule de Calvert OBLIGATOIRE pour dosage (AUC 5–7 mg·mL⁻¹·min : tumeur solide). Clairance Pt = DFG → ajustement IR. Hypersensibilité cumulative : désensibilisation possible. Thrombopénie nadir J21 → surveillance NFS."
+      },
+      "pubchem_cid": 498142,
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/498142",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/498142#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/498142#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/498142#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/498142#section=Mass-Spectrometry"
+      },
+      "cas": "41575-94-4",
+      "smiles": "[Pt].N.N.OC(=O)C1(CCC1)C(=O)O"
+    },
+    {
+      "file": "oxaliplatin.glb",
+      "name": "Oxaliplatine",
+      "formula": "C₈H₁₄N₂O₄Pt",
+      "molar": "397,29 g/mol",
+      "physical": "Poudre blanche cristalline, soluble dans l'eau (6 mg/mL). INCOMPATIBLE NaCl (précipite) — diluer dans G5%",
+      "color": "Blanc",
+      "desc": "Complexe de platine (II) de 3e génération, actif sur les cancers colorectaux résistants",
+      "mineral_type": "Catalyseur métallique",
+      "cation": "Pt²⁺",
+      "anion": "Oxalate²⁻ + DACH (diaminocyclohexane)",
+      "therapeutic": "Cancer colorectal métastatique (protocoles FOLFOX/XELOX), cancer estomac, cancer pancréas (protocole FOLFIRINOX)",
+      "mechanism": "Ligand DACH (trans-R,R-diaminocyclohexane) → adduits Pt-DACH-ADN : moins bien reconnus par les protéines MMR → contournement résistance aux platines MMR-déficients. Adduits interstrand plus importants qu'avec cisplatine. Neurotoxicité unique : chélation Ca²⁺/Mg²⁺ des canaux ioniques → neuropathie aiguë déclenchée par le froid (froid-déclenchée).",
+      "toxicity": "NEUROTOXICITÉ : aiguë (dysesthésies froides, réversibles, 1–2j post-cure) + cumulative (neuropathie sensitivo-motrice irréversible > 6 cycles). Myélosuppression modérée. Peu néphrotoxique. Hypersensibilité (cumulative). NB : INCOMPATIBLE avec NaCl (chlorure précipite l'oxalate).",
+      "uses": "FOLFOX (5-FU + leucovorin + oxaliplatine) : standard cancer côlon/rectum métastatique et adjuvant. FOLFIRINOX (+ irinotécan) : pancréas. XELOX = oxaliplatine + capécitabine (voie orale). Actif sur cancers résistants au cisplatine (adduits différents).",
+      "pk": {
+        "demi_vie": "Platine libre : ~25 min ; Pt ultrafiltrable : ~40 h ; Pt total : plusieurs semaines",
+        "vd": "Large (Pt tissulaire) : accumulation irréversible",
+        "biodispo": "IV exclusivement. Ne jamais diluer dans NaCl (précipite : utiliser G5% exclusivement)",
+        "pp": ">90% (liaison covalente rapide aux érythrocytes et protéines)",
+        "cyp": [
+          {
+            "enzyme": "Voie non-enzymatique principale",
+            "role": "Conversion spontanée en espèces aqueuses actives (Pt-DACH-aqua)",
+            "note": "DACH stabilise le complexe → activation plus lente que cisplatine"
+          },
+          {
+            "enzyme": "OCT2 (Organic Cation Transporter 2)",
+            "role": "Captation tubulaire rénale → néphrotoxicité de cisplatine (faible pour oxaliplatine)",
+            "note": "Cimétidine (inhibiteur OCT2) : ↓ néphrotoxicité cisplatine"
+          }
+        ],
+        "pk_note": "JAMAIS NaCl pour dilution (précipitation) — G5% exclusivement. Neuropathie aiguë (froid) : éviter les glaçons, boissons froides, surfaces froides 5j post-cure. Neuropathie cumulative : dose totale cumulée > 780 mg/m² → évaluer bénéfice/risque. Aucun traitement curatif de la neuropathie chronique."
+      },
+      "pubchem_cid": 77994,
+      "cas": "61913-68-6",
+      "spectra_url": {
+        "pubchem": "https://pubchem.ncbi.nlm.nih.gov/compound/77994",
+        "ir": "https://pubchem.ncbi.nlm.nih.gov/compound/77994#section=IR-Spectra",
+        "rmn1h": "https://pubchem.ncbi.nlm.nih.gov/compound/77994#section=1H-NMR-Spectra",
+        "rmn13c": "https://pubchem.ncbi.nlm.nih.gov/compound/77994#section=13C-NMR-Spectra",
+        "ms": "https://pubchem.ncbi.nlm.nih.gov/compound/77994#section=Mass-Spectrometry",
+        "nist": "https://webbook.nist.gov/cgi/cbook.cgi?ID=61913-68-6&Units=SI",
+        "sdbs": "https://sdbs.db.aist.go.jp/sdbs/cgi-bin/cre_index.cgi?lang=en&indx=sdbs&key=CASNO&val=61913686"
+      },
+      "smiles": "[Pt].N[C@@H]1CCCC[C@H]1N.OC(=O)C(=O)O"
+    },
+    {
+      "file": "palladium_complex.glb",
+      "name": "Palladium (complexes catalytiques)",
+      "formula": "Pd / PdCl₂ / Pd(OAc)₂ (principaux)",
+      "molar": "106,42 g/mol (Pd) ; 177,33 g/mol (PdCl₂) ; 224,51 g/mol (Pd(OAc)₂)",
+      "physical": "Pd métal : solide gris-blanc. PdCl₂ : poudre rouge-brun soluble dans eau. Pd(OAc)₂ : poudre jaune orangé",
+      "color": "Gris (Pd métal) / Rouge-brun (PdCl₂) / Orange (Pd(OAc)₂)",
+      "desc": "Métal de transition catalysant les couplages C–C en synthèse pharmaceutique",
+      "mineral_type": "Catalyseur",
+      "cation": "Pd⁰ / Pd²⁺",
+      "anion": "Cl⁻ / OAc⁻ / ligands phosphines",
+      "therapeutic": "Pas d'usage thérapeutique direct. Rôle central en synthèse de principes actifs pharmaceutiques : +50% des médicaments synthétiques impliquent un couplage catalysé par Pd à une étape de leur synthèse",
+      "mechanism": "Catalyse organométallique : cycle Pd⁰/Pd²⁺. Couplages C–C : ① Addition oxydante (Pd⁰ + R-X → R-Pd²⁺-X), ② Transmétallation (organoborane, organostannane, organozinc → R'-Pd²⁺-R), ③ Élimination réductrice (R-R' + Pd⁰ régénéré). Réactions : Suzuki-Miyaura (boronate), Heck (alcènes), Negishi (organozinc), Sonogashira (alcynes). Prix Nobel Chimie 2010 (Heck, Negishi, Suzuki).",
+      "toxicity": "Pd résiduel dans médicaments : limite ICH Q3D = 100 µg/j (voie orale). Pd²⁺ : cytotoxique in vitro (alkylation protéines thiolées). Inhalation nanoparticules Pd : inflammation pulmonaire. Allergie de contact (bijoux, alliages dentaires). Complexes Pd anticancéreux en recherche (moins avancés que Pt).",
+      "uses": "Synthèse pharmaceutique (ibuprofen, naproxen, anticancéreux, antiviraux). Catalyseurs d'hydrogénation (déprotection Cbz par Pd/C + H₂). Pots catalytiques automobiles (Pd + Pt + Rh). Piles à combustible (électrodes Pd). Purification H₂ (membranes Pd). Bijoux (palladium blanc).",
+      "pk": {
+        "demi_vie": "Non applicable (catalyseur recyclé industriellement)",
+        "vd": "Pd résiduel médicamenteux : distribution systémique si absorbé",
+        "biodispo": "Pd métal et PdCl₂ : absorption orale faible (~5%). Nanoparticules : variable selon taille",
+        "pp": "Pd²⁺ absorbé : liaison forte aux groupements thiol des protéines (métalloprotéines)",
+        "cyp": [
+          {
+            "enzyme": "Non métabolisé en tant que métal",
+            "role": "Pd²⁺ absorbé : excrété bile + urine (comme platine)",
+            "note": ""
+          },
+          {
+            "enzyme": "Inhibition CYP (in vitro, Pd²⁺ > 10 µM)",
+            "role": "Possible inhibition enzymatique à très forte dose",
+            "note": "Non pertinent aux doses résiduelles pharmaceutiques (< 100 µg/j ICH)"
+          }
+        ],
+        "pk_note": "ICH Q3D : limite palladium résiduel dans médicaments = 100 µg/j (voie orale), 25 µg/j (inhalée), 2,5 µg/j (parentérale). Méthodes de contrôle : ICP-MS (spectrométrie de masse plasma inductif). Pd/C + H₂ : déprotection Cbz en synthèse peptidique (usage majeur en chimie médicinale)."
+      }
+    },
+    {
+      "file": "platinum_catalyst.glb",
+      "name": "Platine catalytique (Pt/C, H₂PtCl₆)",
+      "formula": "Pt / H₂PtCl₆ · 6H₂O",
+      "molar": "195,08 g/mol (Pt) ; 517,90 g/mol (acide chloroplatinique)",
+      "physical": "Pt métal : solide dense gris argenté. H₂PtCl₆ : cristaux rouge-orangé, très hygroscopiques, très solubles dans l'eau et éthanol",
+      "color": "Gris argenté (Pt métal) / Rouge-orangé (H₂PtCl₆)",
+      "desc": "Métal noble catalysant hydrogénations et oxydations en synthèse pharmaceutique",
+      "mineral_type": "Catalyseur",
+      "cation": "Pt⁰ / Pt²⁺ / Pt⁴⁺",
+      "anion": "Cl⁻ / [PtCl₆]²⁻",
+      "therapeutic": "Usage indirect : catalyseur clé dans la synthèse de nombreux médicaments. Direct : cisplatine et carboplatine (voir fiches dédiées). Recherche : complexes Pt(IV) (prodrogues oxydées du cisplatine, activation par réduction intracellulaire)",
+      "mechanism": "Catalyse hétérogène (Pt/C, PtO₂) : adsorption dissociative H₂ → H• adsorbé → hydrogénation alcènes, carbonyles, groupements nitro (NO₂ → NH₂), débenzylation (Cbz → amine libre). Catalyse homogène (complexes Pt²⁺) : cf. cisplatine. Complexes Pt(IV) : prodrogues stables oxydées → réduction in vivo (Pt(IV) → Pt(II) + 2 ligands axiaux libérés) → activation cytotoxique.",
+      "toxicity": "Pt catalytique : allergie de contact (platinose des raffineurs). Poussières PtCl₄/H₂PtCl₆ : asthme professionnel (platinose, syndrome de Karasek). Pt résiduel médicaments : limite ICH Q3D = 100 µg/j (orale). Complexes Pt(IV) en essais cliniques : profil toxicité similaire Pt(II) mais meilleure biodisponibilité orale (satraplatin : per os).",
+      "uses": "Catalyse hydrogénation (Pt/C + H₂, Adams PtO₂). Synthèse vitamines (hydrogénation). Pots catalytiques (Pt + Pd + Rh : oxydation CO et HC, réduction NOx). Anticancéreux (cisplatine, carboplatine, oxaliplatine). Capteurs électrochimiques (O₂, glucose). Prothèses (alliage Pt-Ir : électrodes neuronales).",
+      "pk": {
+        "demi_vie": "Non applicable (catalyseur hétérogène — recyclé). Complexes Pt(IV) : cf. fiche cisplatine pour Pt(II) activé",
+        "vd": "Pt résiduel absorbé : large distribution tissulaire",
+        "biodispo": "Pt métal : 0%. Complexes Pt(IV) oraux (satraplatin) : 10–20% (recherche clinique). H₂PtCl₆ : absorption si ingestion accidentelle",
+        "pp": "Pt²⁺ résiduel : liaison covalente aux protéines thiolées (>90%)",
+        "cyp": [
+          {
+            "enzyme": "Réduction Pt(IV) → Pt(II) (activation prodrogue)",
+            "role": "Ascorbate, glutathion, méthionine intracellulaires : réducteurs in vivo",
+            "note": "Vitesse de réduction détermine la sélectivité tumorale des complexes Pt(IV)"
+          },
+          {
+            "enzyme": "Non métabolisé (catalyse hétérogène)",
+            "role": "Recyclage industriel — Pt/C régénéré par calcination + réduction",
+            "note": "Récupération Pt des déchets médicaux : programme ICH sur métaux résidus"
+          }
+        ],
+        "pk_note": "ICH Q3D : Pt résiduel médicaments = 100 µg/j (oral), 1,5 µg/j (parentéral). Platinum-based drugs : séquence d'administration avec taxanes importante (taxane avant platine → moins de toxicité hématologique). PtO₂ (Adams) : préparation fraîche obligatoire (s'oxyde). Récupération Pd/Pt des catalyseurs épuisés : raffineurs (exposition professionnelle → platinose)."
+      }
+    },
+    {
+      "file": "gold_sodium_thiomalate.glb",
+      "name": "Thiomalate d'or sodique",
+      "formula": "Na[Au(SCH(COO)CH₂COO)]",
+      "molar": "390,07 g/mol",
+      "physical": "Poudre jaune pâle, très soluble dans l'eau. Sensible à la lumière (conserver à l'abri)",
+      "color": "Jaune pâle",
+      "desc": "Sel d'or thérapeutique, antirheumatismal de fond historique (chrysothérapie)",
+      "mineral_type": "Catalyseur métallique",
+      "cation": "Au⁺ (or I)",
+      "anion": "Thiomalate²⁻",
+      "therapeutic": "Polyarthrite rhumatoïde (traitement de fond de 2e ligne, largement remplacé par les biothérapies), arthrite psoriasique",
+      "mechanism": "Au⁺ : affinité pour groupements thiol (cystéines) → inhibition de l'activité enzymatique de protéases, phosphatases, oxydases. Inhibe la migration et la fonction des macrophages (phagocytose ↓). Inhibe NF-κB → ↓ cytokines pro-inflammatoires (IL-1, TNF-α). Inhibe la présentation antigénique (MHC II). Mécanisme anti-inflammatoire exact encore partiellement élucidé.",
+      "toxicity": "Chrysiasis (coloration gris-ardoise irréversible de la peau exposée au soleil). Protéinurie (glomérulopathie membraneuse : 5–10%). Stomatite, éruptions cutanées. Thrombopénie, aplasie médullaire (rare mais grave). Arrêt si protéinurie > 500 mg/24h ou cytopénies.",
+      "uses": "PR sévère réfractaire (avant biothérapies). Auranofine (or oral) : arthrite (mieux toléré, moins efficace). Recherche anticancéreuse : complexes Au(III) pour tumeurs résistantes platine. Nanoparticules Au (AuNP) : vectorisation médicaments, photothermolyse tumorale (PTT).",
+      "pk": {
+        "demi_vie": "~17–25 jours (or circulant) ; dépôts tissulaires : mois à années",
+        "vd": "~0,1 L/kg (confiné au tissu conjonctif, macrophages, synoviale)",
+        "biodispo": "0% per os (thiomalate). Auranofine orale : ~25%. IM : 100%",
+        "pp": ">95% (albumine — liaison covalente aux cystéines)",
+        "cyp": [
+          {
+            "enzyme": "Non métabolisé (Au⁺ ionique)",
+            "role": "Redistribution tissulaire (synoviale, rein, peau, foie) → élimination rénale + fécale lente",
+            "note": "Chrysiasis : dépôt Au dans derme = irréversible"
+          },
+          {
+            "enzyme": "Thiorédoxine réductase (TrxR) — cible principale",
+            "role": "Au⁺ inhibe TrxR → ↑ stress oxydant dans cellules inflammatoires → apoptose macrophages/lymphocytes",
+            "note": "Même cible que pour l'activité anticancéreuse de l'auranofine (essais cliniques)"
+          }
+        ],
+        "pk_note": "Surveillance obligatoire : NFS, protéinurie, créatinine avant chaque injection IM. Délai d'action : 3–6 mois (traitement de fond lent). Chrysiasis : exposition solaire à éviter (photoprotection). Auranofine (Ridaura®) : recyclage thérapeutique en oncologie (leucémie lymphoïde chronique, myélome)."
+      },
+      "cas": "12244-57-4",
+      "pubchem_cid": 6101376
+    },
+    {
+      "file": "iron_dextran.glb",
+      "name": "Fer-dextran (IV)",
+      "formula": "Complexe polymère Fe(III)-dextran",
+      "molar": "Variable (masse moléculaire 165 000–400 000 Da selon préparation)",
+      "physical": "Solution colloïdale brun foncé à noir, opaque, prête à l'emploi",
+      "color": "Brun-noir",
+      "desc": "Complexe de fer injectable pour le traitement des carences martiales en cas d'échec oral",
+      "mineral_type": "Oligoélément",
+      "cation": "Fe³⁺ (noyau fer-oxyde polymère)",
+      "anion": "Dextran (carbohydrate stabilisant)",
+      "therapeutic": "Anémie ferriprive par malabsorption (MICI, post-chirurgie bariatrique), carence martiale des dialysés, carence martiale en oncologie (ESA), intolérance aux sels de fer oraux, carence martiale péri-opératoire",
+      "mechanism": "Nanoparticules de fer-oxyde stabilisées par le dextran. Captées par phagocytose dans les macrophages du SMF (rate, foie, moelle) → libération de Fe³⁺ → ferritine de stockage → mobilisation par transferrine → synthèse d'hémoglobine. Pas d'effet immédiat (transit macrophagique → Hb augmente en 1–4 semaines).",
+      "toxicity": "Réactions anaphylactoïdes (historique avec fer-dextran HMW, plus rares avec LMW). Fer-sucrose, ferricarboxymaltose : mieux tolérés. Test dose recommandé avec fer-dextran. Hypophosphatémie (ferricarboxymaltose spécifiquement — inhibition FGF23 turnover).",
+      "uses": "Fer-dextran (Cosmofer®, InFed®), Fer-sucrose (Venofer®), Ferricarboxymaltose (Ferinject® — dose unique 1000 mg/15 min), Fer-isomaltoside (Monofer®). Protocoles anémie péri-opératoire (patient blood management). Dialyse : fer IV systématique avec érythropoïétine.",
+      "pk": {
+        "demi_vie": "~5–20 h (complexe circulant) ; Fe libéré : redistribué sur semaines",
+        "vd": "~3 L/kg (captation SMF)",
+        "biodispo": "100% IV",
+        "pp": "Complexe colloïdal (macroparticule non lié albumine) → captation macrophagique",
+        "cyp": [
+          {
+            "enzyme": "SMF phagocytose (macrophages — non-CYP)",
+            "role": "Dégradation lysosomal du complexe → Fe³⁺ libéré → ferritine",
+            "note": "Foie (cellules Kupffer), rate, moelle osseuse"
+          },
+          {
+            "enzyme": "Hepcidine (régulateur clé)",
+            "role": "↑ après correction carence → bloque ferroportine → ralentit mobilisation Fe stocké",
+            "note": "Inflammation élevée → hepcidine haute → inefficacité même du Fe IV (anémie inflammatoire vraie)"
+          }
+        ],
+        "pk_note": "Ferritine post-IV : s'élève avant l'Hb (J3–J7) — ne pas renouveler sur ferritine seule. CST (saturation Tf) + CHr (contenu Hb réticulocytes) : meilleurs marqueurs de réponse. Ferricarboxymaltose : hypophosphatémie transitoire (surveiller chez patients à risque)."
+      },
+      "cas": "9004-66-4"
+    }
+  ]
+}

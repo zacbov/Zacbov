@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Microscope Virtuel — Frottis Sanguin · DFGSP2</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&family=Playfair+Display:ital,wght@1,500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:       #f5f0e8;
+  --bg2:      #ede7d9;
+  --parch:    #f9f5ec;
+  --ink:      #1a1208;
+  --sepia:    #6b5640;
+  --gold:     #c8860a;
+  --gold2:    #e8a820;
+  --red:      #c0392b;
+  --green:    #27ae60;
+  --blue:     #2980b9;
+  --purple:   #8e44ad;
+  --border:   #d4c8b0;
+  --shadow:   rgba(100,80,40,.15);
+
+  /* Couleurs MGG — issues du cours */
+  --hematie:     #e8a080;  /* rose saumoné, biconcave */
+  --plaquette:   #d4a0c8;  /* rosé violet, granules */
+  --pnn-cyto:    #f5e8c0;  /* beige */
+  --pnn-noyau:   #7a5090;  /* violet, 3-5 lobes */
+  --pne-gran:    #e86820;  /* orange brique */
+  --pnb-gran:    #2a3080;  /* bleu foncé/noir */
+  --lymph-cyto:  #4060c0;  /* bleu foncé */
+  --mono-cyto:   #b8b0a0;  /* gris cendré */
+  --schizo:      #cc3030;  /* rouge, fragment */
+  --drepa:       #a04010;  /* ocre, faucille */
+  --target:      #d4905a;  /* cocarde */
+}
+
+body{
+  font-family:'Space Grotesk',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  min-height:100vh;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ══ HEADER ══ */
+header{
+  height:52px;
+  background:var(--ink);
+  display:flex;align-items:center;padding:0 20px;gap:16px;
+  flex-shrink:0;
+  border-bottom:3px solid var(--gold);
+}
+.logo{
+  font-family:'Space Mono',monospace;
+  font-size:13px;color:var(--gold);letter-spacing:2px;
+}
+.logo span{color:#888;font-size:11px;margin-left:8px;}
+.header-tabs{display:flex;gap:4px;margin-left:20px;}
+.htab{
+  padding:5px 14px;border-radius:3px;
+  border:1px solid #333;background:transparent;
+  color:#888;font-family:'Space Grotesk',sans-serif;
+  font-size:11px;font-weight:600;cursor:pointer;
+  transition:all .2s;letter-spacing:.5px;
+}
+.htab:hover,.htab.active{border-color:var(--gold);color:var(--gold);background:rgba(200,134,10,.1);}
+.score-badge{
+  margin-left:auto;
+  font-family:'Space Mono',monospace;font-size:12px;
+  color:var(--gold2);border:1px solid rgba(200,134,10,.4);
+  padding:3px 12px;border-radius:3px;
+}
+.lives-display{font-size:16px;letter-spacing:2px;}
+
+/* ══ MAIN ══ */
+#main{flex:1;display:flex;overflow:hidden;}
+
+/* ── LAME À GAUCHE ── */
+#slide-panel{
+  flex:1;
+  display:flex;flex-direction:column;
+  position:relative;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 50%,#f2ede0,#e8dfc8);
+}
+
+/* Cercle oculaire microscope */
+#scope-vignette{
+  position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 50%,
+    transparent 42%,
+    rgba(10,8,5,.85) 55%,
+    rgba(5,4,2,.98) 70%
+  );
+  z-index:10;pointer-events:none;
+}
+
+/* Lame de verre */
+#glass-slide{
+  position:absolute;inset:0;
+  cursor:crosshair;
+  overflow:hidden;
+}
+
+/* Texture lame */
+#glass-slide::before{
+  content:'';position:absolute;inset:0;
+  background:
+    linear-gradient(105deg,rgba(255,255,255,.12) 0%,transparent 60%),
+    radial-gradient(ellipse 120% 80% at 30% 20%,rgba(255,255,255,.08),transparent);
+  z-index:1;pointer-events:none;
+}
+
+/* Cellule SVG canvas */
+#cells-canvas{
+  position:absolute;inset:0;
+  transition:transform .1s;
+  will-change:transform;
+}
+
+/* Réticule */
+#reticule{
+  position:absolute;
+  width:60px;height:60px;
+  border:1px solid rgba(0,200,100,.5);
+  border-radius:50%;
+  pointer-events:none;
+  z-index:9;
+  transform:translate(-50%,-50%);
+  display:none;
+}
+#reticule::before,#reticule::after{
+  content:'';position:absolute;
+  background:rgba(0,200,100,.4);
+}
+#reticule::before{top:50%;left:0;right:0;height:1px;transform:translateY(-50%);}
+#reticule::after{left:50%;top:0;bottom:0;width:1px;transform:translateX(-50%);}
+
+/* Ring de sélection animé SVG */
+.sel-ring {
+  pointer-events: none;
+  animation: ringPulse 1s ease-in-out infinite;
+}
+
+/* Info zoom */
+#zoom-indicator{
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  z-index:12;font-family:'Space Mono',monospace;font-size:11px;
+  color:rgba(255,255,255,.6);letter-spacing:1px;
+}
+
+
+@keyframes ringPulse{
+  0%,100%{opacity:.8;transform:translate(-50%,-50%) scale(1);}
+  50%{opacity:.4;transform:translate(-50%,-50%) scale(1.08);}
+}
+
+/* ── PANNEAU DROIT ── */
+#info-panel{
+  width:300px;flex-shrink:0;
+  background:var(--parch);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+.panel-section{
+  padding:14px 16px;
+  border-bottom:1px solid var(--border);
+}
+.panel-title{
+  font-family:'Space Mono',monospace;
+  font-size:9px;color:var(--sepia);
+  letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:10px;
+}
+
+/* Fiche cellule sélectionnée */
+.cell-card{
+  background:white;border-radius:8px;
+  border:1px solid var(--border);
+  padding:14px;
+}
+.cell-card-name{
+  font-size:17px;font-weight:700;color:var(--ink);
+  margin-bottom:2px;
+}
+.cell-card-latin{
+  font-family:'Playfair Display',serif;
+  font-size:12px;font-style:italic;color:var(--sepia);
+  margin-bottom:10px;
+}
+.cell-mini-svg{
+  display:block;margin:0 auto 10px;
+}
+.cell-props{display:flex;flex-direction:column;gap:4px;}
+.prop-row{
+  display:flex;gap:6px;align-items:baseline;
+  font-size:11px;line-height:1.4;
+}
+.prop-label{
+  font-family:'Space Mono',monospace;
+  font-size:9px;color:var(--sepia);
+  letter-spacing:.5px;min-width:72px;flex-shrink:0;
+}
+.prop-val{color:var(--ink);font-weight:500;}
+
+/* Bouton identifier */
+.btn-identify{
+  width:100%;margin-top:12px;padding:10px;
+  background:var(--gold);
+  border:none;border-radius:6px;
+  font-family:'Space Grotesk',sans-serif;
+  font-weight:700;font-size:13px;
+  color:white;cursor:pointer;
+  transition:all .2s;letter-spacing:.5px;
+}
+.btn-identify:hover{background:#b07800;transform:translateY(-1px);}
+.btn-identify:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+/* Quiz choix */
+.quiz-options{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+.quiz-opt{
+  padding:9px 12px;border-radius:6px;
+  border:1px solid var(--border);
+  background:white;cursor:pointer;
+  font-size:12px;font-weight:500;
+  transition:all .15s;text-align:left;
+}
+.quiz-opt:hover{border-color:var(--gold);color:var(--gold);}
+.quiz-opt.correct{background:#eafaf1;border-color:var(--green);color:var(--green);}
+.quiz-opt.wrong{background:#fdedec;border-color:var(--red);color:var(--red);}
+.quiz-opt:disabled{pointer-events:none;}
+
+/* Feedback */
+.feedback-box{
+  padding:10px 12px;border-radius:6px;
+  margin-top:8px;font-size:12px;
+  line-height:1.5;display:none;
+}
+.feedback-box.show{display:block;}
+.feedback-box.ok{background:#eafaf1;border:1px solid var(--green);color:#1a6b3a;}
+.feedback-box.ko{background:#fdedec;border:1px solid var(--red);color:#922b21;}
+
+/* Progression */
+.progress-bar{
+  height:5px;background:var(--bg2);
+  border-radius:3px;overflow:hidden;margin-bottom:8px;
+}
+.progress-fill{
+  height:100%;background:var(--gold);
+  border-radius:3px;transition:width .4s;
+}
+.stat-row{display:flex;justify-content:space-between;font-size:11px;color:var(--sepia);}
+.stat-val{font-family:'Space Mono',monospace;font-weight:700;color:var(--ink);}
+
+/* Légende */
+.legend-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:5px;
+}
+.legend-item{
+  display:flex;align-items:center;gap:6px;
+  font-size:10px;color:var(--sepia);
+  padding:3px 5px;border-radius:4px;
+  cursor:pointer;transition:background .15s;
+}
+.legend-item:hover{background:var(--bg2);}
+.legend-dot{
+  width:12px;height:12px;border-radius:50%;
+  flex-shrink:0;border:1px solid rgba(0,0,0,.1);
+}
+
+/* ══ MODE PATHOLOGIES ══ */
+#pathologies-screen{
+  display:none;flex:1;
+  overflow-y:auto;padding:20px;
+  background:var(--bg);
+}
+.path-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:12px;max-width:900px;margin:0 auto;
+}
+.path-card{
+  background:white;border:1px solid var(--border);
+  border-radius:10px;padding:16px;
+  cursor:pointer;transition:all .2s;
+  position:relative;overflow:hidden;
+}
+.path-card::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--pc,var(--gold));
+  transform:scaleX(0);transform-origin:left;transition:transform .3s;
+}
+.path-card:hover{border-color:var(--pc,var(--gold));transform:translateY(-2px);box-shadow:0 6px 20px var(--shadow);}
+.path-card:hover::after{transform:scaleX(1);}
+.path-card.done{border-color:rgba(39,174,96,.4);}
+.path-card.done::after{transform:scaleX(1);background:var(--green);}
+.pc-cell-svg{display:block;margin:0 auto 10px;}
+.pc-name{font-weight:700;font-size:14px;color:var(--ink);margin-bottom:3px;}
+.pc-latin{font-family:'Playfair Display',serif;font-style:italic;font-size:11px;color:var(--sepia);margin-bottom:8px;}
+.pc-pathology{font-size:11px;color:#666;line-height:1.6;border-top:1px solid var(--bg2);padding-top:8px;}
+.pc-badge{
+  display:inline-block;font-family:'Space Mono',monospace;
+  font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid;
+  margin-top:6px;
+}
+
+/* ══ RÉSULTAT FINAL ══ */
+#result-screen{
+  display:none;position:fixed;inset:0;z-index:100;
+  background:rgba(240,235,220,.97);
+  flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;text-align:center;
+}
+.result-grade{
+  font-size:72px;margin-bottom:4px;
+}
+.result-title{
+  font-family:'Space Mono',monospace;
+  font-size:24px;letter-spacing:3px;color:var(--ink);
+}
+.result-score{
+  font-family:'Space Mono',monospace;
+  font-size:16px;color:var(--gold);margin-top:4px;
+}
+.result-detail{font-size:13px;color:var(--sepia);max-width:400px;line-height:1.7;}
+.btn-restart{
+  margin-top:16px;padding:12px 28px;
+  background:var(--ink);border:none;border-radius:6px;
+  color:white;font-family:'Space Grotesk',sans-serif;
+  font-weight:700;font-size:14px;cursor:pointer;
+  transition:all .2s;
+}
+.btn-restart:hover{background:#333;}
+.btn-mode{
+  padding:10px 22px;
+  background:transparent;border:1px solid var(--border);border-radius:6px;
+  color:var(--sepia);font-family:'Space Grotesk',sans-serif;
+  font-size:12px;cursor:pointer;transition:all .2s;
+}
+.btn-mode:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ══ ANIMATIONS ══ */
+@keyframes cellAppear{from{opacity:0;transform:scale(.5);}to{opacity:1;transform:scale(1);}}
+@keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-4px);}60%{transform:translateX(4px);}}
+.shake{animation:shake .3s ease;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PHARMATLAS <span>// MICROSCOPE VIRTUEL · DFGSP2</span></div>
+  <div class="header-tabs">
+    <button class="htab active" onclick="showTab('frottis')">🔬 Frottis normal</button>
+    <button class="htab" onclick="showTab('pathologies')">⚠ Hématies pathologiques</button>
+  </div>
+  <div class="score-badge">
+    <span class="lives-display" id="lives-disp">❤❤❤❤❤</span>
+    &nbsp;|&nbsp; ⚜ <span id="score-disp">0</span> pts
+  </div>
+</header>
+
+<div id="main">
+
+  <!-- ══ LAME DE FROTTIS ══ -->
+  <div id="slide-panel">
+    <div id="scope-vignette"></div>
+    <div id="glass-slide">
+      <svg id="cells-canvas" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="reticule"></div>
+    </div>
+    <div id="zoom-indicator">Grossissement ×400 — Coloration May-Grünwald Giemsa</div>
+  </div>
+
+  <!-- ══ PANNEAU DROIT ══ -->
+  <div id="info-panel">
+
+    <!-- Stats -->
+    <div class="panel-section">
+      <div class="panel-title">// Progression</div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+      <div class="stat-row">
+        <span>Questions <span class="stat-val" id="q-counter">0/10</span></span>
+        <span>Correct <span class="stat-val" id="q-correct">0</span></span>
+        <span>Combo <span class="stat-val" id="q-combo">×1</span></span>
+      </div>
+    </div>
+
+    <!-- Cellule sélectionnée -->
+    <div class="panel-section" id="cell-info-section" style="flex:1;overflow-y:auto;">
+      <div class="panel-title">// Cellule sélectionnée</div>
+
+      <!-- État initial -->
+      <div id="state-idle">
+        <div style="text-align:center;padding:30px 0;color:var(--sepia);font-size:13px;font-style:italic;">
+          Cliquez sur une cellule pour l'identifier
+        </div>
+        <!-- Légende -->
+        <div class="panel-title" style="margin-top:8px">// Légende MGG</div>
+        <div class="legend-grid" id="legend-grid"></div>
+      </div>
+
+      <!-- Cellule cliquée -->
+      <div id="state-selected" style="display:none;">
+        <div class="cell-card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <svg class="cell-mini-svg" id="mini-svg" width="60" height="60" viewBox="-30 -30 60 60"></svg>
+            <div>
+              <div class="cell-card-name" id="cc-name">?</div>
+              <div class="cell-card-latin" id="cc-latin">Cellule inconnue</div>
+            </div>
+          </div>
+          <div class="cell-props" id="cc-props"></div>
+        </div>
+
+        <!-- Quiz identification -->
+        <div id="quiz-section" style="margin-top:12px;">
+          <div class="panel-title">// Identifier cette cellule</div>
+          <div class="quiz-options" id="quiz-opts"></div>
+          <div class="feedback-box" id="feedback-box"></div>
+          <button class="btn-identify" id="btn-next" onclick="nextQuestion()" style="display:none;">
+            Cellule suivante →
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- info-panel -->
+
+</div><!-- main -->
+
+<!-- ══ MODE PATHOLOGIES ══ -->
+<div id="pathologies-screen"></div>
+
+<!-- ══ RÉSULTAT ══ -->
+<div id="result-screen">
+  <div class="result-grade" id="res-grade">🏆</div>
+  <div class="result-title" id="res-title">EXCELLENT</div>
+  <div class="result-score" id="res-score">150 points</div>
+  <div class="result-detail" id="res-detail"></div>
+  <button class="btn-restart" onclick="restartGame()">↺ Recommencer</button>
+  <button class="btn-mode" onclick="showTab('pathologies')">Voir les hématies pathologiques</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  DONNÉES DU COURS — DFGSP2 Hématologie
+//  Source : Cours2A.txt, tableau lignée 6026-6031
+// ══════════════════════════════════════════════════════════════
+
+const CELLS = [
+  {
+    id:'hematie',
+    name:'Hématie',
+    latin:'Érythrocyte',
+    abbr:'GR',
+    color:'#e8a080',
+    colorDark:'#c06040',
+    size:7,       // µm
+    relative:1.0, // taille relative pour dessin
+    lifespan:'120 jours',
+    fonction:'Transport O₂ (hémoglobine)',
+    noyau:'Absent (anucléée)',
+    cyto:'Rose pâle / saumoné',
+    granulations:'Aucune',
+    nc:'—',
+    shape:'biconcave',
+    normal:{ F:'4,2–5,2 ×10¹²/L', H:'4,5–5,7 ×10¹²/L' },
+    description:'Disque biconcave sans noyau, riche en hémoglobine. Durée de vie 120 jours.',
+    drawFn: drawHematie,
+    weight:35,  // fréquence relative sur le frottis
+  },
+  {
+    id:'plaquette',
+    name:'Plaquette',
+    latin:'Thrombocyte',
+    abbr:'PLT',
+    color:'#d4a0c8',
+    colorDark:'#9060a0',
+    size:2.5,
+    relative:0.36,
+    lifespan:'8–10 jours',
+    fonction:'Hémostase (clou plaquettaire, coagulation)',
+    noyau:'Absent (anucléée)',
+    cyto:'Acidophile : rose',
+    granulations:'Granules α (hémostase)',
+    nc:'—',
+    shape:'fragment',
+    normal:'150–450 ×10⁹/L',
+    description:'Fragment de mégacaryocyte, 2–3 µm. Granules α et δ impliqués dans la coagulation.',
+    drawFn: drawPlaquette,
+    weight:20,
+  },
+  {
+    id:'pnn',
+    name:'Polynucléaire Neutrophile',
+    latin:'PNN — Granulocyte neutrophile',
+    abbr:'PNN',
+    color:'#f5e8c0',
+    colorDark:'#7a5090',
+    size:13,
+    relative:1.85,
+    lifespan:'6–10 heures (sang)',
+    fonction:'Phagocytose bactérienne — 1ère ligne de défense',
+    noyau:'3 à 5 lobes, chromatine dense',
+    cyto:'Beige, ratio N/C = 0,3',
+    granulations:'Nombreuses, fines, violet/marron (neutrophiles)',
+    nc:'0,3',
+    shape:'lobed',
+    normal:'1,8–7,5 ×10⁹/L (55–70%)',
+    description:'Granulocyte le plus abondant. Noyau plurilobé (3–5 lobes). Granulations neutrophiles fines violet/marron. N/C = 0,3.',
+    drawFn: drawPNN,
+    weight:14,
+  },
+  {
+    id:'pne',
+    name:'Polynucléaire Éosinophile',
+    latin:'PNE — Granulocyte éosinophile',
+    abbr:'PNE',
+    color:'#f5e8c0',
+    colorDark:'#e86820',
+    size:13,
+    relative:1.85,
+    lifespan:'8–12 jours (tissu)',
+    fonction:'Défense anti-parasitaire, réactions allergiques',
+    noyau:'2 à 3 lobes, chromatine dense',
+    cyto:'Beige, ratio N/C = 0,3',
+    granulations:'"Billes" orangé à chamois — très caractéristiques',
+    nc:'0,3',
+    shape:'bilobed',
+    normal:'0,1–0,4 ×10⁹/L (1–4%)',
+    description:'Noyau bilobé. Grandes granulations orangées caractéristiques en "billes de loto". Impliqué dans les allergies et parasitoses.',
+    drawFn: drawPNE,
+    weight:4,
+  },
+  {
+    id:'pnb',
+    name:'Polynucléaire Basophile',
+    latin:'PNB — Granulocyte basophile',
+    abbr:'PNB',
+    color:'#e0dce8',
+    colorDark:'#2a3080',
+    size:13,
+    relative:1.85,
+    lifespan:'Quelques heures–jours',
+    fonction:'Réactions allergiques IgE, libération histamine',
+    noyau:'Lobes peu marqués, chromatine dense peu visible',
+    cyto:'À peine teintée, ratio N/C = 0,5',
+    granulations:'"Taches" irrégulières bleu foncé/noir (masquent le noyau)',
+    nc:'0,5',
+    shape:'lobedBlue',
+    normal:'0–0,1 ×10⁹/L (<1%) — le plus rare',
+    description:'Rare (<1%). Grandes granulations bleu-noir/violet qui masquent parfois le noyau. Lobes peu distincts. Analogue du mastocyte tissulaire.',
+    drawFn: drawPNB,
+    weight:2,
+  },
+  {
+    id:'lymph_petit',
+    name:'Petit Lymphocyte',
+    latin:'Lymphocyte T ou B (petit)',
+    abbr:'LY',
+    color:'#c0c8e8',
+    colorDark:'#4060c0',
+    size:9,
+    relative:1.28,
+    lifespan:'Années (mémoire)',
+    fonction:'Immunité adaptative (T : cellulaire, B : humorale)',
+    noyau:'Rond/ovalaire excentré, chromatine très dense violet foncé',
+    cyto:'Très réduit, bleu foncé, ratio N/C = 0,9',
+    granulations:'Absence',
+    nc:'0,9',
+    shape:'lymphSmall',
+    normal:'1,5–4,0 ×10⁹/L (20–40%)',
+    description:'Noyau très grand et sombre (N/C = 0,9). Cytoplasme réduit bleu foncé. Chromatine en blocs condensés violet foncé. Rôle central dans l\'immunité.',
+    drawFn: drawLymphPetit,
+    weight:10,
+  },
+  {
+    id:'lymph_grand',
+    name:'Grand Lymphocyte',
+    latin:'Grand lymphocyte granuleux (LGL)',
+    abbr:'LGL',
+    color:'#d8e0f0',
+    colorDark:'#3050a0',
+    size:12,
+    relative:1.71,
+    lifespan:'Semaines à mois',
+    fonction:'NK cells — cytotoxicité naturelle',
+    noyau:'Régulier, ovalaire ou quadrangulaire, aspect laqué',
+    cyto:'Bleuté ou hyalin, ratio N/C = 0,7',
+    granulations:'Parfois 10–15 granulations rouge vif (azurophiles)',
+    nc:'0,7',
+    shape:'lymphLarge',
+    normal:'Sous-population des lymphocytes',
+    description:'Plus grand (10–15 µm). Cytoplasme plus abondant bleuté. Peut contenir des granulations rouge vif azurophiles. Noyau à chromatine laqueuse.',
+    drawFn: drawLymphGrand,
+    weight:6,
+  },
+  {
+    id:'monocyte',
+    name:'Monocyte',
+    latin:'Monocyte — précurseur macrophage',
+    abbr:'MO',
+    color:'#d8d0c0',
+    colorDark:'#806040',
+    size:20,
+    relative:2.85,
+    lifespan:'1–3 jours (sang), années (macrophage)',
+    fonction:'Phagocytose, présentation antigène, précurseur macrophage',
+    noyau:'Irrégulier, réniforme ou "en fœtus", aspect martelé spongieux',
+    cyto:'Gris cendré, bords irréguliers, ratio N/C = 0,5',
+    granulations:'Très fines rouges, à peine visibles',
+    nc:'0,5',
+    shape:'mono',
+    normal:'0,2–1,0 ×10⁹/L (4–8%)',
+    description:'La plus grande cellule sanguine (20–25 µm). Cytoplasme gris cendré aux bords irréguliers. Noyau réniforme ou en U, chromatine martelée "spongieuse".',
+    drawFn: drawMonocyte,
+    weight:5,
+  },
+];
+
+// Hématies pathologiques — données directement du cours
+const PATHO_HEMATIES = [
+  {
+    id:'drepanocyte',
+    name:'Drépanocyte',
+    latin:'Sickle cell — hématie falciforme',
+    color:'#a04010',
+    pathology:'Drépanocytose (hémoglobinopathie)',
+    description:'Forme allongée en faucille ou croissant avec deux spicules bipolaires (extrémités pointues effilées). Spécifique de la drépanocytose.',
+    badge:'Hémoglobinopathie',
+    badgeColor:'#e74c3c',
+    drawFn: drawDrepanocyte,
+    pc:'#e74c3c',
+  },
+  {
+    id:'cellule_cible',
+    name:'Cellule cible',
+    latin:'Target cell — codocyte',
+    color:'#d4905a',
+    pathology:'Hémoglobinoses C/thalassémie, carence martiale',
+    description:'Aspect de cible ou cocarde : hémoglobine répartie en périphérie et au centre. Observé dans les hémoglobinopathies (Hb C, thalassémie).',
+    badge:'Hémoglobinopathie',
+    badgeColor:'#e67e22',
+    drawFn: drawCelluleCible,
+    pc:'#e67e22',
+  },
+  {
+    id:'schizocyte',
+    name:'Schizocyte',
+    latin:'Fragment d\'hématie — hématie en casque',
+    color:'#cc3030',
+    pathology:'Anémies hémolytiques mécaniques (CIVD, SHU, MAT)',
+    description:'Fragment irrégulier d\'hématie avec au moins deux extrémités pointues. Parfois en forme de casque. Signe d\'hémolyse mécanique.',
+    badge:'Hémolyse mécanique',
+    badgeColor:'#c0392b',
+    drawFn: drawSchizocyte,
+    pc:'#c0392b',
+  },
+  {
+    id:'acanthocyte',
+    name:'Acanthocyte',
+    latin:'Spur cell — hématie spiculée irrégulière',
+    color:'#8b6914',
+    pathology:'Cirrhoses éthyliques sévères, abétalipoprotéinémie',
+    description:'Spicules irréguliers (3–12) de taille et répartition inégales, souvent terminés par une extrémité arrondie. Typique des cirrhoses éthyliques.',
+    badge:'Hépatopathie sévère',
+    badgeColor:'#8b6914',
+    drawFn: drawAcanthocyte,
+    pc:'#8b6914',
+  },
+  {
+    id:'echinocyte',
+    name:'Échinocyte',
+    latin:'Burr cell — cellule crénelée',
+    color:'#7a5a2a',
+    pathology:'Souvent artefact (frottis mal séché), urémie',
+    description:'Spicules fins et régulièrement répartis sur toute la surface (30 spicules). Souvent artefactuel. Peut s\'observer dans l\'urémie.',
+    badge:'Artefact / Urémie',
+    badgeColor:'#7f8c8d',
+    drawFn: drawEchinocyte,
+    pc:'#7f8c8d',
+  },
+  {
+    id:'elliptocyte',
+    name:'Elliptocyte',
+    latin:'Ovalocyte — hématie ovale',
+    color:'#c06090',
+    pathology:'Elliptocytose héréditaire, anémies ferriprives',
+    description:'Hématie allongée, ovale ou ellipsoïde. Extrémités arrondies sans spicules (≠ drépanocyte). Elliptocytose héréditaire ou carence martiale.',
+    badge:'Membranopahtie',
+    badgeColor:'#8e44ad',
+    drawFn: drawElliptocyte,
+    pc:'#8e44ad',
+  },
+  {
+    id:'dacryocyte',
+    name:'Dacryocyte',
+    latin:'Hématie en larme — teardrop cell',
+    color:'#2070a0',
+    pathology:'Fibrose médullaire, splénomégalie myéloïde',
+    description:'Forme de poire : une extrémité arrondie, l\'autre allongée et effilée. Évocateur de fibrose médullaire et de splénomégalie myéloïde.',
+    badge:'Fibrose médullaire',
+    badgeColor:'#2980b9',
+    drawFn: drawDacryocyte,
+    pc:'#2980b9',
+  },
+  {
+    id:'annulocyte',
+    name:'Annulocyte',
+    latin:'Annulocyte — hématie hypochrome',
+    color:'#b8a080',
+    pathology:'Anémie ferriprive sévère (hypochromie)',
+    description:'Centre clair anormalement grand. Correspond à une hypochromie marquée. Surtout observé dans les grandes anémies ferriprives.',
+    badge:'Anémie ferriprive',
+    badgeColor:'#c8860a',
+    drawFn: drawAnnulocyte,
+    pc:'#c8860a',
+  },
+];
+
+// ══════════════════════════════════════════════════════════════
+//  FONCTIONS DE DESSIN SVG
+// ══════════════════════════════════════════════════════════════
+
+function svgEl(tag, attrs){
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for(const [k,v] of Object.entries(attrs)) el.setAttribute(k,v);
+  return el;
+}
+
+function drawHematie(g, r=20){
+  // Disque biconcave — rose saumoné avec zone centrale plus claire
+  g.appendChild(svgEl('ellipse',{cx:0,cy:0,rx:r,ry:r*.85,fill:'#e8a080',opacity:.9}));
+  g.appendChild(svgEl('ellipse',{cx:0,cy:0,rx:r*.55,ry:r*.45,fill:'#f0c0a0',opacity:.6}));
+  g.appendChild(svgEl('ellipse',{cx:0,cy:0,rx:r,ry:r*.85,fill:'none',stroke:'#c07050',
+    'stroke-width':.8,opacity:.5}));
+}
+
+function drawPlaquette(g, r=8){
+  // Fragment irrégulier violacé
+  const path = `M${r*.3},${-r*.7} L${r*.9},${-r*.2} L${r*.6},${r*.6}
+    L${-r*.1},${r*.8} L${-r*.8},${r*.3} L${-r*.7},${-r*.5} Z`;
+  g.appendChild(svgEl('path',{d:path,fill:'#d4a0c8',opacity:.85}));
+  // Granules
+  for(let i=0;i<4;i++){
+    const gx=(Math.random()-.5)*r*.8, gy=(Math.random()-.5)*r*.6;
+    g.appendChild(svgEl('circle',{cx:gx,cy:gy,r:r*.12,fill:'#8060a0',opacity:.7}));
+  }
+}
+
+function drawPNN(g, r=24){
+  // Cytoplasme beige
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r,fill:'#f5e8c0',opacity:.9}));
+  // Noyau polylobé (3-4 lobes connectés)
+  const lobes=[[-8,-6],[0,-9],[8,-5],[5,5],[-5,4]];
+  const noyauG = document.createElementNS('http://www.w3.org/2000/svg','g');
+  lobes.forEach(([x,y],i)=>{
+    noyauG.appendChild(svgEl('circle',{cx:x,cy:y,r:6,fill:'#7a5090',opacity:.85}));
+    if(i>0){
+      const [px,py]=lobes[i-1];
+      noyauG.appendChild(svgEl('line',{x1:px,y1:py,x2:x,y2:y,stroke:'#7a5090','stroke-width':3,opacity:.7}));
+    }
+  });
+  g.appendChild(noyauG);
+  // Granulations fines
+  for(let i=0;i<12;i++){
+    const a=Math.random()*Math.PI*2, dist=Math.random()*r*.7+r*.1;
+    const gx=Math.cos(a)*dist, gy=Math.sin(a)*dist;
+    g.appendChild(svgEl('circle',{cx:gx,cy:gy,r:1.2,fill:'#9070a0',opacity:.5}));
+  }
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r,fill:'none',stroke:'#c0a880','stroke-width':.5}));
+}
+
+function drawPNE(g, r=24){
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r,fill:'#f5e8c0',opacity:.9}));
+  // 2 lobes du noyau
+  g.appendChild(svgEl('circle',{cx:-7,cy:-2,r:7,fill:'#c84820',opacity:.8}));
+  g.appendChild(svgEl('circle',{cx:7,cy:-2,r:7,fill:'#c84820',opacity:.8}));
+  g.appendChild(svgEl('line',{x1:-2,y1:-2,x2:2,y2:-2,stroke:'#c84820','stroke-width':3,opacity:.7}));
+  // Granulations orangées caractéristiques
+  const positions=[[-10,6],[-6,9],[0,11],[6,9],[10,6],[12,0],[10,-8],[0,-12],[-10,-8],[-13,0],
+    [-4,4],[4,4],[0,4],[-7,2],[7,2]];
+  positions.forEach(([x,y])=>{
+    g.appendChild(svgEl('circle',{cx:x,cy:y,r:2.8,fill:'#e86820',opacity:.9,stroke:'#a84010','stroke-width':.4}));
+  });
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r,fill:'none',stroke:'#c0a880','stroke-width':.5}));
+}
+
+function drawPNB(g, r=24){
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r,fill:'#e8e0f0',opacity:.6}));
+  // Grandes granulations bleu foncé/noir irrégulières
+  const granPos=[[-8,-8],[0,-10],[8,-6],[10,2],[6,9],[0,11],[-7,8],[-11,2],
+    [-3,-2],[4,-3],[1,4],[-5,4],[8,-1],[-2,8]];
+  granPos.forEach(([x,y])=>{
+    const s=2.5+Math.random()*2.5;
+    g.appendChild(svgEl('circle',{cx:x,cy:y,r:s,fill:'#2a3080',opacity:.9}));
+  });
+  // Noyau peu visible sous les granulations
+  g.appendChild(svgEl('ellipse',{cx:-2,cy:0,rx:8,ry:6,fill:'#4040a0',opacity:.35}));
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r,fill:'none',stroke:'#8080b0','stroke-width':.5}));
+}
+
+function drawLymphPetit(g, r=16){
+  // Cellule petite, noyau énorme
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r,fill:'#c0c8e8',opacity:.7}));
+  // Noyau très grand et dense (N/C = 0.9)
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r*.88,fill:'#4060c0',opacity:.9}));
+  // Hétérochromatine dense
+  g.appendChild(svgEl('circle',{cx:-3,cy:-3,r:r*.4,fill:'#2040a0',opacity:.5}));
+  g.appendChild(svgEl('circle',{cx:4,cy:2,r:r*.3,fill:'#2040a0',opacity:.4}));
+}
+
+function drawLymphGrand(g, r=20){
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r,fill:'#d8e0f0',opacity:.8}));
+  // Noyau plus petit (N/C = 0.7), aspect laqué
+  g.appendChild(svgEl('ellipse',{cx:-2,cy:-1,rx:r*.65,ry:r*.6,fill:'#3050a0',opacity:.8}));
+  g.appendChild(svgEl('ellipse',{cx:-2,cy:-1,rx:r*.65,ry:r*.6,fill:'none',stroke:'#6080e0','stroke-width':.8}));
+  // Quelques granulations azurophiles rouge vif
+  for(let i=0;i<5;i++){
+    const a=Math.random()*Math.PI*2, d=Math.random()*(r-r*.7)+r*.75;
+    g.appendChild(svgEl('circle',{cx:Math.cos(a)*d,cy:Math.sin(a)*d,r:1.8,fill:'#e02020',opacity:.8}));
+  }
+}
+
+function drawMonocyte(g, r=28){
+  // Cytoplasme gris cendré irrégulier
+  const path=`M${-r*.3},${-r} L${r*.5},${-r*.7} L${r},${-r*.1} L${r*.8},${r*.6}
+    L${r*.2},${r} L${-r*.5},${r*.8} L${-r},${r*.3} L${-r*.9},${-r*.4} Z`;
+  g.appendChild(svgEl('path',{d:path,fill:'#d8d0c0',opacity:.85}));
+  // Noyau réniforme / en fœtus
+  const nPath=`M${-r*.5},${-r*.1} Q${-r*.2},${-r*.5} ${r*.1},${-r*.4}
+    Q${r*.5},${-r*.3} ${r*.5},${r*.1} Q${r*.4},${r*.4} ${r*.1},${r*.45}
+    Q${-r*.2},${r*.3} ${-r*.5},${r*.1} Z`;
+  g.appendChild(svgEl('path',{d:nPath,fill:'#806040',opacity:.8}));
+  // Texture martelée du noyau
+  for(let i=0;i<6;i++){
+    const nx=(Math.random()-.5)*r*.6, ny=(Math.random()-.4)*r*.5;
+    g.appendChild(svgEl('circle',{cx:nx,cy:ny,r:2,fill:'#604020',opacity:.3}));
+  }
+  // Granulations très fines rouges
+  for(let i=0;i<8;i++){
+    const a=Math.random()*Math.PI*2, d=Math.random()*r*.5+r*.4;
+    g.appendChild(svgEl('circle',{cx:Math.cos(a)*d,cy:Math.sin(a)*d,r:.9,fill:'#a02020',opacity:.4}));
+  }
+}
+
+// ── Pathologies ──
+
+function drawDrepanocyte(g, r=20){
+  // Faucille
+  const path=`M${-r},0 Q${-r*.5},${-r*1.2} ${r*.3},${-r*.4}
+    Q${r},${0} ${r*.3},${r*.4} Q${-r*.3},${r*.8} ${-r*.8},${r*.3}
+    Q${-r*1.2},${r*.15} ${-r},0 Z`;
+  g.appendChild(svgEl('path',{d:path,fill:'#a04010',opacity:.9}));
+  g.appendChild(svgEl('path',{d:path,fill:'none',stroke:'#7a2a00','stroke-width':1}));
+}
+
+function drawCelluleCible(g, r=20){
+  // Anneau périphérique
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r,fill:'#e8c090',opacity:.9}));
+  // Zone claire intermédiaire
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r*.7,fill:'#f8ecd8',opacity:.95}));
+  // Cible centrale
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r*.35,fill:'#d4905a',opacity:.9}));
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r,fill:'none',stroke:'#c07840','stroke-width':.8}));
+}
+
+function drawSchizocyte(g, r=14){
+  // Fragment irrégulier "en casque"
+  const path=`M${-r*.8},${r*.4} L${-r},${-r*.3} L${-r*.5},${-r*.9}
+    L${r*.3},${-r*.8} L${r},${0} L${r*.5},${r*.6} Z`;
+  g.appendChild(svgEl('path',{d:path,fill:'#cc3030',opacity:.85}));
+  g.appendChild(svgEl('path',{d:path,fill:'none',stroke:'#991010','stroke-width':.8}));
+  // Reflet
+  g.appendChild(svgEl('path',{d:`M${-r*.6},${-r*.1} L${-r*.3},${-r*.6} L${r*.1},${-r*.5}`,
+    fill:'none',stroke:'rgba(255,200,200,.4)','stroke-width':1.5}));
+}
+
+function drawAcanthocyte(g, r=20){
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r*.75,fill:'#c8a060',opacity:.85}));
+  // Spicules irréguliers
+  const n=8;
+  for(let i=0;i<n;i++){
+    const a=(i/n+Math.random()*.15)*Math.PI*2;
+    const len=r*(.7+Math.random()*.5);
+    const tipR=r*(.04+Math.random()*.04);
+    const ex=Math.cos(a)*len, ey=Math.sin(a)*len;
+    g.appendChild(svgEl('line',{x1:Math.cos(a)*r*.6,y1:Math.sin(a)*r*.6,
+      x2:ex,y2:ey,stroke:'#8b6914','stroke-width':2,opacity:.85}));
+    g.appendChild(svgEl('circle',{cx:ex,cy:ey,r:tipR*30,fill:'#8b6914',opacity:.7}));
+  }
+}
+
+function drawEchinocyte(g, r=20){
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r*.75,fill:'#c8a878',opacity:.85}));
+  // Spicules RÉGULIERS (contrairement à l'acanthocyte)
+  const n=16;
+  for(let i=0;i<n;i++){
+    const a=(i/n)*Math.PI*2;
+    const len=r;
+    g.appendChild(svgEl('line',{x1:Math.cos(a)*r*.65,y1:Math.sin(a)*r*.65,
+      x2:Math.cos(a)*len,y2:Math.sin(a)*len,stroke:'#907050','stroke-width':1.5,opacity:.7}));
+  }
+}
+
+function drawElliptocyte(g, r=20){
+  g.appendChild(svgEl('ellipse',{cx:0,cy:0,rx:r,ry:r*.45,fill:'#e090b0',opacity:.85}));
+  // Zone centrale claire
+  g.appendChild(svgEl('ellipse',{cx:0,cy:0,rx:r*.55,ry:r*.2,fill:'#f0c0d0',opacity:.6}));
+  g.appendChild(svgEl('ellipse',{cx:0,cy:0,rx:r,ry:r*.45,fill:'none',stroke:'#a06080','stroke-width':.8}));
+}
+
+function drawDacryocyte(g, r=20){
+  // Forme poire
+  const path=`M0,${-r*.9} Q${r*.6},${-r*.3} ${r*.2},${r*.3}
+    Q0,${r} ${-r*.2},${r*.3} Q${-r*.6},${-r*.3} 0,${-r*.9} Z`;
+  g.appendChild(svgEl('path',{d:path,fill:'#6090c0',opacity:.85}));
+  g.appendChild(svgEl('ellipse',{cx:0,cy:r*.1,rx:r*.3,ry:r*.25,fill:'#90b0d8',opacity:.5}));
+  g.appendChild(svgEl('path',{d:path,fill:'none',stroke:'#407090','stroke-width':.8}));
+}
+
+function drawAnnulocyte(g, r=20){
+  // Anneau fin — centre très clair (hypochromie)
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r,fill:'#e8c8a0',opacity:.7}));
+  // Grand centre clair
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r*.75,fill:'#f9f5ec',opacity:.95}));
+  // Mince couronne d'hémoglobine
+  g.appendChild(svgEl('circle',{cx:0,cy:0,r:r,fill:'none',stroke:'#c09060','stroke-width':3}));
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ÉTAT DU JEU
+// ══════════════════════════════════════════════════════════════
+let GAME = {
+  score: 0,
+  lives: 5,
+  combo: 1,
+  qTotal: 10,
+  qDone: 0,
+  qCorrect: 0,
+  selectedCell: null,
+  answered: false,
+  cells: [],         // cellules placées sur la lame
+  mode: 'frottis',
+};
+
+// ══════════════════════════════════════════════════════════════
+//  GÉNÉRATION DE LA LAME
+// ══════════════════════════════════════════════════════════════
+function generateSlide(){
+  const svg = document.getElementById('cells-canvas');
+  svg.innerHTML = '';
+  GAME.cells = [];
+
+  const W = svg.clientWidth || 900;
+  const H = svg.clientHeight || 580;
+
+  // Pool pondéré selon fréquence physiologique
+  const pool = [];
+  CELLS.forEach(c => { for(let i=0;i<c.weight;i++) pool.push(c); });
+
+  const N = 80;
+  const placed = [];
+
+  for(let attempt=0; attempt<N*10 && placed.length<N; attempt++){
+    const ct = pool[Math.floor(Math.random()*pool.length)];
+    const r = ct.relative * 15;
+    const x = r + 8 + Math.random()*(W - 2*r - 16);
+    const y = r + 8 + Math.random()*(H - 2*r - 16);
+
+    // Anti-chevauchement
+    const overlap = placed.some(p => {
+      const dx=p.x-x, dy=p.y-y;
+      return Math.sqrt(dx*dx+dy*dy) < (p.r + r + 4);
+    });
+    if(overlap) continue;
+
+    const idx = placed.length;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('transform', `translate(${x},${y})`);
+    g.setAttribute('class', 'cell-group');
+    g.style.cursor = 'pointer';
+
+    // Dessiner la cellule
+    ct.drawFn(g, r);
+
+    // Zone de clic OPAQUE transparente couvrant toute la cellule
+    const hit = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    hit.setAttribute('cx', 0);
+    hit.setAttribute('cy', 0);
+    hit.setAttribute('r', r + 4);
+    hit.setAttribute('fill', 'rgba(0,0,0,0)');
+    hit.style.cursor = 'pointer';
+    g.appendChild(hit);
+
+    // Clic direct sur la cellule
+    g.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if(GAME.answered && GAME.qDone < GAME.qTotal) return;
+      if(GAME.qDone >= GAME.qTotal) return;
+      onCellClick(idx);
+    });
+
+    // Hover : ring SVG interne
+    g.addEventListener('mouseenter', () => {
+      // Ajouter un ring si pas déjà présent
+      if(!g.querySelector('.sel-ring')){
+        const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        ring.setAttribute('cx', 0);
+        ring.setAttribute('cy', 0);
+        ring.setAttribute('r', r + 5);
+        ring.setAttribute('fill', 'none');
+        ring.setAttribute('stroke', 'rgba(0,220,100,0.7)');
+        ring.setAttribute('stroke-width', 2);
+        ring.setAttribute('class', 'sel-ring');
+        ring.style.pointerEvents = 'none';
+        g.appendChild(ring);
+      }
+    });
+    g.addEventListener('mouseleave', () => {
+      const ring = g.querySelector('.sel-ring');
+      if(ring) g.removeChild(ring);
+    });
+
+    svg.appendChild(g);
+    placed.push({ x, y, r, cellType: ct, groupEl: g, id: idx });
+  }
+
+  GAME.cells = placed;
+}
+
+function onCellClick(idx){
+  const cell = GAME.cells[idx];
+  if(!cell) return;
+  GAME.selectedCell = cell;
+  GAME.answered = false;
+  showCellInfo(cell.cellType);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  QUIZ
+// ══════════════════════════════════════════════════════════════
+function showCellInfo(ct){
+  document.getElementById('state-idle').style.display = 'none';
+  document.getElementById('state-selected').style.display = 'block';
+  document.getElementById('btn-next').style.display = 'none';
+
+  // Mini SVG
+  const miniSvg = document.getElementById('mini-svg');
+  miniSvg.innerHTML = '';
+  const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+  ct.drawFn(g, 22);
+  miniSvg.appendChild(g);
+
+  // Nom masqué pour le quiz
+  document.getElementById('cc-name').textContent = '?';
+  document.getElementById('cc-latin').textContent = 'Identifiez cette cellule';
+
+  // Propriétés visibles (indices)
+  const props = document.getElementById('cc-props');
+  props.innerHTML = `
+    <div class="prop-row"><span class="prop-label">TAILLE</span><span class="prop-val">${ct.size} µm</span></div>
+    <div class="prop-row"><span class="prop-label">CYTOPLASME</span><span class="prop-val">${ct.cyto}</span></div>
+    <div class="prop-row"><span class="prop-label">GRANULATIONS</span><span class="prop-val">${ct.granulations}</span></div>
+    <div class="prop-row"><span class="prop-label">NOYAU</span><span class="prop-val">${ct.noyau}</span></div>
+    ${ct.nc !== '—' ? `<div class="prop-row"><span class="prop-label">RATIO N/C</span><span class="prop-val">${ct.nc}</span></div>` : ''}
+  `;
+
+  // Générer les options (3 distracteurs + bonne réponse)
+  const opts = generateOptions(ct);
+  const quizOpts = document.getElementById('quiz-opts');
+  quizOpts.innerHTML = '';
+  opts.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-opt';
+    btn.textContent = opt.name;
+    btn.onclick = () => answer(btn, opt.id === ct.id, ct);
+    quizOpts.appendChild(btn);
+  });
+
+  document.getElementById('feedback-box').className = 'feedback-box';
+  document.getElementById('feedback-box').innerHTML = '';
+}
+
+function generateOptions(correct){
+  const distractors = CELLS.filter(c => c.id !== correct.id)
+    .sort(() => Math.random() - .5)
+    .slice(0, 3);
+  return [...distractors, correct].sort(() => Math.random() - .5);
+}
+
+function answer(btn, isCorrect, ct){
+  if(GAME.answered) return;
+  GAME.answered = true;
+  GAME.qDone++;
+
+  // Colorer tous les boutons
+  document.querySelectorAll('.quiz-opt').forEach(b => {
+    b.disabled = true;
+    if(b.textContent === ct.name){
+      b.classList.add('correct');
+    } else if(b === btn && !isCorrect){
+      b.classList.add('wrong');
+    }
+  });
+
+  const fb = document.getElementById('feedback-box');
+
+  if(isCorrect){
+    GAME.qCorrect++;
+    GAME.combo++;
+    const pts = 10 * Math.min(GAME.combo, 5);
+    GAME.score += pts;
+
+    // Révéler le nom
+    document.getElementById('cc-name').textContent = ct.name;
+    document.getElementById('cc-latin').textContent = ct.latin;
+
+    fb.className = 'feedback-box ok show';
+    fb.innerHTML = `✓ Exact ! +${pts} pts (combo ×${Math.min(GAME.combo-1,5) || 1})<br>
+      <small>${ct.description}</small>`;
+  } else {
+    GAME.combo = 1;
+    GAME.lives--;
+
+    document.getElementById('cc-name').textContent = ct.name;
+    document.getElementById('cc-latin').textContent = ct.latin;
+
+    fb.className = 'feedback-box ko show';
+    fb.innerHTML = `✗ Incorrect. C'est : <strong>${ct.name}</strong><br>
+      <small>${ct.description.slice(0,100)}…</small>`;
+
+    if(GAME.lives <= 0){ setTimeout(endGame, 1000); return; }
+  }
+
+  updateHUD();
+
+  if(GAME.qDone >= GAME.qTotal){
+    setTimeout(endGame, 1400);
+    return;
+  }
+
+  document.getElementById('btn-next').style.display = 'block';
+}
+
+function nextQuestion(){
+  const idx = Math.floor(Math.random()*GAME.cells.length);
+  GAME.answered = false;
+  document.getElementById('btn-next').style.display = 'none';
+  onCellClick(idx);
+}
+
+function updateHUD(){
+  document.getElementById('score-disp').textContent = GAME.score;
+  document.getElementById('lives-disp').textContent =
+    '❤'.repeat(Math.max(0,GAME.lives)) + '🖤'.repeat(Math.max(0,5-GAME.lives));
+  document.getElementById('q-counter').textContent = `${GAME.qDone}/${GAME.qTotal}`;
+  document.getElementById('q-correct').textContent = GAME.qCorrect;
+  document.getElementById('q-combo').textContent = `×${Math.min(GAME.combo,5)}`;
+  const pct = (GAME.qDone / GAME.qTotal * 100).toFixed(0);
+  document.getElementById('prog-fill').style.width = pct + '%';
+}
+
+function endGame(){
+  const pct = GAME.qCorrect / GAME.qDone;
+  let grade, title, detail;
+  if(pct >= .9){       grade='🏆'; title='EXCELLENT'; }
+  else if(pct >= .7){  grade='⭐'; title='TRÈS BIEN'; }
+  else if(pct >= .5){  grade='✓';  title='PASSABLE'; }
+  else{                grade='📖'; title='À REVOIR'; }
+
+  detail = `${GAME.qCorrect} bonnes réponses sur ${GAME.qDone} — ${Math.round(pct*100)}%\n` +
+    `Score : ${GAME.score} points\n\n` +
+    `Méthode : les 5 critères MGG — taille, cytoplasme, granulations, noyau, ratio N/C.`;
+
+  document.getElementById('res-grade').textContent = grade;
+  document.getElementById('res-title').textContent = title;
+  document.getElementById('res-score').textContent = `${GAME.score} points — ${GAME.qCorrect}/${GAME.qDone} correct`;
+  document.getElementById('res-detail').textContent = detail;
+  document.getElementById('result-screen').style.display = 'flex';
+}
+
+function restartGame(){
+  document.getElementById('result-screen').style.display = 'none';
+  GAME.score=0; GAME.lives=5; GAME.combo=1;
+  GAME.qDone=0; GAME.qCorrect=0;
+  updateHUD();
+  document.getElementById('state-idle').style.display = 'block';
+  document.getElementById('state-selected').style.display = 'none';
+  generateSlide();
+  buildLegend();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  LÉGENDE
+// ══════════════════════════════════════════════════════════════
+function buildLegend(){
+  const container = document.getElementById('legend-grid');
+  container.innerHTML = '';
+  CELLS.forEach(c => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div><span>${c.abbr} — ${c.name.split(' ').slice(-1)[0]}</span>`;
+    container.appendChild(item);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MODE PATHOLOGIES
+// ══════════════════════════════════════════════════════════════
+function buildPathologiesScreen(){
+  const screen = document.getElementById('pathologies-screen');
+  screen.innerHTML = `
+    <div style="max-width:900px;margin:0 auto;">
+      <div style="font-family:'Space Mono',monospace;font-size:18px;color:var(--ink);letter-spacing:2px;margin-bottom:6px;">HÉMATIES PATHOLOGIQUES</div>
+      <div style="font-size:13px;color:var(--sepia);margin-bottom:20px;font-style:italic;">
+        Source : Cours2A — DFGSP2 Hématologie · Examen du frottis sanguin
+      </div>
+      <div class="path-grid" id="path-grid"></div>
+    </div>
+  `;
+
+  const grid = screen.querySelector('#path-grid');
+  PATHO_HEMATIES.forEach(ph => {
+    const card = document.createElement('div');
+    card.className = 'path-card';
+    card.style.setProperty('--pc', ph.pc);
+
+    // Dessiner la cellule pathologique
+    const svgEl2 = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svgEl2.setAttribute('width','80');
+    svgEl2.setAttribute('height','80');
+    svgEl2.setAttribute('viewBox','-40 -40 80 80');
+    svgEl2.classList.add('pc-cell-svg');
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    ph.drawFn(g, 28);
+    svgEl2.appendChild(g);
+
+    card.innerHTML = `
+      <div class="pc-name">${ph.name}</div>
+      <div class="pc-latin">${ph.latin}</div>
+    `;
+    card.insertBefore(svgEl2, card.firstChild);
+    card.innerHTML += `
+      <div class="pc-pathology">
+        <strong>Pathologie :</strong> ${ph.pathology}<br><br>
+        ${ph.description}
+        <br><span class="pc-badge" style="color:${ph.badgeColor};border-color:${ph.badgeColor}">${ph.badge}</span>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════════
+function showTab(tab){
+  GAME.mode = tab;
+  document.querySelectorAll('.htab').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.htab[onclick*="${tab}"]`).classList.add('active');
+
+  document.getElementById('main').style.display = tab === 'frottis' ? 'flex' : 'none';
+  document.getElementById('pathologies-screen').style.display = tab === 'pathologies' ? 'block' : 'none';
+
+  if(tab === 'pathologies') buildPathologiesScreen();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  generateSlide();
+  buildLegend();
+  updateHUD();
+});
+window.addEventListener('resize', () => {
+  if(GAME.mode === 'frottis') generateSlide();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧪 Chimie Analytique</title>
+<style>
+
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1e2530;--border:#30363d;
+--accent:#7ee787;--accent2:#58a6ff;--accent3:#f78166;--accent4:#d2a8ff;--accent5:#ffa657;
+--text:#e6edf3;--muted:#8b949e;--radius:10px;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:12px}
+h1{text-align:center;padding:18px 16px 6px;font-size:1.5rem;font-weight:700;
+background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.82rem;margin-bottom:16px}
+.nav-wrap{overflow-x:auto;padding:0 8px;border-bottom:1px solid var(--border)}
+.nav{display:flex;gap:4px;min-width:max-content}
+.nav-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:10px 14px;
+font-size:.8rem;font-weight:600;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap}
+.nav-btn:hover{color:var(--text)}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.panels{padding:18px 8px;max-width:1100px;margin:0 auto}
+.panel{display:none}.panel.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.card-title{font-size:1rem;font-weight:700;margin-bottom:12px;color:var(--accent2)}
+label{display:block;font-size:.78rem;color:var(--muted);margin:8px 0 3px;font-weight:600}
+input[type=number],select{width:100%;background:var(--surface2);border:1px solid var(--border);
+border-radius:7px;color:var(--text);padding:8px 10px;font-size:.85rem}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.chk{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);
+border-radius:7px;padding:8px 10px;margin:5px 0;cursor:pointer;font-size:.82rem}
+.chk input{width:16px;height:16px;accent-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.result{background:var(--surface2);border-radius:8px;padding:14px 16px;margin-top:12px;font-size:.85rem;line-height:1.7}
+.result .key{color:var(--accent4);font-weight:700}
+.bigscore{font-size:2.2rem;font-weight:800;text-align:center;margin:6px 0}
+.badge{display:inline-block;border-radius:20px;padding:4px 14px;font-size:.8rem;font-weight:700;margin-top:6px}
+.range-val{display:inline-block;background:var(--surface2);border-radius:4px;padding:1px 8px;
+font-size:.8rem;color:var(--accent5);font-weight:700;margin-left:8px}
+canvas{background:#111;border-radius:8px;width:100%;display:block;margin-top:8px}
+.note{font-size:.72rem;color:var(--muted);margin-top:10px;line-height:1.5}
+.srz{display:flex;gap:6px;margin-top:10px}
+.srz>div{flex:1;text-align:center;padding:8px;border-radius:7px;font-weight:700;font-size:.85rem}
+
+</style>
+</head>
+<body>
+<h1>🧪 Chimie Analytique</h1>
+<div class="card">
+  <div class="card-title">🧪 Titrage acido-basique</div>
+  <div class="grid2">
+   <div>
+    <label>Acide : concentration Ca (mol/L) <span class="range-val" id="t-ca-v">0.10</span></label>
+    <input type="range" id="t-ca" min="0.01" max="1" step="0.01" value="0.1" oninput="titr()">
+    <label>Volume acide Va (mL) <span class="range-val" id="t-va-v">20</span></label>
+    <input type="range" id="t-va" min="5" max="100" step="1" value="20" oninput="titr()">
+    <label>pKa de l'acide <span class="range-val" id="t-pka-v">4.76</span></label>
+    <input type="range" id="t-pka" min="0" max="14" step="0.01" value="4.76" oninput="titr()">
+   </div>
+   <div>
+    <label>Base titrante Cb (mol/L) <span class="range-val" id="t-cb-v">0.10</span></label>
+    <input type="range" id="t-cb" min="0.01" max="1" step="0.01" value="0.1" oninput="titr()">
+    <label>Type</label>
+    <select id="t-type" onchange="titr()"><option value="weak">Acide faible + base forte</option><option value="strong">Acide fort + base forte</option></select>
+   </div>
+  </div>
+  <canvas id="t-cv" height="240"></canvas>
+  <div class="result" id="t-res"></div>
+ </div>
+ <div class="card">
+  <div class="card-title">📊 Diagramme de spéciation (acide faible)</div>
+  <label>pKa <span class="range-val" id="s-pka-v">4.76</span></label>
+  <input type="range" id="s-pka" min="0" max="14" step="0.01" value="4.76" oninput="spec()">
+  <canvas id="s-cv" height="220"></canvas>
+  <div class="result" id="s-res"></div>
+  <div class="note">Henderson-Hasselbalch : %A⁻ = 100/(1+10^(pKa−pH)). À pH = pKa, [AH] = [A⁻] (50/50).</div>
+ </div>
+ <div class="card">
+  <div class="card-title">🌈 Spectres — pics ↔ groupes fonctionnels (IR)</div>
+  <canvas id="ir-cv" height="200"></canvas>
+  <div class="info-box result" id="ir-res">Survolez/cliquez une bande sur le spectre.</div>
+  <div class="note">Bandes IR caractéristiques simplifiées (nombre d'onde cm⁻¹).</div>
+ </div>
+<script>
+function rv(id,dv,dec){var r=document.getElementById(id),e=document.getElementById(dv);if(r&&e)e.textContent=parseFloat(r.value).toFixed(dec);}
+function titr(){
+ rv('t-ca','t-ca-v',2);rv('t-va','t-va-v',0);rv('t-pka','t-pka-v',2);rv('t-cb','t-cb-v',2);
+ var Ca=+document.getElementById('t-ca').value,Va=+document.getElementById('t-va').value,
+ pKa=+document.getElementById('t-pka').value,Cb=+document.getElementById('t-cb').value,
+ type=document.getElementById('t-type').value;
+ var Veq=Ca*Va/Cb; // mL
+ var cv=document.getElementById('t-cv'),ctx=cv.getContext('2d'),W=cv.offsetWidth;cv.width=W;var H=240;
+ ctx.clearRect(0,0,W,H);var pl=38,pb=24,pt=8,pr=8,w=W-pl-pr,h=H-pt-pb;
+ var Vmax=Veq*2;
+ function px(V){return pl+w*V/Vmax;}function py(pH){return pt+h*(1-pH/14);}
+ ctx.strokeStyle='rgba(255,255,255,.12)';ctx.beginPath();ctx.moveTo(pl,pt);ctx.lineTo(pl,pt+h);ctx.lineTo(pl+w,pt+h);ctx.stroke();
+ ctx.fillStyle='#8b949e';ctx.font='9px monospace';ctx.textAlign='right';
+ for(var ph=0;ph<=14;ph+=2){ctx.fillText(ph,pl-4,py(ph)+3);ctx.strokeStyle='rgba(255,255,255,.05)';ctx.beginPath();ctx.moveTo(pl,py(ph));ctx.lineTo(pl+w,py(ph));ctx.stroke();}
+ ctx.textAlign='center';ctx.fillText('Veq',px(Veq),pt+h+14);ctx.fillText('mL base →',pl+w-30,pt+h+14);
+ // equivalence vertical
+ ctx.strokeStyle='rgba(210,168,255,.5)';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(px(Veq),pt);ctx.lineTo(px(Veq),pt+h);ctx.stroke();ctx.setLineDash([]);
+ // curve
+ ctx.strokeStyle='#58a6ff';ctx.lineWidth=2;ctx.beginPath();var first=true;
+ for(var V=0;V<=Vmax;V+=Vmax/300){
+  var pH;var molA=Ca*Va/1000,molB=Cb*V/1000;
+  if(type==='strong'){
+   if(V<Veq){var hpl=(molA-molB)/((Va+V)/1000);pH=-Math.log10(Math.max(1e-12,hpl));}
+   else if(V>Veq){var oh=(molB-molA)/((Va+V)/1000);pH=14+Math.log10(Math.max(1e-12,oh));}
+   else pH=7;
+  } else {
+   if(V<=0)pH=0.5*(pKa-Math.log10(Ca));
+   else if(V<Veq){var ratio=molB/(molA-molB);pH=pKa+Math.log10(Math.max(1e-6,ratio));}
+   else if(V===Veq||Math.abs(V-Veq)<Vmax/600){var Cs=molA/((Va+Veq)/1000);pH=7+0.5*pKa+0.5*Math.log10(Cs);}
+   else{var oh2=(molB-molA)/((Va+V)/1000);pH=14+Math.log10(Math.max(1e-12,oh2));}
+  }
+  pH=Math.max(0,Math.min(14,pH));
+  var X=px(V),Y=py(pH);if(first){ctx.moveTo(X,Y);first=false;}else ctx.lineTo(X,Y);
+ }
+ ctx.stroke();
+ document.getElementById('t-res').innerHTML='<span class="key">Volume équivalent :</span> '+Veq.toFixed(1)+' mL'+
+  (type==='weak'?' · <span class="key">pH à la demi-équivalence = pKa =</span> '+pKa.toFixed(2):' · <span class="key">pH équivalence = 7</span>');
+}
+// ---- SPECIATION ----
+function spec(){
+ rv('s-pka','s-pka-v',2);
+ var pKa=+document.getElementById('s-pka').value;
+ var cv=document.getElementById('s-cv'),ctx=cv.getContext('2d'),W=cv.offsetWidth;cv.width=W;var H=220;
+ ctx.clearRect(0,0,W,H);var pl=30,pb=22,pt=8,pr=8,w=W-pl-pr,h=H-pt-pb;
+ ctx.strokeStyle='rgba(255,255,255,.12)';ctx.beginPath();ctx.moveTo(pl,pt);ctx.lineTo(pl,pt+h);ctx.lineTo(pl+w,pt+h);ctx.stroke();
+ ctx.fillStyle='#8b949e';ctx.font='9px monospace';ctx.textAlign='center';
+ for(var ph=0;ph<=14;ph+=2){ctx.fillText(ph,pl+w*ph/14,pt+h+14);}
+ ctx.textAlign='right';[0,50,100].forEach(function(p){ctx.fillText(p+'%',pl-3,py2(p)+3);});
+ function px(ph){return pl+w*ph/14;}function py2(p){return pt+h*(1-p/100);}
+ // AH (blue) and A- (green)
+ function plot(fn,col){ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();var f=true;
+  for(var ph=0;ph<=14;ph+=0.05){var Y=py2(fn(ph));var X=px(ph);f?ctx.moveTo(X,Y):ctx.lineTo(X,Y);f=false;}ctx.stroke();}
+ plot(function(ph){return 100/(1+Math.pow(10,ph-pKa));},'#f78166'); // AH
+ plot(function(ph){return 100/(1+Math.pow(10,pKa-ph));},'#7ee787'); // A-
+ ctx.strokeStyle='rgba(210,168,255,.5)';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(px(pKa),pt);ctx.lineTo(px(pKa),pt+h);ctx.stroke();ctx.setLineDash([]);
+ document.getElementById('s-res').innerHTML='<span class="key" style="color:#f78166">■ AH (forme acide)</span> &nbsp; <span class="key" style="color:#7ee787">■ A⁻ (forme basique)</span> &nbsp; — croisement à pH = pKa = '+pKa.toFixed(2);
+}
+// ---- IR SPECTRUM ----
+var irBands=[
+ {x:3300,label:'O–H / N–H',desc:'Élongation O–H (alcools, acides : large) ou N–H (amines). ~3200–3550 cm⁻¹.'},
+ {x:2950,label:'C–H',desc:'Élongation C–H (alcanes, ~2850–2960 cm⁻¹).'},
+ {x:1715,label:'C=O',desc:'Élongation carbonyle (cétones, aldéhydes, acides, esters). Bande FORTE ~1700–1750 cm⁻¹.'},
+ {x:1600,label:'C=C',desc:'Élongation C=C aromatique / alcène (~1600–1680 cm⁻¹).'},
+ {x:1100,label:'C–O',desc:'Élongation C–O (alcools, éthers, esters ~1050–1300 cm⁻¹).'}
+];
+function drawIR(){
+ var cv=document.getElementById('ir-cv'),ctx=cv.getContext('2d'),W=cv.offsetWidth;cv.width=W;var H=200;
+ ctx.clearRect(0,0,W,H);var pl=8,pr=8,pt=8,pb=22,w=W-pl-pr,h=H-pt-pb;
+ // x axis 4000 -> 500 (reversed)
+ function px(wn){return pl+w*(4000-wn)/(4000-500);}
+ ctx.strokeStyle='rgba(255,255,255,.12)';ctx.beginPath();ctx.moveTo(pl,pt+h);ctx.lineTo(pl+w,pt+h);ctx.stroke();
+ ctx.fillStyle='#8b949e';ctx.font='9px monospace';ctx.textAlign='center';
+ [4000,3000,2000,1500,1000,500].forEach(function(wn){ctx.fillText(wn,px(wn),pt+h+14);});
+ // baseline transmittance ~ top; draw downward peaks
+ ctx.strokeStyle='#58a6ff';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(pl,pt+6);
+ for(var wn=4000;wn>=500;wn-=5){
+  var t=pt+6;irBands.forEach(function(b){var d=Math.exp(-Math.pow((wn-b.x)/40,2));t+=d*(h-20);});
+  ctx.lineTo(px(wn),Math.min(pt+h,t));
+ }
+ ctx.lineTo(pl+w,pt+6);ctx.stroke();
+ // clickable labels
+ irBands.forEach(function(b){ctx.fillStyle='#d2a8ff';ctx.font='8px monospace';ctx.textAlign='center';ctx.fillText(b.label,px(b.x),pt+h-4);});
+ cv.onclick=function(e){
+  var rect=cv.getBoundingClientRect();var mx=e.clientX-rect.left;
+  var best=null,bd=1e9;irBands.forEach(function(b){var d=Math.abs(px(b.x)-mx);if(d<bd){bd=d;best=b;}});
+  if(best&&bd<40)document.getElementById('ir-res').innerHTML='<strong>'+best.label+' ('+best.x+' cm⁻¹)</strong><br>'+best.desc;
+ };
+}
+// ---- ANTIBIOGRAMME ----
+titr();spec();drawIR();
+</script>
+</body>
+</html>

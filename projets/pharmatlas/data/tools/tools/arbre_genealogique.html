@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arbre Généalogique</title>
+<style>
+
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1e2530;--border:#30363d;
+  --accent:#7ee787;--accent2:#58a6ff;--accent3:#f78166;--accent4:#d2a8ff;--accent5:#ffa657;
+  --text:#e6edf3;--muted:#8b949e;--radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+h1{text-align:center;padding:24px 16px 8px;font-size:1.6rem;font-weight:700;
+   background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:20px}
+
+/* NAV TABS */
+.nav-wrap{overflow-x:auto;padding:0 16px;border-bottom:1px solid var(--border)}
+.nav{display:flex;gap:4px;min-width:max-content;padding-bottom:0}
+.nav-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:10px 14px;
+  font-size:.8rem;font-weight:600;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap}
+.nav-btn:hover{color:var(--text)}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* PANELS */
+.panels{padding:20px 16px;max-width:1100px;margin:0 auto}
+.panel{display:none}
+.panel.active{display:block}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.card-title{font-size:1rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.row{display:flex;flex-wrap:wrap;gap:12px}
+.col{flex:1;min-width:260px}
+
+/* CONTROLS */
+label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;margin-top:10px}
+input[type=range]{width:100%;accent-color:var(--accent2)}
+input[type=number],select{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:6px;padding:7px 10px;font-size:.85rem;width:100%}
+.btn{background:var(--accent2);color:#000;border:none;border-radius:6px;padding:8px 18px;
+  font-size:.85rem;font-weight:700;cursor:pointer;transition:.15s}
+.btn:hover{opacity:.85}
+.btn-green{background:var(--accent)}
+.btn-red{background:var(--accent3)}
+.btn-purple{background:var(--accent4)}
+.btn-orange{background:var(--accent5)}
+.btn-sm{padding:5px 12px;font-size:.78rem}
+
+/* BADGES / CHIPS */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:700}
+.ok{background:#1a3a1a;color:#7ee787;border:1px solid #2d5a2d}
+.warn{background:#3a2a00;color:#ffa657;border:1px solid #5a4200}
+.err{background:#3a0000;color:#f78166;border:1px solid #5a1a00}
+
+/* CANVAS */
+canvas{display:block;border-radius:8px;border:1px solid var(--border)}
+
+/* STAT TABLE */
+.stat-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.stat-table th{background:var(--surface2);padding:6px 10px;text-align:left;color:var(--muted);font-weight:600}
+.stat-table td{padding:5px 10px;border-bottom:1px solid var(--border)}
+.stat-table tr.highlight td{background:#1a3a1a;color:var(--accent)}
+.stat-table tr.highlight-err td{background:#3a0000;color:var(--accent3)}
+
+/* PEDIGREE */
+.pedigree-ctrl{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+#ped-canvas{cursor:crosshair}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)}
+.legend-box{width:14px;height:14px;border-radius:2px}
+
+/* IMMUNO */
+.immuno-cell{cursor:pointer;transition:.2s;filter:drop-shadow(0 0 4px transparent)}
+.immuno-cell:hover{filter:drop-shadow(0 0 8px var(--accent2));transform-origin:center}
+.info-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;
+  font-size:.82rem;line-height:1.6;min-height:80px}
+.info-box strong{color:var(--accent2)}
+.cytokine{display:inline-block;background:#1e2f4a;color:var(--accent2);border-radius:4px;
+  padding:1px 7px;font-size:.72rem;margin:1px}
+
+/* PGP */
+.cell-viz{position:relative;width:100%;height:240px;background:#0d1a0d;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.pgp-pump{position:absolute;display:flex;align-items:center;justify-content:center;
+  border-radius:8px;font-size:.7rem;font-weight:700}
+
+/* TITRATION */
+#titration-canvas{background:#111}
+
+/* RANGE DISPLAY */
+.range-val{display:inline-block;background:var(--surface2);border-radius:4px;padding:1px 8px;
+  font-size:.8rem;color:var(--accent5);font-weight:700;margin-left:8px}
+
+/* RESULT BOX */
+.result{background:var(--surface2);border-radius:8px;padding:12px 16px;margin-top:10px;font-size:.85rem;line-height:1.7}
+.result .key{color:var(--accent4);font-weight:700}
+
+body{padding:12px;min-height:100vh}
+.panel{display:none}
+.panel.active{display:block}
+</style>
+</head>
+<body>
+<div class="panel active" id="p0">
+<div class="card">
+  <div class="card-title">🧬 Arbre Généalogique Interactif</div>
+  <div class="pedigree-ctrl">
+    <div>
+      <label style="margin:0">Mode d'hérédité</label>
+      <select id="ped-mode" onchange="pedCalc()">
+        <option value="AR">Autosomique Récessif</option>
+        <option value="AD">Autosomique Dominant</option>
+        <option value="XR">Lié à l'X Récessif</option>
+      </select>
+    </div>
+    <div>
+      <label style="margin:0">Action</label>
+      <select id="ped-action">
+        <option value="set-M">♂ Homme sain</option>
+        <option value="set-F">♀ Femme saine</option>
+        <option value="set-MA">♂ Homme atteint</option>
+        <option value="set-FA">♀ Femme atteinte</option>
+        <option value="set-MC">♂ Homme porteur</option>
+        <option value="set-FC">♀ Femme porteuse</option>
+        <option value="del">🗑 Supprimer</option>
+      </select>
+    </div>
+    <button class="btn btn-sm" onclick="pedReset()">Réinitialiser</button>
+    <button class="btn btn-sm btn-green" onclick="pedCalc()">Calculer risques</button>
+  </div>
+  <canvas id="ped-canvas" width="760" height="340" style="width:100%;max-width:760px"></canvas>
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px">
+    <div class="legend-item"><div class="legend-box" style="border:2px solid #8b949e;background:none"></div>Homme sain</div>
+    <div class="legend-item"><div class="legend-box" style="border-radius:50%;border:2px solid #8b949e;background:none"></div>Femme saine</div>
+    <div class="legend-item"><div class="legend-box" style="background:#f78166"></div>Atteint</div>
+    <div class="legend-item"><div class="legend-box" style="background:#58a6ff"></div>Porteur</div>
+    <div class="legend-item"><div class="legend-box" style="background:#d2a8ff"></div>Porteur lié X</div>
+  </div>
+  <div id="ped-result" class="result" style="margin-top:12px"></div>
+</div>
+</div>
+
+<!-- ===== PANEL 1 : HARDY-WEINBERG ===== -->
+<script>
+
+function syncAll(){
+  document.querySelectorAll('input[type=range]').forEach(r=>{
+    const vid=r.id+'-val';
+    const el=document.getElementById(vid);
+    if(el) el.textContent=parseFloat(r.value).toFixed(2);
+  });
+  // specific displays
+  [['hw-q','hw-q-val',2],['drift-n','drift-n-val',0],['drift-g','drift-g-val',0],
+   ['drift-p','drift-p-val',2],['pk-dose','pk-dose-val',0],['pk-vd','pk-vd-val',0],
+   ['pk-ke','pk-ke-val',2],['pk-ka','pk-ka-val',2],['pk-f','pk-f-val',2],['pk-tinf','pk-tinf-val',2],
+   ['md-dose','md-dose-val',0],['md-ke','md-ke-val',2],['md-ka','md-ka-val',2],
+   ['md-vd','md-vd-val',0],['md-tau','md-tau-val',0],['md-n','md-n-val',0],
+   ['cq-cv','cq-cv-val',2],['tit-ca','tit-ca-val',2],['tit-va','tit-va-val',0],
+   ['tit-cb','tit-cb-val',2],['pgp-expr','pgp-expr-val',0]
+  ].forEach(([id,dv,d=2])=>{
+    const r=document.getElementById(id),el=document.getElementById(dv);
+    if(r&&el) el.textContent=parseFloat(r.value).toFixed(d);
+  });
+}
+document.querySelectorAll('input[type=range]').forEach(r=>{
+  r.addEventListener('input',syncAll);
+});
+syncAll();
+
+// ============================================================
+// UTILS
+// ============================================================
+function showPanel(i,btn){
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const inits=[pedDraw];
+  setTimeout(()=>inits[i]&&inits[i](),50);
+}
+function rangeSync(id,display,dec=2){
+  const el=document.getElementById(id);
+  const dv=document.getElementById(display);
+  if(el&&dv){dv.textContent=parseFloat(el.value).toFixed(dec);}
+}
+function syncAll(){
+  [['hw-q','hw-q-val'],['drift-n','drift-n-val',0],['drift-g','drift-g-val',0],
+   ['drift-p','drift-p-val'],['pk-dose','pk-dose-val',0],['pk-vd','pk-vd-val',0],
+   ['pk-ke','pk-ke-val'],['pk-ka','pk-ka-val'],['pk-f','pk-f-val'],['pk-tinf','pk-tinf-val'],
+   ['md-dose','md-dose-val',0],['md-ke','md-ke-val'],['md-ka','md-ka-val'],
+   ['md-vd','md-vd-val',0],['md-tau','md-tau-val',0],['md-n','md-n-val',0],
+   ['cq-cv','cq-cv-val'],['tit-ca','tit-ca-val'],['tit-va','tit-va-val',0],
+   ['tit-cb','tit-cb-val'],['pgp-expr','pgp-expr-val',0]
+  ].forEach(([id,dv,d=2])=>rangeSync(id,dv,d));
+}
+document.querySelectorAll('input[type=range]').forEach(r=>{
+  r.addEventListener('input',syncAll);
+});
+syncAll();
+
+// ============================================================
+// PANEL 0 : ARBRE GÉNÉALOGIQUE
+// ============================================================
+const PED_NODES=[
+  {id:0,x:120,y:60,sex:'M',status:'healthy',gen:0},
+  {id:1,x:240,y:60,sex:'F',status:'healthy',gen:0},
+  {id:2,x:360,y:60,sex:'M',status:'healthy',gen:0},
+  {id:3,x:480,y:60,sex:'F',status:'carrier',gen:0},
+  {id:4,x:180,y:180,sex:'M',status:'carrier',gen:1},
+  {id:5,x:300,y:180,sex:'F',status:'carrier',gen:1},
+  {id:6,x:420,y:180,sex:'M',status:'affected',gen:1},
+  {id:7,x:540,y:180,sex:'F',status:'healthy',gen:1},
+  {id:8,x:240,y:300,sex:'M',status:'affected',gen:2},
+  {id:9,x:340,y:300,sex:'F',status:'healthy',gen:2},
+  {id:10,x:440,y:300,sex:'M',status:'carrier',gen:2},
+];
+const PED_COUPLES=[[0,1],[2,3],[4,5],[6,7]];
+const PED_PARENT={4:[0,1],5:[2,3],8:[4,5],9:[4,5],10:[6,7],6:[2,3],7:[0,1]};
+
+function pedDraw(){
+  const canvas=document.getElementById('ped-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+
+  // Draw couple lines
+  PED_COUPLES.forEach(([a,b])=>{
+    const na=PED_NODES[a],nb=PED_NODES[b];
+    ctx.strokeStyle='#30363d';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(na.x,na.y);ctx.lineTo(nb.x,nb.y);ctx.stroke();
+    // vertical drop
+    const mx=(na.x+nb.x)/2;
+    // find children
+    const children=PED_NODES.filter(n=>PED_PARENT[n.id]&&(PED_PARENT[n.id][0]===a||PED_PARENT[n.id][0]===b));
+    if(children.length){
+      const cy=children[0].y;
+      ctx.beginPath();ctx.moveTo(mx,na.y);ctx.lineTo(mx,na.y+50);ctx.stroke();
+      if(children.length>1){
+        ctx.beginPath();ctx.moveTo(children[0].x,na.y+50);
+        ctx.lineTo(children[children.length-1].x,na.y+50);ctx.stroke();
+      }
+      children.forEach(c=>{
+        ctx.beginPath();ctx.moveTo(c.x,na.y+50);ctx.lineTo(c.x,cy-18);ctx.stroke();
+      });
+    }
+  });
+
+  // Draw nodes
+  const mode=document.getElementById('ped-mode').value;
+  PED_NODES.forEach(n=>{
+    const r=18;
+    let fill='#1e2530',stroke='#8b949e';
+    if(n.status==='affected'){fill='#f78166';stroke='#c85c4a';}
+    else if(n.status==='carrier'){
+      fill=mode==='XR'?'#d2a8ff':'#58a6ff';
+      stroke=mode==='XR'?'#a070cc':'#3a78c9';
+    }
+    ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.lineWidth=2.5;
+    if(n.sex==='M'){
+      ctx.beginPath();ctx.rect(n.x-r,n.y-r,r*2,r*2);ctx.fill();ctx.stroke();
+    } else {
+      ctx.beginPath();ctx.arc(n.x,n.y,r,0,Math.PI*2);ctx.fill();ctx.stroke();
+    }
+    // Half fill for carriers
+    if(n.status==='carrier'&&n.sex==='M'){
+      ctx.fillStyle='#1e2530';ctx.beginPath();
+      ctx.rect(n.x-r,n.y-r,r,r*2);ctx.fill();
+    }
+
+    // Prob label
+    if(n.prob!==undefined){
+      ctx.fillStyle='#ffa657';ctx.font='bold 11px monospace';ctx.textAlign='center';
+      ctx.fillText(n.prob,n.x,n.y+r+14);
+    }
+    // generation label
+    ctx.fillStyle='#8b949e';ctx.font='10px sans-serif';ctx.textAlign='center';
+    ctx.fillText('I'.repeat(n.gen+1),n.x,n.y+r+26);
+  });
+  pedCalc();
+}
+
+function pedCalc(){
+  const mode=document.getElementById('ped-mode').value;
+  let html='<span class="key">Mode :</span> ';
+  const modeNames={AR:'Autosomique Récessif',AD:'Autosomique Dominant',XR:'Lié à l\'X Récessif'};
+  html+=modeNames[mode]+'<br><br>';
+
+  if(mode==='AR'){
+    html+='<span class="key">Risque enfant (2 porteurs):</span> 25% atteint, 50% porteur, 25% sain<br>';
+    html+='<span class="key">Risque enfant (porteur × sain):</span> 0% atteint, 50% porteur<br>';
+    html+='<span class="key">Mucoviscidose :</span> f(aa)=1/4600 → q=1/68 → f(Aa)=1/34 porteurs<br>';
+  } else if(mode==='AD'){
+    html+='<span class="key">Risque enfant (hétérozygote × sain):</span> 50% atteint<br>';
+    html+='<span class="key">Hypercholestérolémie familiale :</span> f=1/500, q≈1/1000<br>';
+    html+='<span class="key">Pénétrance :</span> % d\'individus porteurs exprimant la maladie<br>';
+  } else {
+    html+='<span class="key">Mère porteuse × père sain :</span> fils 50% atteints, filles 50% porteuses<br>';
+    html+='<span class="key">Père atteint × mère saine :</span> fils tous sains, filles toutes porteuses<br>';
+    html+='<span class="key">Ex. :</span> Myopathie de Duchenne, Hémophilie A/B, daltonisme<br>';
+  }
+  document.getElementById('ped-result').innerHTML=html;
+}
+function pedReset(){pedDraw();}
+document.getElementById('ped-canvas').addEventListener('click',function(e){
+  const rect=e.target.getBoundingClientRect();
+  const scaleX=e.target.width/rect.width;
+  const x=(e.clientX-rect.left)*scaleX,y=(e.clientY-rect.top)*scaleX;
+  const action=document.getElementById('ped-action').value;
+  const closest=PED_NODES.find(n=>Math.hypot(n.x-x,n.y-y)<22);
+  if(!closest)return;
+  const statusMap={'set-M':'healthy','set-F':'healthy','set-MA':'affected','set-FA':'affected',
+    'set-MC':'carrier','set-FC':'carrier','del':'healthy'};
+  if(action.startsWith('set-M'))closest.sex='M';
+  else if(action.startsWith('set-F'))closest.sex='F';
+  closest.status=statusMap[action]||'healthy';
+  pedDraw();
+});
+setTimeout(pedDraw,100);
+
+</script>
+</body>
+</html>

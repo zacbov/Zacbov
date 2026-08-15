@@ -1,0 +1,352 @@
+{
+  "Fonctions_Organiques": [
+    {
+      "file": "orga_groupes_fonctionnels.glb",
+      "name": "Groupes Fonctionnels — Classification",
+      "desc": "Panorama des fonctions organiques — monovalentes, divalentes, trivalentes et formules",
+      "orga_type": "Fondamental",
+      "group": "Fonctions organiques",
+      "structure": "Hydrocarbures : alcane C-C, alcène C=C, alcyne C≡C. Fonctions monovalentes : halogénure C-X, alcool C-OH (I°/II°/III°), thiol C-SH, éther C-OR, thioéther C-SR, amine C-NR (I°/II°/III°), ammonium C-NR⁺. Fonctions carbonylées (C=O) monovalentes : aldéhyde R-CHO, cétone R-CO-R', acide carboxylique R-COOH. Fonctions carbonylées divalentes (dérivés d'acides) : ester R-COOR', amide R-CONR₂, chlorure d'acyle R-COCl, anhydride (RCO)₂O, thioester R-COSR'. Fonctions divalentes : hémiacétal/acétal, imine C=NR, oxime C=NOH. Représentations : formule brute, semi-développée, développée plane, Cram, topologique (squelettique).",
+      "properties": "Conventions de représentation topologique : chaque sommet = C, chaque extrémité = C, les H implicites complètent la valence. Représentation de Cram : liaisons en coin = vers l'observateur, tirets = vers l'arrière. Liaison polaire : si Y plus électronégatif que C → Cδ+. Si Z moins électronégatif que C → Cδ-. Groupes électrophiles (E) : attaquables par nucléophiles → aldéhydes, cétones, dérivés d'acides, halogénures. Groupes nucléophiles (Nu) : attaquants d'électrophiles → alcools, amines, thiols. Réactivité dépend de : effet électronique (+I, −I, +M, −M), encombrement stérique, pKa.",
+      "pharmacology": "Les groupes fonctionnels déterminent les propriétés physico-chimiques d'un médicament (solubilité, pKa, lipophilie, liaison aux protéines plasmatiques) et sa métabolisation (sites d'oxydation CYP450 — C-H → C-OH ; hydrolyse des esters/amides par estérases/amidases ; conjugaison Phase II — glucuronoconjugaison des OH, COOH et amines). Conception médicaments : bioisostères (remplacement d'un groupe par un autre de propriétés similaires sans perte d'activité) — ex : C-F remplace C-OH pour augmenter la lipophilie et résistance métabolique.",
+      "key_examples": "Paracétamol : phénol + amide → glucuronoconjugaison et sulfatation. Aspirine : ester + acide carboxylique → hydrolyse en acide salicylique. Morphine : phénol + amine tertiaire + alcool. Ibuprofène : acide carboxylique + aromatique. Ampicilline : β-lactame (amide cyclique) + amine + acide carboxylique → hydrolyse β-lactamase.",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_interactions_faibles.glb",
+      "name": "Interactions Intermoléculaires",
+      "desc": "Forces de van der Waals, liaisons hydrogène, effet hydrophobe — structure des protéines et ADN",
+      "orga_type": "Interactions moléculaires",
+      "group": "Interactions non covalentes",
+      "structure": "Interactions à grande distance sans recouvrement d'OA = interactions faibles. 1) Interactions électrostatiques : charge-charge (W ∝ 1/r), charge-dipôle, dipôle-dipôle. 2) Interactions d'induction : charge-dipôle induit, dipôle induit-dipôle induit = forces de London (W ∝ 1/r⁶ — dépendent de la polarisabilité). 3) Van der Waals = ensemble des interactions 1) + 2) = forces attractives + répulsion à courte distance (rayon VdW). 4) Liaison hydrogène : interaction électrostatique forte (10-40 kJ/mol) entre A-H⋯B où A,B = O, N, F (atomes très électronégatifs). 5) Effet hydrophobe : ΔS > 0 (entropique) — molécules apolaires dans l'eau se regroupent pour minimiser le coût entropique lié à la structuration de l'eau.",
+      "properties": "Ordres de grandeur énergétiques (ε=2, d=0,3 nm) : charge-charge −230 kJ/mol, charge-dipôle induit −40 kJ/mol, London −4 à −80 kJ/mol, liaison H −10 à −30 kJ/mol, effet hydrophobe ΔG −20 kJ/mol. Liaison covalente C-C : −400 kJ/mol. Agitation thermique à 298 K : 3/2 RT = 3,8 kJ/mol. Dans l'eau (ε=80), les interactions électrostatiques sont 80× diminuées vs milieu apolaire (ε=2). Liaison hydrogène : linéaire = énergie maximale, ruptures/reformations constantes en phase liquide, assurent la cohésion du cristal en phase solide.",
+      "pharmacology": "Ces interactions sont la base des interactions médicament-récepteur (pharmacodynamie) et médicament-protéine de transport (pharmacocinétique). Liaison au site actif d'une enzyme : combinaison charge-charge (Asp/Glu vs amine protonée), liaisons H (résidus Ser, Tyr, Asn), dipôle-dipôle, effet hydrophobe (poche hydrophobe ← cycle aromatique, chaîne alkyle). Albumine plasmatique : site I (warfarine) et site II (ibuprofène) — interactions hydrophobes et ioniques. Design rationnel : DeltaG de liaison = somme de toutes ces interactions → optimisation structurale via cristallographie + modélisation moléculaire.",
+      "key_examples": "ADN : liaisons H entre bases (A-T : 2 LH ; G-C : 3 LH) + empilement aromatique (stacking) entre bases planes. Hémoglobine tétramère : interactions hydrophobes + sel bridges inter-sous-unités. Albumine (protéine globulaire soluble) : cœur apolaire (effet hydrophobe) + surface chargée (eau). Insuline hexamérique : Zn²⁺ + liaisons H inter-monomères. Savon/détergent : amphiphile → micelles (effet hydrophobe).",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_reactivite_bases.glb",
+      "name": "Bases de la Réactivité Organique",
+      "desc": "Électrophile, nucléophile, nucléofuge — mécanismes de substitution, addition, élimination",
+      "orga_type": "Réactivité générale",
+      "group": "Mécanismes réactionnels",
+      "structure": "Réaction organique = rupture + formation de liaison = réorganisation des électrons de valence. Homolytique (radicaux, non étudié). Hétérolytique : charge + et − créées. Électrophile (E) = accepteur d'e⁻ = acide de Lewis (orbitale vacante). Nucléophile (Nu) = donneur d'e⁻ = base de Lewis (doublet non-liant). Nucléofuge (groupe partant, GP) = groupe qui part avec son doublet après rupture de la liaison. Types de réaction : substitution (Nu remplace GP), addition (fixation sur insaturation), élimination (départ de 2 atomes/groupes → insaturation), isomérisation (réorganisation interne).",
+      "properties": "Classement électrophiles (↑ électrophilie avec ↑ déficience électronique, ↓ encombrement) : OM 2p vide (carbocations) > OM σ* vide (halogénures) > OM π* vide (carbonyles). Classement nucléophiles (↑ nucléophilie avec ↑ densité e⁻, ↓ encombrement, ↑ polarisabilité) : I⁻ > RS⁻ > RO⁻ > HO⁻ > amines. Classement nucléofuges (↑ aptitude avec ↑ stabilité de l'anion, ↑ polarisabilité) : I⁻ >> Br⁻ > Cl⁻ >> F⁻ >> OH⁻ (très mauvais GP). Énergie d'activation ΔG‡ : cinétique (vitesse de réaction) ≠ thermodynamique (ΔG° = stabilité). Bilan : produit majoritaire = produit cinétique (conditions douces) ou thermodynamique (conditions dures/réversibles).",
+      "pharmacology": "La réactivité organique explique : la synthèse des médicaments (formation des liaisons C-C, C-N, C-O), la métabolisation (oxydation = insertion O par CYP450 = réaction radicalaire + addition électrophile sur C-H), l'hydrolyse des promédicaments esters (substitution nucléophile sur le C=O de l'ester par H₂O ou estérases), l'alkylation de l'ADN par les agents alkylants anticancéreux (SN2 ou SN1 sur N7 de la guanine → pontage et apoptose), la β-lactamine (ouverture du cycle amide tendu par SN2 sur la PBP bactérienne).",
+      "key_examples": "Aspirine + NaHCO₃ → salicylate (substitution acido-basique). Paracétamol via NAPQI : métabolisme CYP2E1 → N-acétyl-p-benzoquinone imine (électrophile puissant → alkylation GSH). Agents alkylants (cyclophosphamide, cisplatine) : SN2/SN1 sur ADN. β-lactamines : SN2 sur PBP (transpeptidase bactérienne → ouverture β-lactame → inhibition synthèse paroi).",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_sn1_sn2.glb",
+      "name": "Substitution Nucléophile SN1 et SN2",
+      "desc": "Mécanismes de substitution nucléophile — cinétique, stéréochimie, facteurs favorisants",
+      "orga_type": "Mécanisme réactionnel",
+      "group": "Substitution nucléophile",
+      "structure": "Bilan : Nu + C-GP → Nu-C + GP (1 liaison σ rompue + 1 liaison σ formée). SN2 (bimoléculaire) : rupture et formation concertées → 1 seule étape cinétiquement déterminante → v = k[Nu][C-GP] (ordre 2). État de transition : Nu attaque côté opposé au GP (attaque en « anti ») → inversion de configuration = inversion de Walden. SN1 (unimoléculaire) : rupture C-GP spontanée (lente) → carbocation plan C⁺ → attaque Nu des deux côtés → 2 stéréoisomères → v = k[C-GP] (ordre 1). Étape cinétiquement déterminante = formation du carbocation.",
+      "properties": "Facteurs favorisant SN2 : carbone électrophile peu encombré (CH₃ >> 1° >> 2° >> 3° impossible), bon Nu (fort, non encombré), bon GP (I⁻ > Br⁻ > Cl⁻ >> F⁻, OTs⁻). Facteurs favorisant SN1 : carbocation stable (3° >> 2° >> 1°), stabilisé par mésomérie (benzylique, allylique) ou par effet inductif donneur, solvant polaire (favorise séparation de charges), Nu peut être faible. SN2 : 1 seul stéréoisomère de configuration inversée (réaction stéréospécifique). SN1 : mélange racémique (2 attaques équiprobables sur carbocation plan).",
+      "pharmacology": "Agents alkylants anticancéreux (mécanisme de type SN2/SN1) : moutardes azotées (cyclophosphamide, melphalan), nitroso-urées (carmustine), mitomycine C → alkylation N7 guanine ADN → pontages intra-brin ou inter-brins → blocage réplication → apoptose. Réactivité de la β-lactamine (pénicillines, céphalosporines) : ouverture du cycle amide β-lactame tendu (angle de Baeyer) par SN2 de la Ser-OH de la PBP → inhibition transpeptidase → bactériostatique/bactéricide. Résistance aux β-lactamines : β-lactamases (SN2 sur β-lactame → hydrolyse → inactivation). Métabolisme : déméthylation (CYP → N-déméthylation ~ SN sur C-H activé par radical oxo-fer(IV)).",
+      "key_examples": "SN2 : CH₃Br + HO⁻ → CH₃OH + Br⁻ (ordre 2, inversion). SN1 : (CH₃)₃CCl + H₂O → (CH₃)₃COH + Cl⁻ (ordre 1, racémique). Iodométhane (CH₃I) : excellent substrat SN2 (CH₃ = non encombré, I⁻ = meilleur GP). Cyclophosphamide → ion bis-chloroéthyl (moutarde azotée) → SN2 sur N7 ADN. Pénicilline G → amide β-lactame → SN2 Ser-OH PBP → acyl-enzyme → inhibition. Tosylates (OTs) : alcools activés pour SN2 (pKa TsOH = −7 → très bon GP).",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_e1_e2.glb",
+      "name": "Élimination E1 et E2",
+      "desc": "Mécanismes d'élimination — compétition avec la substitution, règle de Zaïtsev, stéréochimie",
+      "orga_type": "Mécanisme réactionnel",
+      "group": "Élimination",
+      "structure": "Bilan : C-GP + Base → C=C + Base-H + GP (2 liaisons σ rompues + 1 liaison π formée). E2 (bimoléculaire) : concertée → v = k[C-GP][Base] (ordre 2). La base arrache H en conformation anticoplanaire par rapport à GP → stéréospécifique (1 seul alcène Z ou E selon la géométrie). E1 (unimoléculaire) : formation du carbocation C⁺ (lente) → perte H⁺ → v = k[C-GP] (ordre 1). Donne 2 stéréoisomères Z et E. Règle de Zaïtsev (Saytzeff) : régiosélective en faveur de l'alcène le plus substitué (le plus stable thermodynamiquement).",
+      "properties": "Facteurs favorisant E2 : forte base (pKa > 10 → ex : EtO⁻, t-BuO⁻), bon GP, substrat encombré (compétition avec SN2 → E gagne à haute T et avec base volumineuse). Facteurs favorisant E1 = SN1 : carbocation stable (3° > 2°), solvant polaire, base faible. Compétition SN/E : toujours en compétition → SN2 favorisé à T basse, bonne Nu non encombrée. E2 favorisé à T haute, forte base. SN1/E1 favorisés avec substrats 3° (carbocation stable). Orientation anti-éliminatoire : E2 sur carburation anti-périplanaire → un seul diastéréoisomère d'alcène. Exemple : acide meso-2,3-dibromobutane donne alcène E (trans) par E2.",
+      "pharmacology": "Déshydratation des alcools (E2/E1 en milieu acide) : réaction utilisée en synthèse pharmaceutique. Bêta-élimination thermique : purification de substrats via formation d'alcènes volatils. Promédicaments à activation par élimination : certains prodrugs libèrent le PA via β-élimination in vivo (ex : azuridinium à partir de moutardes azotées). Médicaments contenant des doubles liaisons (résultant de l'élimination industrielle) : rétinal (vitamines A), combretastatine A-4 phosphate (antitumoraux ciblant le réseau vasculaire tumoral), tamoxifène (SERM — modulateur sélectif des récepteurs œstrogènes, isomère Z actif vs E inactif).",
+      "key_examples": "E2 de (2R,3R)-2-bromo-3-méthylbutane + EtO⁻ → alcène E majoritaire (anti-coplanaire). E1 de (CH₃)₃CCl + H₂O → 2-méthylpropène (Zaïtsev). Règle Zaïtsev : 2-bromobutane + EtO⁻ → 2-butène (majoritaire, Zaïtsev) + 1-butène (minoritaire). Rétinal : isomère 11-cis → 11-trans lors de la photoisomérisation dans la rhodopsine (vision). Tamoxifène : isomère Z = actif (agoniste partiel ER), isomère E = inactif.",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_alcools_thiols_amines.glb",
+      "name": "Alcools, Thiols et Amines",
+      "desc": "Fonctions nucléophiles — réactivité comparée, acylation, formation d'éthers, imines",
+      "orga_type": "Fonctions nucléophiles",
+      "group": "Alcools, thiols, amines",
+      "structure": "Alcools R-OH : liaison C-OH faiblement polarisée → nucléophile + base. pKa(ROH/RO⁻) = 16-19. Thiols R-SH : liaison C-S peu polarisée mais S plus polarisable → meilleur nucléofuge + meilleur nucléophile que O. pKa(RSH/RS⁻) = 8-11. Amines R-NH₂ (I°), R₂NH (II°), R₃N (III°) : doublet non-liant sur N → excellent nucléophile + base forte. La liaison N-H est moins polarisée que O-H → liaisons H plus faibles. Amines hétéroaromatiques (imidazole, pyridine) : nucléophiles malgré délocalisation du doublet.",
+      "properties": "Réactivité des alcools : activation nécessaire pour substitution (OH⁻ mauvais GP) → activation en milieu acide (protonation → OH₂⁺ → meilleur GP), ou en ester sulfonique (tosylate OTs⁻, pKa = −7 → excellent GP). Formation éthers (milieu basique : Williamson : RO⁻ + R'X → ROR'). Formation hémiacétal/acétal (catalyse acide uniquement). Formation esters (acylation de l'alcool). Oxydation des alcools : 1° → aldéhyde (PCC, PDC) ou acide (Jones : K₂Cr₂O₇/H₂SO₄), 2° → cétone. Amines : formation amides (acylation par chlorure d'acyle ou ester), formation imines (+ aldéhyde/cétone, catalyse acide faible pH 4-6), formation sulfonamides. Amination réductrice : amine + aldéhyde/cétone → imine → réduction (NaBH₃CN) → amine secondaire.",
+      "pharmacology": "Métabolisme des alcools : oxydation hépatique par alcool deshydrogénase (ADH) : alcool → aldéhyde → acide. Thiols biologiques : cystéine (pKa ~8) → présente sous forme thiolate RS⁻ à pH physiologique → réactions de transfert de méthyle (méthionine), formation de disulfures (ponts S-S des protéines), conjugaison avec NAPQI (paracétamol toxique). Glutathion (GSH) : tripeptide Glu-Cys-Gly → piège nucléophile des électrophiles toxiques (Phase II). Amines pharmaceutiques : la grande majorité des médicaments sont des bases faibles (amines) → pKa 7-11 → forme ionisée/non ionisée contrôle l'absorption. Amines → N-déméthylation (CYP3A4) = métabolisme hépatique de 1er passage.",
+      "key_examples": "Paracétamol : phénol (pKa 9,5) → glucuronoconjugaison et sulfatation à pH physiologique. Aspirine : ester phénolique → hydrolyse par estérases plasmatiques → acide salicylique. Morphine : phénol (3-OH) + alcool (6-OH) + amine (N-CH₃) → sites de métabolisme. Glutathion (Cys-SH) + NAPQI → conjugué GS-paracétamol → éliminé. Réaction de Mannich : formaldéhyde + amine + carbonyle → base de Mannich → synthèse de neuromédiateurs (biosynthèse de la noradrénaline).",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_alcenes_alcynes.glb",
+      "name": "Alcènes et Alcynes",
+      "desc": "Hydrocarbures insaturés — addition électrophile, hydrogénation, époxydation, réactivité",
+      "orga_type": "Hydrocarbures insaturés",
+      "group": "Alcènes et alcynes",
+      "structure": "Alcènes CₙH₂ₙ : double liaison C=C (1σ + 1π). Alcynes CₙH₂ₙ₋₂ : triple liaison C≡C (1σ + 2π). Les électrons π constituent des sites riches (nucléophiles) → réaction avec électrophiles. Alcènes : réaction principale = Addition Électrophile (AE). Règle de Markovnikov : dans AE de H-X sur alcène asymétrique → H se fixe sur le C de la double liaison qui a le plus d'hydrogènes (→ carbocation le plus stable). Alcynes : protons alcyniques très acides (pKa ≈ 25) → déprotonation par base forte → alcynure (carbanion sp, excellent nucléophile).",
+      "properties": "Réactions des alcènes : (1) AE de HX (hydrohalogénation) → alkyl halogénure selon Markovnikov. (2) Dihalogénation : Cl₂/Br₂ → dihalogénure vicinaux via ion halonium. (3) Hydratation acide (H₂SO₄/H₂O) → alcool via Markovnikov. (4) Hydroboration (BH₃ puis H₂O₂/NaOH) → alcool anti-Markovnikov + syn. (5) Hydrogénation H₂/Pd → alcane (syn, sélective). (6) Époxydation (m-CPBA peracide) → époxyde (stéréospécifique : cis-alcène → cis-époxyde). (7) Dihydroxylation OsO₄ → diol vicinal syn. (8) KMnO₄ → diol (doux) ou coupure oxydante (dur). (9) Ozonolyse (O₃) → coupure C=C → aldéhydes/cétones. Stabilité alcènes : ↑ avec nombre de substituants alkyles (effet hyperconjugatif).",
+      "pharmacology": "Les alcènes sont des pharmacophores présents dans de nombreux médicaments et molécules biologiques. Rétinal (Vitamine A, 11-cis → 11-trans dans la rhodopsine : vision). Combretastatine A-4 phosphate : double liaison (isomère Z actif, E inactif) → antiangiogénique tumoral. Tamoxifène (SERM) : stéréochimie Z active. Squalène (précurseur du cholestérol) : polycyclisation de l'époxyde. Alkaloïdes à double liaison : vincristine/vinblastine → inhibition tubuline → antimitotiques. Prostaglandines : alcènes Z dans la chaîne lipidique. Acides gras insaturés : oméga-3 (alcènes Z/cis) → anti-inflammatoires. Époxydation par CYP450 = métabolisme arène-oxyde (intermédiaire électrophile toxique → → cancer).",
+      "key_examples": "11-cis-rétinal + opsine = rhodopsine (vision). Squalène → 2,3-époxysqualène (CYP) → lanostérol (cyclisation) → cholestérol. Vincristine/vinblastine → liaison tubuline-β. Acide arachidonique (4 doubles liaisons) → prostaglandines (COX-1/2). Camptothécine, taxol : doubles liaisons dans le pharmacophore.",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_carbonyles.glb",
+      "name": "Composés Carbonylés — Aldéhydes et Cétones",
+      "desc": "Réactivité du C=O — addition nucléophile, aldolisation, réduction, tautomerie céto-énolique",
+      "orga_type": "Fonctions carbonylées",
+      "group": "Aldéhydes et cétones",
+      "structure": "Groupe carbonyle C=O : C sp² électrophile (∂⁺) + O électronégatif (∂⁻). Aldéhydes R-CHO : plus électrophiles et plus réducteurs que les cétones. Cétones R-CO-R' : moins réactives. Réaction principale : Addition Nucléophile (AN) sur C=O — Nu attaque perpendiculairement au plan du C=O (des deux côtés) → intermédiaire tétrahédral. Tautomerie céto-énolique : C=O ⇌ C=C-OH (énol), catalysée par acide ou base. L'énolate (base) et l'énol (acide) sont des nucléophiles au carbone α.",
+      "properties": "Additions nucléophiles sur C=O : (1) Amines primaires → imines (bases de Schiff) R-CH=NR' + H₂O, pH optimal 4-6. Amines secondaires → énamine (+ cétone). (2) Alcools → hémiacétal (en acide) puis acétal (protégé). (3) HCN (cyanhydrine). (4) Grignard/organolithiens → alcools primaires, secondaires ou tertiaires. (5) Hydrures (NaBH₄, LiAlH₄) → alcools. Aldolisation (C-C) : énolate + aldéhyde/cétone → β-hydroxy-carbonyle (3-hydroxy-butanal de CH₃CHO). Crotonisation : déshydratation de l'aldol → alcène α,β-insaturé conjugué (4-méthylpent-3-en-2-one). Addition 1,4 (réaction de Michael) : Nu attaque sur Cβ d'un carbonyle α,β-insaturé.",
+      "pharmacology": "Aldéhydes biologiques : rétinal (vision), pyridoxal-5'-phosphate PLP = cofacteur des amino-transférases (forme imine avec les lysines enzymatiques). Cétones : corps cétoniques (acétone, β-hydroxybutyrate, acétoacétate) en jeûne/diabète. Imines (bases de Schiff) : liaison entre le PLP et les lysines enzymatiques, entre le rétinal et les opsines → cromoprotéines de vision. Réductions pharmaceutiques : NaBH₄ → réduction sélective des aldéhydes/cétones sans toucher les esters (chimiosélectivité). Réaction de Mannich : formaldéhyde + amine + composé méthylène actif → base de Mannich (motif présent dans de nombreux alcaloïdes, biosynthèse de nombreux alcaloïdes tropaniques). Carbimazole (médicament hyperthyroïdien) : imidazole thioamide → hydrolysé en méthimazole actif.",
+      "key_examples": "Acétalisation du glucose (hémiacétal interne pyranose/furanose) → formes α et β. Aldolisation : biosynthèse des lipides (condensation cétothiolase). Formation imine : PLP + lysine enzymatique → aldimine. Formation oxime : aldéhyde/cétone + NH₂OH → R-CH=N-OH (réactif de dérivation pour GC-MS). Aldol industriel : synthèse d'ibuprofène via aldolisation. Réduction Wolf-Kishner : C=O + N₂H₄ + KOH → CH₂ (désoxygénation — synthèse ibuprofène).",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_acides_esters_amides.glb",
+      "name": "Acides Carboxyliques, Esters et Amides",
+      "desc": "Dérivés d'acides — réactivité addition-élimination, hydrolyse, saponification, promédicaments",
+      "orga_type": "Fonctions carbonylées — Dérivés d'acides",
+      "group": "Acides, esters, amides",
+      "structure": "Dérivés d'acide R-CO-LG (LG = groupe partant) : chlorure d'acyle (LG = Cl⁻), anhydride (LG = RCO₂⁻), ester (LG = RO⁻), amide (LG = NR₂⁻ — le moins réactif car N donneur mésomère), acide carboxylique (LG = HO⁻). Réactivité décroissante : chlorure d'acyle >> anhydride >> ester >> acide >> amide. Mécanisme d'addition-élimination (AN-E) sur C=O : Nu attaque le C carbonylé → intermédiaire tétrahédral → départ du LG. Hydrolyse des esters : en milieu basique (saponification) = irréversible (RCOO⁻ formé → mauvais électrophile) ; en milieu acide = réversible.",
+      "properties": "Formation de chlorures d'acyle : RCOOH + SOCl₂ → RCOCl + SO₂ + HCl, ou + PCl₅. Formation d'esters : alcool + chlorure d'acyle, ou estérification Fischer (alcool + acide, cat. H⁺, réversible, équilibre = loi d'action de masse). Hydrolyse des amides : acide (3h, 100°C, eau, rdt 70%) ou base concentrée (reflux). Réaction de Claisen (C-C) : condensation entre deux esters via énolate → β-cétoester. Réaction de Dieckmann (intramoléculaire de Claisen) → cycle. Condensation de Knoevenagel. Alkylation d'énamines : amine secondaire + cétone → énamine → alkylation sur Cα → hydrolyse → cétone alkylée.",
+      "pharmacology": "Promédicaments esters : aspirine (ester phénolique d'acide salicylique) → hydrolyse enzymatique → acide salicylique + acide acétique. Pivampicilline (ester de l'ampicilline) → pro-drogue per os → hydrolyse → ampicilline (mieux absorbée). Chloramphenicol palmitate (ester) → hydrolyse intestinale → chloramphénicol actif. Lidocaïne : amide → résistant aux estérases → demi-vie plus longue que la procaïne (ester). Amides biologiques : liaisons peptidiques → synthèse protéique (ribosomes) et hydrolyse enzymatique (protéases). Pénicillines (β-lactames = amides cycliques) : hydrolyse par β-lactamases → inactivation. Réaction de Mannich : synthèse d'aminométhylation de cycles aromatiques → nombreux médicaments (antihistaminiques, anesthésiques locaux).",
+      "key_examples": "Aspirine (ester) → acide salicylique + acide acétique (estérases). Pivot ampicilline (ester) → ampicilline. Lidocaïne (amide) vs procaïne (ester) → demi-vies différentes. Pénicilline G : β-lactame (amide tendu) → ouverture par PBP ou β-lactamase. Rivastigmine : carbamate (dérivé ester) → hydrolyse lente (inhibiteur ChE suicide). LiAlH₄ réduit l'amide → amine (R-CONH₂ → R-CH₂-NH₂).",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_aromatiques.glb",
+      "name": "Composés Aromatiques — Benzène et Réactivité",
+      "desc": "Aromaticité, règle de Hückel, substitution électrophile aromatique SEAr",
+      "orga_type": "Composés aromatiques",
+      "group": "Chimie aromatique",
+      "structure": "Benzène C₆H₆ : molécule plane, 12 atomes coplanaires, angles 120° (C sp²), 6 liaisons C-C identiques (d = 0,139 nm entre simple et double). Aromaticité : 6 électrons π délocalisés → grande stabilité (énergie de résonance ER = 150 kJ/mol). Règle de Hückel : aromatique si : (1) cycles(s), (2) système totalement conjugué sans discontinuité (plan π), (3) 4n+2 électrons π (n = entier : 0, 1, 2…). Conséquences de l'aromaticité : grande stabilité → réaction de substitution (pas d'addition, qui déstabiliserait) et pas d'addition électrophile simple.",
+      "properties": "Substitution Électrophile Aromatique (SEAr) : mécanisme en 2 étapes → formation du complexe σ (arénonium, carbocation cyclohexadiényle) + réaromatisation (départ H⁺). Nécessite électrophiles très activés (cationiques). Exemples SEAr : (1) Halogénation : Cl₂/AlCl₃ → chlorobenzène. (2) Nitration : HNO₃/H₂SO₄ → nitrobenzène (électrophile = NO₂⁺). (3) Sulfonation : H₂SO₄/SO₃ → acide benzènesulfonique (électrophile = SO₃). (4) Friedel-Crafts alkylation : R-X + AlCl₃ → alkylbenzène. (5) Friedel-Crafts acylation : R-COCl + AlCl₃ → cétone aromatique. Substitution Nucléophile Aromatique (SNAr) : mécanisme addition-élimination → complexe de Meisenheimer → nécessite groupes électroattracteurs (NO₂) en ortho/para du GP.",
+      "pharmacology": "La majorité des médicaments contiennent au moins un cycle aromatique (pharmacophore essentiel pour les interactions hydrophobes avec les récepteurs). SEAr utilisée en synthèse pharmaceutique : (1) Nitration → réduction → aniline → diazotation → couplage ou réaction de Sandmeyer. (2) Sulfonation → sulfonamides (antibactériens), sulfonyurées (antidiabétiques). (3) Friedel-Crafts acylation → ibuprofène (étape clé de la synthèse industrielle). Métabolisme : époxydation aromatique par CYP450 → arène-oxyde → précurseur toxique (électrophile) → cancer (benzène), mutagenèse (HAP). Paracétamol : phénol (électrodonneur) → CYP2E1 → NAPQI (électrophile) → toxicité hépatique.",
+      "key_examples": "Aniline (amino-benzène) : SEAr 10¹⁴× plus rapide que benzène. Phénol : SEAr ortho/para préférentielle (mésomère +M de OH). Chlorobenzène : désactivant, ortho/para (−I dominant). Nitrobenzène : désactivant, méta (−M du NO₂ → méta directeur). Synthèse paracétamol : nitration du phénol → réduction → aniline → acylation par anhydride acétique → paracétamol.",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_phenol_aniline.glb",
+      "name": "Phénol et Aniline — Réactivité Aromatique",
+      "desc": "Substituants électrodonneurs +M — directeurs ortho/para, sels de diazonium, synthèse",
+      "orga_type": "Composés aromatiques fonctionnalisés",
+      "group": "Phénol et aniline",
+      "structure": "Phénol C₆H₅-OH : groupe OH électrodonneur par mésomère (+M) → ortho et para directeur, activant. Densité électronique augmentée en ortho et para. Aniline C₆H₅-NH₂ : groupe NH₂ encore plus donneur que OH (meilleur +M) → ortho et para directeur, encore plus activant que le phénol. SEAr très facile sur aniline sans acide de Lewis. Sels de diazonium : aniline + HNO₂ → R-N≡N⁺ Cl⁻ (diazonium) → intermédiaire électrophile très réactif.",
+      "properties": "Phénol : SEAr préférentielle en para (moins encombré) sans acide de Lewis. Exemple : bromation de phénol → 4-bromophénol majoritaire (+ ortho-bromophénol minoritaire). Carboxylation de Kolbe (coordination CO₂ en ortho) → acide salicylique. Réaction de Fries. Aniline : nucléophile très actif → acylation facile avec chlorures d'acyle → amides aromatiques. Réaction de diazonium (sels stables à 0-5°C) : avec perte N₂ (SN1) → phénol (H₂O), fluoration/chloruration/iodation (Sandmeyer). Sans perte N₂ : couplage diazoïque avec phénols/amines → colorants azoïques (R-N=N-Ar, pont azoïque = chromophore). Rendre l'aniline moins réactive : acylation → amide aromatique (moins nucléophile → SEAr plus contrôlée).",
+      "pharmacology": "Phénols pharmaceutiques : paracétamol (phénol → substrat glucuronoconjugaison et sulfatation), phényléphrine (phénol + amine → sympathomimétique), propofol (phénol disubstitué isopropyle → anesthésique IV). Salicylate de méthyle (phénol ester) → antiinflammatoire topique. Phénol (acide carbolique de Lister) : premier antiseptique chirurgical historique. Anilines pharmaceutiques : sulfamides (aniline sulfonée → antibiotiques : sulfaméthoxazole), benzocaïne (ester d'aminobenzoate → anesthésique local), procaïne. Sels de diazonium utilisés en synthèse de colorants azoïques (indicateurs colorés, test ELISA, immunohistochimie).",
+      "key_examples": "Synthèse paracétamol : phénol → nitration → p-nitrophénol → réduction → p-aminophénol → acylation (CH₃CO)₂O → paracétamol. Hélianthine (méthylorange) : sel de diazonium + N,N-diméthylaniline → colorant azoïque (indicateur coloré pH). Sulfaméthoxazole : aniline sulfonée + cycle pyrimidine. Acide 2,4-D (herbicide) : 2,4-dichlorophénoxyacétate de synthèse.",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_heterocycles_5.glb",
+      "name": "Hétérocycles à 5 Chaînons",
+      "desc": "Pyrrole, furane, thiophène, imidazole, thiazole — aromaticité, réactivité et médicaments",
+      "orga_type": "Hétérocycles aromatiques",
+      "group": "Hétérocycles à 5 chaînons",
+      "structure": "Hétérocycles = cycles avec au moins un hétéroatome (N, O, S, etc.). Hétérocycles à 5 chaînons aromatiques (règle de Hückel, n=1, 6 e⁻ π) : pyrrole (N-H, doublet N impliqu é dans le système π), furane (O), thiophène (S), imidazole (1 N donneur + 1 N accepteur sp², 2 hétéroatomes), thiazole (N + S), oxazole (N + O), isoxazole (N + O), pyrazole (2 N adjacents). Le doublet de l'hétéroatome est intégré dans le système aromatique → effet mésomère +M → densité électronique augmentée sur le noyau → SEAr facile (plus réactifs que benzène).",
+      "properties": "Réactivité des cycles à 5 chaînons : SEAr très facile (densité e⁻ élevée). Position préférentielle de SEAr : α (position 2) préférentielle. Si α occupée → β (position 3). Exemples réactions : halogénation (Br₂, 0°C), acylation Friedel-Crafts (acide de Lewis doux), nitration (acétate de nitronium → évite acides forts), réaction de Vilsmeier-Haack (formylation avec DMF + POCl₃ → aldéhyde). Imidazole : tautomères (N1-H ⇌ N3-H), formes équivalentes → bon nucléophile et bonne base (pKa 7). Peut agir comme acide/base → catalyse enzyme (sérine-protéases, histidine). Pyrrole : donneur de liaison H (N-H).",
+      "pharmacology": "Hétérocycles à 5 chaînons parmi les plus présents dans les médicaments : Imidazole : metronidazole (antiparasitaire/antibactérien → réduction NO₂ sous forme anaérobie → radical toxique), histamine (neurotransmetteur H₁/H₂), antihistaminiques (cimétidine H₂). Thiazole : dans pénicillines (cycle β-lactame + cycle thiazolidine), vitamine B₁ (thiamine). Oxazole, isoxazole : nombreux AINS (lornoxicam), antibiotiques. Furane : furanes toxiques (intermédiaires d'oxydation par CYP), hydroxyfuranes dans plantes médicinales. Pyrazole : célécoxib (COX-2 sélectif — AINS), phénylbutazone. Thiophène : ticlopidine, clopidogrel (antiagrégant plaquettaire — pro-drogue → CYP2C19 active).",
+      "key_examples": "Imidazole dans l'histidine (site actif de la chymotrypsine : triade catalytique Ser-His-Asp). Metronidazole (Flagyl®) : nitroimidazole → réduction anaérobie → radical →  lésion ADN bactérienne/parasitaire. Thiamine (vitamine B₁) : thiazole + pyrimidine → cofacteur essentiel (décarboxylation oxydative). Clopidogrel (Plavix®) : thiénopyridine → pro-drogue → CYP2C19 → métabolite actif (bloque P2Y₁₂). Célécoxib (Celebrex®) : pyrazole sulfonamide → COX-2 sélectif.",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_heterocycles_6.glb",
+      "name": "Hétérocycles à 6 Chaînons",
+      "desc": "Pyridine, pyrimidine, quinoléine — aromaticité, réactivité et médicaments",
+      "orga_type": "Hétérocycles aromatiques",
+      "group": "Hétérocycles à 6 chaînons",
+      "structure": "Pyridine : N sp² → doublet non impliqué dans le système π (OA sp² perpendiculaire au plan π, disponible pour protonation/coordination) → base de Lewis + Lewis acid de Brønsted (pKa conjugué PyH⁺ = 5,2). Pyridine : cycle électro-appauvri (N électroattracteur − I et −M) → désactivé pour SEAr, activé pour SNAr. Pyrimidine (1,3-diazine) : deux N → encore plus appauvri → SNAr encore plus facile. Quinoléine (benzo + pyridine) : réactivité mixte (SEAr sur cycle benzénique, SNAr sur pyridine). Synthèse des pyridines : Hantzsch (1,3-dicarbonyle + aldéhyde + ammoniac). Synthèse des pyrimidines : Pinner (1,3-dicétone + amidine ou guanidine).",
+      "properties": "Pyridine : SEAr pas possible (sauf si activée). Par contre SNAr facile : nucléophiles en position 2 ou 4 (N meta directeur des positions 2,6 et 4). N-oxyde de pyridine : active le cycle → permet SEAr. Quinoléine (synthèse de Skraup) : aniline + glycérol + oxydant. Réactivité quinoléine : SEAr sur cycle benzénique (positions 5 et 8, équiprobables), SNAr sur cycle pyridinium (position 2 ou 4). Pyrimidine : base d'Adénine, de Guanine (dans ADN/ARN, avec cycle imidazole → purines). Cytosine, Thymine, Uracile sont des pyrimidines. 1,4-dihydropyridine (DHP) : forme réduite de la pyridine → pharmacophore important.",
+      "pharmacology": "Pyridines pharmaceutiques : niacine/nicotinamide (vitamine PP, coenzyme NAD⁺), isoniazide (INH — anti-tuberculeux), pyridostigmine (anticholinestérasique). Quinoléines : quinine (antipaludique historique), chloroquine, hydroxychloroquine (COVID-19, lupus). Fluoroquinolones (ciprofloxacine, ofloxacine) : quinolone + F → inhibition ADN gyrase/topoisomérase IV bactérienne → antibiotiques. Pyrimidines : thymine, cytosine, uracile (bases nucléiques). 5-fluorouracile (5-FU) : pyrimidine anticarcinogène (inhibition thymidylate synthase). Méthrotrexate : antagoniste de l'acide folique (inhibition DHFR). Atazanavir, lopinavir : contiennent des cycles pyrimidine. DHP (dihydropyridines) : nifédipine, amlodipine → inhibiteurs calciques (antihypertenseurs, antiangineux) → bloquent les canaux Ca²⁺ de type L.",
+      "key_examples": "Ciprofloxacine (Ciflox®) : fluoroquinolone → inhibition ADN gyrase. Chloroquine : 4-aminoquinoléine → accumulation dans vacuoles acides du Plasmodium. 5-FU (fluorouracile) : analogue pyrimidine → 5-FdUMP → inhibition thymidylate synthase → arêt synthèse ADN. Nifédipine (Adalate®) : 1,4-DHP → inhibiteur calcique → vasodilatateur. Adénine, guanine (purines = imidazole + pyrimidine bicyclique). Pyridoxine (B₆) : pyridine substitée.",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_indole_quinoline.glb",
+      "name": "Indole et Hétérocycles Bicycliques",
+      "desc": "Indole, benzimidazole, quinoléine — médicaments triptans, inhibiteurs de pompe, antiparasitaires",
+      "orga_type": "Hétérocycles bicycliques",
+      "group": "Hétérocycles bicycliques",
+      "structure": "Indole = benzo[b]pyrrole : cycle benzène fusionné + pyrrole (N-H). 10 e⁻ π délocalisés (n=2, 4n+2=10, règle Hückel). Réactivité préférentielle en position 3 (β du pyrrole) = complexe σ le plus stable. Synthèse de Fischer : phénylhydrazone + acide → cyclisation. Benzimidazole = benzo + imidazole : N-H + N (basique) en β. Quinoléine = benzo + pyridine. Isoquinoléine = benzo + pyridine (N en position 2). Ces hétérocycles bicycliques sont des pharmacophores majeurs des médicaments.",
+      "properties": "Indole : SEAr en position 3 très facile (complexe σ en 3 stabilisé par N). Réactions : (1) Vilsmeier-Haack (formylation → indole-3-carbaldéhyde), (2) Mannich (amine + aldéhyde → gramine puis tryptamine), (3) alkylation C3 avec électrophiles. Benzimidazole : pKa 5,5 (moins basique que imidazole) + tautomérisme N1-H/N3-H. Quinoléine : réactivité mixte SEAr (positions 5,8 sur benzène) + SNAr (positions 2,4 sur pyridine). Synthèse quinoléine : Skraup (aniline + glycérol/acroléine + oxydant) ou Combes (aniline + 1,3-dicétone).",
+      "pharmacology": "Indole : tryptophane (acide aminé essentiel), sérotonine 5-HT (neurotransmetteur, indole-3-éthylamine), mélatonine (N-acétyl-5-méthoxytryptamine, rythme circadien), triptans (sumatriptan, almotriptan, zolmitriptan = agonistes 5-HT₁B/₁D → anti-migraineux). Alcaloïdes indoliques : vincristine/vinblastine (antimitotiques), ergotamine (migraine), LSD (hallucinogène). Benzimidazole : oméprazole, pantoprazole (IPP = inhibiteurs de la pompe à protons H⁺/K⁺-ATPase → traitement RGO, ulcères), albendazole, mébendazole (anthelminthiques). Quinoléine : quinine (antipaludique historique), chloroquine (antipaludique, lupus), méfloquine. Fluoroquinolones (quinolone-4-one) : ciprofloxacine → antibiotiques.",
+      "key_examples": "Sumatriptan (Imigrane®) : indole-5-sulfonamide → agoniste 5-HT₁B/₁D → vasoconstriction artères cérébrales → anti-migraineux. Oméprazole (Mopral®) : benzimidazole + pyridine → pro-drogue → sulfénamide → lien covalent Cys-H⁺/K⁺-ATPase. Vincristine/vinblastine : indole bicyclique (catharanthus roseus) → liaison tubuline. Mélatonine : indole-3-acétamide N-acétylé → régulation sommeil. Albendazole : benzimidazole-carbamate → liaison β-tubuline parasites.",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_grignard.glb",
+      "name": "Réactifs de Grignard et Organométalliques",
+      "desc": "Réactifs RMgX et organolithiens — nucléophiles carbonés, formation de liaisons C-C",
+      "orga_type": "Réactivité — Organométalliques",
+      "group": "Organométalliques",
+      "structure": "Réactifs de Grignard R-MgX : obtenus par insertion oxydante du Mg dans une liaison C-X (Mg⁰ → Mg²⁺). Victor Grignard — Prix Nobel 1912. Solvant THF (complexe Mg-THF). Organolithiens R-Li : insertion oxydante de 2 Li dans C-X → R-Li + LiX. R-MgX et R-Li = carbanions de facto = base + nucléophile carboé très fort (pKa conjugué R-H ≈ 40-50).",
+      "properties": "Réactivité des réactifs de Grignard/organolithiens : (A) comme base (déprotonation de H acide, pKa < 40) : alcynes → alcynures. (B) Addition sur C=O : aldéhyde → alcool secondaire, cétone → alcool tertiaire, formaldéhyde → alcool primaire (homologation +1C), ester → alcool tertiaire (2 équivalents de Nu). (C) Addition sur alcènes activés, nitriles. Chimiosélectivité : réactivité élevée → peu sélectif → utiliser à basse température, solvant anhydre absolu (détruit par H₂O → R-H). Incompatibilité avec fonctions acides (OH, NH, COOH) → préprotection nécessaire.",
+      "pharmacology": "Les réactifs de Grignard sont essentiels en synthèse totale de médicaments : formation de centres stéréogènes par addition asymétrique sur des carbonyles chiraux (auxiliaires chiraux, catalyse asymétrique). Alcynures lithiés : blocs de construction de la synthèse de l'érythronolide A (antibiotique macrolide), du farnésol (terpène). Addition sur époxyde → extension de chaîne. Synthèse de l'ibuprofène industrielle : étape clé Grignard. Synthèse d'analogues de stéroïdes : additions stéréosélectives. Formation de liaisons C-C contrôlées : pilier de la synthèse organique pharmaceutique moderne. Alternative catalytique : couplages pallado-catalysés (Suzuki, Heck, Buchwald-Hartwig) pour les liaisons C-C et C-N difficiles.",
+      "key_examples": "Grignard (CH₃MgBr) + formaldéhyde → éthanol (alcool primaire, +1C). Grignard (PhMgBr) + acétone → alcool tertiaire (1-phénylpropan-1-ol). Grignard + CO₂ → acide carboxylique (voie de synthèse d'AINS). Organolithien + alcyne terminal → alcynure lithié → addition sur aldéhyde (synthèse de l'érythronolide). Grignard + ester → alcool tertiaire (2 équivalents).",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "orga_stereochimie.glb",
+      "name": "Stéréochimie — Chiralité et Médicaments",
+      "desc": "Énantiomères, diastéréoisomères, stéréosélectivité — importance pharmacologique de la configuration",
+      "orga_type": "Stéréochimie",
+      "group": "Stéréoisomérie",
+      "structure": "Stéréoisomères = même formule brute et connectivité, mais arrangement spatial différent. Énantiomères : images l'une de l'autre dans un miroir, non superposables → présence d'un centre stéréogène (C sp³ lié à 4 groupements différents). Conventions R/S de Cahn-Ingold-Prelog. Diastéréoisomères : stéréoisomères non énantiomères (2 centres stéréogènes ou plus, dont au moins un diffère). Composé méso : centres stéréogènes mais plan de symétrie interne → optiquement inactif. Géométrie cis/trans (alcènes, cycles) : configurations Z (zusammen) et E (entgegen).",
+      "properties": "Chiralité et activité biologique : les récepteurs, enzymes, transporteurs sont chiraux → énantiosélectivité de la reconnaissance moléculaire → les 2 énantiomères peuvent avoir des effets biologiques différents (activité, toxicité, métabolisme). Conséquences : médicaments racémiques (mélange 50:50 R/S) peuvent avoir 1 seul énantiomère actif. Développement des médicaments énantiomériquement purs (single enantiomer). Règle de Biot-Savart : activité optique (α) = rotation du plan de lumière polarisée. Régiochimie (Markovnikov, Zaïtsev) et stéréochimie (SN2 = inversion de Walden, E2 = anti-coplanaire) sont liées au mécanisme réactionnel.",
+      "pharmacology": "Exemples de médicaments chiraux : ibuprofène (S-(+) actif, R-(−) inactif mais converti en S in vivo — racémique commercialisé). Esoméprazole (S-oméprazole) vs oméprazole (racémique) : pharmacocinétique et métabolisme différents. Escitalopram (S-énantiomère actif du citalopram). Lévofloxacine (L-isomère de l'ofloxacine, plus actif). Thalidomide (R actif, S tératogène — mais racémisation in vivo → impossibilité de commercialiser l'énantiomère pur). L-DOPA (l-dihydroxyphénylalanine) → précurseur de la dopamine (D-DOPA inactive). Blocage neuromuscualaire : d-tubocurarine vs l-tubocurarine (différences d'activité).",
+      "key_examples": "S-(+)-ibuprofène (actif) / R-(−)-ibuprofène (inactif, converti en S). Esoméprazole (Nexium®) = S-oméprazole (plus stable métaboliquement). Thalidomide : R = sédatif, S = tératogène → chaque énantiomère converti en l'autre in vivo. L-DOPA (Modopar®) : acide aminé L → franchit la BHE → déscarboxylation → L-dopamine. Lévofloxacine (Tavanic®) = L-ofloxacine (×2 active vs racémique).",
+      "camera": {
+        "x": 0,
+        "y": 1.2,
+        "z": 4,
+        "lookAtX": 0,
+        "lookAtY": 0.8,
+        "lookAtZ": 0
+      }
+    },
+    {
+      "file": "stereochimie_medicaments.glb",
+      "name": "Stéréochimie — Impact Pharmacologique",
+      "orga_type": "Stéréochimie",
+      "group": "Stéréochimie",
+      "desc": "Conséquences de la configuration spatiale (R/S, énantiomères) sur l'activité pharmacologique. Règles CIP, médicaments chiraux, importance clinique des énantiopurs.",
+      "structure": "Règle de CIP : C asymétrique → R (Rectus, sens horaire priorités) ou S (Sinister, antihoraire). Nombre d'isomères = 2^n (n carbones asymétriques, sauf méso).",
+      "properties": "Activité optique : rotation plane lumière polarisée. [α] = rotation × 100 / (l × c). (+) = dextrogyre, (-) = lévogyre. Séparation énantiomères : colonnes chirales (HPLC, CPG), résolution classique (sel diastéréoisomères + cristallisation), biotransformation enzymatique. Impact sur pKa : énantiomères mêmes pKa (mais interactions avec protéines chirales différentes → liaison plasmatique peut différer).",
+      "key_examples": "Thalidomide : (R) = sédatif, (S) = tératogène, mais interconversion in vivo → CI absolue grossesse. Ibuprofène : (R) converti en (S) actif in vivo (inversion chirale enzymatique → avantage racémique limité). Oméprazole (racémique) vs ésoméprazole (S-oméprazole, meilleure pharmacocinétique). Lévothyroxine (L-T4) actif, D-T4 inactif. Lévocetirizine (R-cétirizine, antihistaminique, moindre sédation). Naproxène (S actif commercialisé). Atorvastatine (R-atorvastatine actif).",
+      "pharmacology": "Stratégie de développement de médicaments chiraux : chiral switch (racémique → enantiopur). Avantages énantiopurs : dose réduite de moitié, effets indésirables liés à un énantiomère éliminés, protection par brevet. ICH Q6A : caractérisation stéréochimique obligatoire dans le dossier d'AMM. Chirotechnologie : asymmetric synthesis (catalyseurs chiraux, biocatalyse)."
+    },
+    {
+      "file": "heterocycles_pharmaceutiques.glb",
+      "name": "Hétérocycles Pharmaceutiques — Applications",
+      "orga_type": "Hétérocycles",
+      "group": "Hétérocycles",
+      "desc": "Cycles organiques contenant un ou plusieurs hétéroatomes (N, O, S). Plus de 60% des médicaments contiennent un cycle hétéroaromatique. Classification et exemples clés.",
+      "structure": "Hétérocycles à 5 chaînons avec 1N : pyrrole (N-H, aromatique 6π), imidazole (2N, tautomère, pKa 7 → protonation physiologique), pyrazole, triazole. Avec O : furane, isoxazole. Avec S : thiophène, thiazole. Hétérocycles à 6 chaînons : pyridine (1N, base faible pKa 5,2), pyrimidine (2N : positions 1,3), pyrazine, purine (bicyclique : imidazole + pyrimidine). Hétérocycles bicycliques : benzimidazole, indole (amino-acide Trp), quinoline, isoquinoline, benzothiazole.",
+      "properties": "Aromaticité : respect de la règle de Hückel (4n+2 électrons π). Imidazole : amphotère (pKaH=7 pour N3, pKaH=-1 pour N1), site de coordination métallique (histidine dans sites actifs enzymatiques Zn²⁺, Fe²⁺). Pyridine : moins nucléophile que benzène (N électronégatif → appauvrissement), SEAr moins facile, facilite réactions nucléophiles en para/ortho. Thiophène : cycle soufré aromatique (plus réactif que benzène en SEAr). Furane : plus réactif, sensible à l'ouverture acide.",
+      "key_examples": "Imidazole → métronidazole (anti-infectieux), kétoconazole, miconazole, oméprazole (benzimidazole). Pyridine → nicotinamide (vit B3), isoniazide, amlodipine (dihydropyridine). Pyrimidine → 5-FU (anticancéreux), trétinoïne, sulfaméthoxazole, acyclovir (pyrimidine modifiée). Triazole → fluconazole, itraconazole, voriconazole (antifongiques). Indole → sumatriptan (triptan), ondansétron (5-HT3), tryptophane. Quinoline → chloroquine, méfloquine, lévofloxacine. Purine → adénosine, théophylline, aciclovir, 6-mercaptopurine.",
+      "pharmacology": "Hétérocycles dans pharmacophores antifongiques : triazoles → inhibition CYP51 (lanostérol 14α-déméthylase fongique). Inhibiteurs de kinases : pirimidinyl-amino (imatinib : phénylaminopyrimidine, BCR-ABL). Inhibiteurs PDE5 : sildénafil (pyrazolopyrimidinone). Liaison aux protéines : les N hétérocycliques coordinats aux métaux (zinc des métalloprotéases, histidines des cytochromes P450)."
+    },
+    {
+      "file": "pka_medicaments.glb",
+      "name": "pKa des Médicaments — Ionisation et Absorption",
+      "orga_type": "Acide-base",
+      "group": "Propriétés physico-chimiques",
+      "desc": "Constante d'acidité des fonctions ionisables des médicaments. Impact sur la solubilité, l'absorption orale (règle de pH-partition), la liaison protéique et la pénétration tissulaire.",
+      "structure": "Fonctions ionisables et pKa : acide carboxylique (COOH pKa 2-5), phénol (pKa 9-10), sulfonamide (pKa 5-11), thiol (pKa 8-10), amine aliphatique (pKa 9-11), amine aromatique (pKa 2-5), imidazolium (pKa 6-7), pyridinium (pKa 5-6), guanidinium (pKa 12-13). Médicaments acides (COOH, sulfonamides, phénols) : ionisés à pH physiologique → forme A⁻. Médicaments basiques (amines) : protonés à pH physiologique → forme BH⁺.",
+      "properties": "Règle de pH-partition (Henderson-Hasselbalch) : seule la forme non-ionisée (lipophile) franchit les membranes biologiques. Aspirine (pKa 3,5) : forme acide prédominante à pH gastrique (1,2-3) → absorption gastrique ✓, mais irritation muqueuse. Morphine (pKa 9,9) : base, 76% ionisée à pH 7,4 → faible lipophilie → pénétration SNC limitée (vs héroïne pKa ~8 + ester). Accumulation dans compartiments acides : bases faibles accumulées dans phagosomes (chloroquine : pH 4,5 → forme ionisée piégée → antimalérien).",
+      "key_examples": "Ibuprofène pKa 4,5 : acide → 99,9% ionisé à pH 7,4 mais liposolubilité résiduelle → biodisponibilité. Amoxicilline (amine + acide) : zwitterion, pKaH1=2,67, pKaH2=7,11, pKa3=9,63. Morphine pKa 9,9 : base lipophile faible → bonne absorption orale mais SNC limité. Propranolol pKa 9,5 : lipophile → bon SNC. Quinidine pKa 8,3/4,3 (dibase) → accumulation dans tissus acides.",
+      "pharmacology": "Stratégies pour optimiser le pKa : promédicaments esters → libération de l'acide actif (énalaprilate ↔ énalapril). Sels pharmaceutiques : ajuster pHi de dissolution (chlorhydrate → ↑ solubilité bases faibles; sodium → ↑ solubilité acides faibles). Formes à libération gastro-résistante : protègent acides instables en milieu acide (oméprazole pKa 4 → enrobage entérique). Ionisation et toxicité rénale : aminosides (cations, pKa élevé) → accumulation cellules tubulaires (cationiques, piégés par membranes chargées négativement)."
+    },
+    {
+      "file": "reactions_organiques_pharmaceutiques.glb",
+      "name": "Réactions Organiques — Applications Pharmaceutiques",
+      "orga_type": "Réactivité",
+      "group": "Mécanismes réactionnels",
+      "desc": "Mécanismes réactionnels fondamentaux (substitution, addition, élimination, hydrolyse) appliqués à la synthèse et la dégradation des médicaments.",
+      "structure": "SN1 (bimoléculaire, carbocation) : carbone tertiaire, solvant polaire, pas de stéréosélectivité → racémisation. SN2 (bimoléculaire, concertée) : carbone primaire ou secondaire accessible, base forte, inversion Walden → stéréosélectif. Addition nucléophile C=O : aldéhyde + RNH2 → imine (base de Schiff, réversible) → base de Schiff de l'aminotransférase (cofacteur PLP). Addition électrophile C=C : Br2, HX. Élimination E1/E2 : formation alcènes. SEAr (Substitution Électrophile Aromatique) : halogénation, nitration, sulfonation, friedel-crafts → bases médicaments aromatiques. SNAr (aromatiques activés par groupes EWG) : réaction nucléophile sur arène déficient.",
+      "properties": "Hydrolyse esters (estérases) : médicaments prodrogues (aspirine, chloramphénicol palmitate). Hydrolyse amides (amidases) : plus lente (résonance N-C=O stabilisante). Dégradation pH-dépendante : aspirine → acide salicylique + acide acétique (pH basique). Photodégradation : nifédipine (dihydropyridine → pyridine aromatique, perte activité). Oxydation : phénothiazines (chlorpromazine → sulfoxyde). Isomérisation : tétracyclines (4-épitétracycline inactif, néphrotoxique).",
+      "key_examples": "Réaction de Maillard : amino-acides + sucres réducteurs → produits bruns (ex: ampoules glucosées avec amines). Condensation de Knoevenagel : nifédipine synthèse. Cyclisation : formation de lactones (δ-gluconolactone), β-lactames. SNAr : exemples antibiotiques fluoroquinolones (F en C-6 actif électrofuge).",
+      "pharmacology": "Dégradation des médicaments : stabilité pH, T°, lumière → conditions conservation. Hydrolysable : esters (aspirine, procaïne), amides (lidocaïne plus stable), β-lactames (pénicillines + eau → acide penicilloïque inactif + toxique). β-lactames et résistance : β-lactamases → hydrolyse cycle → inactivation. Inhibiteurs β-lactamases : acide clavulanique, sulbactam, tazobactam (substrat suicide : réaction irréversible avec β-lactamase)."
+    }
+  ]
+}

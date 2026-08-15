@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculateur PK — PharmAtlas</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@300;400;500;600&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#faf8f3;
+  --bg2:#f3f0e8;
+  --bg3:#eceae0;
+  --paper:#ffffff;
+  --ink:#1a1410;
+  --ink2:#3d3528;
+  --muted:#7a6e5a;
+  --border:#d4cbb8;
+  --border2:#b8ad98;
+  --accent:#1a4a6e;
+  --accent2:#2d7a4f;
+  --accent3:#7a2d1a;
+  --amber:#8a5c10;
+  --amber-bg:#fff8e8;
+  --amber-border:#e8d098;
+  --red:#c0392b;
+  --red-bg:#fff0ee;
+  --green:#2d7a4f;
+  --green-bg:#edf7f0;
+  --blue:#1a4a6e;
+  --blue-bg:#edf3f9;
+  --shadow:rgba(26,20,10,.08);
+  --shadow2:rgba(26,20,10,.14);
+}
+
+body{
+  font-family:'Instrument Sans',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── HEADER ── */
+header{
+  background:var(--ink);
+  color:#f5f0e4;
+  padding:18px 32px;
+  display:flex;
+  align-items:center;
+  gap:20px;
+  border-bottom:3px solid var(--amber);
+}
+.logo-pk{
+  font-family:'Libre Baskerville',serif;
+  font-size:20px;
+  letter-spacing:.5px;
+}
+.logo-pk span{color:var(--amber-border);font-style:italic;}
+.header-sub{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  color:rgba(245,240,228,.4);
+  letter-spacing:2px;
+  text-transform:uppercase;
+  margin-left:auto;
+}
+
+/* ── LAYOUT ── */
+.layout{
+  display:grid;
+  grid-template-columns:260px 1fr;
+  min-height:calc(100vh - 57px);
+}
+
+/* ── SIDEBAR ── */
+nav{
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+  padding:20px 0;
+  position:sticky;
+  top:0;
+  height:calc(100vh - 57px);
+  overflow-y:auto;
+}
+.nav-section{
+  padding:8px 16px 4px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:2px;
+  margin-top:12px;
+}
+.nav-section:first-child{margin-top:0;}
+.nav-btn{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  padding:10px 18px;
+  background:none;
+  border:none;
+  border-left:3px solid transparent;
+  text-align:left;
+  cursor:pointer;
+  font-family:'Instrument Sans',sans-serif;
+  font-size:13px;
+  color:var(--ink2);
+  transition:all .15s;
+}
+.nav-btn:hover{background:var(--bg3);color:var(--ink);}
+.nav-btn.active{
+  background:var(--paper);
+  border-left-color:var(--accent);
+  color:var(--accent);
+  font-weight:600;
+}
+.nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+.nav-formula{
+  margin-left:auto;
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;
+  color:var(--muted);
+  background:var(--bg3);
+  padding:2px 6px;
+  border-radius:3px;
+}
+
+/* ── MAIN ── */
+main{
+  padding:32px 36px;
+  max-width:900px;
+}
+
+/* ── MODULE CARD ── */
+.module{display:none;}
+.module.active{display:block;}
+
+.module-header{
+  margin-bottom:28px;
+}
+.module-title{
+  font-family:'Libre Baskerville',serif;
+  font-size:26px;
+  color:var(--ink);
+  margin-bottom:6px;
+}
+.module-title em{color:var(--accent);font-style:italic;}
+.module-desc{
+  font-size:13px;
+  color:var(--muted);
+  line-height:1.6;
+  max-width:620px;
+}
+
+/* ── FORMULA DISPLAY ── */
+.formula-box{
+  background:var(--ink);
+  border-radius:10px;
+  padding:18px 24px;
+  margin-bottom:24px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  flex-wrap:wrap;
+}
+.formula-text{
+  font-family:'JetBrains Mono',monospace;
+  font-size:15px;
+  color:#e8d098;
+  letter-spacing:.5px;
+  flex:1;
+}
+.formula-label{
+  font-size:10px;
+  color:rgba(245,240,228,.35);
+  letter-spacing:2px;
+  text-transform:uppercase;
+}
+
+/* ── INPUT GRID ── */
+.input-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:16px;
+  margin-bottom:24px;
+}
+.field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.field label{
+  font-size:11px;
+  font-weight:600;
+  color:var(--ink2);
+  text-transform:uppercase;
+  letter-spacing:.8px;
+}
+.field .unit-hint{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  color:var(--muted);
+  font-weight:400;
+  text-transform:none;
+  letter-spacing:0;
+}
+.input-wrap{position:relative;}
+.field input{
+  width:100%;
+  padding:10px 14px;
+  background:var(--paper);
+  border:1.5px solid var(--border);
+  border-radius:7px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:14px;
+  color:var(--ink);
+  outline:none;
+  transition:border-color .15s;
+}
+.field input:focus{border-color:var(--accent);}
+.field input.filled{border-color:var(--accent2);background:var(--green-bg);}
+.field input[readonly]{
+  background:var(--bg2);
+  color:var(--muted);
+  cursor:not-allowed;
+}
+.field .suffix{
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform:translateY(-50%);
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  color:var(--muted);
+  pointer-events:none;
+}
+
+/* ── BOUTONS ── */
+.btn-row{
+  display:flex;
+  gap:10px;
+  margin-bottom:28px;
+  flex-wrap:wrap;
+}
+.btn{
+  padding:10px 22px;
+  border:none;
+  border-radius:7px;
+  font-family:'Instrument Sans',sans-serif;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+  transition:all .15s;
+  letter-spacing:.3px;
+}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#15385a;transform:translateY(-1px);box-shadow:0 4px 12px rgba(26,74,110,.3);}
+.btn-secondary{background:var(--bg3);color:var(--ink2);border:1px solid var(--border);}
+.btn-secondary:hover{background:var(--border);color:var(--ink);}
+
+/* ── RÉSULTATS ── */
+.results-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:14px;
+  margin-bottom:28px;
+}
+.result-card{
+  background:var(--paper);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:16px;
+  position:relative;
+  overflow:hidden;
+  transition:box-shadow .2s;
+}
+.result-card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:3px;
+  background:var(--accent);
+  border-radius:3px 3px 0 0;
+}
+.result-card.green::before{background:var(--accent2);}
+.result-card.amber::before{background:var(--amber);}
+.result-card.red::before{background:var(--red);}
+.result-card:hover{box-shadow:0 4px 16px var(--shadow2);}
+.result-abbr{
+  font-family:'JetBrains Mono',monospace;
+  font-size:13px;
+  font-weight:600;
+  color:var(--accent);
+  margin-bottom:4px;
+}
+.result-card.green .result-abbr{color:var(--accent2);}
+.result-card.amber .result-abbr{color:var(--amber);}
+.result-card.red .result-abbr{color:var(--red);}
+.result-name{font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.3;}
+.result-value{
+  font-family:'Libre Baskerville',serif;
+  font-size:24px;
+  color:var(--ink);
+  margin-bottom:2px;
+}
+.result-value.empty{font-size:16px;color:var(--border2);}
+.result-unit{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+
+/* ── INTERPRÉTATION ── */
+.interp-box{
+  background:var(--amber-bg);
+  border:1px solid var(--amber-border);
+  border-radius:10px;
+  padding:18px 20px;
+  margin-bottom:24px;
+  display:none;
+}
+.interp-box.visible{display:block;}
+.interp-title{
+  font-size:11px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  color:var(--amber);
+  margin-bottom:10px;
+}
+.interp-items{display:flex;flex-direction:column;gap:6px;}
+.interp-item{
+  font-size:12.5px;
+  color:var(--ink2);
+  line-height:1.5;
+  padding-left:14px;
+  position:relative;
+}
+.interp-item::before{
+  content:'→';
+  position:absolute;
+  left:0;
+  color:var(--amber);
+  font-family:'JetBrains Mono',monospace;
+}
+
+/* ── COURBE ── */
+.chart-wrap{
+  background:var(--paper);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:20px;
+  margin-bottom:24px;
+}
+.chart-title{
+  font-size:11px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  color:var(--muted);
+  margin-bottom:16px;
+}
+canvas{width:100%;height:180px;display:block;}
+
+/* ── RÉFÉRENCE TABLE ── */
+.ref-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+  margin-top:8px;
+}
+.ref-table th{
+  background:var(--bg2);
+  padding:8px 12px;
+  text-align:left;
+  font-weight:600;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.8px;
+  color:var(--muted);
+  border-bottom:2px solid var(--border);
+}
+.ref-table td{
+  padding:9px 12px;
+  border-bottom:1px solid var(--bg3);
+  color:var(--ink2);
+  vertical-align:top;
+  line-height:1.4;
+}
+.ref-table tr:hover td{background:var(--bg);}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11px;}
+
+/* ── ALERT ── */
+.alert{
+  padding:10px 14px;
+  border-radius:7px;
+  font-size:12px;
+  margin-bottom:16px;
+  display:none;
+  line-height:1.4;
+}
+.alert.visible{display:block;}
+.alert-err{background:var(--red-bg);border:1px solid #f0b8b0;color:var(--red);}
+.alert-ok{background:var(--green-bg);border:1px solid #a8d8b8;color:var(--green);}
+
+/* ── TABS ── */
+.tabs{
+  display:flex;
+  gap:0;
+  border-bottom:2px solid var(--border);
+  margin-bottom:24px;
+}
+.tab-btn-inner{
+  padding:8px 18px;
+  background:none;
+  border:none;
+  border-bottom:2px solid transparent;
+  margin-bottom:-2px;
+  font-family:'Instrument Sans',sans-serif;
+  font-size:13px;
+  color:var(--muted);
+  cursor:pointer;
+  transition:all .15s;
+  font-weight:500;
+}
+.tab-btn-inner.active{
+  color:var(--accent);
+  border-bottom-color:var(--accent);
+  font-weight:600;
+}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* ── DIVIDER ── */
+.divider{
+  border:none;
+  border-top:1px solid var(--border);
+  margin:24px 0;
+}
+
+/* ── STEADY STATE TIMELINE ── */
+.ss-timeline{
+  display:flex;
+  align-items:flex-end;
+  gap:3px;
+  height:60px;
+  padding:0 4px;
+  margin:12px 0;
+}
+.ss-bar{
+  flex:1;
+  background:var(--accent);
+  border-radius:3px 3px 0 0;
+  opacity:.15;
+  transition:all .4s;
+  position:relative;
+}
+.ss-bar.filled{opacity:.8;}
+.ss-bar.partial{opacity:.45;}
+.ss-label{
+  text-align:center;
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;
+  color:var(--muted);
+  margin-top:6px;
+  display:flex;
+  gap:3px;
+}
+.ss-label span{flex:1;text-align:center;}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.result-card{animation:fadeIn .2s ease forwards;}
+.result-card:nth-child(2){animation-delay:.04s;}
+.result-card:nth-child(3){animation-delay:.08s;}
+.result-card:nth-child(4){animation-delay:.12s;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-pk">Pharm<span>Atlas</span> — Calculateur PK</div>
+  <div class="header-sub">Pharmacocinétique clinique · DFGSP2</div>
+</header>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<nav>
+  <div class="nav-section">Paramètres de base</div>
+  <button class="nav-btn active" onclick="switchModule('monocomp')">
+    <span class="nav-icon">📉</span>Modèle monocompartimental
+    <span class="nav-formula">Cl, Vd, t½</span>
+  </button>
+  <button class="nav-btn" onclick="switchModule('biodispo')">
+    <span class="nav-icon">💊</span>Biodisponibilité
+    <span class="nav-formula">F%</span>
+  </button>
+
+  <div class="nav-section">Posologie</div>
+  <button class="nav-btn" onclick="switchModule('doses')">
+    <span class="nav-icon">🎯</span>Doses de charge & entretien
+    <span class="nav-formula">DL, DE</span>
+  </button>
+  <button class="nav-btn" onclick="switchModule('plateau')">
+    <span class="nav-icon">📊</span>Plateau à l'état stable
+    <span class="nav-formula">Css, Cmax, Cmin</span>
+  </button>
+
+  <div class="nav-section">Ajustements</div>
+  <button class="nav-btn" onclick="switchModule('renal')">
+    <span class="nav-icon">🫘</span>Insuffisance rénale
+    <span class="nav-formula">Clcr, Cockcroft</span>
+  </button>
+  <button class="nav-btn" onclick="switchModule('reference')">
+    <span class="nav-icon">📋</span>Valeurs de référence
+  </button>
+</nav>
+
+<!-- MAIN -->
+<main>
+
+<!-- ══════════ MODULE 1 : MONOCOMPARTIMENTAL ══════════ -->
+<div class="module active" id="mod-monocomp">
+  <div class="module-header">
+    <h1 class="module-title">Modèle <em>monocompartimental</em></h1>
+    <p class="module-desc">Calcul des paramètres fondamentaux à partir de la dose, de la concentration initiale et de l'AUC. Le modèle monocompartimental suppose une distribution instantanée dans l'organisme.</p>
+  </div>
+
+  <div class="formula-box">
+    <div>
+      <div class="formula-label">Formules</div>
+      <div class="formula-text">t½ = 0.693 / ke &nbsp;|&nbsp; ke = Cl / Vd &nbsp;|&nbsp; Cl = Dose / AUC &nbsp;|&nbsp; Vd = Dose / C₀</div>
+    </div>
+  </div>
+
+  <div class="alert alert-err" id="mc-err">⚠️ Veuillez renseigner au moins : Dose + (AUC ou C₀) pour calculer.</div>
+
+  <div class="input-grid">
+    <div class="field">
+      <label>Dose administrée <span class="unit-hint">IV bolus</span></label>
+      <div class="input-wrap">
+        <input type="number" id="mc-dose" placeholder="ex: 500" min="0" oninput="calcMono()">
+        <span class="suffix">mg</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>C₀ <span class="unit-hint">concentration initiale (t=0)</span></label>
+      <div class="input-wrap">
+        <input type="number" id="mc-c0" placeholder="ex: 20" min="0" oninput="calcMono()">
+        <span class="suffix">mg/L</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>AUC <span class="unit-hint">aire sous la courbe</span></label>
+      <div class="input-wrap">
+        <input type="number" id="mc-auc" placeholder="ex: 100" min="0" oninput="calcMono()">
+        <span class="suffix">mg·h/L</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>ke <span class="unit-hint">constante d'élimination</span></label>
+      <div class="input-wrap">
+        <input type="number" id="mc-ke" placeholder="calculé ou saisi" min="0" oninput="calcMono()">
+        <span class="suffix">h⁻¹</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="calcMono()">⟳ Calculer</button>
+    <button class="btn btn-secondary" onclick="resetMono()">Réinitialiser</button>
+    <button class="btn btn-secondary" onclick="loadExample('mc')">Exemple ceftriaxone</button>
+  </div>
+
+  <div class="results-grid" id="mc-results">
+    <div class="result-card">
+      <div class="result-abbr">Cl</div>
+      <div class="result-name">Clairance totale</div>
+      <div class="result-value empty" id="mc-r-cl">—</div>
+      <div class="result-unit">L/h</div>
+    </div>
+    <div class="result-card green">
+      <div class="result-abbr">Vd</div>
+      <div class="result-name">Volume de distribution</div>
+      <div class="result-value empty" id="mc-r-vd">—</div>
+      <div class="result-unit">L</div>
+    </div>
+    <div class="result-card amber">
+      <div class="result-abbr">t½</div>
+      <div class="result-name">Demi-vie d'élimination</div>
+      <div class="result-value empty" id="mc-r-t12">—</div>
+      <div class="result-unit">heures</div>
+    </div>
+    <div class="result-card red">
+      <div class="result-abbr">ke</div>
+      <div class="result-name">Constante d'élimination</div>
+      <div class="result-value empty" id="mc-r-ke">—</div>
+      <div class="result-unit">h⁻¹</div>
+    </div>
+  </div>
+
+  <div class="interp-box" id="mc-interp">
+    <div class="interp-title">📖 Interprétation</div>
+    <div class="interp-items" id="mc-interp-items"></div>
+  </div>
+
+  <div class="chart-wrap" id="mc-chart-wrap" style="display:none">
+    <div class="chart-title">Cinétique d'élimination — Déclin monoexponentiel</div>
+    <canvas id="mc-canvas" width="800" height="180"></canvas>
+  </div>
+</div>
+
+<!-- ══════════ MODULE 2 : BIODISPONIBILITÉ ══════════ -->
+<div class="module" id="mod-biodispo">
+  <div class="module-header">
+    <h1 class="module-title">Biodisponibilité <em>absolue & relative</em></h1>
+    <p class="module-desc">Fraction de la dose absorbée atteignant la circulation systémique. La biodisponibilité absolue compare une voie extravasculaire à la voie IV de référence.</p>
+  </div>
+
+  <div class="formula-box">
+    <div>
+      <div class="formula-label">Formules</div>
+      <div class="formula-text">F abs = (AUC_EV / AUC_IV) × (Dose_IV / Dose_EV) × 100 &nbsp;|&nbsp; F rel = AUC_test / AUC_réf × 100</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn-inner active" onclick="switchTab('bio','abs',this)">Biodisponibilité absolue</button>
+    <button class="tab-btn-inner" onclick="switchTab('bio','rel',this)">Biodisponibilité relative</button>
+  </div>
+
+  <div class="tab-pane active" id="bio-abs">
+    <div class="input-grid">
+      <div class="field">
+        <label>AUC voie IV <span class="unit-hint">référence</span></label>
+        <div class="input-wrap">
+          <input type="number" id="bio-auc-iv" placeholder="ex: 120" min="0" oninput="calcBio()">
+          <span class="suffix">mg·h/L</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Dose IV</label>
+        <div class="input-wrap">
+          <input type="number" id="bio-dose-iv" placeholder="ex: 100" min="0" oninput="calcBio()">
+          <span class="suffix">mg</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>AUC voie EV <span class="unit-hint">orale, SC…</span></label>
+        <div class="input-wrap">
+          <input type="number" id="bio-auc-ev" placeholder="ex: 80" min="0" oninput="calcBio()">
+          <span class="suffix">mg·h/L</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Dose EV</label>
+        <div class="input-wrap">
+          <input type="number" id="bio-dose-ev" placeholder="ex: 200" min="0" oninput="calcBio()">
+          <span class="suffix">mg</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane" id="bio-rel">
+    <div class="input-grid">
+      <div class="field">
+        <label>AUC formulation Test</label>
+        <div class="input-wrap">
+          <input type="number" id="bio-auc-test" placeholder="ex: 95" min="0" oninput="calcBio()">
+          <span class="suffix">mg·h/L</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>AUC formulation Référence</label>
+        <div class="input-wrap">
+          <input type="number" id="bio-auc-ref" placeholder="ex: 100" min="0" oninput="calcBio()">
+          <span class="suffix">mg·h/L</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="calcBio()">⟳ Calculer</button>
+    <button class="btn btn-secondary" onclick="resetBio()">Réinitialiser</button>
+    <button class="btn btn-secondary" onclick="loadExample('bio')">Exemple amoxicilline</button>
+  </div>
+
+  <div class="results-grid">
+    <div class="result-card green">
+      <div class="result-abbr">F</div>
+      <div class="result-name">Biodisponibilité</div>
+      <div class="result-value empty" id="bio-r-f">—</div>
+      <div class="result-unit">%</div>
+    </div>
+    <div class="result-card">
+      <div class="result-abbr">Effet 1er passage</div>
+      <div class="result-name">Extraction hépatique estimée</div>
+      <div class="result-value empty" id="bio-r-ep">—</div>
+      <div class="result-unit">%</div>
+    </div>
+  </div>
+
+  <div class="interp-box" id="bio-interp">
+    <div class="interp-title">📖 Interprétation</div>
+    <div class="interp-items" id="bio-interp-items"></div>
+  </div>
+</div>
+
+<!-- ══════════ MODULE 3 : DOSES ══════════ -->
+<div class="module" id="mod-doses">
+  <div class="module-header">
+    <h1 class="module-title">Doses de <em>charge & d'entretien</em></h1>
+    <p class="module-desc">Calcul des doses nécessaires pour atteindre rapidement (dose de charge) puis maintenir (dose d'entretien) une concentration cible.</p>
+  </div>
+
+  <div class="formula-box">
+    <div>
+      <div class="formula-label">Formules</div>
+      <div class="formula-text">DL = Cp_cible × Vd / F &nbsp;&nbsp;&nbsp; DE = Cp_cible × Cl × τ / F</div>
+    </div>
+  </div>
+
+  <div class="input-grid">
+    <div class="field">
+      <label>Cp cible <span class="unit-hint">concentration visée</span></label>
+      <div class="input-wrap">
+        <input type="number" id="d-cp" placeholder="ex: 10" min="0" oninput="calcDoses()">
+        <span class="suffix">mg/L</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Vd <span class="unit-hint">volume de distribution</span></label>
+      <div class="input-wrap">
+        <input type="number" id="d-vd" placeholder="ex: 40" min="0" oninput="calcDoses()">
+        <span class="suffix">L</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Cl <span class="unit-hint">clairance totale</span></label>
+      <div class="input-wrap">
+        <input type="number" id="d-cl" placeholder="ex: 5" min="0" oninput="calcDoses()">
+        <span class="suffix">L/h</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>τ <span class="unit-hint">intervalle inter-doses</span></label>
+      <div class="input-wrap">
+        <input type="number" id="d-tau" placeholder="ex: 8" min="0" oninput="calcDoses()">
+        <span class="suffix">h</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>F <span class="unit-hint">biodisponibilité</span></label>
+      <div class="input-wrap">
+        <input type="number" id="d-f" placeholder="1 si IV, sinon 0–1" min="0" max="1" step="0.01" oninput="calcDoses()">
+        <span class="suffix">fraction</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="calcDoses()">⟳ Calculer</button>
+    <button class="btn btn-secondary" onclick="resetDoses()">Réinitialiser</button>
+    <button class="btn btn-secondary" onclick="loadExample('doses')">Exemple digoxine</button>
+  </div>
+
+  <div class="results-grid">
+    <div class="result-card">
+      <div class="result-abbr">DL</div>
+      <div class="result-name">Dose de charge (loading)</div>
+      <div class="result-value empty" id="d-r-dl">—</div>
+      <div class="result-unit">mg</div>
+    </div>
+    <div class="result-card green">
+      <div class="result-abbr">DE</div>
+      <div class="result-name">Dose d'entretien / prise</div>
+      <div class="result-value empty" id="d-r-de">—</div>
+      <div class="result-unit">mg</div>
+    </div>
+    <div class="result-card amber">
+      <div class="result-abbr">Dose/24h</div>
+      <div class="result-name">Dose journalière totale</div>
+      <div class="result-value empty" id="d-r-d24">—</div>
+      <div class="result-unit">mg/j</div>
+    </div>
+  </div>
+
+  <div class="interp-box" id="d-interp">
+    <div class="interp-title">📖 Interprétation</div>
+    <div class="interp-items" id="d-interp-items"></div>
+  </div>
+</div>
+
+<!-- ══════════ MODULE 4 : PLATEAU ══════════ -->
+<div class="module" id="mod-plateau">
+  <div class="module-header">
+    <h1 class="module-title">Plateau <em>à l'état stable</em> (Css)</h1>
+    <p class="module-desc">Concentrations minimale, maximale et moyenne à l'état d'équilibre lors d'administrations répétées. L'état stable est atteint après ~5 demi-vies.</p>
+  </div>
+
+  <div class="formula-box">
+    <div>
+      <div class="formula-label">Formules</div>
+      <div class="formula-text">Css,moy = F × Dose / (Cl × τ) &nbsp;|&nbsp; Cmax,ss = Css,moy × (1−e^−ke·τ)^−1 × (1−e^−ke·tinf)</div>
+    </div>
+  </div>
+
+  <div class="input-grid">
+    <div class="field">
+      <label>Dose / prise</label>
+      <div class="input-wrap">
+        <input type="number" id="ss-dose" placeholder="ex: 250" min="0" oninput="calcSS()">
+        <span class="suffix">mg</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>τ <span class="unit-hint">intervalle inter-doses</span></label>
+      <div class="input-wrap">
+        <input type="number" id="ss-tau" placeholder="ex: 8" min="0" oninput="calcSS()">
+        <span class="suffix">h</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Cl <span class="unit-hint">clairance</span></label>
+      <div class="input-wrap">
+        <input type="number" id="ss-cl" placeholder="ex: 5" min="0" oninput="calcSS()">
+        <span class="suffix">L/h</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>t½ <span class="unit-hint">demi-vie</span></label>
+      <div class="input-wrap">
+        <input type="number" id="ss-t12" placeholder="ex: 6" min="0" oninput="calcSS()">
+        <span class="suffix">h</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>F <span class="unit-hint">biodisponibilité</span></label>
+      <div class="input-wrap">
+        <input type="number" id="ss-f" placeholder="1 si IV" min="0" max="1" step="0.01" oninput="calcSS()">
+        <span class="suffix">fraction</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="calcSS()">⟳ Calculer</button>
+    <button class="btn btn-secondary" onclick="resetSS()">Réinitialiser</button>
+    <button class="btn btn-secondary" onclick="loadExample('ss')">Exemple antibiotique</button>
+  </div>
+
+  <div class="results-grid">
+    <div class="result-card green">
+      <div class="result-abbr">Css,moy</div>
+      <div class="result-name">Concentration moyenne à l'état stable</div>
+      <div class="result-value empty" id="ss-r-cmoy">—</div>
+      <div class="result-unit">mg/L</div>
+    </div>
+    <div class="result-card">
+      <div class="result-abbr">Cmax,ss</div>
+      <div class="result-name">Concentration maximale (pic)</div>
+      <div class="result-value empty" id="ss-r-cmax">—</div>
+      <div class="result-unit">mg/L</div>
+    </div>
+    <div class="result-card amber">
+      <div class="result-abbr">Cmin,ss</div>
+      <div class="result-name">Concentration minimale (résiduelle)</div>
+      <div class="result-value empty" id="ss-r-cmin">—</div>
+      <div class="result-unit">mg/L</div>
+    </div>
+    <div class="result-card red">
+      <div class="result-abbr">t½ × 5</div>
+      <div class="result-name">Temps pour atteindre l'état stable</div>
+      <div class="result-value empty" id="ss-r-tss">—</div>
+      <div class="result-unit">heures</div>
+    </div>
+  </div>
+
+  <div class="chart-wrap" id="ss-chart-wrap" style="display:none">
+    <div class="chart-title">Accumulation vers l'état stable — progression par demi-vies</div>
+    <div class="ss-timeline" id="ss-timeline"></div>
+    <div class="ss-label" id="ss-labels"></div>
+    <canvas id="ss-canvas" width="800" height="180"></canvas>
+  </div>
+
+  <div class="interp-box" id="ss-interp">
+    <div class="interp-title">📖 Interprétation</div>
+    <div class="interp-items" id="ss-interp-items"></div>
+  </div>
+</div>
+
+<!-- ══════════ MODULE 5 : RÉNALE ══════════ -->
+<div class="module" id="mod-renal">
+  <div class="module-header">
+    <h1 class="module-title">Ajustement en <em>insuffisance rénale</em></h1>
+    <p class="module-desc">Estimation de la clairance de la créatinine (Cockcroft-Gault) et ajustement de posologie pour les médicaments à élimination rénale.</p>
+  </div>
+
+  <div class="formula-box">
+    <div>
+      <div class="formula-label">Cockcroft-Gault</div>
+      <div class="formula-text">Clcr = [(140 − âge) × poids × k] / créatinine &nbsp;&nbsp; k = 1.23 (H) · 1.04 (F)</div>
+    </div>
+  </div>
+
+  <div class="input-grid">
+    <div class="field">
+      <label>Âge</label>
+      <div class="input-wrap">
+        <input type="number" id="rn-age" placeholder="ex: 65" min="1" max="120" oninput="calcRenal()">
+        <span class="suffix">ans</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Poids</label>
+      <div class="input-wrap">
+        <input type="number" id="rn-poids" placeholder="ex: 70" min="1" oninput="calcRenal()">
+        <span class="suffix">kg</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Créatinine sérique</label>
+      <div class="input-wrap">
+        <input type="number" id="rn-creat" placeholder="ex: 100" min="1" oninput="calcRenal()">
+        <span class="suffix">µmol/L</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Sexe</label>
+      <div class="input-wrap" style="display:flex;gap:8px;padding-top:2px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;text-transform:none;letter-spacing:0">
+          <input type="radio" name="rn-sex" value="H" checked onchange="calcRenal()"> Homme
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;cursor:pointer;text-transform:none;letter-spacing:0">
+          <input type="radio" name="rn-sex" value="F" onchange="calcRenal()"> Femme
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+  <p style="font-size:12px;color:var(--muted);margin-bottom:16px;font-weight:600;text-transform:uppercase;letter-spacing:.8px">Médicament à ajuster (optionnel)</p>
+
+  <div class="input-grid">
+    <div class="field">
+      <label>Cl normale du médicament</label>
+      <div class="input-wrap">
+        <input type="number" id="rn-cl-normal" placeholder="ex: 8" min="0" oninput="calcRenal()">
+        <span class="suffix">L/h</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Fraction excrétée rénale (fe)</label>
+      <div class="input-wrap">
+        <input type="number" id="rn-fe" placeholder="ex: 0.7" min="0" max="1" step="0.01" oninput="calcRenal()">
+        <span class="suffix">0–1</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Clcr normale de référence</label>
+      <div class="input-wrap">
+        <input type="number" id="rn-clcr-ref" placeholder="120" min="1" oninput="calcRenal()">
+        <span class="suffix">mL/min</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="calcRenal()">⟳ Calculer</button>
+    <button class="btn btn-secondary" onclick="resetRenal()">Réinitialiser</button>
+    <button class="btn btn-secondary" onclick="loadExample('renal')">Exemple gentamicine</button>
+  </div>
+
+  <div class="results-grid">
+    <div class="result-card">
+      <div class="result-abbr">Clcr</div>
+      <div class="result-name">Clairance créatinine estimée</div>
+      <div class="result-value empty" id="rn-r-clcr">—</div>
+      <div class="result-unit">mL/min</div>
+    </div>
+    <div class="result-card" id="rn-card-stade">
+      <div class="result-abbr">Stade IRC</div>
+      <div class="result-name">Insuffisance rénale chronique</div>
+      <div class="result-value empty" id="rn-r-stade">—</div>
+      <div class="result-unit"></div>
+    </div>
+    <div class="result-card green">
+      <div class="result-abbr">Cl ajustée</div>
+      <div class="result-name">Clairance médicament ajustée</div>
+      <div class="result-value empty" id="rn-r-cl-adj">—</div>
+      <div class="result-unit">L/h</div>
+    </div>
+    <div class="result-card amber">
+      <div class="result-abbr">Facteur τ</div>
+      <div class="result-name">Facteur d'allongement intervalle</div>
+      <div class="result-value empty" id="rn-r-ftau">—</div>
+      <div class="result-unit">×</div>
+    </div>
+  </div>
+
+  <div class="interp-box" id="rn-interp">
+    <div class="interp-title">📖 Interprétation</div>
+    <div class="interp-items" id="rn-interp-items"></div>
+  </div>
+</div>
+
+<!-- ══════════ MODULE 6 : RÉFÉRENCE ══════════ -->
+<div class="module" id="mod-reference">
+  <div class="module-header">
+    <h1 class="module-title">Valeurs de <em>référence</em></h1>
+    <p class="module-desc">Paramètres PK de médicaments courants — données indicatives issues du cours.</p>
+  </div>
+
+  <table class="ref-table">
+    <thead>
+      <tr>
+        <th>Médicament</th>
+        <th>t½ (h)</th>
+        <th>Vd (L/kg)</th>
+        <th>Cl (mL/min)</th>
+        <th>F (%)</th>
+        <th>Liaison PP (%)</th>
+        <th>Élimination</th>
+      </tr>
+    </thead>
+    <tbody id="ref-tbody"></tbody>
+  </table>
+</div>
+
+</main>
+</div>
+
+<script>
+/* ══════════ NAVIGATION ══════════ */
+function switchModule(id){
+  document.querySelectorAll('.module').forEach(m=>m.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mod-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function switchTab(ns,tab,btn){
+  document.querySelectorAll('#mod-biodispo .tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('#mod-biodispo .tab-btn-inner').forEach(b=>b.classList.remove('active'));
+  document.getElementById(ns+'-'+tab).classList.add('active');
+  btn.classList.add('active');
+  calcBio();
+}
+
+/* ══════════ UTILS ══════════ */
+function fmt(v,dec=2){ return isFinite(v)?v.toFixed(dec):null; }
+function setResult(id,val,dec=2){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const s=fmt(val,dec);
+  if(s!==null){el.textContent=s;el.classList.remove('empty');}
+  else{el.textContent='—';el.classList.add('empty');}
+}
+function showInterp(id,items){
+  const box=document.getElementById(id);
+  const list=document.getElementById(id+'-items');
+  if(!items||!items.length){box.classList.remove('visible');return;}
+  list.innerHTML=items.map(i=>`<div class="interp-item">${i}</div>`).join('');
+  box.classList.add('visible');
+}
+function markFilled(id,v){
+  const el=document.getElementById(id);
+  if(el) el.classList.toggle('filled',v!==''&&v!==null&&!isNaN(parseFloat(v)));
+}
+
+/* ══════════ EXEMPLES ══════════ */
+function loadExample(mod){
+  const ex={
+    mc:{dose:1000,c0:70,auc:null,ke:null}, // ceftriaxone: Vd≈14L, t½≈8h
+    bio:{auc_iv:120,dose_iv:500,auc_ev:80,dose_ev:1000}, // amoxicilline F≈80%
+    doses:{cp:1.5,vd:500,cl:7,tau:24,f:0.7}, // digoxine
+    ss:{dose:500,tau:8,cl:6,t12:6,f:1},
+    renal:{age:72,poids:65,creat:180,sex:'H',cl_normal:8,fe:0.9,clcr_ref:120},
+  };
+  const d=ex[mod];
+  if(!d)return;
+  if(mod==='mc'){
+    document.getElementById('mc-dose').value=d.dose;
+    document.getElementById('mc-c0').value=d.c0;
+    calcMono();
+  } else if(mod==='bio'){
+    document.getElementById('bio-auc-iv').value=d.auc_iv;
+    document.getElementById('bio-dose-iv').value=d.dose_iv;
+    document.getElementById('bio-auc-ev').value=d.auc_ev;
+    document.getElementById('bio-dose-ev').value=d.dose_ev;
+    calcBio();
+  } else if(mod==='doses'){
+    document.getElementById('d-cp').value=d.cp;
+    document.getElementById('d-vd').value=d.vd;
+    document.getElementById('d-cl').value=d.cl;
+    document.getElementById('d-tau').value=d.tau;
+    document.getElementById('d-f').value=d.f;
+    calcDoses();
+  } else if(mod==='ss'){
+    document.getElementById('ss-dose').value=d.dose;
+    document.getElementById('ss-tau').value=d.tau;
+    document.getElementById('ss-cl').value=d.cl;
+    document.getElementById('ss-t12').value=d.t12;
+    document.getElementById('ss-f').value=d.f;
+    calcSS();
+  } else if(mod==='renal'){
+    document.getElementById('rn-age').value=d.age;
+    document.getElementById('rn-poids').value=d.poids;
+    document.getElementById('rn-creat').value=d.creat;
+    document.querySelector(`input[name="rn-sex"][value="${d.sex}"]`).checked=true;
+    document.getElementById('rn-cl-normal').value=d.cl_normal;
+    document.getElementById('rn-fe').value=d.fe;
+    document.getElementById('rn-clcr-ref').value=d.clcr_ref;
+    calcRenal();
+  }
+}
+
+/* ══════════ MODULE 1 : MONOCOMPARTIMENTAL ══════════ */
+function calcMono(){
+  const dose=parseFloat(document.getElementById('mc-dose').value);
+  const c0=parseFloat(document.getElementById('mc-c0').value);
+  const auc=parseFloat(document.getElementById('mc-auc').value);
+  const ke_in=parseFloat(document.getElementById('mc-ke').value);
+  ['mc-dose','mc-c0','mc-auc','mc-ke'].forEach(id=>markFilled(id,document.getElementById(id).value));
+
+  document.getElementById('mc-err').classList.remove('visible');
+  let cl,vd,ke,t12;
+
+  if(!isNaN(dose)&&!isNaN(auc)) cl=dose/auc;
+  if(!isNaN(dose)&&!isNaN(c0)) vd=dose/c0;
+  if(!isNaN(ke_in)) ke=ke_in;
+  if(ke===undefined&&!isNaN(cl)&&!isNaN(vd)) ke=cl/vd;
+  if(ke!==undefined) t12=0.693/ke;
+  if(cl===undefined&&ke!==undefined&&vd!==undefined) cl=ke*vd;
+  if(vd===undefined&&ke!==undefined&&cl!==undefined) vd=cl/ke;
+
+  if(isNaN(dose)||(!vd&&!cl)){
+    document.getElementById('mc-err').classList.add('visible');
+    return;
+  }
+
+  setResult('mc-r-cl',cl);
+  setResult('mc-r-vd',vd,1);
+  setResult('mc-r-t12',t12,2);
+  setResult('mc-r-ke',ke,4);
+
+  // Interprétation
+  const interps=[];
+  if(t12) interps.push(`Demi-vie ${fmt(t12,1)} h → état stable atteint après ~${fmt(t12*5,1)} h (5 t½)`);
+  if(vd){
+    if(vd<15) interps.push(`Vd faible (${fmt(vd,1)} L) → médicament principalement plasmatique, fort taux de liaison aux protéines`);
+    else if(vd<60) interps.push(`Vd modéré (${fmt(vd,1)} L) → distribution tissu/plasma équilibrée`);
+    else interps.push(`Vd élevé (${fmt(vd,1)} L) → forte distribution tissulaire, séquestration dans les graisses ou protéines tissulaires`);
+  }
+  if(cl) interps.push(`Clairance ${fmt(cl,2)} L/h → éliminé principalement ${cl>5?'par voie hépatique (CYP450)':'par voie rénale (filtration glomérulaire)'}`);
+  showInterp('mc-interp',interps);
+
+  // Courbe
+  if(ke!==undefined&&c0!==undefined&&isFinite(c0)){
+    drawDecay(ke,c0,t12);
+    document.getElementById('mc-chart-wrap').style.display='block';
+  }
+}
+
+function drawDecay(ke,c0,t12){
+  const canvas=document.getElementById('mc-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const tmax=Math.min(t12*8,200);
+  const pts=[];
+  for(let i=0;i<=200;i++){
+    const t=tmax*i/200;
+    pts.push({x:t,y:c0*Math.exp(-ke*t)});
+  }
+  const pad={l:50,r:20,t:15,b:30};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  // Axes
+  ctx.strokeStyle='#d4cbb8';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+ch);ctx.lineTo(pad.l+cw,pad.t+ch);ctx.stroke();
+  // Courbe
+  ctx.beginPath();ctx.strokeStyle='#1a4a6e';ctx.lineWidth=2;
+  pts.forEach((p,i)=>{
+    const x=pad.l+p.x/tmax*cw;
+    const y=pad.t+ch-(p.y/c0)*ch;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  // AUC fill
+  ctx.beginPath();ctx.fillStyle='rgba(26,74,110,0.07)';
+  pts.forEach((p,i)=>{
+    const x=pad.l+p.x/tmax*cw;
+    const y=pad.t+ch-(p.y/c0)*ch;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.lineTo(pad.l+cw,pad.t+ch);ctx.lineTo(pad.l,pad.t+ch);ctx.closePath();ctx.fill();
+  // Marqueurs t½
+  ctx.setLineDash([4,3]);ctx.strokeStyle='#8a5c10';ctx.lineWidth=1;
+  for(let n=1;n<=3;n++){
+    const tx=pad.l+(n*t12)/tmax*cw;
+    if(tx>pad.l+cw) break;
+    const cy2=pts.find(p=>Math.abs(p.x-n*t12)<tmax/200)||null;
+    if(cy2){
+      const ty=pad.t+ch-(cy2.y/c0)*ch;
+      ctx.beginPath();ctx.moveTo(tx,pad.t+ch);ctx.lineTo(tx,ty);ctx.stroke();
+      ctx.fillStyle='#8a5c10';ctx.font='9px JetBrains Mono,monospace';
+      ctx.fillText(`${n}t½`,tx+3,pad.t+ch-4);
+    }
+  }
+  ctx.setLineDash([]);
+  // Labels
+  ctx.fillStyle='#7a6e5a';ctx.font='10px Instrument Sans,sans-serif';
+  ctx.fillText('C₀',pad.l-26,pad.t+10);
+  ctx.fillText('C (mg/L)',4,pad.t+ch/2);
+  ctx.fillText('Temps (h)',pad.l+cw/2,H-4);
+}
+
+function resetMono(){
+  ['mc-dose','mc-c0','mc-auc','mc-ke'].forEach(id=>{document.getElementById(id).value='';document.getElementById(id).classList.remove('filled');});
+  ['mc-r-cl','mc-r-vd','mc-r-t12','mc-r-ke'].forEach(id=>{const el=document.getElementById(id);el.textContent='—';el.classList.add('empty');});
+  document.getElementById('mc-err').classList.remove('visible');
+  document.getElementById('mc-interp').classList.remove('visible');
+  document.getElementById('mc-chart-wrap').style.display='none';
+}
+
+/* ══════════ MODULE 2 : BIODISPONIBILITÉ ══════════ */
+function calcBio(){
+  const mode=document.querySelector('#mod-biodispo .tab-pane.active').id;
+  let F;
+  if(mode==='bio-abs'){
+    const auc_iv=parseFloat(document.getElementById('bio-auc-iv').value);
+    const dose_iv=parseFloat(document.getElementById('bio-dose-iv').value);
+    const auc_ev=parseFloat(document.getElementById('bio-auc-ev').value);
+    const dose_ev=parseFloat(document.getElementById('bio-dose-ev').value);
+    if([auc_iv,dose_iv,auc_ev,dose_ev].some(isNaN))return;
+    F=(auc_ev/auc_iv)*(dose_iv/dose_ev)*100;
+  } else {
+    const auc_t=parseFloat(document.getElementById('bio-auc-test').value);
+    const auc_r=parseFloat(document.getElementById('bio-auc-ref').value);
+    if([auc_t,auc_r].some(isNaN))return;
+    F=auc_t/auc_r*100;
+  }
+  setResult('bio-r-f',F,1);
+  const ep=mode==='bio-abs'?Math.max(0,100-F):null;
+  setResult('bio-r-ep',ep,1);
+  const interps=[];
+  if(F<20) interps.push(`F très faible (${fmt(F,1)}%) — fort effet de premier passage hépatique ou mauvaise absorption`);
+  else if(F<60) interps.push(`F modérée (${fmt(F,1)}%) — voie orale utilisable, attention aux variations inter-individuelles`);
+  else if(F<90) interps.push(`F bonne (${fmt(F,1)}%) — voie orale comparable à l'IV en termes d'exposition`);
+  else interps.push(`F excellente (${fmt(F,1)}%) — absorption quasi-complète, biodisponibilité proche de 100%`);
+  if(ep&&ep>50) interps.push(`Effet de premier passage estimé à ${fmt(ep,1)}% — métabolisme hépatique pré-systémique important (CYP3A4, CYP2D6 probablement impliqués)`);
+  showInterp('bio-interp',interps);
+}
+
+function resetBio(){
+  ['bio-auc-iv','bio-dose-iv','bio-auc-ev','bio-dose-ev','bio-auc-test','bio-auc-ref'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  setResult('bio-r-f',null);setResult('bio-r-ep',null);
+  document.getElementById('bio-interp').classList.remove('visible');
+}
+
+/* ══════════ MODULE 3 : DOSES ══════════ */
+function calcDoses(){
+  const cp=parseFloat(document.getElementById('d-cp').value);
+  const vd=parseFloat(document.getElementById('d-vd').value);
+  const cl=parseFloat(document.getElementById('d-cl').value);
+  const tau=parseFloat(document.getElementById('d-tau').value);
+  const f=parseFloat(document.getElementById('d-f').value)||1;
+  ['d-cp','d-vd','d-cl','d-tau','d-f'].forEach(id=>markFilled(id,document.getElementById(id).value));
+  if([cp,vd,cl,tau].some(isNaN))return;
+  const dl=cp*vd/f;
+  const de=cp*cl*tau/f;
+  const d24=de*(24/tau);
+  setResult('d-r-dl',dl,1);
+  setResult('d-r-de',de,1);
+  setResult('d-r-d24',d24,1);
+  const interps=[];
+  interps.push(`Dose de charge ${fmt(dl,1)} mg pour atteindre rapidement Cp = ${fmt(cp,1)} mg/L dès la 1ère administration`);
+  interps.push(`Dose d'entretien ${fmt(de,1)} mg toutes les ${fmt(tau,0)} h pour compenser l'élimination (${fmt(cl,1)} L/h)`);
+  if(f<1) interps.push(`Biodisponibilité F = ${(f*100).toFixed(0)}% → doses augmentées d'un facteur ${(1/f).toFixed(2)} vs voie IV`);
+  showInterp('d-interp',interps);
+}
+
+function resetDoses(){
+  ['d-cp','d-vd','d-cl','d-tau','d-f'].forEach(id=>{const el=document.getElementById(id);el.value='';el.classList.remove('filled');});
+  ['d-r-dl','d-r-de','d-r-d24'].forEach(id=>{const el=document.getElementById(id);el.textContent='—';el.classList.add('empty');});
+  document.getElementById('d-interp').classList.remove('visible');
+}
+
+/* ══════════ MODULE 4 : PLATEAU ══════════ */
+function calcSS(){
+  const dose=parseFloat(document.getElementById('ss-dose').value);
+  const tau=parseFloat(document.getElementById('ss-tau').value);
+  const cl=parseFloat(document.getElementById('ss-cl').value);
+  const t12=parseFloat(document.getElementById('ss-t12').value);
+  const f=parseFloat(document.getElementById('ss-f').value)||1;
+  ['ss-dose','ss-tau','ss-cl','ss-t12','ss-f'].forEach(id=>markFilled(id,document.getElementById(id).value));
+  if([dose,tau,cl,t12].some(isNaN))return;
+  const ke=0.693/t12;
+  const cmoy=f*dose/(cl*tau);
+  const cmax=cmoy*(ke*tau)/(1-Math.exp(-ke*tau));
+  const cmin=cmax*Math.exp(-ke*tau);
+  const tss=5*t12;
+  setResult('ss-r-cmoy',cmoy,2);
+  setResult('ss-r-cmax',cmax,2);
+  setResult('ss-r-cmin',cmin,2);
+  setResult('ss-r-tss',tss,1);
+  drawSS(ke,tau,dose,cl,f,t12);
+  document.getElementById('ss-chart-wrap').style.display='block';
+  const interps=[];
+  interps.push(`État stable atteint après ~${fmt(tss,1)} h (5 t½ = 5 × ${fmt(t12,1)} h)`);
+  interps.push(`Fluctuation Cmax/Cmin = ${fmt(cmax/cmin,2)} × — ${cmax/cmin>3?'fluctuation élevée, envisager un intervalle plus court ou une forme LP':'fluctuation acceptable'}`);
+  interps.push(`Index de fluctuation = (Cmax−Cmin)/Css,moy = ${fmt((cmax-cmin)/cmoy*100,0)}%`);
+  showInterp('ss-interp',interps);
+}
+
+function drawSS(ke,tau,dose,cl,f,t12){
+  const canvas=document.getElementById('ss-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const n_doses=8;
+  const pts=[];
+  for(let dose_n=0;dose_n<n_doses;dose_n++){
+    for(let i=0;i<=50;i++){
+      const t_local=tau*i/50;
+      const t=dose_n*tau+t_local;
+      let c=0;
+      for(let k=0;k<=dose_n;k++) c+=f*(dose/1)*(ke/(ke))* Math.exp(-ke*(t-k*tau));
+      // Simplified accumulation
+      const c_ss=f*dose/(cl*tau);
+      const acc_factor=1-Math.exp(-ke*(dose_n+1)*tau);
+      const c_local=c_ss*(ke*tau)/(1-Math.exp(-ke*tau))*Math.exp(-ke*t_local)*acc_factor+ c_ss*(1-(ke*tau)/(1-Math.exp(-ke*tau))*Math.exp(-ke*t_local))*acc_factor;
+      pts.push({t,c:Math.abs(c_local)||0});
+    }
+  }
+  const cmax=Math.max(...pts.map(p=>p.c));
+  const tmax=n_doses*tau;
+  const pad={l:50,r:20,t:15,b:30};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  ctx.strokeStyle='#d4cbb8';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+ch);ctx.lineTo(pad.l+cw,pad.t+ch);ctx.stroke();
+  ctx.beginPath();ctx.strokeStyle='#1a4a6e';ctx.lineWidth=2;
+  pts.forEach((p,i)=>{
+    const x=pad.l+p.t/tmax*cw;
+    const y=pad.t+ch-(p.c/cmax)*ch*0.9;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  // Css,moy line
+  const cmoy_ss=f*dose/(cl*tau);
+  ctx.setLineDash([5,4]);ctx.strokeStyle='#2d7a4f';ctx.lineWidth=1.5;
+  const ymoy=pad.t+ch-(cmoy_ss/cmax)*ch*0.9;
+  ctx.beginPath();ctx.moveTo(pad.l,ymoy);ctx.lineTo(pad.l+cw,ymoy);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#2d7a4f';ctx.font='9px JetBrains Mono,monospace';
+  ctx.fillText('Css,moy',pad.l+cw-52,ymoy-4);
+  ctx.fillStyle='#7a6e5a';ctx.font='10px Instrument Sans,sans-serif';
+  ctx.fillText('C (mg/L)',4,pad.t+ch/2);
+  ctx.fillText('Temps (h)',pad.l+cw/2,H-4);
+}
+
+function resetSS(){
+  ['ss-dose','ss-tau','ss-cl','ss-t12','ss-f'].forEach(id=>{const el=document.getElementById(id);el.value='';el.classList.remove('filled');});
+  ['ss-r-cmoy','ss-r-cmax','ss-r-cmin','ss-r-tss'].forEach(id=>{const el=document.getElementById(id);el.textContent='—';el.classList.add('empty');});
+  document.getElementById('ss-interp').classList.remove('visible');
+  document.getElementById('ss-chart-wrap').style.display='none';
+}
+
+/* ══════════ MODULE 5 : RÉNALE ══════════ */
+function calcRenal(){
+  const age=parseFloat(document.getElementById('rn-age').value);
+  const poids=parseFloat(document.getElementById('rn-poids').value);
+  const creat=parseFloat(document.getElementById('rn-creat').value);
+  const sex=document.querySelector('input[name="rn-sex"]:checked').value;
+  const cl_norm=parseFloat(document.getElementById('rn-cl-normal').value);
+  const fe=parseFloat(document.getElementById('rn-fe').value);
+  const clcr_ref=parseFloat(document.getElementById('rn-clcr-ref').value)||120;
+  if([age,poids,creat].some(isNaN))return;
+  const k=sex==='H'?1.23:1.04;
+  const clcr=((140-age)*poids*k)/creat;
+  setResult('rn-r-clcr',clcr,1);
+
+  // Stade IRC
+  const stades=[
+    {min:90, label:'Normal / G1',    color:'var(--green)'},
+    {min:60, label:'Légère G2',       color:'var(--accent)'},
+    {min:45, label:'Modérée G3a',     color:'var(--amber)'},
+    {min:30, label:'Modérée G3b',     color:'var(--amber)'},
+    {min:15, label:'Sévère G4',       color:'var(--red)'},
+    {min:0,  label:'Terminale G5',    color:'var(--red)'},
+  ];
+  const stade=stades.find(s=>clcr>=s.min)||stades[stades.length-1];
+  const stadeEl=document.getElementById('rn-r-stade');
+  stadeEl.textContent=stade.label;stadeEl.style.fontSize='14px';stadeEl.classList.remove('empty');
+
+  // Ajustement médicament
+  let cl_adj,ftau;
+  if(!isNaN(cl_norm)&&!isNaN(fe)){
+    const r=clcr/clcr_ref;
+    cl_adj=cl_norm*(1-fe+fe*r);
+    ftau=cl_norm/cl_adj;
+    setResult('rn-r-cl-adj',cl_adj,2);
+    setResult('rn-r-ftau',ftau,2);
+  } else {
+    setResult('rn-r-cl-adj',null);
+    setResult('rn-r-ftau',null);
+  }
+
+  const interps=[];
+  interps.push(`Clcr = ${fmt(clcr,1)} mL/min → ${stade.label}`);
+  if(clcr<30) interps.push(`⚠️ Insuffisance rénale sévère — contre-indication ou adaptation obligatoire pour la plupart des médicaments à élimination rénale`);
+  if(cl_adj&&ftau) interps.push(`Clairance ajustée ${fmt(cl_adj,2)} L/h — l'intervalle inter-doses doit être multiplié par ${fmt(ftau,2)} ou la dose divisée par ce facteur`);
+  if(fe&&fe>0.5&&clcr<60) interps.push(`fe = ${(fe*100).toFixed(0)}% > 50% → médicament à risque en IRC — surveillance TDM recommandée`);
+  showInterp('rn-interp',interps);
+}
+
+function resetRenal(){
+  ['rn-age','rn-poids','rn-creat','rn-cl-normal','rn-fe','rn-clcr-ref'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['rn-r-clcr','rn-r-stade','rn-r-cl-adj','rn-r-ftau'].forEach(id=>{const el=document.getElementById(id);el.textContent='—';el.classList.add('empty');});
+  document.getElementById('rn-interp').classList.remove('visible');
+}
+
+/* ══════════ TABLEAU DE RÉFÉRENCE ══════════ */
+const REF_DATA=[
+  {name:'Amoxicilline',    t12:'1–1.5',  vd:'0.3',   cl:'200',  F:'80',   pp:'20',   elim:'Rénal (60-70%)'},
+  {name:'Ceftriaxone',     t12:'7–9',    vd:'0.12',  cl:'15',   F:'—',    pp:'85-95',elim:'Biliaire + Rénal'},
+  {name:'Ciprofloxacine',  t12:'3–5',    vd:'2–3',   cl:'600',  F:'70',   pp:'20-40',elim:'Rénal + Hépatique'},
+  {name:'Métronidazole',   t12:'6–10',   vd:'0.5',   cl:'60',   F:'80',   pp:'<20',  elim:'Hépatique (CYP2C9)'},
+  {name:'Warfarine',       t12:'36–42',  vd:'0.14',  cl:'3',    F:'97',   pp:'99',   elim:'Hépatique (CYP2C9)'},
+  {name:'Digoxine',        t12:'36–48',  vd:'7',     cl:'120',  F:'70',   pp:'25',   elim:'Rénal (60-80%)'},
+  {name:'Amiodarone',      t12:'40j',    vd:'60',    cl:'3',    F:'22-86',pp:'99',   elim:'Hépatique (CYP2C8/3A4)'},
+  {name:'Lisinopril',      t12:'12',     vd:'0.5',   cl:'40',   F:'25',   pp:'<5',   elim:'Rénal'},
+  {name:'Atorvastatine',   t12:'14',     vd:'380',   cl:'500',  F:'12',   pp:'>98',  elim:'Hépatique (CYP3A4)'},
+  {name:'Oméprazole',      t12:'1',      vd:'0.3',   cl:'400',  F:'35-65',pp:'97',   elim:'Hépatique (CYP2C19)'},
+  {name:'Midazolam',       t12:'2–5',    vd:'1.1',   cl:'500',  F:'36',   pp:'97',   elim:'Hépatique (CYP3A4)'},
+  {name:'Morphine',        t12:'2–4',    vd:'3.5',   cl:'1200', F:'25',   pp:'35',   elim:'Hépatique (UGT2B7)'},
+  {name:'Paracétamol',     t12:'2–3',    vd:'0.9',   cl:'350',  F:'80',   pp:'<20',  elim:'Hépatique (UGT/SULT)'},
+  {name:'Phénytoïne',      t12:'22',     vd:'0.65',  cl:'25',   F:'90',   pp:'90',   elim:'Hépatique (CYP2C9)'},
+  {name:'Metformine',      t12:'5',      vd:'654',   cl:'450',  F:'55',   pp:'0',    elim:'Rénal (100%)'},
+  {name:'Gentamicine',     t12:'2–3',    vd:'0.25',  cl:'90',   F:'—',    pp:'<10',  elim:'Rénal (95%)'},
+];
+
+const tbody=document.getElementById('ref-tbody');
+REF_DATA.forEach(d=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td style="font-weight:600">${d.name}</td>
+    <td class="mono">${d.t12}</td>
+    <td class="mono">${d.vd}</td>
+    <td class="mono">${d.cl}</td>
+    <td class="mono">${d.F}</td>
+    <td class="mono">${d.pp}</td>
+    <td style="font-size:11px;color:var(--muted)">${d.elim}</td>`;
+  tbody.appendChild(tr);
+});
+</script>
+</body>
+</html>

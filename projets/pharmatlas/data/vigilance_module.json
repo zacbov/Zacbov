@@ -1,0 +1,998 @@
+[
+  {
+    "id": "VIG-001",
+    "family": "Pharmacovigilance",
+    "name": "Définition et objet de la pharmacovigilance",
+    "definition": "La pharmacovigilance a pour objet la surveillance, l'évaluation, la prévention et la gestion du risque d'effet indésirable résultant de l'utilisation des médicaments et produits mentionnés à l'article L.5121-1 (Art. 28 de la loi du 29 décembre 2011 / L.5121-22 du CSP).",
+    "points_cles": [
+      "Effet indésirable = réaction nocive et non voulue à un médicament (Art. R.5121-152 du CSP)",
+      "Inclut : erreurs médicamenteuses, abus, mésusage, surdosage",
+      "EI attendus (connus, effets pharmacologiques) vs inattendus",
+      "Gérée par l'ANSM au niveau national, l'EMA au niveau européen"
+    ],
+    "historique": [
+      "1938 : Federal Food, Drug and Cosmetic Act (USA) – >100 morts par élixir de sulfanilamide",
+      "Années 1950 : thalidomide → phocomélie, tératogénicité → révélateur mondial",
+      "1962 : Drug Efficacy Amendment → preuve d'efficacité ET de sécurité avant commercialisation",
+      "1964 : Yellow card (UK) + Directive CE 65/65",
+      "1968 : Programme mondial OMS, création de VigiBase (ICSRs)",
+      "1973 : 6 premiers centres hospitaliers de PV en France"
+    ],
+    "tags": [
+      "pharmacovigilance",
+      "définition",
+      "effet indésirable",
+      "ANSM",
+      "réglementation"
+    ],
+    "gravite_EI": {
+      "definition": "Un EI est qualifié de GRAVE s'il remplit au moins un des critères suivants :",
+      "criteres": [
+        "Décès du patient",
+        "Mise en danger de la vie (risque vital immédiat)",
+        "Hospitalisation ou prolongation d'une hospitalisation existante",
+        "Invalidité ou incapacité permanente ou significative",
+        "Malformation congénitale ou anomalie congénitale",
+        "Autre situation médicalement importante (à l'appréciation du médecin)"
+      ],
+      "importance": "EI grave → déclaration sans délai. EI non grave → délai moins contraignant.",
+      "sanction": "Absence de déclaration : contravention de 5e classe (Art. R.5421-1 du CSP)"
+    }
+  },
+  {
+    "id": "VIG-002",
+    "family": "Pharmacovigilance",
+    "name": "Organisation et fonctionnement du réseau français",
+    "definition": "La pharmacovigilance française repose sur 30 Centres Régionaux de PharmacoVigilance (CRPV) organisés en réseau, sous la tutelle de l'ANSM.",
+    "missions_CRPV": [
+      "Recueil, analyse, synthèse et enregistrement des EI médicamenteux (notification spontanée)",
+      "Mise en place d'enquêtes et d'études pour analyser les risques",
+      "Suivi des plans de gestion des risques (PGR)",
+      "Appréciation du profil de sécurité d'emploi du médicament",
+      "Prise de mesures correctives (précautions, restrictions, CI, retrait)",
+      "Communication vers les professionnels de santé et le public"
+    ],
+    "declaration": {
+      "qui_peut_declarer": "Obligatoire : médecins, pharmaciens, sage-femmes, chirurgiens-dentistes. Facultatif : patients, non-professionnels, associations.",
+      "quoi_declarer": "Toute suspicion d'EI (voulu ou non), attendu ou inattendu, grave ou non grave",
+      "comment_declarer": "Via https://signalement-sante.gouv.fr avec au minimum : notificateur, patient (âge/sexe), médicament, effet",
+      "gravite_et_delai": "EI grave → déclaration sans délai. EI non grave → délai moins contraignant."
+    },
+    "circuit_CRPV": [
+      "Réception du cas / de la question",
+      "Traçabilité interne",
+      "Analyse détaillée (imputabilité)",
+      "Réponse au notificateur",
+      "Enregistrement du cas",
+      "Identification de cas marquants",
+      "Analyse littérature / bases de données ± étude épidémiologique",
+      "Enquêtes nationales si signal confirmé"
+    ],
+    "tags": [
+      "CRPV",
+      "déclaration",
+      "réseau",
+      "ANSM",
+      "organisation"
+    ],
+    "points_cles": [
+      "30 CRPV en France sous tutelle de l'ANSM — obligation légale de déclaration pour médecins, pharmaciens, sages-femmes, chirurgiens-dentistes",
+      "Déclaration via signalement-sante.gouv.fr ou directement au CRPV",
+      "4 infos minimales : notificateur, patient, médicament suspecté, nature de l'EI"
+    ]
+  },
+  {
+    "id": "VIG-003",
+    "family": "Pharmacovigilance",
+    "name": "Analyse d'imputabilité",
+    "definition": "L'imputabilité est l'évaluation de la force du lien de causalité entre un évènement indésirable et le(s) médicament(s) suspect(s).",
+    "methode_francaise": {
+      "description": "Méthode française (Miremont-Salamé et al. 2016) : score I0 à I6",
+      "score_I": "De I0 (pas de lien) à I6 (forte association)",
+      "criteres_chronologiques": "Score C0 à C3 : évalue le lien temporel (délai d'apparition, évolution après arrêt/réintroduction)",
+      "criteres_semiologiques": "Score S0 à S3 : évalue le lien étiologique (explication alternative, sémiologie connue)",
+      "parametre_bibliographique": "Score B0 (non décrit) à B3 (bien connu dans la littérature)"
+    },
+    "points_cles": [
+      "Médicaments suspects ≠ médicaments concomitants",
+      "L'imputabilité s'applique à chaque médicament séparément",
+      "La réintroduction positive est le critère chronologique le plus fort"
+    ],
+    "tags": [
+      "imputabilité",
+      "causalité",
+      "méthode française",
+      "score",
+      "CRPV"
+    ]
+  },
+  {
+    "id": "VIG-004",
+    "family": "Pharmacovigilance",
+    "name": "Détection et gestion des signaux",
+    "definition": "Un signal en pharmacovigilance est une suspicion d'effet indésirable inattendu ou dont la fréquence, la gravité ou la notoriété dépasse ce qui est connu.",
+    "sources_signal": [
+      "Cas marquants individuels ou cluster",
+      "Analyse de la littérature",
+      "Analyse des bases de données de PV (VigiBase, FNPV…)",
+      "Détection automatisée (méthodes bayésiennes, ROR)"
+    ],
+    "detection_automatisee": {
+      "IC": "Méthode bayésienne : IC025 > 0 → signal positif",
+      "ROR": "Rapport de cotes de reporting (méthode fréquentiste)",
+      "limite": "Absence de consensus international sur la méthode"
+    },
+    "consequences": [
+      "Signal confirmé → enquête de PV (analyse qualitative)",
+      "Enquête → modification RCP, restriction, contre-indication",
+      "Dans les cas graves → retrait du marché"
+    ],
+    "bases_de_donnees": {
+      "VigiBase": "Base mondiale OMS des ICSRs (Individual Case Safety Reports), accessible via VigiLyze",
+      "FNPV": "Base nationale française gérée par l'ANSM",
+      "MedDRA": "Système de codage hiérarchique à 5 niveaux : SOC > HLGT > HLT > PT > LLT (>80 000 termes)"
+    },
+    "limites_notification_spontanee": [
+      "Sous-notification estimée à 90–95%",
+      "Absence de dénominateur → calcul de fréquence impossible",
+      "Biais multiples : Weber, médiatique, protopathique, nosologique",
+      "Qualité variable des déclarations"
+    ],
+    "tags": [
+      "signal",
+      "détection",
+      "VigiBase",
+      "MedDRA",
+      "biais",
+      "enquête"
+    ],
+    "biais_details": {
+      "effet_Weber": "Augmentation artificielle des déclarations dans les 1–2 premières années après la mise sur le marché, puis décroissance. Fausse les variations temporelles.",
+      "biais_mediatique": "Un événement médiatisé provoque une vague de déclarations souvent peu documentées → signal artificiel possible.",
+      "biais_protopathique": "Le médicament est prescrit pour les premiers symptômes d'une maladie → on lui attribue à tort les symptômes de la maladie sous-jacente.",
+      "biais_nosologique": "Difficulté à distinguer réaction médicamenteuse d'une manifestation de la maladie traitée.",
+      "biais_notoriete": "Un médicament connu pour un EI donné est plus souvent déclaré pour cet EI, indépendamment du lien causal réel.",
+      "sous_notification": "90–95% des EI ne sont pas déclarés → fréquence vraie incalculable depuis les bases de PV."
+    }
+  },
+  {
+    "id": "VIG-005",
+    "family": "Pharmacovigilance",
+    "name": "Interactions médicamenteuses",
+    "definition": "Une interaction médicamenteuse est la modification des effets d'un médicament lorsqu'il est associé à un autre médicament ou à des aliments.",
+    "niveaux_contraintes": [
+      "Contre-indication (CI) : association formellement déconseillée",
+      "Déconseillé : association à éviter sauf cas particulier",
+      "Précaution d'emploi : possible avec surveillance",
+      "À prendre en compte : interaction à connaître"
+    ],
+    "exemple_clinique": "Paxlovid® (nirmatrelvir/ritonavir) : le ritonavir est un puissant inhibiteur du CYP3A4 → nombreuses interactions médicamenteuses à vérifier systématiquement.",
+    "tags": [
+      "interactions",
+      "CYP450",
+      "PK",
+      "PD",
+      "Paxlovid",
+      "mécanisme"
+    ],
+    "interactions_PK_absorption": "Modification motilité GI, pH, complexation (ex. chélation par antiacides)",
+    "interactions_PK_distribution": "Compétition sur sites de fixation protéiques (albumine)",
+    "interactions_PK_metabolisme": {
+      "CYP450": "Enzymes ubiquitaires hépatiques (CYP3A4, 2D6, 2C9…). Inhibiteurs → ↑ concentration du substrat. Inducteurs → ↓ concentration du substrat.",
+      "metaboliseurs": "Polymorphisme génétique : métaboliseurs lents vs rapides (ex. codéine → morphine via CYP2D6)"
+    },
+    "interactions_PK_transporteurs": {},
+    "interactions_PK_elimination": "Compétition sécrétion tubulaire rénale, modification pH urinaire",
+    "interactions_PD": {
+      "agonisme_antagonisme": "Compétition sur le même récepteur → effet opposé",
+      "synergie": "Additive (ΣE = EA + EB) ou potentialisation (ΣE > EA + EB)",
+      "antagonisme_fonctionnel": "Effets opposés sur des récepteurs différents"
+    }
+  },
+  {
+    "id": "VIG-006",
+    "family": "Pharmacovigilance",
+    "name": "Erreur médicamenteuse",
+    "definition": "Omission ou réalisation non intentionnelle d'un acte survenant au cours du processus de soins relatif à un médicament, pouvant être à l'origine d'un effet indésirable pour le patient.",
+    "distinctions": {
+      "erreur_averee": "Erreur réalisée avec EI associé → relève de la PV",
+      "erreur_potentielle": "Erreur détectée avant administration → gestion interne (CREX, RMM)",
+      "mesusage": "Utilisation intentionnelle non conforme aux mentions légales ≠ erreur médicamenteuse"
+    },
+    "lien_PV": "Seules les erreurs médicamenteuses avec effet indésirable associé relèvent de la pharmacovigilance",
+    "etapes_erreur": [
+      "Prescription",
+      "Dispensation",
+      "Préparation",
+      "Administration"
+    ],
+    "intersections": "Les erreurs médicamenteuses impliquent souvent d'autres vigilances (matériovigilance, hémovigilance) et des structures de gestion des risques (CREX, RMM).",
+    "tags": [
+      "erreur médicamenteuse",
+      "mésusage",
+      "iatrogénie",
+      "CREX",
+      "RMM"
+    ],
+    "points_cles": [
+      "L'erreur médicamenteuse est déclarable en PV QUE si elle s'accompagne d'un EI avéré",
+      "EM avérée avec EI → PV ; EM potentielle interceptée → CREX/RMM",
+      "4 étapes exposées : prescription, dispensation, préparation, administration"
+    ]
+  },
+  {
+    "id": "VIG-007",
+    "family": "Pharmacovigilance",
+    "name": "Pharmacovigilance européenne et ANSM",
+    "definition": "Le système européen de pharmacovigilance repose sur le réseau EudraVigilance, coordonné par l'EMA via le PRAC (Pharmacovigilance Risk Assessment Committee), avec des responsabilités nationales maintenues.",
+    "ANSM": {
+      "missions": [
+        "1- Recueillir et transmettre les informations sur les EI",
+        "2- Évaluer le rapport bénéfice/risque (avant et après AMM)",
+        "3- Exercer les pouvoirs de police sanitaire (réévaluation B/R, restriction, retrait)",
+        "4- Communiquer et informer les professionnels et le public"
+      ],
+      "chiffres_2023": "Plus de 1 430 000 EI enregistrés en France / >39 900 000 dans VigiBase (monde)"
+    },
+    "EMA_PRAC": {
+      "composition": "Membres nommés pour 3 ans (renouvelable 1 fois), représentants des EM + patients",
+      "procedures": {
+        "PSUSA": "Periodic Safety Update Single Assessment : évaluation unique des PSURs",
+        "Art_107i": "Évaluation d'un signal dans le cadre d'une procédure européenne",
+        "Art_31": "Arbitrage pour intérêt de l'Union européenne",
+        "Art_20": "Procédures centralisées"
+      }
+    },
+    "textes_reglementaires": [
+      "Directive 2001/83/CE (code communautaire médicaments à usage humain)",
+      "Loi du 29 décembre 2011 (veille sanitaire, PV)",
+      "Guidelines ICH : E2E (planning PV), E2C (PBRER), E2D (définitions)"
+    ],
+    "tags": [
+      "EMA",
+      "ANSM",
+      "PRAC",
+      "PSUR",
+      "réglementation européenne",
+      "signal"
+    ],
+    "points_cles": [
+      "Le PRAC (EMA) évalue les risques médicamenteux à l'échelle européenne — ses recommandations s'imposent aux États membres",
+      "PSUR/PBRER : rapport périodique de sécurité soumis par les industriels, évalué via la procédure PSUSA",
+      "La BNPV française alimente EudraVigilance (Europe) et VigiBase (OMS)"
+    ]
+  },
+  {
+    "id": "VIG-008",
+    "family": "Hémovigilance",
+    "name": "Définition et historique de l'hémovigilance",
+    "definition": "L'hémovigilance est l'ensemble des procédures de surveillance et d'évaluation des effets indésirables survenant chez les receveurs de PSL (EIR), chez les donneurs de sang (EIGD), et des incidents graves de la chaîne transfusionnelle. Elle porte sur toute la chaîne : de la collecte à la transfusion (Ordonnance du 1er septembre 2005).",
+    "historique": [
+      "1952 : Loi 52-854 – premiers principes fondateurs de la transfusion",
+      "1965 : Contrôle ultime au lit du malade (CULM)",
+      "Années 1980-90 : crise du sang contaminé (SIDA, hépatite C) → prise de conscience",
+      "4 janvier 1993 : naissance de l'hémovigilance en France",
+      "1998 : Loi 98-535 de sécurité sanitaire",
+      "2003-2005 : Directives européennes élargissant le champ aux donneurs et incidents de chaîne",
+      "2011 : Loi transparence liens d'intérêt"
+    ],
+    "champ": [
+      "EIR : effets indésirables receveurs de PSL",
+      "EIGD : effets indésirables graves donneurs",
+      "IG : incidents graves de la chaîne transfusionnelle",
+      "IPD : informations post-don"
+    ],
+    "tags": [
+      "hémovigilance",
+      "définition",
+      "historique",
+      "EFS",
+      "ANSM"
+    ],
+    "points_cles": [
+      "L'hémovigilance couvre 4 domaines : EIR (receveurs), EIGD (donneurs), IG (incidents de chaîne), IPD (informations post-don)",
+      "Née le 4 janvier 1993 — déclencheur : crise du sang contaminé (SIDA, VHC)",
+      "L'EFS est le seul opérateur national de collecte et préparation des PSL"
+    ]
+  },
+  {
+    "id": "VIG-009",
+    "family": "Hémovigilance",
+    "name": "Organisation de l'hémovigilance",
+    "definition": "L'hémovigilance est organisée à 3 niveaux : national (ANSM, EFS, CTSA), régional (CRH-ST) et local (CHV-ST dans les ES et ETS).",
+    "acteurs": {
+      "national": [
+        "ANSM : autorité sanitaire compétente unique",
+        "EFS : Etablissement Français du Sang (seul opérateur)",
+        "CTSA : Centre de Transfusion Sanguine des Armées",
+        "Comité Scientifique Permanent Hémovigilance de l'ANSM (créé 2023, 8 missions)"
+      ],
+      "regional": "CRH-ST : Coordonnateurs Régionaux d'Hémovigilance et de Sécurité Transfusionnelle",
+      "local": [
+        "CHV-ST ES : Correspondants d'Hémovigilance des Etablissements de Santé",
+        "CHV-ST ETS : Correspondants d'Hémovigilance des ETS",
+        "CSTH : Comité de Sécurité Transfusionnelle et d'Hémovigilance (par ES)"
+      ]
+    },
+    "outils": [
+      "e-FIT : Fiche d'Incident Transfusionnel (télédéclaration nationale depuis 2004)",
+      "Traçabilité : lien PSL-receveur en préservant l'anonymat du donneur",
+      "FDN : Fiche de Distribution Nominative",
+      "Information post-don (IPD) : signalement par le donneur après le don"
+    ],
+    "tags": [
+      "EFS",
+      "CHV-ST",
+      "CRH-ST",
+      "e-FIT",
+      "traçabilité",
+      "organisation"
+    ],
+    "tracabilite": {
+      "definition": "Processus permettant de relier tout PSL à son donneur ET à son receveur via un numéro à 11 chiffres, tout en préservant l'anonymat mutuel.",
+      "numero_11_chiffres": "Contient : N° de prélèvement + code ETS préleveur + année (code-barres sur la poche)",
+      "objectif_bidirectionnel": [
+        "Donneur → receveur : identifier tous les receveurs d'un lot contaminé (enquête descendante)",
+        "Receveur → donneur : retrouver le donneur source en cas d'EIR infectieux (enquête ascendante)"
+      ],
+      "FDN": "Fiche de Distribution Nominative : retour de l'ES vers l'ETS obligatoire après chaque transfusion."
+    },
+    "points_cles": [
+      "La traçabilité (numéro à 11 chiffres) relie tout PSL à son donneur ET son receveur en préservant l'anonymat",
+      "FDN (Fiche de Distribution Nominative) : retour de l'ES vers l'ETS obligatoire après chaque transfusion",
+      "CSTH : instance locale de sécurité transfusionnelle dans chaque établissement de santé"
+    ]
+  },
+  {
+    "id": "VIG-010",
+    "family": "Hémovigilance",
+    "name": "Produits sanguins labiles (PSL)",
+    "definition": "Tout produit issu d'un don de sang destiné à être transfusé à un patient. Issus de prélèvements en sang total ou par aphérèse.",
+    "types_PSL": {
+      "CGR": {
+        "nom": "Concentrés de Globules Rouges",
+        "caracteristiques": "Déleucocytés (< 1 million GB/unité), ≥ 40g Hb, conservés 42 jours à 2–8°C",
+        "indication": "Anémie symptomatique"
+      },
+      "CP": {
+        "MCPS": "Mélange de Concentrés Plaquettaires Standards : 5–6 donneurs de sang total",
+        "CPA": "Concentrés Plaquettaires d'Aphérèse : 1 seul donneur, conservés 5 jours à 20–24°C sous agitation"
+      },
+      "PFC": {
+        "types": [
+          "PFC-SD (solvant-détergent, pool 100 donneurs)",
+          "PFC-IA (inactivé par amotosalen)",
+          "PFC-Se (sécurisé quarantaine)"
+        ],
+        "conservation": "< -25°C, durée 1 an (IA/Se) ou 2 ans (SD)"
+      }
+    },
+    "compatibilite_ABO": {
+      "A": "Antigène A sur GR, anti-B dans sérum",
+      "B": "Antigène B sur GR, anti-A dans sérum",
+      "AB": "Antigènes A et B sur GR, pas d'anticorps → receveur universel (AB+)",
+      "O": "Pas d'antigène → donneur universel GR (O-)"
+    },
+    "securite_transfusionnelle": [
+      "1/ Sélection des donneurs (critères d'aptitude, questionnaire)",
+      "2/ Tests obligatoires (VIH, VHB, VHC, syphilis, HTLV, HEV…)",
+      "3/ Règles de prescription et d'utilisation des PSL (ordonnance médicale, contrôle ultime)"
+    ],
+    "tags": [
+      "PSL",
+      "CGR",
+      "CPA",
+      "PFC",
+      "compatibilité ABO",
+      "sécurité transfusionnelle"
+    ]
+  },
+  {
+    "id": "VIG-011",
+    "family": "Hémovigilance",
+    "name": "Effets indésirables et déclaration en hémovigilance",
+    "definition": "Un effet indésirable transfusionnel est une réaction nocive survenue chez le receveur liée à l'administration d'un PSL, ou chez le donneur liée au prélèvement.",
+    "EIR_principaux": [
+      "Allergie (la plus fréquente)",
+      "IBTT : Infection Bactérienne Transmise par Transfusion",
+      "Incompatibilité immunologique (incompatibilité ABO = accident grave)",
+      "TRALI : Transfusion-Related Acute Lung Injury (oedème pulmonaire lésionnel)",
+      "TACO : Transfusion-Associated Circulatory Overload (oedème de surcharge)"
+    ],
+    "cotation": {
+      "gravite_receveur": [
+        "G1 : non sévère",
+        "G2 : sévère",
+        "G3 : menace vitale immédiate",
+        "G4 : décès"
+      ],
+      "gravite_donneur": [
+        "G1 : minime",
+        "G2 : modéré",
+        "G3 : sévère"
+      ],
+      "imputabilite": [
+        "0 : exclue/improbable",
+        "1 : possible",
+        "2 : vraisemblable",
+        "3 : certaine",
+        "NC : non classifiable"
+      ]
+    },
+    "delais_declaration": {
+      "EIR_grave": "Sans délai, au plus tard dans les 48h (EIR G>1, IBTT, incompatibilité ABO)",
+      "EIR_complete": "Dans les 15 jours pour compléter les investigations",
+      "IG": "Dans les 15 jours"
+    },
+    "chiffres_2023": {
+      "prelevements": "2 625 470 prélèvements, 1 547 679 donneurs",
+      "EIR": "5 412 EIR déclarés (+1,5%)",
+      "IBTT": "3 cas en 2023 (événements rares : 1–2/an)",
+      "EIGD": "7 723 EIGD fortement imputables, sans conséquence dans 96% des cas"
+    },
+    "tags": [
+      "EIR",
+      "TACO",
+      "TRALI",
+      "IBTT",
+      "imputabilité",
+      "déclaration",
+      "e-FIT"
+    ],
+    "TACO_criteres": {
+      "definition": "Transfusion-Associated Circulatory Overload : œdème pulmonaire de surcharge. EIG le plus fréquemment déclaré.",
+      "delai": "Pendant la transfusion ou jusqu'à 12h après sa fin",
+      "criteres": "A (atteinte respiratoire aiguë) ± B (œdème pulmonaire) + ≥3 critères parmi A–E",
+      "prevention": "Ralentir débit à 2 ml/kg/h, max 3h par CGR. Réévaluer après chaque unité."
+    },
+    "TRALI_criteres": {
+      "definition": "Transfusion-Related Acute Lung Injury : œdème pulmonaire lésionnel immunologique (non cardiogénique).",
+      "mecanisme": "Ac anti-HLA ou anti-HNA du donneur → activation PNN → atteinte endothéliale pulmonaire",
+      "delai": "Généralement dans les 6h suivant la transfusion",
+      "diagnostic_differentiel": "TACO : BNP ↑, surcharge. TRALI : BNP normal, Ac anti-HLA/HNA positifs."
+    }
+  },
+  {
+    "id": "VIG-012",
+    "family": "Vigilance et Grossesse",
+    "name": "Généralités – médicaments et grossesse",
+    "definition": "La majorité des médicaments sont déconseillés ou contre-indiqués durant la grossesse. La prise en charge thérapeutique de la femme enceinte nécessite une évaluation bénéfice/risque rigoureuse.",
+    "principes_generaux": [
+      "Aucun médicament ne doit être considéré comme anodin pendant la grossesse",
+      "La mère doit être traitée efficacement : son efficacité thérapeutique prime",
+      "Le placenta N'EST PAS une barrière : seules 2 molécules ne passent pas = héparine et insuline",
+      "La mère est l'organe épurateur du fœtus (sauf pour certains toxiques)",
+      "Lutter contre l'automédication",
+      "Ressource de référence : www.lecrat.fr (CRAT)"
+    ],
+    "modifications_PK_maternelles": [
+      "↓ albumine plasmatique → ↑ fraction libre des médicaments",
+      "↑ volume de distribution",
+      "↑ clairance rénale et hépatique → doses souvent à adapter",
+      "Modifications variables selon le trimestre"
+    ],
+    "periodes_de_risque": {
+      "J0_J14": "Tout ou rien (implantation : mort ou survie sans séquelle)",
+      "J14_J56": "Période tératogène (organogenèse) : risque de malformations",
+      "J56_terme": "Période fœtale : risque fœtotoxique (fonctions, maturation)"
+    },
+    "types_risque": [
+      "1) Risque tératogène : malformatif morphologique (2 premiers mois)",
+      "2) Risque fœtal : atteinte développement/maturation fœtale (2e–3e trimestre)",
+      "3) Risque néonatal : effets sur le nouveau-né à la naissance"
+    ],
+    "tags": [
+      "grossesse",
+      "médicaments",
+      "CRAT",
+      "tératogénicité",
+      "placenta",
+      "bénéfice-risque"
+    ]
+  },
+  {
+    "id": "VIG-013",
+    "family": "Vigilance et Grossesse",
+    "name": "Médicaments tératogènes et fœtotoxiques – cas particuliers",
+    "definition": "Certains médicaments présentent un risque tératogène ou fœtotoxique documenté chez l'humain, nécessitant des précautions spécifiques ou des contre-indications formelles.",
+    "exemples_clés": {
+      "thalidomide": "Commercialisé en 1956, phocomélie → scandale mondial ayant fondé la pharmacovigilance",
+      "acide_valproique": "Dépakine® : risque malformatif x3–5 en monothérapie (~12–15%). Troubles neurodéveloppementaux à long terme. Pictogramme grossesse obligatoire depuis l'affaire Dépakine.",
+      "AINS": {
+        "risque_cardiaque": "Fermeture prématurée du canal artériel in utero (prostaglandines → canal artériel ouvert)",
+        "risque_renal": "Oligoamnios, insuffisance rénale fœtale (diurèse fœtale dès 12 SA)",
+        "periode_a_risque": "Surtout 3e trimestre : contre-indiqués après 24 SA"
+      },
+      "IEC_sartans": "Hypotension fœtale, insuffisance rénale, oligoamnios, ossification crânienne incomplète → contre-indiqués 2e et 3e trimestre",
+      "alcool": "Syndrome d'alcoolisation fœtale (SAF) : AUCUNE dose sans risque"
+    },
+    "pictogramme_grossesse": "Obligatoire sur les boîtes des médicaments à risque tératogène/fœtotoxique avéré (décret issu de l'affaire Dépakine)",
+    "allaitement": "Relativement peu de CI formelles. Ressource : lecrat.fr/allaitement",
+    "tags": [
+      "tératogène",
+      "AINS",
+      "valproate",
+      "Dépakine",
+      "IEC",
+      "canal artériel",
+      "SAF"
+    ]
+  },
+  {
+    "id": "VIG-014",
+    "family": "Perturbateurs Endocriniens",
+    "name": "Définition et classification des perturbateurs endocriniens",
+    "definition": "Un perturbateur endocrinien (PE) est une substance exogène qui, seule ou en mélange, modifie le fonctionnement du système hormonal et provoque des effets néfastes sur un organisme intact ou sur sa descendance (définition OMS/IPCS).",
+    "paradigme": {
+      "Paracelse_classique": "La dose fait le poison",
+      "paradigme_PE": "La faible dose peut faire le poison ! Les PE suivent souvent des courbes dose-réponse non monotones (en J ou en U inversé)"
+    },
+    "classification": {
+      "POP": "Polluants organiques persistants (PCB, dioxines, DDT…) : bioaccumulables",
+      "phytoestrogenes": "Isoflavones de soja, lignanes…",
+      "plastifiants": "BPA (bisphénol A), phtalates (DEHP…)",
+      "pesticides": "Herbicides, fongicides, insecticides",
+      "cosmetiques": "Parabènes, oxybenzone (écrans solaires)",
+      "autres": "Alkylphénols, retardateurs de flamme, perturbateurs thyroïdiens"
+    },
+    "mecanismes": [
+      "Mimétisme hormonal (agonisme des récepteurs hormonaux)",
+      "Antagonisme hormonal",
+      "Modification de la synthèse, du transport, du métabolisme ou de l'élimination des hormones",
+      "Mécanismes épigénétiques (méthylation, acétylation)"
+    ],
+    "sources_exposition": [
+      "Alimentation (graisses, conserves, céréales)",
+      "Air intérieur et poussières",
+      "Cosmétiques et soins corporels",
+      "Matériaux d'emballage et contenants",
+      "Médicaments",
+      "Jouets, matériaux de construction"
+    ],
+    "tags": [
+      "perturbateurs endocriniens",
+      "BPA",
+      "phtalates",
+      "parabènes",
+      "épigénétique",
+      "définition"
+    ]
+  },
+  {
+    "id": "VIG-015",
+    "family": "Perturbateurs Endocriniens",
+    "name": "Effets sanitaires des perturbateurs endocriniens",
+    "definition": "Les PE exercent des effets biologiques multiples via le système neuroendocrinien, avec des effets potentiellement transmis à la descendance (programmation fœtale, théorie du DOHaD).",
+    "effets_principaux": {
+      "fertilite": [
+        "↓ qualité spermatique (concentration, morphologie, mobilité)",
+        "Dysgénésie testiculaire",
+        "Hypospadias, cryptorchidie",
+        "↓ fertilité féminine"
+      ],
+      "metaboliques": [
+        "Obésité (composés obésogènes)",
+        "Diabète de type 2 (insulino-résistance)",
+        "Syndrome métabolique"
+      ],
+      "thyroide": [
+        "Perturbation de l'axe thyroïdien",
+        "Goitres (soja, phtalates)",
+        "Effets neurodéveloppementaux via T3/T4"
+      ],
+      "neurodeveloppement": [
+        "Troubles autistiques",
+        "Déficits cognitifs",
+        "Troubles du comportement"
+      ],
+      "pubertes": [
+        "Puberté précoce (< 8 ans)",
+        "Modifications fertilité"
+      ],
+      "cancers": [
+        "↑ cancers hormonaux (sein, prostate, thyroïde)"
+      ]
+    },
+    "concepts_cles": {
+      "DOHaD": "Developmental Origins of Health and Disease : maladies adultes programmées par exposition fœtale aux PE",
+      "Distilbene": "Exemple historique : DES (diéthylstilbestrol) → malformations génitales F1, cancers vagin/col F2",
+      "fenetre_exposition": "Les effets dépendent de la période d'exposition (vie fœtale > adulte)"
+    },
+    "conseils_pratiques": [
+      "Éviter plastiques à risque (PVC, PC, PS) pour les aliments chauds",
+      "Préférer verre, inox, céramique pour la cuisine",
+      "Réduire cosmétiques avec parabènes, oxybenzone",
+      "Privilégier alimentation biologique pour les femmes enceintes et enfants",
+      "Ventiler les espaces intérieurs"
+    ],
+    "tags": [
+      "DOHaD",
+      "fertilité",
+      "obésité",
+      "neurodéveloppement",
+      "distilbène",
+      "fenêtre d'exposition"
+    ]
+  },
+  {
+    "id": "VIG-016",
+    "family": "Addictovigilance",
+    "name": "Définition et objectifs de l'addictovigilance",
+    "definition": "L'addictovigilance est la surveillance des cas d'abus, de dépendance et d'usages détournés liés à la consommation de substances psychoactives (SPA), en dehors de l'alcool et du tabac. Elle est assurée par le réseau des CEIP-A (Centres d'Evaluation et d'Information sur la Pharmacodépendance – Addictovigilance).",
+    "pharmacodependance": {
+      "definition_OMS": "Pathologie neuropsychiatrique chronique caractérisée par la perte de contrôle de l'usage",
+      "DSM5": "Trouble de l'usage d'une substance (11 critères)",
+      "neurobiologie": "Toute SPA → libération de dopamine (circuit de récompense). Répétition → hyperdopaminergie → hypodopaminergie à l'arrêt → craving"
+    },
+    "SPA_concernees": [
+      "Médicaments à potentiel d'abus (benzodiazépines, opioïdes, prégabaline, méthylphénidate…)",
+      "Substances illicites classiques (héroïne, cocaïne, cannabis, ecstasy)",
+      "Nouveaux Produits de Synthèse (NPS) : cathinones, pipérazines, cannabinoïdes de synthèse…"
+    ],
+    "contexte_france": [
+      "France : 2e consommateur de benzodiazépines en Europe",
+      "Crise des opioïdes : France moins touchée que les USA mais sous surveillance",
+      "NPS : nombre de nouvelles substances identifiées chaque année en augmentation"
+    ],
+    "tags": [
+      "addictovigilance",
+      "CEIP-A",
+      "pharmacodépendance",
+      "DSM-5",
+      "dopamine",
+      "NPS"
+    ],
+    "protoxyde_azote": {
+      "nom": "Protoxyde d'azote (N₂O) — gaz hilarant",
+      "effets_EI": [
+        "Paresthésies, engourdissements",
+        "Céphalées, confusion, délire",
+        "Carence vitamine B12 → myélopathie, neuropathie périphérique",
+        "Tachycardie, douleurs thoraciques"
+      ],
+      "reglementation": "Vente aux mineurs interdite depuis 2021. Toujours légal pour usage médical (MEOPA).",
+      "mecanisme_addiction": "Libération dopaminergique rapide → potentiel d'abus. Usage compulsif documenté."
+    }
+  },
+  {
+    "id": "VIG-017",
+    "family": "Addictovigilance",
+    "name": "Organisation et outils de l'addictovigilance",
+    "definition": "Les CEIP-A assurent la surveillance nationale de l'abus et de la dépendance aux SPA via des outils spécifiques de recueil et d'analyse.",
+    "outils": {
+      "OPPIDUM": "Observation des Produits Psychotropes Illicites ou Détournés de leur Utilisation Médicamenteuse : enquête annuelle auprès de centres de soin spécialisés",
+      "DRAMES": "Décès en Relation avec l'Abus de Médicaments Et de Substances : surveillance des décès liés aux SPA",
+      "OSIAP": "Ordonnances Suspectes Indicateur d'Abus Possible : surveillance des ordonnances falsifiées en officine",
+      "ASOS": "Analgésiques Stupéfiants en Officine de ville : suivi des prescriptions d'antalgiques opioïdes",
+      "Soumission_chimique": "Enquête nationale CEIP Paris : administration d'une SPA à l'insu de la victime"
+    },
+    "notification": {
+      "qui": "Tous professionnels de santé (médecins, pharmaciens, infirmiers…)",
+      "quoi": "Cas d'abus, de dépendance, d'usage détourné, de pharmacodépendance",
+      "limite": "Sous-notification importante (comme en PV classique)"
+    },
+    "roles_CEIP_A": [
+      "Notification et recueil",
+      "Enquêtes et suivis nationaux pour l'ANSM",
+      "Veille sanitaire (ex. IDF via ARS)",
+      "Avis à la Commission nationale des stupéfiants",
+      "Décisions réglementaires (classement, retrait)"
+    ],
+    "tags": [
+      "OPPIDUM",
+      "DRAMES",
+      "OSIAP",
+      "soumission chimique",
+      "prégabaline",
+      "CEIP-A"
+    ],
+    "cas_clinique": {
+      "titre": "Signal prégabaline — parcours type en addictovigilance",
+      "description": "Lyrica® (prégabaline) : signal d'addictovigilance → signaux dans la littérature, données CEIP-A → décisions réglementaires (classement, restriction)"
+    }
+  },
+  {
+    "id": "VIG-018",
+    "family": "Biovigilance",
+    "name": "Définition et organisation de la biovigilance",
+    "definition": "La biovigilance a pour objet de surveiller et prévenir les risques liés à l'utilisation à des fins thérapeutiques d'éléments et produits issus du corps humain (PICH) : organes, tissus, cellules (OTC) et lait maternel.",
+    "champ": [
+      "Organes solides (rein, foie, cœur, poumon…)",
+      "Tissus (cornées, os, peau, artères…)",
+      "Cellules (CSH, cellules souches, thérapie cellulaire)",
+      "Lait maternel",
+      "Produits thérapeutiques annexes (PTA)"
+    ],
+    "acteurs": {
+      "ABM": "Agence de la Biomédecine : autorité compétente en matière de biovigilance (née de la loi bioéthique du 6 août 2004)",
+      "ANSM": "Évalue les bénéfices/risques, police sanitaire",
+      "CLB": "Correspondants Locaux de Biovigilance : au moins 1 par établissement pratiquant des greffes/thérapies"
+    },
+    "systeme_national": {
+      "niveaux": [
+        "Local (CLB)",
+        "Régional (SRA : Structures Régionales d'Appui)",
+        "National (ABM + ANSM)"
+      ],
+      "classification_Maastricht": "Classe le contexte d'un arrêt cardiaque pour orienter la décision de prélèvement (donneurs à cœur arrêté : DCD)"
+    },
+    "definitions_cles": {
+      "incident_grave": "Accident ou erreur lié aux activités OTC entraînant ou susceptible d'entraîner un EI grave, une perte du greffon, ou toute fréquence anormalement élevée d'EI attendus",
+      "effet_indesirable_inattendu": "EI non prévisible selon le profil de qualité du produit"
+    },
+    "delais_declaration": "Tout incident grave et tout EI inattendu → déclaration à l'ABM sans délai",
+    "chiffres_2023": {
+      "greffes_organes": "5 634 greffes d'organes (+2,5%)",
+      "donneurs_recensés": "3 132 recensés, 1 512 prélevés en mort encéphalique",
+      "opposition": "36,1% d'opposition au don (+9,4%)"
+    },
+    "PTA": {
+      "definition": "Produit d'origine chimique ou biologique entrant en contact avec des OTC pour leur prélèvement, conservation, transformation ou greffe",
+      "exemples": [
+        "Milieu de conservation de cornée (STEM ALPHA)",
+        "Collagénase NB1 (dissociation pancréatique)",
+        "Protéase neutre NB"
+      ]
+    },
+    "tags": [
+      "biovigilance",
+      "ABM",
+      "CLB",
+      "organes",
+      "tissus",
+      "greffes",
+      "PTA",
+      "Maastricht"
+    ],
+    "classification_Maastricht": {
+      "definition": "Classifie le contexte d'un arrêt cardiaque pour orienter la décision de prélèvement d'organes à cœur arrêté (DCD).",
+      "pertinence_biovigilance": "Catégories I et II = donneurs non contrôlés (ischémie chaude non maîtrisée). Catégorie III = donneur contrôlé.",
+      "categories": [
+        "I — Décédé à l'arrivée des secours (arrêt hors contexte médical)",
+        "II — Arrêt cardiaque en présence de secours qualifiés sans récupération hémodynamique",
+        "III — Arrêt ou limitation thérapeutique décidée en réanimation",
+        "IV — Mort encéphalique avec arrêt cardiaque survenant en réanimation",
+        "V — Décès par euthanasie (Belgique, Pays-Bas uniquement)"
+      ]
+    }
+  },
+  {
+    "id": "VIG-019",
+    "family": "Réactovigilance",
+    "name": "Définition et organisation de la réactovigilance",
+    "definition": "La réactovigilance est la surveillance des incidents et risques d'incidents résultant de l'utilisation des Dispositifs Médicaux de Diagnostic In Vitro (DMDIV) : réactifs, calibrateurs, matériaux de contrôle, logiciels et instruments de biologie médicale.",
+    "DMDIV_definition": "Produit ou instrument destiné à être utilisé in vitro dans l'examen d'échantillons provenant du corps humain, pour fournir une information sur l'état physiologique ou pathologique (Règlement UE 2017/746).",
+    "classification_RDMDIV": {
+      "classe_A": "Risque faible : colorants histologiques, récipients pour échantillons",
+      "classe_B": "Risque modéré : tests de glucose, cholestérol, grossesse",
+      "classe_C": "Risque élevé : analyse génétique, autodiagnostics",
+      "classe_D": "Risque critique : tests groupage sanguin, détection VIH, VHB, VHC…"
+    },
+    "incident_DMDIV": [
+      "Défaillance ou altération des caractéristiques ou performances d'un DMDIV",
+      "Inadéquation dans l'étiquetage ou la notice",
+      "Résultats erronés pouvant conduire à une décision médicale inappropriée"
+    ],
+    "organisation": {
+      "local": "CLRV (Correspondant Local de Réactovigilance) : médecin ou pharmacien désigné dans ES/ETS",
+      "national": "ANSM + Commission nationale DMDIV + Comité technique MV/RV",
+      "regional": "CRMRV (Coordonnateur Régional de Matériovigilance et Réactovigilance)"
+    },
+    "declaration": "Via portail national signalement.social-sante.gouv.fr ou formulaire ANSM. Fabricants ont des obligations spécifiques de déclaration.",
+    "marquage_CE": "Obligatoire avant mise sur le marché. Autocertification pour classe A ; organisme notifié pour B, C, D.",
+    "tags": [
+      "réactovigilance",
+      "DMDIV",
+      "CLRV",
+      "biologie médicale",
+      "Règlement 2017/746",
+      "ANSM"
+    ]
+  },
+  {
+    "id": "VIG-020",
+    "family": "Matériovigilance",
+    "name": "Définition et organisation de la matériovigilance",
+    "definition": "La matériovigilance a pour objet d'éviter la (re)production d'incidents ou de risques d'incidents graves impliquant des dispositifs médicaux (DM) en prenant des mesures préventives et correctives.",
+    "DM_definition": "Tout instrument, appareil, équipement, logiciel, implant, réactif, matière ou autre article destiné par le fabricant à être utilisé chez l'homme pour des fins médicales, dont l'action principale N'EST PAS obtenue par voie pharmacologique, immunologique ou métabolique (Règlement UE 2017/745).",
+    "incident_DM": "Tout dysfonctionnement ou altération des caractéristiques/performances d'un DM mis sur le marché, incluant les erreurs d'utilisation dues à des caractéristiques ergonomiques, et tout défaut d'information du fabricant.",
+    "organisation": {
+      "local": [
+        "CLMV (Correspondant Local de Matériovigilance) : obligatoire dans tout ES",
+        "Missions : recueil incidents, conservation DM impliqués, interface utilisateurs/ANSM"
+      ],
+      "regional": "CRMRV : vision globale des incidents régionaux, appui aux CLMV",
+      "national": [
+        "ANSM : destinataire des signalements, évaluation, police sanitaire",
+        "Comité Scientifique Permanent Surveillance DM & DMDIV",
+        "Echelle européenne : collaboration avec autorités compétentes des EM"
+      ]
+    },
+    "obligations_fabricants": {
+      "declaration_IG": "Délai immédiat (< 2 jours pour décès/risque vital) à 30 jours selon gravité",
+      "FSCA": "Field Safety Corrective Action : action de sécurité sur le terrain (rappel de lot, note de sécurité, modification de notice)"
+    },
+    "retour_information": [
+      "Site internet ANSM (abonnement liste de diffusion)",
+      "Répertoire des signalements avec état d'avancement",
+      "Informations de sécurité descendantes vers les ES"
+    ],
+    "tags": [
+      "matériovigilance",
+      "dispositif médical",
+      "CLMV",
+      "CRMRV",
+      "FSCA",
+      "ANSM",
+      "Règlement 2017/745"
+    ]
+  },
+  {
+    "id": "VIG-021",
+    "family": "Toxicovigilance",
+    "name": "Toxicovigilance et réseau des Centres Antipoison",
+    "definition": "La toxicovigilance (Art. L.1340-2 du CSP) a pour objet la surveillance et l'évaluation des effets toxiques pour l'homme des substances ou préparations auxquelles il est exposé. Elle est coordonnée par l'Anses via 8 Centres Antipoison (CAP).",
+    "CAP": {
+      "nombre": "8 CAP en France (Paris, Lyon, Bordeaux, Marseille, Nancy, Rennes, Strasbourg, Toulouse)",
+      "missions": [
+        "Réponse téléphonique aux urgences d'exposition toxique (24h/24)",
+        "Recueil et analyse des cas d'intoxication",
+        "Système d'information national (BNPC : Base Nationale des Cas)"
+      ],
+      "score_gravite": "Score PSS (Poisoning Severity Score) de 0 (asymptomatique) à 4 (décès)"
+    },
+    "BNPC": {
+      "hierarchies": [
+        "Agent chimique / composition",
+        "Circonstance d'exposition",
+        "Voie d'exposition"
+      ],
+      "intoxications_frequentes": [
+        "Médicaments (1re cause)",
+        "Produits ménagers",
+        "Plantes",
+        "Champignons",
+        "Cosmétiques",
+        "Pesticides"
+      ]
+    },
+    "detection_signal_Anses": [
+      "1/ Signaux et alertes (cas individuels et clusters)",
+      "2/ Études dans des collectifs d'experts (GT Vigilance)",
+      "3/ Détection automatisée de signaux (algorithmes sur données CAP)"
+    ],
+    "exemples_alertes": [
+      "Produits amaigrissants adultérés (sibutramine)",
+      "Miels aphrodisiaques adultérés",
+      "Produits contenant du CBD et cannabinoïdes de synthèse",
+      "Brûlures liées à des verrucides caustiques chez nourrissons",
+      "Intoxications champignons (2023 : bilan annuel Anses)",
+      "Chenilles processionnaires (toxicité urticante)"
+    ],
+    "Vigilanses": "Bulletin périodique de l'Anses sur les vigilances sanitaires",
+    "tags": [
+      "toxicovigilance",
+      "CAP",
+      "Anses",
+      "BNPC",
+      "intoxications",
+      "signal",
+      "champignons"
+    ]
+  },
+  {
+    "id": "VIG-022",
+    "family": "Nutrivigilance",
+    "name": "Nutrivigilance et compléments alimentaires",
+    "definition": "La nutrivigilance est un dispositif de surveillance des effets indésirables liés à la consommation de compléments alimentaires, de denrées alimentaires enrichies et de nouveaux aliments. Gérée par l'Anses.",
+    "complement_alimentaire_def": "Denrée alimentaire dont le but est de compléter le régime alimentaire normal ; source concentrée de nutriments ou d'autres substances à effet nutritionnel ou physiologique (Directive 2002/46/CE).",
+    "imputabilite": {
+      "score_intrinsèque": "Établi indépendamment pour chaque symptôme et chaque produit, sans tenir compte de la composition",
+      "score_chronologique": "Évaluation du lien temporel (délai d'apparition, évolution à l'arrêt/reprise)",
+      "score_etiologique": "Évaluation du lien étiologique (explication alternative, notoriété)"
+    },
+    "declaration": {
+      "qui": "Professionnels de santé, industriels (via formulaires SUE A), usagers",
+      "comment": "Portail de signalement national ou formulaire Anses",
+      "formulaires": [
+        "SUE A : fiche déclaration des industriels à l'Anses",
+        "SUE B : fiche de réponse Anses aux industriels",
+        "SUE C : fiche de déclaration Anses aux industriels"
+      ]
+    },
+    "cas_marquants": {
+      "boissons_energisantes": "BDE : 2 décès + 1 arrêt cardiaque documentés. Recommandations Anses : limiter la consommation, ne pas associer à la caféine ou à l'alcool.",
+      "p_synephrine": "Avis Anses 2014 : ne pas dépasser 20 mg/j, ne pas associer à la caféine",
+      "levure_riz_rouge": "LRR = citrinine (monacoline K ≈ simvastatine) : atteintes musculaires (9 cas très vraisemblables). Avis Anses 2014 : consulter médecin avant consommation.",
+      "substitution_lait_infantile": "Remplacement de lait infantile par boisson aux amandes → carences graves"
+    },
+    "chiffres": "Pharmacovigilance vétérinaire ≈ 4900 signalements/an. Nutrivigilance : plusieurs centaines de signalements/an.",
+    "tags": [
+      "nutrivigilance",
+      "compléments alimentaires",
+      "Anses",
+      "BDE",
+      "levure riz rouge",
+      "imputabilité"
+    ]
+  },
+  {
+    "id": "VIG-023",
+    "family": "Cosmétovigilance",
+    "name": "Cosmétovigilance – missions et organisation",
+    "definition": "La cosmétovigilance est le système de surveillance des effets indésirables liés à l'utilisation des produits cosmétiques, géré par l'Anses (depuis 2017) en lien avec l'ANSM.",
+    "produit_cosmetique": "Toute substance ou mélange destiné à être mis en contact avec les parties superficielles du corps humain (épiderme, phanères, lèvres, organes génitaux externes, dents, muqueuses) en vue de les nettoyer, parfumer, modifier leur aspect, les protéger ou maintenir en bon état.",
+    "circuit_declaration": {
+      "etape1": "Signalement par utilisateur, professionnel de santé ou industriel",
+      "etape2": "Réception par l'Anses via le portail national",
+      "etape3": "Analyse d'imputabilité par l'Anses",
+      "etape4": "Réponse aux industriels (SUE B/C) et mesures si nécessaire"
+    },
+    "chiffres_2024": "378 signalements du 1er janvier au 31 décembre 2024",
+    "lien_avec_autres_vigilances": "Produits cosmétiques peuvent contenir des PE (parabènes, oxybenzone) → interface avec le module Perturbateurs Endocriniens",
+    "declaration_usagers": "signalement.social-sante.gouv.fr",
+    "tags": [
+      "cosmétovigilance",
+      "Anses",
+      "cosmétiques",
+      "effets indésirables",
+      "parabènes",
+      "imputabilité"
+    ],
+    "cas_clinique": {
+      "cas": "Traitement eczéma des paupières : réaction allergique suite à une application sur la paupière droite. Analyse imputabilité → évaluation du produit suspect.",
+      "suites": "L'Anses peut émettre un avis, recommander le retrait ou informer les industriels"
+    }
+  },
+  {
+    "id": "VIG-024",
+    "family": "Panorama des Vigilances",
+    "name": "Panorama des vigilances sanitaires françaises",
+    "definition": "Les vigilances sanitaires sont des systèmes réglementaires de sécurité sanitaire comportant notamment la déclaration par les professionnels de santé des effets indésirables, incidents et risques. Elles sont coordonnées au niveau national par les agences de sécurité sanitaire (Ordonnance du 19 janvier 2017).",
+    "tableau_vigilances": {
+      "ANSM": [
+        "Pharmacovigilance (médicaments)",
+        "Hémovigilance (PSL)",
+        "Matériovigilance (DM)",
+        "Réactovigilance (DMDIV)",
+        "Addictovigilance (CEIP-A)"
+      ],
+      "ABM": [
+        "Biovigilance (organes, tissus, cellules)",
+        "Assistance médicale à la procréation"
+      ],
+      "ASN": [
+        "Radiovigilance (expositions aux rayonnements ionisants)"
+      ],
+      "Sante_Publique_France": [
+        "Infectiovigilance",
+        "Surveillance épidémiologique"
+      ],
+      "HAS": [
+        "Qualité et sécurité des soins"
+      ],
+      "Anses": [
+        "Toxicovigilance (CAP, intoxications)",
+        "Nutrivigilance (compléments alimentaires)",
+        "Cosmétovigilance (produits cosmétiques)",
+        "Pharmacovigilance vétérinaire (ANMV)",
+        "Phytovigilance (produits phytosanitaires)",
+        "Biocides vigilance",
+        "Tatouvigilance (depuis 2024)"
+      ]
+    },
+    "principe_general": "Obligation réglementaire de déclaration pour les professionnels de santé, sans sanction pénale mais avec responsabilité professionnelle. L'objectif est collectif : améliorer la sécurité sanitaire.",
+    "portail_unique": "signalement.social-sante.gouv.fr : portail national centralisé pour la majorité des vigilances",
+    "tags": [
+      "panorama",
+      "vigilances sanitaires",
+      "ANSM",
+      "ABM",
+      "ASN",
+      "Anses",
+      "SPF",
+      "HAS",
+      "organisation"
+    ]
+  }
+]

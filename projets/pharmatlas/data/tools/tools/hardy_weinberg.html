@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hardy-Weinberg</title>
+<style>
+
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1e2530;--border:#30363d;
+  --accent:#7ee787;--accent2:#58a6ff;--accent3:#f78166;--accent4:#d2a8ff;--accent5:#ffa657;
+  --text:#e6edf3;--muted:#8b949e;--radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+h1{text-align:center;padding:24px 16px 8px;font-size:1.6rem;font-weight:700;
+   background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:20px}
+
+/* NAV TABS */
+.nav-wrap{overflow-x:auto;padding:0 16px;border-bottom:1px solid var(--border)}
+.nav{display:flex;gap:4px;min-width:max-content;padding-bottom:0}
+.nav-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:10px 14px;
+  font-size:.8rem;font-weight:600;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap}
+.nav-btn:hover{color:var(--text)}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* PANELS */
+.panels{padding:20px 16px;max-width:1100px;margin:0 auto}
+.panel{display:none}
+.panel.active{display:block}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.card-title{font-size:1rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.row{display:flex;flex-wrap:wrap;gap:12px}
+.col{flex:1;min-width:260px}
+
+/* CONTROLS */
+label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;margin-top:10px}
+input[type=range]{width:100%;accent-color:var(--accent2)}
+input[type=number],select{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:6px;padding:7px 10px;font-size:.85rem;width:100%}
+.btn{background:var(--accent2);color:#000;border:none;border-radius:6px;padding:8px 18px;
+  font-size:.85rem;font-weight:700;cursor:pointer;transition:.15s}
+.btn:hover{opacity:.85}
+.btn-green{background:var(--accent)}
+.btn-red{background:var(--accent3)}
+.btn-purple{background:var(--accent4)}
+.btn-orange{background:var(--accent5)}
+.btn-sm{padding:5px 12px;font-size:.78rem}
+
+/* BADGES / CHIPS */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:700}
+.ok{background:#1a3a1a;color:#7ee787;border:1px solid #2d5a2d}
+.warn{background:#3a2a00;color:#ffa657;border:1px solid #5a4200}
+.err{background:#3a0000;color:#f78166;border:1px solid #5a1a00}
+
+/* CANVAS */
+canvas{display:block;border-radius:8px;border:1px solid var(--border)}
+
+/* STAT TABLE */
+.stat-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.stat-table th{background:var(--surface2);padding:6px 10px;text-align:left;color:var(--muted);font-weight:600}
+.stat-table td{padding:5px 10px;border-bottom:1px solid var(--border)}
+.stat-table tr.highlight td{background:#1a3a1a;color:var(--accent)}
+.stat-table tr.highlight-err td{background:#3a0000;color:var(--accent3)}
+
+/* PEDIGREE */
+.pedigree-ctrl{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+#ped-canvas{cursor:crosshair}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)}
+.legend-box{width:14px;height:14px;border-radius:2px}
+
+/* IMMUNO */
+.immuno-cell{cursor:pointer;transition:.2s;filter:drop-shadow(0 0 4px transparent)}
+.immuno-cell:hover{filter:drop-shadow(0 0 8px var(--accent2));transform-origin:center}
+.info-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;
+  font-size:.82rem;line-height:1.6;min-height:80px}
+.info-box strong{color:var(--accent2)}
+.cytokine{display:inline-block;background:#1e2f4a;color:var(--accent2);border-radius:4px;
+  padding:1px 7px;font-size:.72rem;margin:1px}
+
+/* PGP */
+.cell-viz{position:relative;width:100%;height:240px;background:#0d1a0d;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.pgp-pump{position:absolute;display:flex;align-items:center;justify-content:center;
+  border-radius:8px;font-size:.7rem;font-weight:700}
+
+/* TITRATION */
+#titration-canvas{background:#111}
+
+/* RANGE DISPLAY */
+.range-val{display:inline-block;background:var(--surface2);border-radius:4px;padding:1px 8px;
+  font-size:.8rem;color:var(--accent5);font-weight:700;margin-left:8px}
+
+/* RESULT BOX */
+.result{background:var(--surface2);border-radius:8px;padding:12px 16px;margin-top:10px;font-size:.85rem;line-height:1.7}
+.result .key{color:var(--accent4);font-weight:700}
+
+body{padding:12px;min-height:100vh}
+.panel{display:none}
+.panel.active{display:block}
+</style>
+</head>
+<body>
+<div class="panel active" id="p0">
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <div class="card-title">🧬 Calculateur Hardy-Weinberg</div>
+      <label>Fréquence allèle a (q) <span class="range-val" id="hw-q-val">0.20</span></label>
+      <input type="range" id="hw-q" min="0.01" max="0.99" step="0.01" value="0.20" oninput="hwCalc()">
+      <label>Effectif population (N)</label>
+      <input type="number" id="hw-n" value="278" min="10" max="10000" oninput="hwCalc()">
+      <div id="hw-result" class="result" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 Test χ² — Conformité à HW</div>
+      <label>Observés AA</label><input type="number" id="hw-obs-AA" value="79" oninput="hwChi()">
+      <label>Observés Aa</label><input type="number" id="hw-obs-Aa" value="138" oninput="hwChi()">
+      <label>Observés aa</label><input type="number" id="hw-obs-aa" value="61" oninput="hwChi()">
+      <div id="hw-chi-result" class="result" style="margin-top:12px"></div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card">
+      <div class="card-title">🌀 Dérive Génétique</div>
+      <label>Taille N <span class="range-val" id="drift-n-val">20</span></label>
+      <input type="range" id="drift-n" min="5" max="500" step="5" value="20" oninput="driftSim()">
+      <label>Générations <span class="range-val" id="drift-g-val">50</span></label>
+      <input type="range" id="drift-g" min="10" max="200" step="10" value="50" oninput="driftSim()">
+      <label>Fréquence initiale p₀ <span class="range-val" id="drift-p-val">0.50</span></label>
+      <input type="range" id="drift-p" min="0.1" max="0.9" step="0.05" value="0.5" oninput="driftSim()">
+      <button class="btn btn-purple btn-sm" style="margin-top:10px" onclick="driftSim()">Simuler</button>
+      <div style="margin-top:10px"><canvas id="drift-canvas" width="420" height="220" style="width:100%"></canvas></div>
+      <div id="drift-result" style="font-size:.8rem;color:var(--muted);margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===== PANEL 2 : COURBES PK ===== -->
+<script>
+
+function syncAll(){
+  document.querySelectorAll('input[type=range]').forEach(r=>{
+    const vid=r.id+'-val';
+    const el=document.getElementById(vid);
+    if(el) el.textContent=parseFloat(r.value).toFixed(2);
+  });
+  // specific displays
+  [['hw-q','hw-q-val',2],['drift-n','drift-n-val',0],['drift-g','drift-g-val',0],
+   ['drift-p','drift-p-val',2],['pk-dose','pk-dose-val',0],['pk-vd','pk-vd-val',0],
+   ['pk-ke','pk-ke-val',2],['pk-ka','pk-ka-val',2],['pk-f','pk-f-val',2],['pk-tinf','pk-tinf-val',2],
+   ['md-dose','md-dose-val',0],['md-ke','md-ke-val',2],['md-ka','md-ka-val',2],
+   ['md-vd','md-vd-val',0],['md-tau','md-tau-val',0],['md-n','md-n-val',0],
+   ['cq-cv','cq-cv-val',2],['tit-ca','tit-ca-val',2],['tit-va','tit-va-val',0],
+   ['tit-cb','tit-cb-val',2],['pgp-expr','pgp-expr-val',0]
+  ].forEach(([id,dv,d=2])=>{
+    const r=document.getElementById(id),el=document.getElementById(dv);
+    if(r&&el) el.textContent=parseFloat(r.value).toFixed(d);
+  });
+}
+document.querySelectorAll('input[type=range]').forEach(r=>{
+  r.addEventListener('input',syncAll);
+});
+syncAll();
+
+// ============================================================
+// UTILS
+// ============================================================
+function showPanel(i,btn){
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const inits=[hwCalc];
+  setTimeout(()=>inits[i]&&inits[i](),50);
+}
+function rangeSync(id,display,dec=2){
+  const el=document.getElementById(id);
+  const dv=document.getElementById(display);
+  if(el&&dv){dv.textContent=parseFloat(el.value).toFixed(dec);}
+}
+function syncAll(){
+  [['hw-q','hw-q-val'],['drift-n','drift-n-val',0],['drift-g','drift-g-val',0],
+   ['drift-p','drift-p-val'],['pk-dose','pk-dose-val',0],['pk-vd','pk-vd-val',0],
+   ['pk-ke','pk-ke-val'],['pk-ka','pk-ka-val'],['pk-f','pk-f-val'],['pk-tinf','pk-tinf-val'],
+   ['md-dose','md-dose-val',0],['md-ke','md-ke-val'],['md-ka','md-ka-val'],
+   ['md-vd','md-vd-val',0],['md-tau','md-tau-val',0],['md-n','md-n-val',0],
+   ['cq-cv','cq-cv-val'],['tit-ca','tit-ca-val'],['tit-va','tit-va-val',0],
+   ['tit-cb','tit-cb-val'],['pgp-expr','pgp-expr-val',0]
+  ].forEach(([id,dv,d=2])=>rangeSync(id,dv,d));
+}
+document.querySelectorAll('input[type=range]').forEach(r=>{
+  r.addEventListener('input',syncAll);
+});
+syncAll();
+
+// ============================================================
+// PANEL 1 : HARDY-WEINBERG
+// ============================================================
+function hwCalc(){
+  const q=parseFloat(document.getElementById('hw-q').value);
+  const N=parseInt(document.getElementById('hw-n').value)||278;
+  const p=1-q;
+  const fAA=p*p,fAa=2*p*q,faa=q*q;
+  const hz=2*p*q;
+  const seuil=document.getElementById('hw-q-val');
+  if(seuil)seuil.textContent=q.toFixed(2);
+
+  let html=`<span class="key">p(A)</span> = ${p.toFixed(4)} &nbsp;|&nbsp; <span class="key">q(a)</span> = ${q.toFixed(4)}<br>`;
+  html+=`<span class="key">f(AA)</span> = p² = ${fAA.toFixed(4)} (${(fAA*N).toFixed(1)} individus)<br>`;
+  html+=`<span class="key">f(Aa)</span> = 2pq = ${fAa.toFixed(4)} &nbsp;<span class="badge ok">Hétérozygotie H=${hz.toFixed(4)}</span><br>`;
+  html+=`<span class="key">f(aa)</span> = q² = ${faa.toFixed(4)} (${(faa*N).toFixed(1)} individus)<br>`;
+  // Application maladies
+  html+=`<br><span class="key">📌 Applications :</span><br>`;
+  if(q<0.05){
+    const prev=Math.round(1/faa);
+    html+=`Maladie AR rare : prévalence ≈ 1/${prev.toLocaleString('fr')}<br>`;
+    html+=`Porteurs (Aa) ≈ 1/${Math.round(1/fAa).toLocaleString('fr')} (${(fAa*100).toFixed(2)}%)<br>`;
+  } else {
+    html+=`Allèle délétère fréquent (q=${q.toFixed(2)}) → forte prévalence maladie AR : ${(faa*100).toFixed(1)}%<br>`;
+  }
+  document.getElementById('hw-result').innerHTML=html;
+  hwChi();
+}
+
+function hwChi(){
+  const AA=parseInt(document.getElementById('hw-obs-AA').value)||0;
+  const Aa=parseInt(document.getElementById('hw-obs-Aa').value)||0;
+  const aa=parseInt(document.getElementById('hw-obs-aa').value)||0;
+  const N=AA+Aa+aa;
+  if(N<10){document.getElementById('hw-chi-result').innerHTML='⚠️ N insuffisant';return;}
+  const p=(2*AA+Aa)/(2*N), q=1-p;
+  const eAA=p*p*N, eAa=2*p*q*N, eaa=q*q*N;
+  const chi2=((AA-eAA)**2/eAA)+((Aa-eAa)**2/eAa)+((aa-eaa)**2/eaa);
+  const seuil=3.841; // ddl=1, α=5%
+  const conforme=chi2<seuil;
+  let html=`<span class="key">Effectifs attendus :</span><br>`;
+  html+=`AA=${eAA.toFixed(1)}, Aa=${eAa.toFixed(1)}, aa=${eaa.toFixed(1)}<br>`;
+  html+=`<span class="key">χ² calculé</span> = <strong>${chi2.toFixed(3)}</strong> &nbsp;`;
+  html+=`χ²seuil (ddl=1, 5%) = 3.841<br>`;
+  html+=chi2<seuil
+    ?`<span class="badge ok">✓ Conforme à HW (χ² < 3.841)</span>`
+    :`<span class="badge err">✗ Écart à HW significatif (χ² > 3.841)</span>`;
+  document.getElementById('hw-chi-result').innerHTML=html;
+}
+
+function driftSim(){
+  const N=parseInt(document.getElementById('drift-n').value)||20;
+  const G=parseInt(document.getElementById('drift-g').value)||50;
+  const p0=parseFloat(document.getElementById('drift-p').value)||0.5;
+  const nPop=10;
+  document.getElementById('drift-n-val').textContent=N;
+  document.getElementById('drift-g-val').textContent=G;
+  document.getElementById('drift-p-val').textContent=p0.toFixed(2);
+
+  const canvas=document.getElementById('drift-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+
+  const colors=['#7ee787','#58a6ff','#f78166','#d2a8ff','#ffa657','#56d364','#79c0ff','#ffa198','#cae8ff','#ffb86c'];
+  let fixed=0,lost=0;
+  for(let pop=0;pop<nPop;pop++){
+    let p=p0;
+    const pts=[[0,p]];
+    let ended=false;
+    for(let g=1;g<=G;g++){
+      if(ended){pts.push([g,p]);continue;}
+      // Binomial sampling
+      let count=0;
+      for(let i=0;i<2*N;i++) if(Math.random()<p) count++;
+      p=count/(2*N);
+      pts.push([g,p]);
+      if(p<=0){p=0;lost++;ended=true;}
+      else if(p>=1){p=1;fixed++;ended=true;}
+    }
+    ctx.strokeStyle=colors[pop];ctx.lineWidth=1.5;
+    ctx.beginPath();
+    pts.forEach(([g,pv],i)=>{
+      const x=20+g*(W-30)/G;
+      const y=H-20-pv*(H-30);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+  // Axes
+  ctx.strokeStyle='#30363d';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(20,10);ctx.lineTo(20,H-20);ctx.lineTo(W-10,H-20);ctx.stroke();
+  // Labels
+  ctx.fillStyle='#8b949e';ctx.font='10px monospace';ctx.textAlign='center';
+  ctx.fillText('0',20,H-8);ctx.fillText(G,W-10,H-8);
+  ctx.textAlign='right';ctx.fillText('1.0',18,14);ctx.fillText('0.5',18,H/2);
+  // Dashed 0.5 line
+  ctx.strokeStyle='#30363d';ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(20,H/2);ctx.lineTo(W-10,H/2);ctx.stroke();
+  ctx.setLineDash([]);
+
+  const freqFixed=(fixed/nPop*100).toFixed(0);
+  const freqLost=(lost/nPop*100).toFixed(0);
+  document.getElementById('drift-result').textContent=
+    `N=${N} — ${freqFixed}% pop. fixées (p→1), ${freqLost}% perdues (p→0). Plus N est petit, plus la dérive est rapide.`;
+}
+setTimeout(()=>{hwCalc();driftSim();},100);
+
+</script>
+</body>
+</html>

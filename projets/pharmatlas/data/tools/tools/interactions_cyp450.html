@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactions CYP — PharmAtlas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --bg:#0d0f14;
+  --bg2:#13161e;
+  --bg3:#1a1e2a;
+  --paper:#f0ece3;
+  --accent:#4fc3f7;
+  --accent2:#e8a838;
+  --red:#e05252;
+  --red2:#ff6b6b;
+  --orange:#f08030;
+  --green:#52c07a;
+  --purple:#a06cd5;
+  --muted:#6b7280;
+  --muted2:#9ca3af;
+  --text:#e8e4dc;
+  --text2:#b8b4ac;
+  --border:rgba(255,255,255,0.06);
+  --border2:rgba(255,255,255,0.12);
+
+  /* node colors */
+  --cyp:#4fc3f7;
+  --substrat:#52c07a;
+  --inhibiteur:#e05252;
+  --inducteur:#f08030;
+}
+
+body{
+  font-family:'Instrument Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+/* ─── HEADER ─── */
+header{
+  background:var(--bg2);
+  border-bottom:1px solid var(--border2);
+  padding:12px 24px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  flex-shrink:0;
+  z-index:20;
+}
+.logo{
+  font-family:'Playfair Display',serif;
+  font-size:18px;
+  color:var(--paper);
+  letter-spacing:3px;
+  text-transform:uppercase;
+}
+.logo span{color:var(--accent2);}
+.header-title{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  letter-spacing:2px;
+  color:var(--muted2);
+  text-transform:uppercase;
+}
+.demo-tag{
+  margin-left:auto;
+  background:rgba(79,195,247,0.1);
+  border:1px solid rgba(79,195,247,0.25);
+  color:var(--accent);
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  padding:3px 10px;
+  border-radius:3px;
+  letter-spacing:1px;
+}
+
+/* ─── LAYOUT ─── */
+.workspace{
+  display:flex;
+  flex:1;
+  overflow:hidden;
+}
+
+/* ─── SIDEBAR ─── */
+.sidebar{
+  width:260px;
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  flex-shrink:0;
+}
+.sidebar-section{
+  padding:14px 16px;
+  border-bottom:1px solid var(--border);
+}
+.sidebar-title{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:10px;
+}
+
+/* Legend */
+.legend-items{display:flex;flex-direction:column;gap:6px;}
+.leg-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.leg-line{width:20px;height:2px;flex-shrink:0;border-radius:2px;}
+
+/* CYP filters */
+.cyp-filters{display:flex;flex-direction:column;gap:4px;}
+.cyp-btn{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 10px;border-radius:6px;
+  background:none;border:1px solid transparent;
+  cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;
+  color:var(--muted2);transition:all .15s;text-align:left;width:100%;
+}
+.cyp-btn:hover{background:var(--bg3);border-color:var(--border2);}
+.cyp-btn.active{background:rgba(79,195,247,0.08);border-color:rgba(79,195,247,0.3);color:var(--accent);}
+.cyp-btn.all{color:var(--text2);}
+.cyp-badge{
+  margin-left:auto;font-size:9px;padding:1px 6px;border-radius:10px;
+  background:rgba(255,255,255,0.06);color:var(--muted2);
+}
+.cyp-btn.active .cyp-badge{background:rgba(79,195,247,0.15);color:var(--accent);}
+
+/* Danger alerts */
+.danger-list{
+  flex:1;overflow-y:auto;padding:10px;
+}
+.danger-list::-webkit-scrollbar{width:3px;}
+.danger-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px;}
+
+.danger-card{
+  padding:10px 12px;border-radius:8px;margin-bottom:8px;cursor:pointer;
+  border:1px solid transparent;transition:all .15s;
+}
+.danger-card:hover{transform:translateX(2px);}
+.danger-card.critical{background:rgba(224,82,82,0.08);border-color:rgba(224,82,82,0.25);}
+.danger-card.major{background:rgba(240,128,48,0.08);border-color:rgba(240,128,48,0.25);}
+.danger-card.moderate{background:rgba(232,168,56,0.08);border-color:rgba(232,168,56,0.25);}
+
+.danger-severity{
+  font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:1.5px;
+  text-transform:uppercase;font-weight:600;margin-bottom:4px;
+}
+.danger-card.critical .danger-severity{color:var(--red2);}
+.danger-card.major .danger-severity{color:var(--orange);}
+.danger-card.moderate .danger-severity{color:var(--accent2);}
+
+.danger-mol1{font-size:12px;font-weight:600;color:var(--text);}
+.danger-label{font-size:11px;color:var(--text2);margin-top:2px;line-height:1.4;}
+.danger-cyp{
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  color:var(--accent);margin-top:4px;
+}
+
+/* ─── GRAPH AREA ─── */
+.graph-area{
+  flex:1;position:relative;overflow:hidden;
+  background:radial-gradient(ellipse at 30% 40%, rgba(79,195,247,0.03) 0%, transparent 60%),
+             radial-gradient(ellipse at 70% 70%, rgba(224,82,82,0.03) 0%, transparent 50%),
+             var(--bg);
+}
+#graph-svg{width:100%;height:100%;}
+
+/* Grid dots background */
+.graph-area::before{
+  content:'';position:absolute;inset:0;
+  background-image:radial-gradient(circle,rgba(255,255,255,0.04) 1px,transparent 1px);
+  background-size:28px 28px;pointer-events:none;
+}
+
+/* ─── TOOLTIP ─── */
+#tooltip{
+  position:fixed;pointer-events:none;z-index:100;
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:10px;padding:14px 16px;
+  min-width:220px;max-width:320px;
+  box-shadow:0 16px 48px rgba(0,0,0,0.6);
+  opacity:0;transition:opacity .15s;
+}
+#tooltip.visible{opacity:1;}
+.tt-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.tt-plant{font-size:11px;color:var(--accent2);font-style:italic;margin-bottom:8px;}
+.tt-role{
+  font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;
+  text-transform:uppercase;padding:2px 7px;border-radius:3px;
+  display:inline-block;margin-bottom:8px;
+}
+.tt-role.cyp{background:rgba(79,195,247,0.15);color:var(--accent);}
+.tt-role.substrat{background:rgba(82,192,122,0.15);color:var(--green);}
+.tt-role.inhibiteur{background:rgba(224,82,82,0.15);color:var(--red2);}
+.tt-role.inducteur{background:rgba(240,128,48,0.15);color:var(--orange);}
+.tt-detail{font-size:12px;color:var(--text2);line-height:1.5;}
+.tt-cyp-list{margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;}
+.tt-cyp-tag{
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  padding:2px 6px;border-radius:3px;border:1px solid var(--border2);color:var(--muted2);
+}
+
+/* ─── CONTROLS ─── */
+.graph-controls{
+  position:absolute;bottom:20px;right:20px;
+  display:flex;flex-direction:column;gap:6px;
+}
+.ctrl-btn{
+  width:34px;height:34px;border-radius:8px;
+  background:var(--bg2);border:1px solid var(--border2);
+  color:var(--text2);font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+.ctrl-btn:hover{background:var(--bg3);border-color:rgba(255,255,255,0.2);color:var(--text);}
+
+/* ─── INFO BAR ─── */
+.info-bar{
+  position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  background:rgba(13,15,20,0.85);backdrop-filter:blur(12px);
+  border:1px solid var(--border2);border-radius:100px;
+  padding:6px 18px;font-size:12px;color:var(--muted2);
+  pointer-events:none;white-space:nowrap;
+}
+.info-bar strong{color:var(--accent);font-weight:500;}
+
+/* Highlight ring */
+.highlight-ring{
+  fill:none;stroke-width:2;stroke-dasharray:4 2;
+  animation:spin 6s linear infinite;
+  transform-origin:center;
+  opacity:0;transition:opacity .3s;
+}
+.highlight-ring.visible{opacity:1;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* Edge label */
+.edge-label{
+  font-family:'JetBrains Mono',monospace;font-size:8px;
+  fill:var(--muted);pointer-events:none;
+  opacity:0;transition:opacity .2s;
+}
+.edge-label.visible{opacity:1;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Pharm<span>Atlas</span></div>
+  <div class="header-title">⚗ Carte des interactions CYP</div>
+  <div class="demo-tag">DÉMO</div>
+</header>
+
+<div class="workspace">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Légende</div>
+      <div class="legend-items">
+        <div class="leg-row">
+          <div class="leg-dot" style="background:#4fc3f7;box-shadow:0 0 6px #4fc3f7"></div>
+          <span>Enzyme CYP</span>
+        </div>
+        <div class="leg-row">
+          <div class="leg-dot" style="background:#52c07a"></div>
+          <span>Substrat</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:auto">métabolisé par</span>
+        </div>
+        <div class="leg-row">
+          <div class="leg-dot" style="background:#e05252"></div>
+          <span>Inhibiteur</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:auto">bloque</span>
+        </div>
+        <div class="leg-row">
+          <div class="leg-dot" style="background:#f08030"></div>
+          <span>Inducteur</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:auto">accélère</span>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+          <div class="sidebar-title" style="margin-bottom:6px;">Arêtes</div>
+          <div class="leg-row">
+            <div class="leg-line" style="background:#52c07a;opacity:.5"></div>
+            <span style="font-size:11px">Substrat → CYP</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-line" style="background:#e05252"></div>
+            <span style="font-size:11px">Inhibition (⛔)</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-line" style="background:#f08030;border-top:2px dashed #f08030;height:0"></div>
+            <span style="font-size:11px">Induction (↑)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Filtrer par CYP</div>
+      <div class="cyp-filters">
+        <button class="cyp-btn all active" onclick="filterCYP('all',this)">
+          🔬 Tous les CYP
+          <span class="cyp-badge" id="badge-all">35</span>
+        </button>
+        <button class="cyp-btn" onclick="filterCYP('CYP3A4',this)">
+          CYP3A4 <span class="cyp-badge" id="badge-CYP3A4">23</span>
+        </button>
+        <button class="cyp-btn" onclick="filterCYP('CYP2D6',this)">
+          CYP2D6 <span class="cyp-badge" id="badge-CYP2D6">-</span>
+        </button>
+        <button class="cyp-btn" onclick="filterCYP('CYP2C9',this)">
+          CYP2C9 <span class="cyp-badge" id="badge-CYP2C9">-</span>
+        </button>
+        <button class="cyp-btn" onclick="filterCYP('CYP2C19',this)">
+          CYP2C19 <span class="cyp-badge" id="badge-CYP2C19">-</span>
+        </button>
+        <button class="cyp-btn" onclick="filterCYP('CYP1A2',this)">
+          CYP1A2 <span class="cyp-badge" id="badge-CYP1A2">-</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="sidebar-title" style="padding:14px 16px 4px;">⚠ Interactions critiques</div>
+    <div class="danger-list" id="dangerList"></div>
+  </div>
+
+  <!-- Graph -->
+  <div class="graph-area">
+    <div class="info-bar">
+      Survolez un nœud pour voir les détails · Cliquez pour <strong>fixer</strong> · Scroll pour zoomer
+    </div>
+    <svg id="graph-svg"></svg>
+    <div class="graph-controls">
+      <button class="ctrl-btn" onclick="zoomIn()" title="Zoom +">+</button>
+      <button class="ctrl-btn" onclick="zoomOut()" title="Zoom -">−</button>
+      <button class="ctrl-btn" onclick="resetZoom()" title="Reset">⌂</button>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip">
+  <div class="tt-name" id="tt-name"></div>
+  <div class="tt-plant" id="tt-plant"></div>
+  <div class="tt-role" id="tt-role"></div>
+  <div class="tt-detail" id="tt-detail"></div>
+  <div class="tt-cyp-list" id="tt-cyp-list"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════
+// DATA (extrait de PharmAtlas index.json)
+// ═══════════════════════════════════════════════════
+const RAW = {"nodes":[{"id":"CYP3A4","label":"CYP3A4","type":"cyp","plant":"","detail":"Métabolise ~50% des médicaments cliniques"},{"id":"CYP2D6","label":"CYP2D6","type":"cyp","plant":"","detail":"Polymorphisme génétique majeur — PM 7% Caucasiens"},{"id":"CYP2C9","label":"CYP2C9","type":"cyp","plant":"","detail":"Métabolise warfarine, phénytoïne, ibuprofène"},{"id":"CYP2C19","label":"CYP2C19","type":"cyp","plant":"","detail":"Polymorphisme : PM 2-3% Caucasiens, 15-20% Asiatiques"},{"id":"CYP1A2","label":"CYP1A2","type":"cyp","plant":"","detail":"Induit par tabac, aliments grillés"},{"id":"Colchicine","label":"Colchicine","type":"inhibiteur","plant":"Colchicum autumnale","detail":"Interaction majeure : inhibiteurs CYP3A4 (clarithromycine, érythromycine, antifongiques azolés) → toxicité fatale possible"},{"id":"Hyperforine","label":"Hyperforine","type":"inducteur","plant":"Hypericum perforatum","detail":"INTERACTION MAJEURE : ↓ 50–80% efficacité ciclosporine, anticoagulants, contraceptifs oraux, antirétroviraux, imatinib"},{"id":"Allicine","label":"Allicine","type":"inhibiteur","plant":"Allium sativum","detail":"Inactivation CYP3A4 (liaison covalente thiols CYP) — interactions antirétroviraux documentées"},{"id":"Curcumine","label":"Curcumine","type":"inhibiteur","plant":"Curcuma longa","detail":"Cliniquement significatif aux doses > 2 g/j : interactions avec immunosuppresseurs, anticoagulants"},{"id":"Quercétine","label":"Quercétine","type":"inhibiteur","plant":"Allium cepa","detail":"Interaction warfarine, cyclosporine : surveiller si supplémentation > 500 mg/j"},{"id":"Silybine","label":"Silybine","type":"inhibiteur","plant":"Silybum marianum","detail":"Cliniquement marginal aux doses thérapeutiques standard"},{"id":"Morphine","label":"Morphine","type":"substrat","plant":"Papaver somniferum","detail":"N-déméthylation (CYP3A4, mineur) ; glucuroconjugaison principale (UGT2B7)"},{"id":"Scopolamine","label":"Scopolamine","type":"substrat","plant":"Datura stramonium","detail":"→ nor-scopolamine (moins actif) + scopine via CYP3A4 et CYP2D6"},{"id":"Atropine","label":"Atropine","type":"substrat","plant":"Atropa belladonna","detail":"N-oxydation (CYP2D6, mineur) ; hydrolyse ester principale"},{"id":"Taxine","label":"Taxine","type":"substrat","plant":"Taxus baccata","detail":"Déacétylation + hydroxylation via CYP3A4 → taxines moins actives"},{"id":"Strychnine","label":"Strychnine","type":"substrat","plant":"Strychnos nux-vomica","detail":"N-oxydation → strychnine N-oxyde (inactif) via CYP3A4/CYP2C19"},{"id":"Spartéine","label":"Spartéine","type":"substrat","plant":"Cytisus scoparius","detail":"2-déhydrospartéine (voie principale CYP2D6, lente chez PM) — modèle historique du polymorphisme CYP2D6"},{"id":"Menthol","label":"Menthol","type":"substrat","plant":"Mentha × piperita","detail":"Hydroxylation → néomenthol + menthone via CYP3A4"},{"id":"Crocine","label":"Crocine","type":"substrat","plant":"Crocus sativus","detail":"Métabolisme oxidatif de la crocétine via CYP2C9"},{"id":"Eugénol","label":"Eugénol","type":"substrat","plant":"Dianthus caryophyllus","detail":"→ 4'-hydroxy-eugénol, isoeugénol via CYP2C9 + CYP1A2"},{"id":"Thymol","label":"Thymol","type":"substrat","plant":"Thymus vulgaris","detail":"→ thymol-glucuronide (principal) + hydroxy-thymol via CYP1A2"},{"id":"Caféine","label":"Caféine","type":"substrat","plant":"Coffea arabica","detail":"Déméthylation N1/N3/N7 via CYP1A2 (90%) → paraxanthine. Induction par tabac (×2). Inhibition par fluvoxamine (×5)"},{"id":"Escine","label":"Escine","type":"substrat","plant":"Aesculus hippocastanum","detail":"Hydroxylation via CYP3A4"},{"id":"Carvacrol","label":"Carvacrol","type":"inhibiteur","plant":"Origanum vulgare","detail":"Inhibiteur modéré CYP3A4 et CYP1A2 in vitro — peu de données cliniques"},{"id":"Aconitine","label":"Aconitine","type":"substrat","plant":"Aconitum napellus","detail":"Déméthylation → benzoylaconine (moins toxique) via CYP3A4 — important pour détoxification"},{"id":"Paracétamol","label":"Paracétamol","type":"substrat","plant":"","detail":"Formation de NAPQI (10%) via CYP3A4/CYP2E1 — voie toxique induite par alcool ou jeûne"},{"id":"Oléandrine","label":"Oléandrine","type":"inhibiteur","plant":"Nerium oleander","detail":"Accumulation potentielle avec inhibiteurs CYP3A4 — risque cardiotoxique"},{"id":"Acide chlorogénique","label":"Acide chlorogénique","type":"substrat","plant":"Lonicera japonica","detail":"Hydroxylation aromatique mineure via CYP1A2"}],"edges":[{"source":"Colchicine","target":"CYP3A4","role":"inhibiteur","detail":"Colchicine est substrat CYP3A4 — tout inhibiteur CYP3A4 augmente ses taux → toxicité"},{"source":"Hyperforine","target":"CYP3A4","role":"inducteur","detail":"Induction via PXR — ↓ 50-80% concentrations substrats CYP3A4"},{"source":"Hyperforine","target":"CYP2C9","role":"inducteur","detail":"↓ warfarine, AINS, sulfamides — délai 2-3 semaines"},{"source":"Hyperforine","target":"CYP2C19","role":"inducteur","detail":"↓ IPP, clopidogrel actif, antidépresseurs"},{"source":"Allicine","target":"CYP3A4","role":"inhibiteur","detail":"Liaison covalente irréversible aux groupements thiols du site actif"},{"source":"Curcumine","target":"CYP3A4","role":"inhibiteur","detail":"Dose-dépendant > 2g/j ; Ki ~1-10 μM selon étude"},{"source":"Curcumine","target":"CYP2C9","role":"inhibiteur","detail":"Interaction warfarine documentée en cas de supplémentation"},{"source":"Curcumine","target":"CYP1A2","role":"inhibiteur","detail":"Inhibition modérée in vitro"},{"source":"Quercétine","target":"CYP2C9","role":"inhibiteur","detail":"↑ biodisponibilité warfarine, fexofénadine"},{"source":"Quercétine","target":"CYP2C19","role":"inhibiteur","detail":"↑ exposition IPP, clopidogrel"},{"source":"Quercétine","target":"CYP1A2","role":"inhibiteur","detail":"↑ exposition caféine, théophylline"},{"source":"Silybine","target":"CYP3A4","role":"inhibiteur","detail":"Marginal cliniquement aux doses standard de chardon-Marie"},{"source":"Morphine","target":"CYP3A4","role":"substrat","detail":"Voie mineure (< 10%) ; principale = UGT2B7"},{"source":"Scopolamine","target":"CYP3A4","role":"substrat","detail":"Hydrolyse + CYP3A4"},{"source":"Scopolamine","target":"CYP2D6","role":"substrat","detail":"N-déméthylation voie secondaire"},{"source":"Atropine","target":"CYP2D6","role":"substrat","detail":"N-oxydation (mineur) ; hydrolyse enzymatique principale"},{"source":"Taxine","target":"CYP3A4","role":"substrat","detail":"Déacétylation — toxicité si CYP3A4 inhibé"},{"source":"Strychnine","target":"CYP3A4","role":"substrat","detail":"N-oxydation → inactif ; accumulation si CYP3A4 inhibé"},{"source":"Strychnine","target":"CYP2C19","role":"substrat","detail":"Hydroxylation voie secondaire"},{"source":"Spartéine","target":"CYP2D6","role":"substrat","detail":"Marqueur historique du polymorphisme CYP2D6 (test in vivo)"},{"source":"Menthol","target":"CYP3A4","role":"substrat","detail":"Hydroxylation → néomenthol"},{"source":"Crocine","target":"CYP2C9","role":"substrat","detail":"Métabolisme oxidatif de la crocétine"},{"source":"Eugénol","target":"CYP2C9","role":"substrat","detail":"→ 4'-hydroxy-eugénol"},{"source":"Eugénol","target":"CYP1A2","role":"substrat","detail":"→ isoeugénol"},{"source":"Thymol","target":"CYP1A2","role":"substrat","detail":"→ thymol-glucuronide (principal)"},{"source":"Caféine","target":"CYP1A2","role":"substrat","detail":"Voie principale (90%) → paraxanthine"},{"source":"Caféine","target":"CYP3A4","role":"substrat","detail":"Voies mineures"},{"source":"Escine","target":"CYP3A4","role":"substrat","detail":"Hydroxylation"},{"source":"Carvacrol","target":"CYP3A4","role":"inhibiteur","detail":"Inhibiteur modéré in vitro"},{"source":"Carvacrol","target":"CYP1A2","role":"inhibiteur","detail":"Inhibiteur modéré in vitro"},{"source":"Aconitine","target":"CYP3A4","role":"substrat","detail":"Détoxification : CYP3A4 convertit aconitine → benzoylaconine moins toxique"},{"source":"Paracétamol","target":"CYP3A4","role":"substrat","detail":"Formation NAPQI (voie toxique 10%)"},{"source":"Oléandrine","target":"CYP3A4","role":"inhibiteur","detail":"Accumulation avec inhibiteurs CYP3A4 — risque cardiotoxique"},{"source":"Acide chlorogénique","target":"CYP1A2","role":"substrat","detail":"Hydroxylation aromatique mineure"}],"danger_pairs":[{"mol1":"Colchicine","cyp":"CYP3A4","label":"Clarithromycine/Kétoconazole → accumulation → myopathie, aplasie, décès","severity":"critical","detail":"La colchicine est un substrat étroit de CYP3A4 et Pgp. Tout inhibiteur fort (clarithromycine, érythromycine, kétoconazole, voriconazole, ritonavir) peut multiplier l'AUC par 3-5× → dépasser le seuil toxique. Des cas mortels documentés."},{"mol1":"Hyperforine","cyp":"CYP3A4","label":"Millepertuis → ↓ 50–80% cyclosporine → rejet de greffe","severity":"critical","detail":"L'induction CYP3A4 par la millepertuis (Hypericum) est l'interaction phytothérapie-médicament la plus documentée. Délai 2-3 semaines. Concerne : ciclosporine, tacrolimus, antirétroviraux (indinavir), imatinib, contraceptifs oraux, warfarine, digoxine."},{"mol1":"Allicine","cyp":"CYP3A4","label":"Ail concentré → ↓ saquinavir/ritonavir de 50%","severity":"major","detail":"Suppléments d'ail à forte dose (≠ alimentation normale) : inhibition CYP3A4 + induction CYP2C9. Cas cliniques documentés chez patients VIH sous antirétroviraux."},{"mol1":"Hyperforine","cyp":"CYP2C9","label":"Millepertuis → ↓ warfarine → risque thromboembolique","severity":"major","detail":"Induction CYP2C9 → accélération du métabolisme de la warfarine → ↓ INR → risque thrombose chez patients anticoagulés. Nombreux cas documentés en littérature."},{"mol1":"Quercétine","cyp":"CYP2C9","label":"Suppléments quercétine > 500mg → ↑ warfarine → hémorragie","severity":"major","detail":"Inhibition CYP2C9 → ↑ biodisponibilité de la warfarine (substrat CYP2C9) → élévation INR → risque hémorragique."},{"mol1":"Curcumine","cyp":"CYP3A4","label":"Curcuma > 2g/j → ↑ immunosuppresseurs → toxicité","severity":"moderate","detail":"Aux doses alimentaires (< 1g/j) : peu significatif. Suppléments à haute dose : inhibition CYP3A4 → accumulation ciclosporine, tacrolimus, anticancéreux."}]};
+
+// ═══════════════════════════════════════════════════
+// BUILD DANGER LIST
+// ═══════════════════════════════════════════════════
+const dl = document.getElementById('dangerList');
+RAW.danger_pairs.forEach((d,i) => {
+  const card = document.createElement('div');
+  card.className = `danger-card ${d.severity}`;
+  card.innerHTML = `
+    <div class="danger-severity">${d.severity === 'critical' ? '☠ CRITIQUE' : d.severity === 'major' ? '⚠ MAJEURE' : '● MODÉRÉE'}</div>
+    <div class="danger-mol1">${d.mol1}</div>
+    <div class="danger-label">${d.label}</div>
+    <div class="danger-cyp">via ${d.cyp}</div>
+  `;
+  card.onclick = () => highlightPair(d.mol1, d.cyp, d.detail);
+  dl.appendChild(card);
+});
+
+// ═══════════════════════════════════════════════════
+// D3 FORCE GRAPH
+// ═══════════════════════════════════════════════════
+const svg = d3.select('#graph-svg');
+const container = document.querySelector('.graph-area');
+let W = container.clientWidth, H = container.clientHeight;
+
+const g = svg.append('g').attr('class','graph-g');
+
+// Zoom
+const zoom = d3.zoom()
+  .scaleExtent([0.3, 3])
+  .on('zoom', e => g.attr('transform', e.transform));
+svg.call(zoom);
+
+const nodeColors = {
+  cyp: '#4fc3f7',
+  substrat: '#52c07a',
+  inhibiteur: '#e05252',
+  inducteur: '#f08030'
+};
+const nodeRadius = {
+  cyp: 28,
+  substrat: 16,
+  inhibiteur: 18,
+  inducteur: 18
+};
+
+// Prepare node objects (D3 will mutate them)
+const nodes = RAW.nodes.map(n => ({...n}));
+const nodeMap = {};
+nodes.forEach(n => nodeMap[n.id] = n);
+
+// Build adjacency for tooltip
+const nodeEdges = {};
+nodes.forEach(n => nodeEdges[n.id] = []);
+RAW.edges.forEach(e => {
+  nodeEdges[e.source]?.push(e);
+  nodeEdges[e.target]?.push(e);
+});
+
+// Edges
+const links = RAW.edges.map(e => ({...e, source: e.source, target: e.target}));
+
+// ─── DEFS: arrowheads
+const defs = svg.append('defs');
+['substrat','inhibiteur','inducteur'].forEach(role => {
+  const col = roleColor(role);
+  defs.append('marker')
+    .attr('id','arrow-'+role)
+    .attr('viewBox','0 -5 10 10')
+    .attr('refX',8).attr('refY',0)
+    .attr('markerWidth',6).attr('markerHeight',6)
+    .attr('orient','auto')
+    .append('path')
+    .attr('d','M0,-5L10,0L0,5')
+    .attr('fill',col).attr('opacity',0.7);
+});
+
+// Glow filter
+const filter = defs.append('filter').attr('id','glow').attr('x','-50%').attr('y','-50%').attr('width','200%').attr('height','200%');
+filter.append('feGaussianBlur').attr('stdDeviation','4').attr('result','blur');
+const feMerge = filter.append('feMerge');
+feMerge.append('feMergeNode').attr('in','blur');
+feMerge.append('feMergeNode').attr('in','SourceGraphic');
+
+function roleColor(role) {
+  return nodeColors[role] || '#888';
+}
+
+// ─── SIMULATION
+const sim = d3.forceSimulation(nodes)
+  .force('link', d3.forceLink(links).id(d => d.id).distance(d => {
+    const r = d.role;
+    if (r === 'inducteur') return 130;
+    if (r === 'inhibiteur') return 110;
+    return 95;
+  }).strength(0.6))
+  .force('charge', d3.forceManyBody().strength(d => d.type === 'cyp' ? -600 : -200))
+  .force('center', d3.forceCenter(W/2, H/2))
+  .force('collision', d3.forceCollide(d => nodeRadius[d.type] + 22))
+  .force('x', d3.forceX(W/2).strength(0.04))
+  .force('y', d3.forceY(H/2).strength(0.04));
+
+// ─── EDGES
+const linkG = g.append('g').attr('class','links');
+const link = linkG.selectAll('line')
+  .data(links)
+  .enter().append('line')
+  .attr('stroke', d => roleColor(d.role))
+  .attr('stroke-width', d => d.role === 'inhibiteur' ? 2 : 1.5)
+  .attr('stroke-opacity', d => d.role === 'substrat' ? 0.25 : 0.6)
+  .attr('stroke-dasharray', d => d.role === 'inducteur' ? '6,3' : null)
+  .attr('marker-end', d => `url(#arrow-${d.role})`);
+
+// ─── NODES GROUP
+const nodeG = g.append('g').attr('class','nodes');
+
+const nodeEl = nodeG.selectAll('g')
+  .data(nodes)
+  .enter().append('g')
+  .attr('class', d => `node node-${d.id}`)
+  .style('cursor','pointer')
+  .call(d3.drag()
+    .on('start', dragStart)
+    .on('drag', dragging)
+    .on('end', dragEnd));
+
+// Outer glow ring for CYP nodes
+nodeEl.filter(d => d.type === 'cyp')
+  .append('circle')
+  .attr('r', d => nodeRadius[d.type] + 10)
+  .attr('fill','none')
+  .attr('stroke', d => nodeColors[d.type])
+  .attr('stroke-width', 1)
+  .attr('stroke-opacity', 0.2)
+  .attr('stroke-dasharray', '3 2');
+
+// Main circle
+nodeEl.append('circle')
+  .attr('r', d => nodeRadius[d.type])
+  .attr('fill', d => d.type === 'cyp'
+    ? 'rgba(13,15,20,0.95)'
+    : `${nodeColors[d.type]}18`)
+  .attr('stroke', d => nodeColors[d.type])
+  .attr('stroke-width', d => d.type === 'cyp' ? 2 : 1.5)
+  .attr('filter', d => d.type === 'cyp' ? 'url(#glow)' : null);
+
+// Label
+nodeEl.append('text')
+  .attr('text-anchor','middle')
+  .attr('dy','0.35em')
+  .attr('font-family','JetBrains Mono, monospace')
+  .attr('font-size', d => d.type === 'cyp' ? '10px' : '9px')
+  .attr('font-weight', d => d.type === 'cyp' ? '600' : '400')
+  .attr('fill', d => nodeColors[d.type])
+  .attr('pointer-events','none')
+  .each(function(d) {
+    const el = d3.select(this);
+    const words = d.label.split(/\s+|(?=\()/);
+    if (d.type === 'cyp' || words.length === 1) {
+      el.text(d.label);
+    } else {
+      // wrap 2 lines
+      const line1 = words.slice(0,Math.ceil(words.length/2)).join(' ');
+      const line2 = words.slice(Math.ceil(words.length/2)).join(' ');
+      el.text('');
+      el.append('tspan').attr('x',0).attr('dy','-0.4em').text(line1);
+      el.append('tspan').attr('x',0).attr('dy','1.1em').text(line2);
+    }
+  });
+
+// Plant icon for phyto molecules
+nodeEl.filter(d => d.type !== 'cyp' && d.plant)
+  .append('text')
+  .attr('text-anchor','middle')
+  .attr('dy', d => nodeRadius[d.type] + 11)
+  .attr('font-size','8px')
+  .attr('fill', 'rgba(255,255,255,0.3)')
+  .attr('pointer-events','none')
+  .text(d => d.plant.split(' ')[0]);
+
+// ─── TOOLTIP interaction
+nodeEl
+  .on('mouseover', (event, d) => showTooltip(event, d))
+  .on('mousemove', (event) => moveTooltip(event))
+  .on('mouseout', () => hideTooltip())
+  .on('click', (event, d) => {
+    event.stopPropagation();
+    if (d.fx !== null) {
+      d.fx = null; d.fy = null;
+    } else {
+      d.fx = d.x; d.fy = d.y;
+    }
+  });
+
+svg.on('click', () => {
+  nodes.forEach(n => { n.fx = null; n.fy = null; });
+});
+
+// ─── SIMULATION TICK
+sim.on('tick', () => {
+  link
+    .attr('x1', d => d.source.x)
+    .attr('y1', d => d.source.y)
+    .attr('x2', d => {
+      const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y;
+      const dist = Math.sqrt(dx*dx+dy*dy) || 1;
+      return d.target.x - (dx/dist) * (nodeRadius[d.target.type] + 8);
+    })
+    .attr('y2', d => {
+      const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y;
+      const dist = Math.sqrt(dx*dx+dy*dy) || 1;
+      return d.target.y - (dy/dist) * (nodeRadius[d.target.type] + 8);
+    });
+
+  nodeEl.attr('transform', d => `translate(${d.x},${d.y})`);
+});
+
+// ─── DRAG
+function dragStart(event, d) {
+  if (!event.active) sim.alphaTarget(0.3).restart();
+  d.fx = d.x; d.fy = d.y;
+}
+function dragging(event, d) { d.fx = event.x; d.fy = event.y; }
+function dragEnd(event, d) {
+  if (!event.active) sim.alphaTarget(0);
+  // keep fixed
+}
+
+// ─── TOOLTIP functions
+const tt = document.getElementById('tooltip');
+
+function showTooltip(event, d) {
+  document.getElementById('tt-name').textContent = d.label;
+  document.getElementById('tt-plant').textContent = d.plant ? `🌿 ${d.plant}` : '';
+  document.getElementById('tt-plant').style.display = d.plant ? '' : 'none';
+  
+  const roleEl = document.getElementById('tt-role');
+  roleEl.textContent = d.type === 'cyp' ? 'ENZYME' : d.type.toUpperCase();
+  roleEl.className = `tt-role ${d.type}`;
+  
+  // detail
+  let detail = d.detail || '';
+  // For cyp nodes, list connected molecules
+  if (d.type === 'cyp') {
+    const connected = RAW.edges.filter(e => e.target === d.id || e.source === d.id);
+    const subs = connected.filter(e => e.role === 'substrat' && e.target === d.id).map(e => e.source);
+    const inh = connected.filter(e => e.role === 'inhibiteur' && e.source !== d.id).map(e => e.source);
+    const ind = connected.filter(e => e.role === 'inducteur' && e.source !== d.id).map(e => e.source);
+    detail = `${detail}<br><span style="color:#52c07a">Substrats: ${subs.join(', ') || '—'}</span>`;
+    if (inh.length) detail += `<br><span style="color:#e05252">Inhibiteurs: ${inh.join(', ')}</span>`;
+    if (ind.length) detail += `<br><span style="color:#f08030">Inducteurs: ${ind.join(', ')}</span>`;
+  }
+  document.getElementById('tt-detail').innerHTML = detail;
+
+  // List CYPs this molecule connects to
+  const cypsEl = document.getElementById('tt-cyp-list');
+  cypsEl.innerHTML = '';
+  if (d.type !== 'cyp') {
+    const myEdges = RAW.edges.filter(e => e.source === d.id || e.target === d.id);
+    myEdges.forEach(e => {
+      const tag = document.createElement('span');
+      tag.className = 'tt-cyp-tag';
+      const otherNode = e.source === d.id ? e.target : e.source;
+      if (RAW.nodes.find(n => n.id === otherNode)?.type === 'cyp') {
+        tag.textContent = `${otherNode} (${e.role})`;
+        tag.style.borderColor = roleColor(e.role) + '44';
+        tag.style.color = roleColor(e.role);
+      }
+      if (tag.textContent) cypsEl.appendChild(tag);
+    });
+  }
+
+  moveTooltip(event);
+  tt.classList.add('visible');
+}
+
+function moveTooltip(event) {
+  let x = event.clientX + 16, y = event.clientY - 20;
+  if (x + 330 > window.innerWidth) x = event.clientX - 330;
+  if (y + 200 > window.innerHeight) y = event.clientY - 200;
+  tt.style.left = x + 'px';
+  tt.style.top = y + 'px';
+}
+
+function hideTooltip() { tt.classList.remove('visible'); }
+
+// ─── FILTER BY CYP
+let currentFilter = 'all';
+
+function filterCYP(cypId, btn) {
+  document.querySelectorAll('.cyp-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = cypId;
+
+  if (cypId === 'all') {
+    nodeEl.style('opacity', 1).style('pointer-events', 'all');
+    link.style('opacity', d => d.role === 'substrat' ? 0.25 : 0.6);
+  } else {
+    // find all nodes connected to this CYP
+    const connectedIds = new Set([cypId]);
+    RAW.edges.forEach(e => {
+      if (e.source === cypId || e.target === cypId) {
+        connectedIds.add(e.source);
+        connectedIds.add(e.target);
+      }
+    });
+    nodeEl
+      .style('opacity', d => connectedIds.has(d.id) ? 1 : 0.08)
+      .style('pointer-events', d => connectedIds.has(d.id) ? 'all' : 'none');
+    link
+      .style('opacity', d => (d.source.id === cypId || d.target.id === cypId)
+        ? (d.role === 'substrat' ? 0.35 : 0.8)
+        : 0.03);
+  }
+
+  // Update badges
+  updateBadges();
+}
+
+function updateBadges() {
+  const cypCounts = {};
+  RAW.edges.forEach(e => {
+    const cyp = RAW.nodes.find(n => n.id === e.target && n.type === 'cyp')?.id;
+    if (cyp) cypCounts[cyp] = (cypCounts[cyp]||0) + 1;
+  });
+  ['CYP3A4','CYP2D6','CYP2C9','CYP2C19','CYP1A2'].forEach(c => {
+    const el = document.getElementById('badge-'+c);
+    if (el) el.textContent = cypCounts[c] || 0;
+  });
+  document.getElementById('badge-all').textContent = nodes.length;
+}
+updateBadges();
+
+// ─── HIGHLIGHT PAIR (from danger list)
+let highlightTimeout;
+function highlightPair(molId, cypId, detail) {
+  clearTimeout(highlightTimeout);
+
+  // Flash danger detail in info bar
+  const bar = document.querySelector('.info-bar');
+  bar.innerHTML = `<strong>${molId}</strong> × <strong>${cypId}</strong> — ${detail.slice(0,90)}…`;
+  bar.style.background = 'rgba(224,82,82,0.25)';
+  bar.style.borderColor = 'rgba(224,82,82,0.5)';
+  bar.style.color = '#ff9999';
+  bar.style.maxWidth = '700px';
+  bar.style.whiteSpace = 'normal';
+
+  // Highlight the relevant nodes & edges
+  const relevant = new Set([molId, cypId]);
+  nodeEl
+    .style('opacity', d => relevant.has(d.id) ? 1 : 0.07)
+    .style('pointer-events', d => relevant.has(d.id) ? 'all' : 'none');
+  link
+    .style('opacity', d => (d.source.id === molId && d.target.id === cypId) ? 1
+      : (d.source.id === molId || d.target.id === cypId) ? 0.35 : 0.03)
+    .attr('stroke-width', d => (d.source.id === molId && d.target.id === cypId) ? 3 : 
+      d.role === 'inhibiteur' ? 2 : 1.5);
+
+  // Zoom to center on those nodes
+  const n1 = nodeMap[molId], n2 = nodeMap[cypId];
+  if (n1 && n2 && n1.x && n2.x) {
+    const cx = (n1.x + n2.x) / 2, cy = (n1.y + n2.y) / 2;
+    svg.transition().duration(700)
+      .call(zoom.transform, d3.zoomIdentity.translate(W/2-cx*1.5, H/2-cy*1.5).scale(1.5));
+  }
+
+  highlightTimeout = setTimeout(() => {
+    nodeEl.style('opacity',1).style('pointer-events','all');
+    link.style('opacity', d => d.role==='substrat'?0.25:0.6).attr('stroke-width',d=>d.role==='inhibiteur'?2:1.5);
+    bar.innerHTML = 'Survolez un nœud pour voir les détails · Cliquez pour <strong>fixer</strong> · Scroll pour zoomer';
+    bar.style.background = bar.style.borderColor = bar.style.color = '';
+    bar.style.maxWidth = '';
+    bar.style.whiteSpace = '';
+    resetZoom();
+  }, 5000);
+}
+
+// ─── ZOOM controls
+function zoomIn()  { svg.transition().duration(300).call(zoom.scaleBy, 1.4); }
+function zoomOut() { svg.transition().duration(300).call(zoom.scaleBy, 0.7); }
+function resetZoom() { svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(0,0).scale(1)); }
+
+// Resize
+window.addEventListener('resize', () => {
+  W = container.clientWidth; H = container.clientHeight;
+  sim.force('center', d3.forceCenter(W/2,H/2))
+     .force('x', d3.forceX(W/2).strength(0.04))
+     .force('y', d3.forceY(H/2).strength(0.04))
+     .alpha(0.3).restart();
+});
+
+// Initial cool-down visual
+setTimeout(() => sim.alphaTarget(0), 3000);
+</script>
+</body>
+</html>

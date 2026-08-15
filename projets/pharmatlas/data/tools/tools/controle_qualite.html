@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contrôle Qualité</title>
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1e2530;--border:#30363d;
+  --accent:#7ee787;--accent2:#58a6ff;--accent3:#f78166;--accent4:#d2a8ff;--accent5:#ffa657;
+  --text:#e6edf3;--muted:#8b949e;--radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:12px}
+h1{text-align:center;padding:18px 16px 6px;font-size:1.5rem;font-weight:700;
+   background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.82rem;margin-bottom:16px}
+
+/* NAV TABS */
+.nav-wrap{overflow-x:auto;padding:0;border-bottom:1px solid var(--border);margin-bottom:16px}
+.nav{display:flex;gap:4px;min-width:max-content}
+.nav-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:9px 14px;
+  font-size:.8rem;font-weight:600;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap}
+.nav-btn:hover{color:var(--text)}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+.panel{display:none}.panel.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px}
+.card-title{font-size:.95rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.row{display:flex;flex-wrap:wrap;gap:14px}
+.col{flex:1;min-width:240px}
+label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:4px;margin-top:10px}
+input[type=range]{width:100%;accent-color:var(--accent2)}
+input[type=number],select{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:6px;padding:7px 10px;font-size:.85rem;width:100%}
+.btn{background:var(--accent2);color:#000;border:none;border-radius:6px;padding:8px 18px;
+  font-size:.85rem;font-weight:700;cursor:pointer;transition:.15s}
+.btn:hover{opacity:.85}
+.btn-green{background:var(--accent)}
+.btn-sm{padding:5px 12px;font-size:.78rem}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.73rem;font-weight:700}
+.ok{background:#1a3a1a;color:#7ee787;border:1px solid #2d5a2d}
+.warn{background:#3a2a00;color:#ffa657;border:1px solid #5a4200}
+.err{background:#3a0000;color:#f78166;border:1px solid #5a1a00}
+canvas{display:block;border-radius:8px;border:1px solid var(--border)}
+.stat-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.stat-table th{background:var(--surface2);padding:6px 8px;text-align:left;color:var(--muted);font-weight:600;position:sticky;top:0;z-index:1}
+.stat-table td{padding:5px 8px;border-bottom:1px solid var(--border)}
+.stat-table tr.ok-row td:first-child{border-left:3px solid #7ee787}
+.stat-table tr.warn-row td:first-child{border-left:3px solid #ffa657}
+.stat-table tr.err-row td:first-child{border-left:3px solid #f78166}
+.stat-table tr.warn-row td{background:rgba(255,166,87,.06)}
+.stat-table tr.err-row td{background:rgba(247,129,102,.1)}
+.result{background:var(--surface2);border-radius:8px;padding:12px 14px;font-size:.82rem;line-height:1.7}
+.result .key{color:var(--accent4);font-weight:700}
+.range-val{display:inline-block;background:var(--surface2);border-radius:4px;padding:1px 8px;
+  font-size:.78rem;color:var(--accent5);font-weight:700;margin-left:6px}
+
+/* ── uniformité masse ── */
+.seuil-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;
+  font-size:.75rem;font-weight:700;margin-right:6px;margin-bottom:4px}
+.seuil-r1{background:rgba(88,166,255,.15);color:var(--accent2);border:1px solid rgba(88,166,255,.3)}
+.seuil-r2{background:rgba(247,129,102,.12);color:var(--accent3);border:1px solid rgba(247,129,102,.3)}
+.verdict-big{border-radius:10px;padding:14px 18px;margin-top:4px;font-size:.95rem;font-weight:700;text-align:center}
+.verdict-ok{background:linear-gradient(135deg,rgba(126,231,135,.12),rgba(126,231,135,.05));border:1px solid rgba(126,231,135,.3);color:#7ee787}
+.verdict-fail{background:linear-gradient(135deg,rgba(247,129,102,.12),rgba(247,129,102,.05));border:1px solid rgba(247,129,102,.3);color:#f78166}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;
+  border-bottom:1px solid rgba(255,255,255,.05);font-size:.8rem}
+.detail-row:last-child{border:none}
+.counter{font-size:1.2rem;font-weight:700;font-family:monospace}
+
+/* ph eur info box */
+.pheur-info{background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:8px;
+  padding:10px 14px;font-size:.78rem;color:var(--muted);line-height:1.7;margin-bottom:10px}
+.pheur-info strong{color:var(--accent2)}
+
+/* table scroll wrapper */
+.table-wrap{max-height:420px;overflow-y:auto;border-radius:8px;border:1px solid var(--border)}
+
+/* manual inputs grid */
+.mass-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:8px}
+.mass-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:5px;padding:5px 6px;font-size:.8rem;text-align:center;width:100%;
+  transition:border-color .15s}
+.mass-input:focus{outline:none;border-color:var(--accent2)}
+.mass-input.warn-in{border-color:#ffa657!important;background:rgba(255,166,87,.08)!important}
+.mass-input.err-in{border-color:#f78166!important;background:rgba(247,129,102,.1)!important}
+.mass-lbl{font-size:.65rem;color:var(--muted);text-align:center;margin-top:1px}
+</style>
+</head>
+<body>
+
+<div class="nav-wrap">
+  <div class="nav">
+    <button class="nav-btn active" onclick="showPanel(0,this)">💊 Uniformité de masse</button>
+    <button class="nav-btn" onclick="showPanel(1,this)">📊 Ancien simulateur</button>
+  </div>
+</div>
+
+<!-- ===== PANEL 0 : UNIFORMITÉ DE MASSE Ph. Eur. ===== -->
+<div class="panel active" id="p0">
+
+  <div class="card">
+    <div class="card-title">💊 Uniformité de masse — Préparations unidoses (Ph. Eur. 2.9.5)</div>
+
+    <div class="pheur-info">
+      <strong>Protocole Ph. Eur. :</strong> 20 gélules pesées individuellement (contenu seul, sans capsule).<br>
+      <strong>Seuil requis :</strong> masse cible &lt; 300 mg → <strong>±10%</strong> &nbsp;|&nbsp; masse cible ≥ 300 mg → <strong>±7,5%</strong><br>
+      <strong>Critères d'acceptation :</strong> ≤ 2 masses hors seuil requis <em>ET</em> aucune hors intervalle double (±20% ou ±15%)
+    </div>
+
+    <div class="row" style="align-items:flex-start">
+
+      <!-- col 1 : paramètres -->
+      <div class="col" style="min-width:220px;max-width:260px">
+        <label>Mode de saisie</label>
+        <select id="um-mode" onchange="umModeChange()">
+          <option value="random">Génération aléatoire</option>
+          <option value="manual">Saisie manuelle</option>
+        </select>
+
+        <label>Masse cible (mg)</label>
+        <input type="number" id="um-target" value="200" min="1" max="2000" oninput="umRecalc()">
+
+        <div id="um-random-ctrl">
+          <label>Variabilité (%CV) <span class="range-val" id="um-cv-val">5.0</span></label>
+          <input type="range" id="um-cv" min="0.5" max="25" step="0.5" value="5"
+            oninput="document.getElementById('um-cv-val').textContent=parseFloat(this.value).toFixed(1);umGenerate()">
+          <button class="btn btn-green btn-sm" style="margin-top:10px;width:100%" onclick="umGenerate()">🎲 Générer lot</button>
+        </div>
+
+        <div id="um-manual-ctrl" style="display:none">
+          <label>Saisir les 20 masses (mg) :</label>
+          <div class="mass-grid" id="um-mass-grid"></div>
+          <button class="btn btn-sm" style="margin-top:8px;width:100%;background:var(--accent4)" onclick="umRecalc()">Calculer</button>
+        </div>
+
+        <hr style="border-color:var(--border);margin:14px 0 10px">
+
+        <!-- seuils dynamiques -->
+        <div id="um-seuils"></div>
+
+        <!-- verdict -->
+        <div id="um-verdict" style="margin-top:12px"></div>
+
+        <!-- stats -->
+        <div id="um-stats" class="result" style="margin-top:10px"></div>
+      </div>
+
+      <!-- col 2 : tableau -->
+      <div class="col" style="min-width:240px">
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:6px">Résultats individuels</div>
+        <div class="table-wrap">
+          <table class="stat-table" id="um-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Masse (mg)</th>
+                <th>Écart (%)</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody id="um-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- col 3 : graphique + détails -->
+      <div class="col" style="min-width:260px">
+        <canvas id="um-canvas" width="300" height="260" style="width:100%"></canvas>
+        <div id="um-detail" class="result" style="margin-top:8px"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANEL 1 : ANCIEN SIMULATEUR ===== -->
+<div class="panel" id="p1">
+  <div class="card">
+    <div class="card-title">📊 Simulateur Général — Contrôle Qualité Ph. Eur.</div>
+    <div class="row" style="align-items:flex-start">
+      <div class="col" style="min-width:200px;max-width:280px">
+        <label>Type de forme</label>
+        <select id="cq-type" onchange="cqUpdate()">
+          <option value="gelule">Gélule</option>
+          <option value="comprimeS">Comprimé (&lt;80 mg)</option>
+          <option value="comprimeM">Comprimé (80–250 mg)</option>
+          <option value="comprimeL">Comprimé (&gt;250 mg)</option>
+        </select>
+        <label>Masse cible (mg)</label>
+        <input type="number" id="cq-target" value="200" min="1" max="2000" oninput="cqRecalc()">
+        <label>Variabilité lot (%CV) <span class="range-val" id="cq-cv-val">5</span></label>
+        <input type="range" id="cq-cv" min="0.5" max="25" step="0.5" value="5" oninput="cqGenerate()">
+        <button class="btn btn-green btn-sm" style="margin-top:12px;width:100%" onclick="cqGenerate()">Générer lot aléatoire</button>
+        <button class="btn btn-sm" style="margin-top:6px;width:100%" onclick="cqRecalc()">Recalculer</button>
+        <div id="cq-verdict" style="margin-top:12px"></div>
+      </div>
+      <div class="col">
+        <div style="overflow-x:auto">
+          <table class="stat-table" id="cq-table">
+            <thead><tr><th>#</th><th>Masse (mg)</th><th>Écart (%)</th><th>Statut</th></tr></thead>
+            <tbody id="cq-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="col">
+        <canvas id="cq-canvas" width="300" height="280" style="width:100%"></canvas>
+        <div id="cq-stats" class="result" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── NAV ──────────────────────────────────────────────────────────
+function showPanel(i,btn){
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PANEL 0 — UNIFORMITÉ DE MASSE Ph. Eur. 2.9.5
+// ══════════════════════════════════════════════════════════════════
+let umMasses = Array(20).fill(0);
+
+function umModeChange(){
+  const mode = document.getElementById('um-mode').value;
+  document.getElementById('um-random-ctrl').style.display = mode==='random'?'':'none';
+  document.getElementById('um-manual-ctrl').style.display  = mode==='manual' ?'':'none';
+  if(mode==='manual') buildManualGrid();
+  else umGenerate();
+}
+
+function buildManualGrid(){
+  const grid = document.getElementById('um-mass-grid');
+  const target = parseFloat(document.getElementById('um-target').value)||200;
+  grid.innerHTML = '';
+  for(let i=0;i<20;i++){
+    const wrap = document.createElement('div');
+    const inp = document.createElement('input');
+    inp.type='number'; inp.className='mass-input'; inp.id='um-m'+i;
+    inp.value = umMasses[i]||target; inp.step='0.1'; inp.min='0';
+    inp.addEventListener('input', umRecalcManual);
+    const lbl = document.createElement('div');
+    lbl.className='mass-lbl'; lbl.textContent='#'+(i+1);
+    wrap.appendChild(inp); wrap.appendChild(lbl);
+    grid.appendChild(wrap);
+  }
+}
+
+function umGetLimits(){
+  const target = parseFloat(document.getElementById('um-target').value)||200;
+  const r1 = target < 300 ? 10 : 7.5;
+  const r2 = r1 * 2;
+  return {r1, r2, target};
+}
+
+function umGenerate(){
+  const cv = parseFloat(document.getElementById('um-cv').value)/100;
+  const {target} = umGetLimits();
+  // Box-Muller for more realistic gaussian
+  umMasses = Array.from({length:20}, ()=>{
+    let u=0,v=0;
+    while(!u) u=Math.random();
+    while(!v) v=Math.random();
+    const z = Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+    return Math.round((target*(1+z*cv))*10)/10;
+  });
+  umRecalc();
+}
+
+function umRecalcManual(){
+  umMasses = Array.from({length:20}, (_,i)=>{
+    const el=document.getElementById('um-m'+i);
+    return el ? parseFloat(el.value)||0 : 0;
+  });
+  umRecalc(true);
+}
+
+function umRecalc(fromManual=false){
+  const {r1, r2, target} = umGetLimits();
+  const tbody = document.getElementById('um-tbody');
+  tbody.innerHTML = '';
+  let out1=0, out2=0;
+
+  const rows = umMasses.map((m,i)=>{
+    const e = (m-target)/target*100;
+    const abs = Math.abs(e);
+    let level = 0; // 0=ok,1=warn,2=err
+    let badge='';
+    if(abs > r2){
+      out2++; level=2;
+      badge=`<span class="badge err">✗ Hors double (±${r2}%)</span>`;
+    } else if(abs > r1){
+      out1++; level=1;
+      badge=`<span class="badge warn">⚠ Hors seuil (±${r1}%)</span>`;
+    } else {
+      badge=`<span class="badge ok">✓ Conforme</span>`;
+    }
+    const cls = level===2?'err-row':level===1?'warn-row':'ok-row';
+    tbody.innerHTML += `<tr class="${cls}">
+      <td>${i+1}</td>
+      <td>${m.toFixed(1)}</td>
+      <td style="font-family:monospace;font-weight:${level>0?700:400};color:${level===2?'#f78166':level===1?'#ffa657':'var(--muted)'}">
+        ${e>=0?'+':''}${e.toFixed(2)}%
+      </td>
+      <td>${badge}</td>
+    </tr>`;
+    // Colorize manual inputs
+    if(fromManual || document.getElementById('um-mode').value==='manual'){
+      const inp = document.getElementById('um-m'+i);
+      if(inp){
+        inp.classList.remove('warn-in','err-in');
+        if(level===2) inp.classList.add('err-in');
+        else if(level===1) inp.classList.add('warn-in');
+      }
+    }
+    return {m, e, level};
+  });
+
+  // Seuils dynamiques
+  document.getElementById('um-seuils').innerHTML =
+    `<div style="margin-bottom:6px;font-size:.78rem;color:var(--muted)">Intervalles applicables :</div>`+
+    `<span class="seuil-badge seuil-r1">±${r1}% seuil requis</span>`+
+    `<span class="seuil-badge seuil-r2">±${r2}% double</span>`+
+    `<div style="font-size:.72rem;color:var(--muted);margin-top:4px">
+      ${target<300?'Masse < 300 mg → ±10% / ±20%':'Masse ≥ 300 mg → ±7,5% / ±15%'}
+    </div>`;
+
+  // Critère Ph. Eur.
+  // Conforme si : ≤2 hors seuil r1 ET 0 hors double r2
+  const conforme = out1 <= 2 && out2 === 0;
+  // Cas limite: si 3 hors seuil, non conforme; si 1 hors double, non conforme
+  let motif = '';
+  if(!conforme){
+    if(out2 > 0) motif = `${out2} unité${out2>1?'s':''} hors intervalle double (±${r2}%)`;
+    else         motif = `${out1} unités hors seuil requis (max autorisé : 2)`;
+  }
+
+  document.getElementById('um-verdict').innerHTML = conforme
+    ? `<div class="verdict-big verdict-ok">✓ LOT CONFORME Ph. Eur.</div>`
+    : `<div class="verdict-big verdict-fail">✗ LOT NON CONFORME<br><span style="font-size:.78rem;font-weight:400;opacity:.8">${motif}</span></div>`;
+
+  // Stats
+  const vals = umMasses;
+  const moy  = vals.reduce((a,b)=>a+b,0)/20;
+  const sd   = Math.sqrt(vals.reduce((s,m)=>s+(m-moy)**2,0)/19);
+  const cv2  = (sd/moy*100).toFixed(2);
+  const eMin = Math.min(...rows.map(r=>r.e));
+  const eMax = Math.max(...rows.map(r=>r.e));
+
+  document.getElementById('um-stats').innerHTML =
+    `<div class="detail-row"><span class="key">Masse cible</span><span>${target} mg</span></div>`+
+    `<div class="detail-row"><span class="key">Moyenne</span><span>${moy.toFixed(2)} mg</span></div>`+
+    `<div class="detail-row"><span class="key">Écart-type</span><span>${sd.toFixed(2)} mg</span></div>`+
+    `<div class="detail-row"><span class="key">%CV</span><span>${cv2}%</span></div>`+
+    `<div class="detail-row"><span class="key">Min / Max</span><span>${Math.min(...vals).toFixed(1)} / ${Math.max(...vals).toFixed(1)} mg</span></div>`+
+    `<div class="detail-row"><span class="key">Écart min / max</span><span>${eMin.toFixed(2)}% / ${eMax.toFixed(2)}%</span></div>`;
+
+  document.getElementById('um-detail').innerHTML =
+    `<div class="detail-row">
+      <span>Hors seuil requis (±${r1}%)</span>
+      <span class="counter" style="color:${out1>2?'#f78166':out1>0?'#ffa657':'#7ee787'}">${out1} / 20</span>
+    </div>`+
+    `<div class="detail-row">
+      <span style="font-size:.73rem;color:var(--muted)">Max autorisé</span>
+      <span style="color:var(--muted);font-size:.8rem">≤ 2</span>
+    </div>`+
+    `<div class="detail-row" style="margin-top:4px">
+      <span>Hors double (±${r2}%)</span>
+      <span class="counter" style="color:${out2>0?'#f78166':'#7ee787'}">${out2} / 20</span>
+    </div>`+
+    `<div class="detail-row">
+      <span style="font-size:.73rem;color:var(--muted)">Max autorisé</span>
+      <span style="color:var(--muted);font-size:.8rem">= 0</span>
+    </div>`;
+
+  umDrawChart(target, r1, r2, rows.map(r=>r.e));
+}
+
+function umDrawChart(target, r1, r2, ecarts){
+  const canvas = document.getElementById('um-canvas');
+  const ctx = canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  ctx.fillStyle='#0d1117'; ctx.fillRect(0,0,W,H);
+
+  const pad={l:36,r:16,t:18,b:28};
+  const n=ecarts.length, bW=Math.floor((W-pad.l-pad.r)/(n+1)), gap=2;
+  const maxE = Math.max(r2*1.2, Math.max(...ecarts.map(Math.abs))*1.1);
+  const h = H-pad.t-pad.b;
+  const mid = pad.t + h/2;
+  const ys = h/(maxE*2);
+
+  // Background bands
+  ctx.fillStyle='rgba(88,166,255,0.05)';
+  ctx.fillRect(pad.l, mid-r1*ys, W-pad.r-pad.l, r1*2*ys);
+  ctx.fillStyle='rgba(247,129,102,0.04)';
+  ctx.fillRect(pad.l, mid-r2*ys, W-pad.r-pad.l, r2*2*ys);
+
+  // Grid + zero
+  ctx.strokeStyle='#30363d'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(pad.l,mid); ctx.lineTo(W-pad.r,mid); ctx.stroke();
+
+  // Limit lines
+  [[r1,'rgba(88,166,255,0.6)'],[r2,'rgba(247,129,102,0.6)']].forEach(([r,col])=>{
+    ctx.strokeStyle=col; ctx.setLineDash([3,3]); ctx.lineWidth=1;
+    [mid-r*ys, mid+r*ys].forEach(y=>{
+      ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+    ctx.fillStyle=col; ctx.font='8px monospace'; ctx.textAlign='right';
+    ctx.fillText(`+${r}%`, W-pad.r-2, mid-r*ys-2);
+    ctx.fillText(`-${r}%`, W-pad.r-2, mid+r*ys+8);
+  });
+
+  // Bars
+  ecarts.forEach((e,i)=>{
+    const abs=Math.abs(e);
+    const col = abs>r2?'#f78166':abs>r1?'#ffa657':'#7ee787';
+    const x = pad.l + i*(bW+gap);
+    const bh = Math.abs(e)*ys;
+    ctx.fillStyle=col+'cc';
+    ctx.fillRect(x, e>0?mid-bh:mid, bW, bh||1);
+    // top glow dot
+    ctx.fillStyle=col;
+    ctx.fillRect(x, e>0?mid-bh:mid+bh-1, bW, 2);
+  });
+
+  // Y labels
+  ctx.fillStyle='#8b949e'; ctx.font='9px monospace'; ctx.textAlign='right';
+  for(let v=-r2;v<=r2;v+=r1){
+    const y=mid-v*ys;
+    if(y>5&&y<H-5) ctx.fillText(v+'%', pad.l-3, y+3);
+  }
+
+  // X labels (every 5)
+  ctx.fillStyle='#8b949e'; ctx.textAlign='center';
+  ecarts.forEach((_,i)=>{
+    if((i+1)%5===0){
+      ctx.fillText(i+1, pad.l+i*(bW+gap)+bW/2, H-6);
+    }
+  });
+
+  // Title
+  ctx.fillStyle='#8b949e'; ctx.font='9px monospace'; ctx.textAlign='left';
+  ctx.fillText('Écarts individuels / Seuils Ph. Eur.', pad.l, 11);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PANEL 1 — ANCIEN SIMULATEUR (inchangé)
+// ══════════════════════════════════════════════════════════════════
+let cqMasses=[];
+function cqInit(){cqGenerate();}
+function cqGetLimits(){
+  const type=document.getElementById('cq-type').value;
+  const limits={
+    gelule:{r1:10,r2:20},
+    comprimeS:{r1:10,r2:20},
+    comprimeM:{r1:7.5,r2:15},
+    comprimeL:{r1:5,r2:10}
+  };
+  const lim=limits[type];
+  const target=parseFloat(document.getElementById('cq-target').value)||200;
+  let r1=lim.r1,r2=lim.r2;
+  if(type==='gelule'){r1=target<300?10:7.5;r2=r1*2;}
+  return{r1,r2,target};
+}
+function cqGenerate(){
+  const cv=parseFloat(document.getElementById('cq-cv').value)/100;
+  const{target}=cqGetLimits();
+  cqMasses=Array.from({length:20},()=>{
+    const gauss=Array.from({length:6},()=>Math.random()).reduce((a,b)=>a+b,0)/6;
+    return Math.round((target*(1+(gauss-0.5)*cv*6))*10)/10;
+  });
+  cqRecalc();
+}
+function cqRecalc(){
+  const{r1,r2,target}=cqGetLimits();
+  const tbody=document.getElementById('cq-tbody');
+  tbody.innerHTML='';
+  let out1=0,out2=0;
+  const ecarts=cqMasses.map(m=>{const e=(m-target)/target*100;return{m,e};});
+  ecarts.forEach(({m,e},i)=>{
+    const abs=Math.abs(e);
+    let cls='',badge='<span class="badge ok">✓ OK</span>';
+    if(abs>r2){out2++;cls='highlight-err';badge=`<span class="badge err">✗ Hors double</span>`;}
+    else if(abs>r1){out1++;cls='highlight';badge=`<span class="badge warn">⚠ Hors seuil</span>`;}
+    tbody.innerHTML+=`<tr class="${cls}"><td>${i+1}</td><td>${m.toFixed(1)}</td><td>${e.toFixed(1)}%</td><td>${badge}</td></tr>`;
+  });
+  const moy=cqMasses.reduce((a,b)=>a+b,0)/20;
+  const sd=Math.sqrt(cqMasses.reduce((s,m)=>s+(m-moy)**2,0)/19);
+  const cv2=(sd/moy*100).toFixed(2);
+  const conforme=out1<=2&&out2===0;
+  document.getElementById('cq-verdict').innerHTML=
+    (conforme?`<div class="badge ok" style="font-size:.9rem;padding:8px 14px">✓ LOT CONFORME Ph. Eur.</div>`
+    :`<div class="badge err" style="font-size:.9rem;padding:8px 14px">✗ LOT NON CONFORME</div>`)+
+    `<div style="margin-top:6px;font-size:.8rem;color:var(--muted)">Hors seuil: ${out1} | Hors double: ${out2}</div>`;
+  document.getElementById('cq-stats').innerHTML=
+    `<span class="key">Masse moyenne</span> = ${moy.toFixed(2)} mg<br>`+
+    `<span class="key">Écart-type</span> = ${sd.toFixed(2)} mg &nbsp;(%CV = ${cv2}%)<br>`+
+    `<span class="key">Seuil requis</span> ±${r1}% &nbsp;|&nbsp; Double ±${r2}%<br>`+
+    `<span class="key">Min</span> = ${Math.min(...cqMasses).toFixed(1)} mg &nbsp;|&nbsp; <span class="key">Max</span> = ${Math.max(...cqMasses).toFixed(1)} mg`;
+  cqDrawChart(target,r1,r2,moy,ecarts.map(e=>e.e));
+}
+function cqDrawChart(target,r1,r2,moy,ecarts){
+  const canvas=document.getElementById('cq-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+  const pad=30,bW=8,gap=2;
+  const maxE=Math.max(r2+2,Math.max(...ecarts.map(Math.abs)));
+  const yS=(H-pad*2)/(maxE*2);
+  const mid=H/2;
+  ctx.strokeStyle='#30363d';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad,mid);ctx.lineTo(W-10,mid);ctx.stroke();
+  [r1,r2].forEach((r,i)=>{
+    ctx.fillStyle=i===0?'rgba(88,166,255,0.07)':'rgba(247,129,102,0.07)';
+    ctx.fillRect(pad,mid-r*yS,W-10-pad,r*2*yS);
+    ctx.strokeStyle=i===0?'rgba(88,166,255,0.4)':'rgba(247,129,102,0.4)';
+    ctx.setLineDash([4,4]);ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(pad,mid-r*yS);ctx.lineTo(W-10,mid-r*yS);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(pad,mid+r*yS);ctx.lineTo(W-10,mid+r*yS);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#8b949e';ctx.font='9px monospace';ctx.textAlign='left';
+    ctx.fillText(`±${r}%`,W-28,mid-r*yS-2);
+  });
+  ecarts.forEach((e,i)=>{
+    const x=pad+i*(bW+gap);const h=Math.abs(e)*yS;const abs=Math.abs(e);
+    ctx.fillStyle=abs>r2?'#f78166':abs>r1?'#ffa657':'#7ee787';
+    ctx.fillRect(x,e>0?mid-h:mid,bW,h);
+  });
+  ctx.fillStyle='#8b949e';ctx.font='9px monospace';ctx.textAlign='right';
+  for(let v=-maxE;v<=maxE;v+=r1){
+    const y=mid-v*yS;
+    if(y>5&&y<H-5)ctx.fillText(v.toFixed(0)+'%',pad-2,y+3);
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+document.getElementById('um-target').addEventListener('input', ()=>{
+  if(document.getElementById('um-mode').value==='random') umGenerate();
+  else umRecalc();
+});
+setTimeout(()=>{ umGenerate(); cqGenerate(); }, 80);
+</script>
+</body>
+</html>

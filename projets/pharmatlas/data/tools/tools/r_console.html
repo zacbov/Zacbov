@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R Console — WebR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0d0f14;
+    --panel:    #141720;
+    --border:   #1e2333;
+    --accent:   #4fc3f7;
+    --accent2:  #81c784;
+    --accent3:  #ffb74d;
+    --err:      #ef5350;
+    --text:     #cdd6f4;
+    --muted:    #6c7086;
+    --r-blue:   #276DC2;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace}
+
+  /* ── HEADER ── */
+  header{
+    display:flex;align-items:center;gap:14px;
+    padding:10px 18px;
+    background:var(--panel);
+    border-bottom:1px solid var(--border);
+    user-select:none;
+    position:relative;z-index:10;
+  }
+  .logo{
+    display:flex;align-items:center;gap:10px;
+  }
+  .logo-r{
+    width:34px;height:34px;border-radius:8px;
+    background:var(--r-blue);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:#fff;
+    letter-spacing:-1px;box-shadow:0 0 18px rgba(39,109,194,.45);
+  }
+  .logo-title{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;letter-spacing:.04em;color:#fff}
+  .logo-sub{font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-top:1px}
+
+  .status-pill{
+    display:flex;align-items:center;gap:6px;
+    padding:4px 10px;border-radius:20px;
+    background:rgba(255,255,255,.04);border:1px solid var(--border);
+    font-size:11px;color:var(--muted);margin-left:auto;
+  }
+  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:background .4s,box-shadow .4s}
+  .status-dot.loading{background:var(--accent3);box-shadow:0 0 8px var(--accent3);animation:pulse 1s infinite}
+  .status-dot.ready  {background:var(--accent2);box-shadow:0 0 8px var(--accent2)}
+  .status-dot.error  {background:var(--err);box-shadow:0 0 8px var(--err)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+  /* ── LAYOUT ── */
+  .layout{display:flex;height:calc(100vh - 57px)}
+
+  /* ── SIDEBAR ── */
+  aside{
+    width:200px;min-width:200px;
+    background:var(--panel);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .sidebar-section{padding:10px 0;}
+  .sidebar-label{
+    font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);padding:0 14px 6px;
+  }
+  .snippet-btn{
+    display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;
+    padding:7px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);
+    border-left:2px solid transparent;transition:all .15s;
+  }
+  .snippet-btn:hover{background:rgba(79,195,247,.06);border-left-color:var(--accent);color:var(--accent)}
+  .snippet-btn .snip-tag{font-size:9px;color:var(--muted);display:block;margin-top:1px}
+
+  .sidebar-sep{height:1px;background:var(--border);margin:4px 0;}
+
+  /* ── MAIN AREA ── */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+
+  /* ── EDITOR ── */
+  .editor-wrap{
+    flex:0 0 auto;
+    border-bottom:1px solid var(--border);
+    display:flex;flex-direction:column;
+  }
+  .editor-header{
+    display:flex;align-items:center;gap:8px;
+    padding:6px 14px;background:rgba(0,0,0,.2);
+    border-bottom:1px solid var(--border);
+  }
+  .editor-tab{
+    font-size:11px;color:var(--accent);border-bottom:2px solid var(--accent);
+    padding-bottom:2px;letter-spacing:.04em;
+  }
+  .editor-actions{margin-left:auto;display:flex;gap:6px}
+  .btn{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:5px 12px;border-radius:6px;border:1px solid var(--border);
+    background:rgba(255,255,255,.04);color:var(--text);
+    font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;
+    transition:all .15s;white-space:nowrap;
+  }
+  .btn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15)}
+  .btn.primary{background:rgba(79,195,247,.12);border-color:rgba(79,195,247,.35);color:var(--accent)}
+  .btn.primary:hover{background:rgba(79,195,247,.22)}
+  .btn.danger{background:rgba(239,83,80,.08);border-color:rgba(239,83,80,.3);color:var(--err)}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .btn .icon{font-size:13px}
+
+  #editor{
+    resize:none;outline:none;border:none;
+    background:transparent;color:var(--text);
+    font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7;
+    padding:14px 18px;
+    width:100%;height:180px;
+    tab-size:2;
+    caret-color:var(--accent);
+  }
+  #editor::selection{background:rgba(79,195,247,.2)}
+
+  /* ── RESIZE HANDLE ── */
+  .resizer{
+    height:5px;background:var(--border);cursor:row-resize;
+    transition:background .15s;flex-shrink:0;
+  }
+  .resizer:hover,.resizer.dragging{background:var(--accent)}
+
+  /* ── OUTPUT / CONSOLE ── */
+  .output-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .output-header{
+    display:flex;align-items:center;gap:8px;
+    padding:6px 14px;background:rgba(0,0,0,.2);
+    border-bottom:1px solid var(--border);
+  }
+  .output-tab{font-size:11px;color:var(--accent2);border-bottom:2px solid var(--accent2);padding-bottom:2px}
+  #output{
+    flex:1;overflow-y:auto;padding:12px 18px;
+    font-size:12px;line-height:1.8;
+    scroll-behavior:smooth;
+  }
+  #output::-webkit-scrollbar{width:5px}
+  #output::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+  .out-line{display:block;white-space:pre-wrap;word-break:break-all}
+  .out-line.info   {color:var(--muted)}
+  .out-line.stdout {color:var(--text)}
+  .out-line.stderr {color:var(--err)}
+  .out-line.prompt {color:var(--accent);opacity:.6}
+  .out-line.success{color:var(--accent2)}
+  .out-line.warning{color:var(--accent3)}
+
+  /* ── PLOT PANEL ── */
+  .plot-wrap{
+    width:320px;min-width:260px;max-width:50%;
+    border-left:1px solid var(--border);
+    display:flex;flex-direction:column;
+    background:var(--panel);
+  }
+  .plot-header{
+    padding:6px 14px;background:rgba(0,0,0,.2);
+    border-bottom:1px solid var(--border);
+    font-size:11px;color:var(--accent3);
+    border-bottom-color:var(--border);
+    display:flex;align-items:center;gap:8px;
+  }
+  .plot-tab-label{border-bottom:2px solid var(--accent3);padding-bottom:2px}
+  #plot-container{flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:12px;padding:12px}
+  #plot-container::-webkit-scrollbar{width:5px}
+  #plot-container::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  .plot-empty{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:var(--muted);font-size:11px;text-align:center;gap:8px;width:100%;
+  }
+  .plot-empty .big{font-size:36px}
+  .plot-img-wrap{
+    position:relative;background:#fff;border-radius:6px;overflow:hidden;
+    box-shadow:0 4px 20px rgba(0,0,0,.5);width:100%;
+  }
+  .plot-img-wrap img{display:block;width:100%}
+  .plot-num{
+    position:absolute;top:6px;right:6px;
+    background:rgba(0,0,0,.55);color:#fff;
+    font-size:9px;padding:2px 6px;border-radius:10px;
+  }
+
+  /* ── GUTTER (line numbers) ── */
+  .editor-outer{display:flex;overflow:hidden;flex:1}
+  .line-nums{
+    padding:14px 8px 14px 14px;background:rgba(0,0,0,.15);
+    font-size:13px;line-height:1.7;color:var(--muted);
+    text-align:right;user-select:none;min-width:40px;
+    font-family:'JetBrains Mono',monospace;
+  }
+
+  /* ── VAR ENV PANE ── */
+  #env-list{padding:6px 0;overflow-y:auto;flex:1}
+  #env-list::-webkit-scrollbar{width:3px}
+  #env-list::-webkit-scrollbar-thumb{background:var(--border)}
+  .env-item{padding:5px 14px;font-size:10px;border-bottom:1px solid rgba(255,255,255,.03)}
+  .env-item .env-name{color:var(--accent);font-weight:500}
+  .env-item .env-type{color:var(--muted);font-size:9px}
+  .env-item .env-val {color:var(--text);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+
+  /* ── FOOTER ── */
+  footer{
+    height:22px;background:var(--r-blue);
+    display:flex;align-items:center;padding:0 14px;gap:14px;
+    font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.75);
+  }
+  footer span{margin-right:auto}
+
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .fade-in{animation:fadeIn .2s ease forwards}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-r">R</div>
+    <div>
+      <div class="logo-title">R Console</div>
+      <div class="logo-sub">powered by WebR · WebAssembly</div>
+    </div>
+  </div>
+  <div class="status-pill">
+    <div class="status-dot loading" id="statusDot"></div>
+    <span id="statusText">Chargement de R…</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside>
+    <div class="sidebar-section">
+      <div class="sidebar-label">TP Étalonnage — UE2</div>
+      <button class="snippet-btn" onclick="loadSnippet('etalo_donnees')">1 · Données<span class="snip-tag">C · YET · YI · k · YImoy</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('etalo_graphe')">2 · Nuage de points<span class="snip-tag">plot · pch · axes</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('etalo_regression')">3 · Régression &amp; droite<span class="snip-tag">lm · b1 b2 · abline</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('etalo_validation')">4 · Validation · TR<span class="snip-tag">taux recouvrement · S²</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('etalo_prediction')">5 · Intervalles prédiction<span class="snip-tag">predict · YP · CP · IE</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('etalo_complet')">Script complet TP<span class="snip-tag">toutes les étapes</span></button>
+    </div>
+    <div class="sidebar-sep"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Cours R — Pharmacie</div>
+      <button class="snippet-btn" onclick="loadSnippet('cours_bases')">Bases R<span class="snip-tag">vecteurs · types · str()</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('cours_anova')">ANOVA 1 voie<span class="snip-tag">lm · anova · TukeyHSD</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('cours_regression_multi')">Régression multiple<span class="snip-tag">step · AIC · vif()</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('cours_lois')">Lois &amp; Tests ajustement<span class="snip-tag">qqnorm · shapiro · χ²</span></button>
+    </div>
+    <div class="sidebar-sep"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Exemples généraux</div>
+      <button class="snippet-btn" onclick="loadSnippet('basics')">Statistiques de base<span class="snip-tag">mean · sd · summary</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('plot')">Graphique<span class="snip-tag">plot · courbe</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('regression')">Régression linéaire<span class="snip-tag">lm · predict</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('histogram')">Histogramme<span class="snip-tag">hist · density</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('dataframe')">Data frame<span class="snip-tag">df · filter · apply</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('ttest')">Test de Student<span class="snip-tag">t.test · p-value</span></button>
+      <button class="snippet-btn" onclick="loadSnippet('pharmacocinétique')">Pharmacocinétique<span class="snip-tag">PK · AUC · C(t)</span></button>
+    </div>
+    <div class="sidebar-sep"></div>
+    <div class="sidebar-section" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <div class="sidebar-label">Environnement</div>
+      <div id="env-list"><div class="env-item"><span class="env-type">vide</span></div></div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- EDITOR -->
+    <div class="editor-wrap" id="editorWrap">
+      <div class="editor-header">
+        <span class="editor-tab">script.R</span>
+        <div class="editor-actions">
+          <button class="btn" onclick="clearEditor()" title="Effacer l'éditeur">🗑 Vider</button>
+          <button class="btn primary" id="runBtn" onclick="runCode()" disabled>
+            <span class="icon">▶</span> Exécuter
+          </button>
+        </div>
+      </div>
+      <div class="editor-outer">
+        <div class="line-nums" id="lineNums">1</div>
+        <textarea id="editor" spellcheck="false"
+          placeholder="# Écrire du code R ici…
+# Ctrl+Enter ou ▶ pour exécuter"
+          oninput="updateLineNums()"
+          onscroll="syncScroll()"
+          onkeydown="handleKey(event)"></textarea>
+      </div>
+    </div>
+
+    <!-- RESIZE -->
+    <div class="resizer" id="resizer"></div>
+
+    <!-- OUTPUT -->
+    <div class="output-wrap">
+      <div class="output-header">
+        <span class="output-tab">Console</span>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <button class="btn danger" onclick="clearConsole()">✕ Effacer</button>
+        </div>
+      </div>
+      <div id="output"></div>
+    </div>
+  </div>
+
+  <!-- PLOTS -->
+  <div class="plot-wrap">
+    <div class="plot-header">
+      <span class="plot-tab-label">Graphiques</span>
+      <span style="margin-left:auto;cursor:pointer;font-size:10px;color:var(--muted)" onclick="clearPlots()">✕ Tout effacer</span>
+    </div>
+    <div id="plot-container">
+      <div class="plot-empty" id="plotEmpty">
+        <div class="big">📊</div>
+        <div>Les graphiques<br>apparaîtront ici</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <span>WebR · R via WebAssembly</span>
+  <span id="footerVer">—</span>
+  <span id="footerTime">—</span>
+</footer>
+
+<script>
+// Chargement dynamique du module WebR puis initialisation
+let _webRModule;
+async function _loadWebR() {
+  _webRModule = await import('https://webr.r-wasm.org/latest/webr.mjs');
+}
+const _webRReady = _loadWebR();
+
+// Proxy pour obtenir WebR après chargement
+async function getWebR() {
+  await _webRReady;
+  return new _webRModule.WebR();
+}
+
+let webR;
+let plotCount = 0;
+let isReady = false;
+
+// ── INIT ────────────────────────────────────────────────────────────────
+async function init() {
+  printLine('▸ Démarrage de WebR…', 'info');
+  try {
+    webR = await getWebR();
+    await webR.init();
+    // Capturer les graphiques via canvas virtuel
+    await webR.evalRVoid(`options(device = webr::canvas)`);
+
+    const ver = await webR.evalR(`R.version.string`);
+    const verStr = await ver.toString();
+    document.getElementById('footerVer').textContent = verStr;
+    document.getElementById('statusDot').className = 'status-dot ready';
+    document.getElementById('statusText').textContent = 'R prêt';
+    document.getElementById('runBtn').disabled = false;
+    printLine(`✓ ${verStr}`, 'success');
+    printLine('✓ Prêt. Écrivez votre code et cliquez sur ▶ Exécuter.', 'success');
+    printLine('', 'info');
+    isReady = true;
+  } catch(e) {
+    document.getElementById('statusDot').className = 'status-dot error';
+    document.getElementById('statusText').textContent = 'Erreur';
+    printLine(`✗ Erreur: ${e.message}`, 'stderr');
+  }
+}
+
+// ── EXÉCUTION ────────────────────────────────────────────────────────────
+window.runCode = async function() {
+  if (!isReady) return;
+  const code = document.getElementById('editor').value.trim();
+  if (!code) return;
+
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="icon">⏳</span> Exécution…';
+
+  const t0 = performance.now();
+  printLine(`\n> ${code.split('\n').join('\n> ')}`, 'prompt');
+
+  try {
+    // Écouter les messages WebR (stdout, stderr, graphiques)
+    const shelter = await new webR.Shelter();
+    try {
+      await webR.evalRVoid(`webr::canvas(width=600, height=400)`);
+    } catch(e){}
+
+    const result = await shelter.captureR(code, {
+      withAutoprint: true,
+      captureStreams: true,
+      captureGraphics: { width: 600, height: 400 },
+    });
+
+    // Sorties texte
+    for (const msg of result.output) {
+      if (msg.type === 'stdout') printLine(msg.data, 'stdout');
+      else if (msg.type === 'stderr') printLine(msg.data, 'warning');
+      else if (msg.type === 'message') printLine(msg.data, 'warning');
+    }
+
+    // Graphiques
+    for (const img of result.images) {
+      addPlot(img);
+    }
+
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(3);
+    document.getElementById('footerTime').textContent = `${elapsed}s`;
+    await shelter.purge();
+    await updateEnv();
+
+  } catch(e) {
+    printLine(e.message || String(e), 'stderr');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="icon">▶</span> Exécuter';
+  }
+};
+
+// ── ENV ──────────────────────────────────────────────────────────────────
+async function updateEnv() {
+  try {
+    const res = await webR.evalR(`
+      nms <- ls(envir=.GlobalEnv)
+      if (length(nms) == 0) {
+        list()
+      } else {
+        lapply(setNames(nms, nms), function(n) {
+          x <- get(n, envir=.GlobalEnv)
+          list(type=class(x)[1], val=paste(capture.output(str(x, max.level=0)), collapse=" "))
+        })
+      }
+    `);
+    const obj = await res.toJs();
+    const el = document.getElementById('env-list');
+    if (!obj || !obj.values || obj.values.length === 0) {
+      el.innerHTML = '<div class="env-item"><span class="env-type">vide</span></div>';
+      return;
+    }
+    let html = '';
+    const names = obj.names || [];
+    for (let i = 0; i < names.length; i++) {
+      const name = names[i];
+      const entry = obj.values[i];
+      let type = '', val = '';
+      if (entry && entry.values) {
+        const typeIdx = (entry.names || []).indexOf('type');
+        const valIdx  = (entry.names || []).indexOf('val');
+        if (typeIdx >= 0) type = entry.values[typeIdx]?.values?.[0] || '';
+        if (valIdx  >= 0) val  = entry.values[valIdx ]?.values?.[0] || '';
+      }
+      html += `<div class="env-item">
+        <div class="env-name">${escHtml(name)}</div>
+        <div class="env-type">${escHtml(type)}</div>
+        <div class="env-val">${escHtml(val)}</div>
+      </div>`;
+    }
+    el.innerHTML = html;
+  } catch(e) { /* silencieux */ }
+}
+
+// ── GRAPHIQUES ────────────────────────────────────────────────────────────
+function addPlot(img) {
+  const container = document.getElementById('plot-container');
+  document.getElementById('plotEmpty')?.remove();
+  plotCount++;
+  const wrap = document.createElement('div');
+  wrap.className = 'plot-img-wrap fade-in';
+  const canvas = document.createElement('canvas');
+  canvas.width  = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const dataUrl = canvas.toDataURL('image/png');
+  const imgEl = document.createElement('img');
+  imgEl.src = dataUrl;
+  imgEl.title = `Graphique ${plotCount}`;
+  imgEl.style.cursor = 'pointer';
+  imgEl.onclick = () => {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `plot_${plotCount}.png`;
+    a.click();
+  };
+  const num = document.createElement('div');
+  num.className = 'plot-num';
+  num.textContent = `#${plotCount}`;
+  wrap.appendChild(imgEl);
+  wrap.appendChild(num);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+}
+
+window.clearPlots = function() {
+  plotCount = 0;
+  document.getElementById('plot-container').innerHTML =
+    `<div class="plot-empty" id="plotEmpty"><div class="big">📊</div><div>Les graphiques<br>apparaîtront ici</div></div>`;
+};
+
+// ── CONSOLE ───────────────────────────────────────────────────────────────
+function printLine(text, cls = 'stdout') {
+  const el = document.getElementById('output');
+  const line = document.createElement('span');
+  line.className = `out-line ${cls}`;
+  line.textContent = text;
+  el.appendChild(line);
+  el.appendChild(document.createElement('br'));
+  el.scrollTop = el.scrollHeight;
+}
+window.clearConsole = function() {
+  document.getElementById('output').innerHTML = '';
+};
+
+// ── ÉDITEUR ───────────────────────────────────────────────────────────────
+window.clearEditor = function() {
+  document.getElementById('editor').value = '';
+  updateLineNums();
+};
+
+window.updateLineNums = function() {
+  const lines = document.getElementById('editor').value.split('\n').length;
+  document.getElementById('lineNums').textContent =
+    Array.from({length: lines}, (_, i) => i + 1).join('\n');
+};
+
+window.syncScroll = function() {
+  document.getElementById('lineNums').scrollTop =
+    document.getElementById('editor').scrollTop;
+};
+
+window.handleKey = function(e) {
+  if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); window.runCode(); }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const ta = e.target;
+    const s = ta.selectionStart;
+    ta.value = ta.value.substring(0, s) + '  ' + ta.value.substring(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = s + 2;
+    updateLineNums();
+  }
+};
+
+// ── SNIPPETS ─────────────────────────────────────────────────────────────
+const SNIPPETS = {
+
+  // ── TP ÉTALONNAGE UE2 ─────────────────────────────────────────────────────
+  etalo_donnees: `# TP Étalonnage — N°1,2,3 : Données + données intermédiaires
+# Adaptez les valeurs C, YET et YI à vos propres mesures de TP
+
+# N°2 — Concentrations d'étalonnage (µg/mL) et mesures (rapports d'aires)
+C   <- c(30, 60, 90, 120)          # vos 4 concentrations étalons
+YET <- c(0.225, 0.478, 0.742, 1.01) # vos 4 mesures d'étalonnage (YET de travail)
+YI  <- c(0.61, 0.63)               # vos 2 mesures solution inconnue
+
+cat("Concentrations C :", C, "\\n")
+cat("Mesures YET      :", YET, "\\n")
+cat("Mesures YI       :", YI, "\\n")
+
+# N°3 — Données intermédiaires
+k     <- length(YI)      # nombre de mesures sur la solution inconnue
+YImoy <- mean(YI)        # moyenne des mesures sur la solution inconnue
+
+cat("\\nk =", k, "\\n")
+cat("YImoy =", YImoy, "\\n")`,
+
+  etalo_graphe: `# TP Étalonnage — N°4 : Nuage de points YET = f(C)
+# Remplacez C et YET par vos données, et "Votre Nom" par votre prénom
+
+C   <- c(30, 60, 90, 120)
+YET <- c(0.225, 0.478, 0.742, 1.01)
+
+plot(C, YET,
+  pch  = 19, cex = 1.5,
+  lab  = c(40, 5, 0),
+  ylim = c(0.8 * min(YET), 1.1 * max(YET)),
+  xlab = "Concentrations (µg/mL)",
+  ylab = "Mesures (rapport d'aires)",
+  main = "Votre Nom"          # <-- remplacer par votre prénom
+)`,
+
+  etalo_regression: `# TP Étalonnage — N°5,6,7 : Régression linéaire et droite d'étalonnage
+
+C   <- c(30, 60, 90, 120)
+YET <- c(0.225, 0.478, 0.742, 1.01)
+
+# N°4 — Graphique initial
+plot(C, YET,
+  pch=19, cex=1.5, lab=c(40,5,0),
+  ylim=c(0.8*min(YET), 1.1*max(YET)),
+  xlab="Concentrations (µg/mL)", ylab="Mesures", main="Votre Nom")
+
+# N°5 — Modèle de régression linéaire Y = b1 + b2*C
+Y.M <- lm(YET ~ C)
+cat("Modèle estimé :\\n")
+print(Y.M)
+print(summary(Y.M))
+
+# N°6 — Coefficients b1 et b2
+b1 <- coef(Y.M)[1]
+b2 <- coef(Y.M)[2]
+cat("\\nÉquation : Y =", round(b1, 5), "+", round(b2, 6), "* C\\n")
+
+# N°7 — Tracé de la droite d'étalonnage
+abline(Y.M, col="red", lwd=2)`,
+
+  etalo_validation: `# TP Étalonnage — N°8,9 : Variance résiduelle et taux de recouvrement
+
+C   <- c(30, 60, 90, 120)
+YET <- c(0.225, 0.478, 0.742, 1.01)
+
+Y.M <- lm(YET ~ C)
+b1  <- coef(Y.M)[1]
+b2  <- coef(Y.M)[2]
+
+# N°8 — Variance résiduelle S²
+S2 <- summary(Y.M)$sigma^2
+cat("Variance résiduelle S² =", S2, "\\n")
+
+# N°9 — Taux de recouvrement (TR) pour chaque étalon
+TR <- (YET - b1) / (b2 * C)
+cat("\\nTaux de recouvrement TR :\\n")
+print(round(TR, 4))
+cat("\\nTR min =", round(min(TR)*100, 2), "% | TR max =", round(max(TR)*100, 2), "%\\n")
+
+# Critère d'acceptabilité : TR entre 90% et 110%
+if (min(TR) >= 0.90 && max(TR) <= 1.10) {
+  cat("✓ Taux de recouvrement ACCEPTABLE (entre 90% et 110%)\\n")
+} else {
+  cat("✗ Taux de recouvrement NON acceptable\\n")
+}`,
+
+  etalo_prediction: `# TP Étalonnage — N°10-15 : Intervalles de prédiction et IE
+
+C    <- c(30, 60, 90, 120)
+YET  <- c(0.225, 0.478, 0.742, 1.01)
+YI   <- c(0.61, 0.63)
+k    <- length(YI)
+YImoy <- mean(YI)
+
+Y.M <- lm(YET ~ C)
+b1  <- coef(Y.M)[1]
+b2  <- coef(Y.M)[2]
+S2  <- summary(Y.M)$sigma^2
+
+# N°4 — Graphe de base
+plot(C, YET, pch=19, cex=1.5, lab=c(40,5,0),
+  ylim=c(0, 1.3*max(YET)),
+  xlab="Concentrations (µg/mL)", ylab="Mesures", main="Votre Nom")
+abline(Y.M, col="red", lwd=2)
+
+# N°10 — CP : 10 points équidistants dans le domaine d'étalonnage
+Cmin <- min(C) ; Cmax <- max(C) ; pas <- (Cmax - Cmin) / 9
+CP   <- seq(Cmin, Cmax, pas)
+
+# N°11 — YP : valeurs prédites de la moyenne de Y (k mesures) aux points CP
+YP <- predict(Y.M,
+              newdata  = list(C = CP),
+              interval = "pred",
+              pred.var = S2 / k)
+YP <- data.frame(YP)[2:3]
+cat("Tableau YP (lwr = borne inf, upr = borne sup) :\\n")
+print(round(YP, 4))
+
+# N°13 — Tracé des bornes supérieures et inférieures
+lines(CP, YP$upr, col="black", lwd=2)   # borne supérieure
+lines(CP, YP$lwr, col="black", lwd=2)   # borne inférieure
+
+# N°14 — Ligne horizontale YImoy
+abline(h = YImoy, col="blue", lwd=2)
+
+# Intervalle d'étalonnage approché (analytique)
+IE_inf <- (YImoy - b1 - qt(0.975, nrow(data.frame(C))-2) * sqrt(S2 * (1/k + 1/length(C) + (YImoy/b2 - mean(C))^2/sum((C-mean(C))^2)))) / b2
+IE_sup <- (YImoy - b1 + qt(0.975, nrow(data.frame(C))-2) * sqrt(S2 * (1/k + 1/length(C) + (YImoy/b2 - mean(C))^2/sum((C-mean(C))^2)))) / b2
+cat("\\nIntervalle d'étalonnage IE ≈ [", round(IE_inf,1), ";", round(IE_sup,1), "] µg/mL\\n")`,
+
+  etalo_complet: `# TP Étalonnage UE2 — Script complet (commandes 1 à 15)
+# Remplacez les valeurs ci-dessous par vos données personnelles
+
+# ── Vos données ───────────────────────────────────────────────────────────
+prenom  <- "Votre Nom"                  # <-- remplacer
+C       <- c(30, 60, 90, 120)           # concentrations étalons (µg/mL)
+YET     <- c(0.225, 0.478, 0.742, 1.01) # mesures d'étalonnage (YET de travail)
+YI      <- c(0.61, 0.63)               # mesures solution inconnue
+# ─────────────────────────────────────────────────────────────────────────
+
+# N°3
+k     <- length(YI)
+YImoy <- mean(YI)
+cat("k =", k, " | YImoy =", YImoy, "\\n")
+
+# N°4 — Nuage de points
+plot(C, YET, pch=19, cex=1.5, lab=c(40,5,0),
+  ylim=c(0, 1.3*max(YET)),
+  xlab="Concentrations (µg/mL)", ylab="Mesures",
+  main=prenom)
+
+# N°5 — Régression
+Y.M <- lm(YET ~ C)
+
+# N°6 — Coefficients
+b1 <- coef(Y.M)[1] ; b2 <- coef(Y.M)[2]
+cat("b1 =", round(b1,6), " | b2 =", round(b2,7), "\\n")
+cat("Équation : Y =", round(b1,5), "+", round(b2,6),"* C\\n")
+
+# N°7 — Droite
+abline(Y.M, col="red", lwd=2)
+
+# N°8 — Variance résiduelle
+S2 <- summary(Y.M)$sigma^2
+cat("S² =", S2, "\\n")
+
+# N°9 — Taux de recouvrement
+TR <- (YET - b1) / (b2 * C)
+cat("TR : min =", round(min(TR)*100,2), "% | max =", round(max(TR)*100,2), "%\\n")
+cat(ifelse(min(TR)>=.9 && max(TR)<=1.1, "✓ TR acceptable", "✗ TR non acceptable"), "\\n")
+
+# N°10 — CP
+Cmin <- min(C) ; Cmax <- max(C)
+CP   <- seq(Cmin, Cmax, (Cmax-Cmin)/9)
+
+# N°11 — YP
+YP <- data.frame(predict(Y.M, newdata=list(C=CP), interval="pred", pred.var=S2/k))[2:3]
+
+# N°13 — Bornes prédiction
+lines(CP, YP$upr, col="black", lwd=2)
+lines(CP, YP$lwr, col="black", lwd=2)
+
+# N°14 — Ligne YImoy
+abline(h=YImoy, col="blue", lwd=2)
+
+cat("\\n=== Graphique final prêt ===\\n")`,
+
+  // ── COURS R — PHARMACIE ────────────────────────────────────────────────────
+  cours_bases: `# Cours R — Bases et objets (UE2 Pharmacie)
+# ─────────────────────────────────────────────────────
+# Vecteurs et types
+x_num  <- c(1.5, 2.3, 3.8, 4.1)           # numeric
+x_int  <- c(1L, 2L, 3L)                    # integer
+x_chr  <- c("paracetamol","ibuprofene")    # character
+x_logi <- c(TRUE, FALSE, TRUE)             # logical
+x_fact <- factor(c("A","B","A","C","B"))   # factor
+
+cat("Type numeric :", class(x_num),  "\\n")
+cat("Type factor  :", class(x_fact), "\\n")
+cat("Niveaux factor:", levels(x_fact), "\\n")
+
+# Opérations vectorisées
+doses <- c(500, 250, 1000, 750, 500)
+cat("\\nMoyenne :", mean(doses), "mg\\n")
+cat("Écart-type :", sd(doses), "mg\\n")
+cat("Médiane :", median(doses), "mg\\n")
+cat("Variance :", var(doses), "\\n")
+cat("Doses > 500 mg :", doses[doses > 500], "\\n")
+
+# seq, rep
+seq_doses <- seq(250, 1000, by=250)
+cat("\\nSéquence doses :", seq_doses, "\\n")
+
+# Data frame
+patients <- data.frame(
+  id       = 1:5,
+  poids    = c(65, 80, 55, 72, 90),
+  groupe   = factor(c("T","T","P","P","T")), # T=traité, P=placebo
+  creat    = c(80, 95, 72, 110, 88)
+)
+cat("\\nData frame patients :\\n")
+print(patients)
+cat("\\nStr :\\n"); str(patients)
+cat("\\nSummary :\\n"); print(summary(patients))
+
+# table et prop.table
+cat("\\nEffectifs par groupe :\\n")
+print(table(patients$groupe))
+cat("Proportions :\\n")
+print(prop.table(table(patients$groupe)))
+
+# tapply : stats par groupe
+cat("\\nCréatinine moyenne par groupe :\\n")
+print(tapply(patients$creat, patients$groupe, mean))`,
+
+  cours_anova: `# Cours R — ANOVA 1 voie (UE2 Pharmacie)
+# Comparaison de la réponse entre 3 formulations galéniques
+# ─────────────────────────────────────────────────────────
+set.seed(42)
+
+# Données : temps de dissolution (min) pour 3 formulations
+dissolution <- data.frame(
+  temps       = c(rnorm(15, 12, 2), rnorm(15, 15, 2.5), rnorm(15, 10, 1.8)),
+  formulation = factor(rep(c("F1","F2","F3"), each=15))
+)
+
+cat("Statistiques par formulation :\\n")
+print(tapply(dissolution$temps, dissolution$formulation, function(x)
+  round(c(n=length(x), moy=mean(x), sd=sd(x)), 2)))
+
+# Boxplot
+boxplot(temps ~ formulation, data=dissolution,
+  col=c("#4fc3f7","#81c784","#ffb74d"),
+  main="Temps de dissolution par formulation",
+  xlab="Formulation", ylab="Temps (min)", bty="n")
+
+# Vérification des hypothèses
+cat("\\n--- Test de normalité (Shapiro-Wilk par groupe) ---\\n")
+by(dissolution$temps, dissolution$formulation, function(x) {
+  res <- shapiro.test(x)
+  cat("  p =", round(res$p.value,4), ifelse(res$p.value>0.05,"✓ normal","✗ non normal"),"\\n")
+})
+
+cat("\\n--- Test de Bartlett (homogénéité des variances) ---\\n")
+bart <- bartlett.test(temps ~ formulation, data=dissolution)
+cat("p-value =", round(bart$p.value,4),
+    ifelse(bart$p.value>0.05,"✓ variances homogènes","✗ variances hétérogènes"),"\\n")
+
+# ANOVA
+modele <- lm(temps ~ formulation, data=dissolution)
+cat("\\n--- Table ANOVA ---\\n")
+print(anova(modele))
+
+# Post-hoc Tukey
+cat("\\n--- Test post-hoc de Tukey ---\\n")
+print(TukeyHSD(aov(modele)))`,
+
+  cours_regression_multi: `# Cours R — Régression Linéaire Multiple (UE2 Pharmacie)
+# Prédiction du DFG (clairance rénale) selon CKD-EPI simplifié
+# ─────────────────────────────────────────────────────────────
+set.seed(10)
+n <- 60
+
+patients <- data.frame(
+  age    = round(runif(n, 25, 80)),
+  poids  = round(rnorm(n, 72, 12)),
+  creat  = round(rnorm(n, 85, 20)),
+  sexe   = factor(sample(c("H","F"), n, replace=TRUE))
+)
+# Variable réponse : DFG simulé
+patients$DFG <- with(patients,
+  120 - 0.8*age + 0.3*poids - 0.5*creat +
+  ifelse(sexe=="F", -8, 0) + rnorm(n, 0, 8))
+patients$DFG <- round(pmax(patients$DFG, 10))
+
+cat("Structure des données :\\n"); str(patients)
+
+# Modèle complet
+modele_complet <- lm(DFG ~ age + poids + creat + sexe, data=patients)
+cat("\\n--- Modèle complet ---\\n")
+print(summary(modele_complet))
+
+# Sélection automatique par AIC (step)
+cat("\\n--- Sélection stepwise (AIC) ---\\n")
+modele_step <- step(modele_complet, direction="both", trace=0)
+cat("Variables retenues :", names(coef(modele_step))[-1], "\\n")
+cat("AIC final :", round(AIC(modele_step),2), "\\n")
+
+# Intervalles de confiance
+cat("\\n--- Intervalles de confiance 95% ---\\n")
+print(round(confint(modele_step), 3))
+
+# Diagnostiques graphiques
+par(mfrow=c(2,2))
+plot(modele_step, which=c(1,2,3,5))
+par(mfrow=c(1,1))`,
+
+  cours_lois: `# Cours R — Lois de distribution & Tests d'ajustement (UE2 Pharmacie)
+# ─────────────────────────────────────────────────────────────────────
+set.seed(5)
+
+# 1. Loi Normale : dnorm, pnorm, qnorm, rnorm
+x <- seq(-4, 4, length=200)
+plot(x, dnorm(x), type="l", col="#276DC2", lwd=2,
+  main="Densité de la loi normale N(0,1)",
+  xlab="x", ylab="f(x)", bty="n")
+abline(v=c(-1.96, 1.96), col="#ef5350", lty=2)
+text(0, 0.35, "95% des valeurs", col="#ef5350", font=2)
+
+cat("P(X < 1.96) =", round(pnorm(1.96), 4), "\\n")
+cat("Quantile 97.5% =", round(qnorm(0.975), 4), "\\n")
+
+# 2. Simulation + test de normalité (Shapiro-Wilk)
+set.seed(99)
+echo_normal <- rnorm(50, mean=200, sd=30)   # données normales
+echo_uniforme <- runif(50, 100, 400)         # données non normales
+
+cat("\\n--- Test de Shapiro-Wilk ---\\n")
+sw_n <- shapiro.test(echo_normal)
+sw_u <- shapiro.test(echo_uniforme)
+cat("Données normales  : W =", round(sw_n$statistic,4), "| p =", round(sw_n$p.value,4),
+    ifelse(sw_n$p.value>0.05,"✓ normal","✗"),"\\n")
+cat("Données uniformes : W =", round(sw_u$statistic,4), "| p =", round(sw_u$p.value,4),
+    ifelse(sw_u$p.value>0.05,"✓ normal","✗ non normal"),"\\n")
+
+# 3. QQ-plot
+par(mfrow=c(1,2))
+qqnorm(echo_normal,  main="QQ-plot — données normales",   pch=16, col="#276DC2")
+qqline(echo_normal,  col="#ef5350", lwd=2)
+qqnorm(echo_uniforme, main="QQ-plot — données uniformes", pch=16, col="#4fc3f7")
+qqline(echo_uniforme, col="#ef5350", lwd=2)
+par(mfrow=c(1,1))
+
+# 4. Test du χ² d'adéquation (conformité)
+# Ex : répartition observée des effets indésirables vs attendue
+obs <- c(28, 45, 15, 12)    # fréquences observées
+exp_p <- c(0.30, 0.45, 0.15, 0.10)  # proportions théoriques
+
+chi <- chisq.test(obs, p=exp_p)
+cat("\\n--- Test χ² d'adéquation ---\\n")
+cat("χ² =", round(chi$statistic,3), "| p =", round(chi$p.value,4),
+    ifelse(chi$p.value>0.05,"→ distribution conforme","→ distribution non conforme"),"\\n")`,
+
+  // ── Exemples généraux ──────────────────────────────────────────────────────
+  basics: `# Statistiques descriptives
+x <- c(23, 45, 12, 67, 34, 89, 56, 21, 43, 76)
+
+cat("Moyenne :", mean(x), "\\n")
+cat("Écart-type :", sd(x), "\\n")
+cat("Médiane :", median(x), "\\n")
+cat("Min / Max :", min(x), "/", max(x), "\\n")
+summary(x)`,
+
+  plot: `# Graphique : courbe sinusoïdale
+x <- seq(0, 2*pi, length.out=200)
+y <- sin(x) + 0.2 * rnorm(200)
+
+plot(x, y,
+  type = "l", col = "#276DC2", lwd = 2,
+  main = "Courbe sinusoïdale avec bruit",
+  xlab = "x", ylab = "sin(x) + bruit",
+  bty = "n"
+)
+grid(col = "lightgray", lty = "dotted")`,
+
+  regression: `# Régression linéaire
+set.seed(42)
+n <- 60
+x <- rnorm(n, mean=10, sd=3)
+y <- 2.5 * x + rnorm(n, sd=4)
+
+model <- lm(y ~ x)
+cat("Coefficients :\\n"); print(coef(model))
+cat("\\nR² =", summary(model)$r.squared, "\\n")
+
+plot(x, y,
+  main="Régression linéaire",
+  xlab="x", ylab="y",
+  col="#4fc3f7", pch=16,
+  bty="n"
+)
+abline(model, col="#ef5350", lwd=2)
+legend("topleft",
+  legend=paste("y =", round(coef(model)[2],2), "x +", round(coef(model)[1],2)),
+  col="#ef5350", lty=1, bty="n")`,
+
+  histogram: `# Histogramme avec courbe de densité
+set.seed(1)
+x <- c(rnorm(200, mean=60, sd=10), rnorm(100, mean=85, sd=5))
+
+hist(x, breaks=30, freq=FALSE,
+  col="#276DC233", border="#276DC2",
+  main="Distribution bimodale",
+  xlab="Valeur", ylab="Densité")
+
+lines(density(x), col="#ef5350", lwd=2)
+rug(x, col="#27374D66")`,
+
+  dataframe: `# Manipulation de data frame
+patients <- data.frame(
+  id      = 1:8,
+  age     = c(34, 45, 28, 67, 52, 39, 71, 29),
+  groupe  = c("A","B","A","B","A","B","A","B"),
+  score   = c(7.2, 5.8, 8.1, 4.3, 6.9, 7.5, 3.8, 9.0)
+)
+
+cat("Dimensions :", nrow(patients), "x", ncol(patients), "\\n\\n")
+print(patients)
+
+cat("\\nMoyenne score par groupe :\\n")
+print(tapply(patients$score, patients$groupe, mean))
+
+cat("\\nPatients âge > 40 :\\n")
+print(patients[patients$age > 40, ])`,
+
+  ttest: `# Test de Student (indépendant)
+set.seed(7)
+groupe_A <- rnorm(25, mean=72, sd=8)
+groupe_B <- rnorm(25, mean=68, sd=9)
+
+res <- t.test(groupe_A, groupe_B)
+cat("t =", round(res$statistic, 3), "\\n")
+cat("p-value =", round(res$p.value, 4), "\\n")
+cat("IC 95% : [", round(res$conf.int[1],2),",", round(res$conf.int[2],2), "]\\n")
+
+if (res$p.value < 0.05) {
+  cat("→ Différence significative (p < 0.05)\\n")
+} else {
+  cat("→ Pas de différence significative\\n")
+}
+
+boxplot(groupe_A, groupe_B,
+  names=c("Groupe A","Groupe B"),
+  col=c("#4fc3f7","#81c784"),
+  main="Comparaison des groupes",
+  ylab="Score", bty="n")`,
+
+  pharmacocinétique: `# Pharmacocinétique — modèle monocompartimental IV
+# C(t) = (Dose/Vd) * exp(-ke * t)
+
+Dose <- 500   # mg
+Vd   <- 30    # L
+ke   <- 0.15  # h⁻¹
+t    <- seq(0, 24, by=0.1)
+
+Ct   <- (Dose / Vd) * exp(-ke * t)
+t_half <- log(2) / ke
+AUC  <- Dose / (Vd * ke)
+
+cat("=== Paramètres PK ===\\n")
+cat("Demi-vie :", round(t_half, 2), "h\\n")
+cat("Cmax     :", round(Dose/Vd, 2), "mg/L\\n")
+cat("AUC₀₋∞  :", round(AUC, 1), "mg·h/L\\n")
+
+plot(t, Ct,
+  type="l", col="#276DC2", lwd=2.5,
+  main="Profil PK — Bolus IV (monocompartimental)",
+  xlab="Temps (h)", ylab="Concentration (mg/L)",
+  bty="n"
+)
+abline(v=t_half, col="#ef5350", lty=2, lwd=1.5)
+abline(h=Dose/(2*Vd), col="#ef5350", lty=2, lwd=1.5)
+text(t_half+0.4, max(Ct)*0.9,
+  paste("t½ =", round(t_half,1), "h"),
+  col="#ef5350", font=2, adj=0)
+grid(col="lightgray", lty="dotted")`
+};
+
+window.loadSnippet = function(key) {
+  document.getElementById('editor').value = SNIPPETS[key] || '';
+  updateLineNums();
+  document.getElementById('editor').focus();
+};
+
+// ── RESIZE ────────────────────────────────────────────────────────────────
+const resizer  = document.getElementById('resizer');
+const edWrap   = document.getElementById('editorWrap');
+let dragging = false, startY = 0, startH = 0;
+
+resizer.addEventListener('mousedown', e => {
+  dragging = true; startY = e.clientY;
+  startH = edWrap.offsetHeight;
+  resizer.classList.add('dragging');
+  document.body.style.userSelect = 'none';
+});
+document.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const delta = e.clientY - startY;
+  const newH = Math.max(80, Math.min(startH + delta, window.innerHeight * 0.75));
+  edWrap.style.height = newH + 'px';
+  document.getElementById('editor').style.height = (newH - 80) + 'px';
+});
+document.addEventListener('mouseup', () => {
+  dragging = false;
+  resizer.classList.remove('dragging');
+  document.body.style.userSelect = '';
+});
+
+// ── UTILS ─────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── DÉMARRAGE ─────────────────────────────────────────────────────────────
+updateLineNums();
+loadSnippet('etalo_donnees');
+init();
+</script>
+</body>
+</html>

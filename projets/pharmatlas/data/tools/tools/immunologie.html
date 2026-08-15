@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Immunologie</title>
+<style>
+
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1e2530;--border:#30363d;
+  --accent:#7ee787;--accent2:#58a6ff;--accent3:#f78166;--accent4:#d2a8ff;--accent5:#ffa657;
+  --text:#e6edf3;--muted:#8b949e;--radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+h1{text-align:center;padding:24px 16px 8px;font-size:1.6rem;font-weight:700;
+   background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:20px}
+
+/* NAV TABS */
+.nav-wrap{overflow-x:auto;padding:0 16px;border-bottom:1px solid var(--border)}
+.nav{display:flex;gap:4px;min-width:max-content;padding-bottom:0}
+.nav-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:10px 14px;
+  font-size:.8rem;font-weight:600;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap}
+.nav-btn:hover{color:var(--text)}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* PANELS */
+.panels{padding:20px 16px;max-width:1100px;margin:0 auto}
+.panel{display:none}
+.panel.active{display:block}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.card-title{font-size:1rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.row{display:flex;flex-wrap:wrap;gap:12px}
+.col{flex:1;min-width:260px}
+
+/* CONTROLS */
+label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;margin-top:10px}
+input[type=range]{width:100%;accent-color:var(--accent2)}
+input[type=number],select{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:6px;padding:7px 10px;font-size:.85rem;width:100%}
+.btn{background:var(--accent2);color:#000;border:none;border-radius:6px;padding:8px 18px;
+  font-size:.85rem;font-weight:700;cursor:pointer;transition:.15s}
+.btn:hover{opacity:.85}
+.btn-green{background:var(--accent)}
+.btn-red{background:var(--accent3)}
+.btn-purple{background:var(--accent4)}
+.btn-orange{background:var(--accent5)}
+.btn-sm{padding:5px 12px;font-size:.78rem}
+
+/* BADGES / CHIPS */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:700}
+.ok{background:#1a3a1a;color:#7ee787;border:1px solid #2d5a2d}
+.warn{background:#3a2a00;color:#ffa657;border:1px solid #5a4200}
+.err{background:#3a0000;color:#f78166;border:1px solid #5a1a00}
+
+/* CANVAS */
+canvas{display:block;border-radius:8px;border:1px solid var(--border)}
+
+/* STAT TABLE */
+.stat-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.stat-table th{background:var(--surface2);padding:6px 10px;text-align:left;color:var(--muted);font-weight:600}
+.stat-table td{padding:5px 10px;border-bottom:1px solid var(--border)}
+.stat-table tr.highlight td{background:#1a3a1a;color:var(--accent)}
+.stat-table tr.highlight-err td{background:#3a0000;color:var(--accent3)}
+
+/* PEDIGREE */
+.pedigree-ctrl{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+#ped-canvas{cursor:crosshair}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)}
+.legend-box{width:14px;height:14px;border-radius:2px}
+
+/* IMMUNO */
+.immuno-cell{cursor:pointer;transition:.2s;filter:drop-shadow(0 0 4px transparent)}
+.immuno-cell:hover{filter:drop-shadow(0 0 8px var(--accent2));transform-origin:center}
+.info-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;
+  font-size:.82rem;line-height:1.6;min-height:80px}
+.info-box strong{color:var(--accent2)}
+.cytokine{display:inline-block;background:#1e2f4a;color:var(--accent2);border-radius:4px;
+  padding:1px 7px;font-size:.72rem;margin:1px}
+
+/* PGP */
+.cell-viz{position:relative;width:100%;height:240px;background:#0d1a0d;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.pgp-pump{position:absolute;display:flex;align-items:center;justify-content:center;
+  border-radius:8px;font-size:.7rem;font-weight:700}
+
+/* TITRATION */
+#titration-canvas{background:#111}
+
+/* RANGE DISPLAY */
+.range-val{display:inline-block;background:var(--surface2);border-radius:4px;padding:1px 8px;
+  font-size:.8rem;color:var(--accent5);font-weight:700;margin-left:8px}
+
+/* RESULT BOX */
+.result{background:var(--surface2);border-radius:8px;padding:12px 16px;margin-top:10px;font-size:.85rem;line-height:1.7}
+.result .key{color:var(--accent4);font-weight:700}
+
+body{padding:12px;min-height:100vh}
+.panel{display:none}
+.panel.active{display:block}
+</style>
+</head>
+<body>
+<div class="panel active" id="p0">
+<div class="card">
+  <div class="card-title">🦠 Schéma Interactif — Réponse Immunitaire</div>
+  <div class="row" style="gap:16px">
+    <div style="flex:0 0 auto">
+      <div style="margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" onclick="immunoActivate('bacteria')">🦠 Bactérie</button>
+        <button class="btn btn-sm btn-red" onclick="immunoActivate('virus')">🔴 Virus</button>
+        <button class="btn btn-sm btn-purple" onclick="immunoActivate('none')">↺ Reset</button>
+      </div>
+      <canvas id="immuno-canvas" width="480" height="360" style="width:100%;max-width:480px;cursor:pointer" onclick="immunoClick(event)"></canvas>
+    </div>
+    <div style="flex:1;min-width:220px">
+      <div class="info-box" id="immuno-info">
+        <strong>Cliquez sur une cellule</strong> pour voir son rôle, ses interactions et les cytokines impliquées.
+        <br><br>Utilisez les boutons pour simuler une attaque <em>bactérienne</em> ou <em>virale</em>.
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===== PANEL 7 : DOSAGE ACIDO-BASIQUE ===== -->
+<script>
+
+function syncAll(){
+  document.querySelectorAll('input[type=range]').forEach(r=>{
+    const vid=r.id+'-val';
+    const el=document.getElementById(vid);
+    if(el) el.textContent=parseFloat(r.value).toFixed(2);
+  });
+  // specific displays
+  [['hw-q','hw-q-val',2],['drift-n','drift-n-val',0],['drift-g','drift-g-val',0],
+   ['drift-p','drift-p-val',2],['pk-dose','pk-dose-val',0],['pk-vd','pk-vd-val',0],
+   ['pk-ke','pk-ke-val',2],['pk-ka','pk-ka-val',2],['pk-f','pk-f-val',2],['pk-tinf','pk-tinf-val',2],
+   ['md-dose','md-dose-val',0],['md-ke','md-ke-val',2],['md-ka','md-ka-val',2],
+   ['md-vd','md-vd-val',0],['md-tau','md-tau-val',0],['md-n','md-n-val',0],
+   ['cq-cv','cq-cv-val',2],['tit-ca','tit-ca-val',2],['tit-va','tit-va-val',0],
+   ['tit-cb','tit-cb-val',2],['pgp-expr','pgp-expr-val',0]
+  ].forEach(([id,dv,d=2])=>{
+    const r=document.getElementById(id),el=document.getElementById(dv);
+    if(r&&el) el.textContent=parseFloat(r.value).toFixed(d);
+  });
+}
+document.querySelectorAll('input[type=range]').forEach(r=>{
+  r.addEventListener('input',syncAll);
+});
+syncAll();
+
+// ============================================================
+// UTILS
+// ============================================================
+function showPanel(i,btn){
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const inits=[immunoDraw];
+  setTimeout(()=>inits[i]&&inits[i](),50);
+}
+function rangeSync(id,display,dec=2){
+  const el=document.getElementById(id);
+  const dv=document.getElementById(display);
+  if(el&&dv){dv.textContent=parseFloat(el.value).toFixed(dec);}
+}
+function syncAll(){
+  [['hw-q','hw-q-val'],['drift-n','drift-n-val',0],['drift-g','drift-g-val',0],
+   ['drift-p','drift-p-val'],['pk-dose','pk-dose-val',0],['pk-vd','pk-vd-val',0],
+   ['pk-ke','pk-ke-val'],['pk-ka','pk-ka-val'],['pk-f','pk-f-val'],['pk-tinf','pk-tinf-val'],
+   ['md-dose','md-dose-val',0],['md-ke','md-ke-val'],['md-ka','md-ka-val'],
+   ['md-vd','md-vd-val',0],['md-tau','md-tau-val',0],['md-n','md-n-val',0],
+   ['cq-cv','cq-cv-val'],['tit-ca','tit-ca-val'],['tit-va','tit-va-val',0],
+   ['tit-cb','tit-cb-val'],['pgp-expr','pgp-expr-val',0]
+  ].forEach(([id,dv,d=2])=>rangeSync(id,dv,d));
+}
+document.querySelectorAll('input[type=range]').forEach(r=>{
+  r.addEventListener('input',syncAll);
+});
+syncAll();
+
+// ============================================================
+// PANEL 6 : IMMUNOLOGIE
+// ============================================================
+const IMMUNO_CELLS=[
+  {id:'pathogen',x:60,y:180,r:22,color:'#f78166',label:'🦠',name:'Pathogène',
+   info:'<strong>Pathogène</strong> (bactérie/virus)<br>Exprime des motifs moléculaires reconnaissables : <span class="cytokine">PAMPs</span> (LPS, ARNdb, flagelline…)<br>Reconnus par les récepteurs <span class="cytokine">PRRs</span> et <span class="cytokine">TLRs</span> des cellules de l\'immunité innée.'},
+  {id:'macro',x:160,y:180,r:25,color:'#ffa657',label:'Mφ',name:'Macrophage',
+   info:'<strong>Macrophage / Cellule dendritique</strong><br>1ère ligne de défense. Phagocytose + présentation antigénique (CMH II).<br>Sécrète : <span class="cytokine">IL-1β</span> <span class="cytokine">IL-6</span> <span class="cytokine">TNF-α</span> <span class="cytokine">IL-12</span><br>Active LT CD4 via CMH II + costimulation (CD80/86–CD28).'},
+  {id:'nk',x:160,y:90,r:20,color:'#d2a8ff',label:'NK',name:'Cellule NK',
+   info:'<strong>Cellule NK (Natural Killer)</strong><br>Innée. Détruit les cellules infectées sans présentation spécifique.<br>Activée par <span class="cytokine">IL-12</span> <span class="cytokine">IL-15</span> <span class="cytokine">IFN-α/β</span><br>Sécrète : <span class="cytokine">IFN-γ</span> → activation macrophages.<br>Mécanisme : perforine + granzymes → apoptose.'},
+  {id:'cd4',x:280,y:120,r:22,color:'#58a6ff',label:'LT CD4',name:'Lymphocyte T CD4+',
+   info:'<strong>LT CD4+ (T helper)</strong><br>Chef d\'orchestre de la réponse adaptative.<br>Reconnaît antigène via TCR + CMH II.<br>Différenciation : Th1 (<span class="cytokine">IFN-γ</span>, immunité cellulaire), Th2 (<span class="cytokine">IL-4</span> <span class="cytokine">IL-13</span>, allergie), Th17 (<span class="cytokine">IL-17</span>).<br>Active LB et LT CD8.'},
+  {id:'cd8',x:280,y:240,r:22,color:'#7ee787',label:'LT CD8',name:'Lymphocyte T CD8+',
+   info:'<strong>LT CD8+ (Cytotoxique, CTL)</strong><br>Détruit les cellules infectées ou tumorales.<br>Reconnaît via TCR + CMH I.<br>Mécanisme : <span class="cytokine">Perforine</span> + <span class="cytokine">Granzyme B</span> → apoptose cible.<br>Activé par LT CD4 (<span class="cytokine">IL-2</span>) et cellule dendritique.<br>Cible : cellules exprimant un antigène sur CMH I.'},
+  {id:'lb',x:380,y:120,r:22,color:'#56d364',label:'LB',name:'Lymphocyte B',
+   info:'<strong>Lymphocyte B → Plasmocyte</strong><br>Immunité humorale. Reconnait antigène via BCR.<br>Activé par LT CD4 Tfh (<span class="cytokine">IL-21</span> <span class="cytokine">CD40L</span>).<br>Se différencie en <strong>plasmocyte</strong> → sécrétion d\'<strong>anticorps</strong> (IgM→IgG/IgA/IgE).<br>Recombinaison : commutation de classe, hypermutation somatique.'},
+  {id:'plasma',x:460,y:120,r:20,color:'#e3b341',label:'Plasma',name:'Plasmocyte',
+   info:'<strong>Plasmocyte</strong><br>Effecteur final de l\'immunité humorale.<br>Produit massivement des <strong>anticorps</strong> : <span class="cytokine">IgG</span> <span class="cytokine">IgM</span> <span class="cytokine">IgA</span> <span class="cytokine">IgE</span><br>Anticorps : neutralisation, opsonisation, activation complément (voie classique).<br>Durée de vie : quelques jours (plasmocyte) ou années (cellule à longue vie dans moelle).'},
+  {id:'memory',x:440,y:240,r:18,color:'#79c0ff',label:'Tm',name:'Cellule Mémoire',
+   info:'<strong>Cellule T et B Mémoire</strong><br>Subsistent après la réponse primaire.<br>Permettent une <strong>réponse secondaire rapide et amplifiée</strong>.<br>Base de la vaccination : injecter un antigène → mémoire → protection durable.<br>Caractéristiques : longue durée de vie, seuil d\'activation abaissé.'},
+];
+
+let immunoActive='none';
+function immunoActivate(type){immunoActive=type;immunoDraw();}
+function immunoDraw(){
+  const canvas=document.getElementById('immuno-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+
+  // Zones
+  ctx.fillStyle='rgba(30,40,30,0.5)';ctx.fillRect(0,0,240,H);
+  ctx.fillStyle='rgba(20,30,50,0.5)';ctx.fillRect(240,0,W-240,H);
+  ctx.fillStyle='#30363d';ctx.font='11px sans-serif';ctx.textAlign='center';
+  ctx.fillText('Immunité Innée',120,20);ctx.fillText('Immunité Adaptative',340,20);
+  ctx.strokeStyle='#30363d';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(240,0);ctx.lineTo(240,H);ctx.stroke();ctx.setLineDash([]);
+
+  // Arrows
+  const arrows=[
+    ['pathogen','macro','#ffa657'],['macro','cd4','#58a6ff'],['macro','cd8','#7ee787'],
+    ['cd4','lb','#56d364'],['cd4','cd8','#7ee787'],['lb','plasma','#e3b341'],
+    ['cd8','memory','#79c0ff'],['lb','memory','#79c0ff'],['nk','macro','#d2a8ff'],
+  ];
+  arrows.forEach(([from,to,color])=>{
+    const a=IMMUNO_CELLS.find(c=>c.id===from),b=IMMUNO_CELLS.find(c=>c.id===to);
+    if(!a||!b)return;
+    const active=immunoActive!=='none';
+    const pathwayVirus=['pathogen','macro','nk','cd4','cd8','memory'];
+    const pathwayBact=['pathogen','macro','cd4','lb','plasma','memory'];
+    const pathArr=immunoActive==='virus'?pathwayVirus:pathwayBact;
+    const isActive=active&&(pathArr.includes(from)||pathArr.includes(to));
+    ctx.strokeStyle=isActive?color:'rgba(48,54,61,0.5)';
+    ctx.lineWidth=isActive?2:1;
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    // arrowhead
+    const ang=Math.atan2(b.y-a.y,b.x-a.x);
+    const ex=b.x-Math.cos(ang)*b.r,ey=b.y-Math.sin(ang)*b.r;
+    if(isActive){
+      ctx.fillStyle=color;
+      ctx.beginPath();ctx.moveTo(ex,ey);
+      ctx.lineTo(ex-10*Math.cos(ang-0.4),ey-10*Math.sin(ang-0.4));
+      ctx.lineTo(ex-10*Math.cos(ang+0.4),ey-10*Math.sin(ang+0.4));
+      ctx.closePath();ctx.fill();
+    }
+  });
+
+  // Cells
+  IMMUNO_CELLS.forEach(cell=>{
+    const active=immunoActive==='none'||
+      (immunoActive==='virus'&&['pathogen','macro','nk','cd4','cd8','memory'].includes(cell.id))||
+      (immunoActive==='bacteria'&&['pathogen','macro','cd4','lb','plasma','memory'].includes(cell.id));
+    ctx.globalAlpha=active?1:0.3;
+    ctx.fillStyle=cell.color+'40';
+    ctx.strokeStyle=cell.color;
+    ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.arc(cell.x,cell.y,cell.r,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle=cell.color;ctx.font=`bold ${cell.r>20?11:10}px monospace`;ctx.textAlign='center';
+    ctx.fillText(cell.label,cell.x,cell.y+4);
+    ctx.fillStyle='#e6edf3';ctx.font='9px sans-serif';
+    ctx.fillText(cell.name,cell.x,cell.y+cell.r+12);
+    ctx.globalAlpha=1;
+  });
+}
+function immunoClick(e){
+  const canvas=document.getElementById('immuno-canvas');
+  const rect=canvas.getBoundingClientRect();
+  const scaleX=canvas.width/rect.width;
+  const x=(e.clientX-rect.left)*scaleX,y=(e.clientY-rect.top)*scaleX;
+  const hit=IMMUNO_CELLS.find(c=>Math.hypot(c.x-x,c.y-y)<c.r+5);
+  if(hit)document.getElementById('immuno-info').innerHTML=hit.info;
+}
+setTimeout(immunoDraw,100);
+
+</script>
+</body>
+</html>

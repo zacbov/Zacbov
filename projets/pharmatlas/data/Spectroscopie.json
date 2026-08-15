@@ -1,0 +1,99 @@
+{
+  "Spectroscopie": [
+    {
+      "file": "spectro_overview.glb",
+      "name": "Spectroscopie — Vue d'ensemble",
+      "category": "Fondamentaux",
+      "desc": "Ensemble des techniques analytiques basées sur les interactions entre le rayonnement électromagnétique et la matière. Fondement de l'analyse pharmaceutique moderne.",
+      "definition": "La spectroscopie étudie les interactions entre le rayonnement électromagnétique (EM) et la matière. Chaque technique exploite une région spectrale spécifique et une interaction particulière : absorption (UV-Vis, IR, RMN), émission (fluorescence, SAE), diffusion (Raman). E = hν = hc/λ.",
+      "spectre_em": "Rayons γ (< 0,01 nm) → Rayons X (0,01–10 nm) → UV (10–400 nm) → Visible (400–700 nm) → IR (0,7–1000 µm) → Micro-ondes (1 mm–1 m) → Radio (RMN, > 1 m). UV-Vis : transitions électroniques. IR : transitions vibrationnelles. Micro-ondes/RMN : transitions de spin/rotation.",
+      "loi_beer_lambert": "Loi de Beer-Lambert : A = log(I0/I) = ε × l × c. A = absorbance (sans unité). ε = coefficient d'extinction molaire (L·mol⁻¹·cm⁻¹). l = longueur du trajet optique (cm). c = concentration (mol/L). Domaine de validité : A entre 0,1 et 1 (meilleure précision). Déviation à faible c (chimique) et forte c (instrumental).",
+      "formula": "E = hν = hc/λ | ν̃ (cm⁻¹) = 1/λ(cm) | A = ε × l × c | T = I/I₀ | A = -log T",
+      "pharmacology": "Identification PA : IR (empreinte digitale, Ph. Eur. 2.2.24). Dosage : UV-Vis (Ph. Eur. 2.2.25). Structure : RMN + SM. Contrôle impuretés : HPLC-UV/HPLC-MS. Suivi thérapeutique : HPLC-MS/MS."
+    },
+    {
+      "file": "uv_vis.glb",
+      "name": "Spectrophotométrie UV-Visible",
+      "category": "Spectroscopie moléculaire",
+      "desc": "Absorption du rayonnement UV (200-400 nm) et visible (400-700 nm) par les molécules. Chromophores, auxochromes, loi de Beer-Lambert. Applications pharmaceutiques.",
+      "definition": "UV-Vis : absorption de photons UV/visible par transitions électroniques π→π* (chromophores insaturés, ε élevé 10⁴–10⁵) ou n→π* (groupements carbonyle, ε faible 10–100). Mesure de l'absorbance à longueur d'onde fixe ou scan complet (spectre).",
+      "chromophores": "Chromophores (absorbent UV/Vis) : liaisons C=C conjuguées (diènes, polyènes : bathochrome avec conjugaison), C=O (n→π* ≈ 270-280 nm, π→π* < 220 nm), benzène (254 nm), cycles aromatiques, hétérocycles. Règles de Woodward (calcul λmax diène, énone). Auxochromes : groupements -OH, -NH2, -OR → déplacent λmax et ↑ ε. Effets : bathochrome (↑ λmax, rouge), hypsochrome (↓ λmax, bleu), hyperchrome (↑ ε), hypochrome (↓ ε). Solvants polaires → effet hypsochrome sur π→π*, bathochrome sur n→π*.",
+      "appareils": "Spectrophotomètre simple faisceau (référence puis échantillon) vs double faisceau (simultané). Source : deutérium (UV 180–380 nm) + halogène (Vis 330–700 nm). Monochromateur : réseau de diffraction. Détecteur : photodiode ou réseau de photodiodes (DAD). Cuve : quartz (UV), verre/plastique (Vis). λmax : wavelength of maximum absorbance → identification.",
+      "applications": "Dosage quantitatif : gamme d'étalonnage [concentration vs absorbance] → régression linéaire. Détermination du coefficient ε (A¹%₁cm = absorbance solution 1% sur 1 cm, utilisé en Pharmacopée). Ph. Eur. 2.2.25 : dosage par spectrophotométrie UV-Vis (aspirine, paracétamol, acide acétylsalicylique). Tests de solubilité, cinétiques de dissolution, dosage médicaments plasmatiques (suivi thérapeutique simple). Identification : λmax ± 2nm vs standard.",
+      "formula": "A¹%₁cm = ε × 10 / MM (en g/mol) | Paracétamol : λmax = 243 nm (pH 7), ε₂₄₃ ≈ 14 800 L·mol⁻¹·cm⁻¹ | Aspirine : λmax = 276 nm",
+      "pharmacology": "HPLC-UV : colonne séparation → détecteur UV à λmax du PA → dosage simultané PA + impuretés. DAD (Diode Array Detector) : spectre UV complet à chaque point de la chromatographie → confirmation identité pic (spectre). Applications toxicologie : dosage barbituriques (214 nm), benzodiazépines (228 nm), paracétamol (243 nm) en urgence."
+    },
+    {
+      "file": "spectro_ir.glb",
+      "name": "Spectroscopie Infrarouge (IR/FTIR/ATR)",
+      "category": "Spectroscopie moléculaire",
+      "desc": "Absorption dans l'infrarouge par vibrations moléculaires. Identification des fonctions chimiques. Technique de référence pour l'identification des matières premières (Ph. Eur. 2.2.24).",
+      "definition": "IR : absorption de photons IR (4000–400 cm⁻¹) par vibrations moléculaires (élongation ν et déformation δ). Condition : variation du moment dipolaire. Spectre = empreinte digitale unique de la molécule. FTIR (Transformée de Fourier) : avantage multiplex (tout le spectre simultané), haute S/N, rapide.",
+      "zones": "Zone des groupements fonctionnels (4000–1500 cm⁻¹) : OH libre : 3600–3650 cm⁻¹ (fin, fort). OH lié (H) : 3200–3550 cm⁻¹ (large). NH : 3300–3500 cm⁻¹. CH sp3 : 2950–2850 cm⁻¹ (doublet). CH sp2 : 3020–3100 cm⁻¹. CH aldéhyde : doublet 2820/2720 cm⁻¹ (Fermi). C≡N : 2200–2260 cm⁻¹. C≡C : 2100–2260 cm⁻¹. C=O : acide carboxylique 1700–1725 cm⁻¹, ester 1735–1750 cm⁻¹, amide 1630–1690 cm⁻¹ (amide I+II), aldéhyde 1720–1740 cm⁻¹, cétone 1705–1725 cm⁻¹, anhydride (2 bandes ~1850/1760 cm⁻¹). C=C aromatique : 1580–1620 + 1475–1515 cm⁻¹. Zone empreinte digitale (1500–400 cm⁻¹) : unique, comparaison spectre de référence.",
+      "techniques": "ATR (Attenuated Total Reflectance) : réflexion interne totale sur cristal (ZnSe, diamant) → analyse directe solides/liquides sans préparation. Avantage : rapide, non destructif, PAT (Process Analytical Technology) en ligne. DRIFT (poudres diffuses). NIR (proche IR, 800–2500 nm) : contrôle qualité en ligne, identification non destructive des formes finies.",
+      "applications": "Ph. Eur. 2.2.24 : identification matières premières par comparaison spectrale avec spectre de référence (concordance > 95% zone 4000–400 cm⁻¹). Détection polymorphes (états cristallins différents → spectres FTIR différents : zone empreinte). Contrôle conformité lots. Détection falsifications/contrefaçons (Raman portatif). NIR : identification non destructive à travers emballage.",
+      "formula": "ν̃ (cm⁻¹) = 1/λ(cm) | ν̄ = (1/2πc)√(k/µ) | µ = m1×m2/(m1+m2) | k ↑ → fréquence ↑ (triple liaison > double > simple) | µ ↑ → fréquence ↓ (C-D < C-H)",
+      "pharmacology": "Identification API : oméprazole (C=O benzimidazole 1650 cm⁻¹, S=O sulfoxyde 1075 cm⁻¹). Détection impuretés de forme cristalline : polymorphe I vs III du paracétamol (spectres FTIR différents dans zone 600-900 cm⁻¹). NIR quantitatif : teneur en eau, teneur en API sans dissolution. Raman portatif (terrain) : détection médicaments contrefaits."
+    },
+    {
+      "file": "rmn.glb",
+      "name": "RMN — Résonance Magnétique Nucléaire",
+      "category": "Spectroscopie moléculaire",
+      "desc": "Absorption dans le domaine radio-fréquence par les noyaux magnétiques (¹H, ¹³C, ³¹P...) sous champ magnétique. Outil clé d'élucidation de structure et de contrôle qualité.",
+      "definition": "RMN : certains noyaux (spin I ≠ 0 : ¹H, ¹³C, ¹⁵N, ³¹P, ¹⁹F) placés dans un champ magnétique B₀ absorbent le rayonnement radio-fréquence à des fréquences précises (fréquence de Larmor : ν₀ = γ×B₀/2π). Le déplacement chimique δ (ppm) dépend de l'environnement électronique du noyau.",
+      "rmn1h": "RMN ¹H : protons (abondance 99,98%). Déplacements chimiques (δ, ppm, référence TMS δ=0) : TMS 0, CH3 aliphatique 0,7–1,0, CH2 1,2–1,4, CH allylique 1,6–2,0, C=C-CH3 1,8, CH2-CO 2,0–2,5, CH2-O/N 3,2–3,8, CH=C aromatique 6,5–8,5, CHO aldéhyde 9–10, COOH 10–13 (large). Couplage scalaire (constante J en Hz) : règle n+1 (n voisins H → n+1 raies). Intégration : proportionnelle au nombre de ¹H.",
+      "rmn13c": "RMN ¹³C : abondance naturelle 1,1% → moins sensible. δ (ppm) : CH3 aliphatique 10–20, CH2/CH aliphatique 20–50, C-O 60–90, C=C 100–150, C aromatique 110–160, C=O ester/acide 165–180, C=O cétone/aldéhyde 190–220. APT (Attached Proton Test) : distingue CH/CH3 (phase positive) de CH2/C quaternaire (phase négative). DEPT : même principe, plus sensible.",
+      "2d": "RMN 2D : COSY (¹H-¹H couplage, corrélations géminales/vicinales), HSQC (corrélation ¹H-¹³C direct, 1 liaison), HMBC (corrélation ¹H-¹³C longue distance 2-4 liaisons → connectivité squelette), NOESY (NOE, distance < 5 Å → stéréochimie). Stratégie d'élucidation de structure : HSQC → attribuer ¹³C aux ¹H → HMBC → connectivité → COSY → chaînes → NOESY → stéréochimie.",
+      "formula": "δ (ppm) = (νéchantillon - νréférence) / νspectrométre × 10⁶ | Integration ∝ nombre ¹H | Multiplicité : doublet (1H voisin), triplet (2H), quartet (3H) | δ ↑ = plus blindé (haute densité électronique, 'upfield') | Règle n+1",
+      "pharmacology": "Identification des PA : RMN ¹H/¹³C → elucidation structure complète. Contrôle qualité RMN quantitative (qNMR) : dosage sans calibration si standard interne (erreur < 1%). Ph. Eur. : utilisation RMN croissante (complexes cyclodextrines, anticorps). RMN en imagerie médicale : IRM (¹H de l'eau, contraste T1/T2, Gd-DOTA). RMN ³¹P : métabolites phosphorylés, SNR, énergie."
+    },
+    {
+      "file": "spectrometrie_masse_spec.glb",
+      "name": "Spectrométrie de Masse",
+      "category": "Spectrométrie de masse",
+      "desc": "Identification et quantification de molécules par rapport masse/charge (m/z). Ionisation ESI/MALDI, analyseurs Q/TOF/Orbitrap. Gold standard analytique.",
+      "definition": "SM : ionisation de la molécule → séparation des ions selon m/z → détection. Spectre de masse : signal en fonction de m/z. Ion moléculaire [M+H]⁺ (ESI+), [M-H]⁻ (ESI-), M+• (EI). Ions fragments : pertes caractéristiques d'eau (-18), CO (-28), CH3 (-15), etc.",
+      "ionisation": "EI (Electron Ionization, 70 eV) : fragmentation extensive → spectre riche en fragments (bibliothèque NIST). CI (Chemical Ionization) : plus douce. ESI (ElectroSpray Ionization) : gouttelettes → désolvatation → [M+nH]^n+ (multichargés, grosses molécules, couplage HPLC). APCI : petites molécules apolaires. MALDI (Matrix-Assisted Laser Desorption/Ionization) : laser + matrice → désorption → ions monochargés (protéines, polymères, couplage TOF).",
+      "analyseurs": "Quadrupole (Q) : filtre masse, transmission d'un m/z → Q1 (sélection précurseur), Q3 (sélection fragment), Q2 (collision CID). QqQ (triple quadrupole) : MRM/SRM → quantification ultra-sensible et spécifique (HPLC-MS/MS). TOF (Time Of Flight) : haute résolution, mesure temps de vol → masse exacte (HRMS). Orbitrap : très haute résolution (R > 100 000), mesure précise fréquence rotation → masse exacte < 5 ppm.",
+      "applications": "HPLC-MS/MS MRM : dosage médicaments plasmatiques (TDM ciclosporine, tacrolimus, MTX), toxicologie, dopage. HRMS/HRMS (Orbitrap) : formule brute exacte → identification inconnus (NPS, métabolites), peptide mapping mAbs. MALDI-TOF en microbiologie : identification bactérienne 10 min (Vitek® MS) par fingerprint protéique (protéines ribosomales). LC-HRMS : protéomique, métabolomique.",
+      "formula": "m/z = masse/charge | [M+H]⁺ = M + 1,0079 | Résolution R = m/Δm | HRMS : Δm < 5 ppm (confirmation identité) | MRM : Q1 → précurseur → Q3 → fragment (spécificité absolue)",
+      "pharmacology": "Adalimumab (Humira®) biothérapie : peptide mapping LC-HRMS → carte de toutes les modifications post-traductionnelles (glycosylation, déamidation, oxydation). MALDI-TOF Staphylococcus aureus en 10 min (vs 24-48h culture) → antibiotique adapté plus tôt. LC-MS/MS vitamine D 25-OH : gold standard vs immunodosage (moins interférence). TDM immunosuppresseurs : LC-MS/MS sang total vs immunodosage (moins de réactivité croisée métabolites)."
+    },
+    {
+      "file": "saa_icp.glb",
+      "name": "Spectrométrie Atomique — SAA et ICP",
+      "category": "Spectrométrie atomique",
+      "desc": "Dosage des éléments métalliques et traces inorganiques. Applications cliniques (toxicologie, oligoéléments) et pharmaceutiques (impuretés élémentaires ICH Q3D).",
+      "definition": "Spectrométrie atomique : atomisation de l'échantillon → atomes à l'état gazeux → interaction avec rayonnement → mesure absorption (SAA) ou émission (SEA, ICP-OES). Permet dosage de ~70 éléments à des concentrations traces (µg/L = ppb).",
+      "saa": "SAA (Spectrométrie d'Absorption Atomique) : source lumineuse spécifique de l'élément (lampe à cathode creuse → raies de résonance) → atomiseur (flamme air-acétylène 2300°C ou four graphite HGA 2700°C) → monochromateur → détecteur. SAA flamme : sensibilité ng/mL. SAA four graphite (électrothermique, HGA) : sensibilité pg/mL (pb, As, Hg, Cd, Se). Effet Zeeman : correction interférences de fond (four graphite).",
+      "icp": "ICP-OES (Optical Emission Spectrometry) : torche plasma argon 6000–8000°C → excitation tous éléments → émission raies simultanément → polychromateur (CCD). Avantage : multi-éléments simultanés, gamme dynamique large. ICP-MS : torche ICP → interface → spectromètre de masse (quadrupole ou secteur magnétique) → sensibilité sub-ppt, speciation isotopique. Gold standard traces élémentaires.",
+      "applications": "Clinique/toxicologique : Pb sang (intoxication saturnine, seuil action 50 µg/L), Al (dialysés, encéphalopathie aluminique), Cu (Wilson, céruloplasmine), Zn (dénutrition), As/Hg/Cd (intoxications). Pharmceutique (ICH Q3D) : impuretés élémentaires dans les médicaments — classe 1 (As, Cd, Hg, Pb : PDE stricts), classe 2A et B, classe 3. SAA/ICP obligatoire contrôle API et formes finies selon ICH Q3D.",
+      "formula": "Loi de Beer-Lambert atomique : A = k × N × l (N = nb atomes/cm³) | ICP-OES : émission I ∝ [élément] | Unités : µg/L (ppb), µg/g (ppm) | LOD SAA flamme : 0,1–100 µg/L selon élément",
+      "pharmacology": "ICH Q3D : limites journalières permises (PDEs) pour 24 éléments. Classe 1 : As (15 µg/j oral), Cd (2 µg/j), Hg (30 µg/j), Pb (5 µg/j). Impuretés élémentaires à doser dans tout médicament. Suivi As thérapeutique (trioxyde d'arsenic As2O3 Trisenox® : leucémie aigüe promyélocytaire M3). Lithium : dosage lithiémie 0,6–1 mmol/L par photométrie de flamme ou ISE."
+    },
+    {
+      "file": "fluorescence_spec.glb",
+      "name": "Fluorescence et Analyse par Fluorescence",
+      "category": "Spectroscopie moléculaire",
+      "desc": "Émission de lumière après absorption. 10 à 1000× plus sensible que l'UV-Vis. Applications : dosage médicaments, immunodosages, cytométrie, imagerie.",
+      "definition": "Fluorescence : absorption S0→S1 (excitation) → relaxation vibrationnelle (perte chaleur) → émission S1→S0 (émission fluorescente, λem > λex = décalage de Stokes). Phosphorescence : croisement inter-système S1→T1 → T1→S0 (délai 10⁻³–10⁰ s). Rendement quantique Φ = photons émis/photons absorbés.",
+      "fluorophores": "Endogènes : tryptophane (Ex 280/Em 350 nm), NADH (340/460), riboflavine B2 (450/520), porphyrines. Exogènes synthétiques : fluorescéine (490/519), FITC (495/525 vert), rhodamine B (540/625 rouge), Cy3 (550/570 orange), Cy5 (650/670 rouge), Alexa Fluors. Fluorophores pour immunofluorescence et cytométrie de flux. Quantum dots : nanocristaux semi-conducteurs, ↑ photostabilité.",
+      "techniques": "Spectrofluorimètre : Ex et Em indépendants. Fluorimètre filtre : simple, moins cher. Time-resolved fluorescence (TRFIA) : Europium(III), samarium → délai 400–1000 µs → élimine fluorescence biologique de fond → ↑↑ sensibilité (10⁻¹⁵ M). FRET (Forster Resonance Energy Transfer) : donneur → accepteur si < 10 nm → sonde de proximité moléculaire. Cytométrie de flux (FACS) : immunophénotypage cellulaire (CD4-FITC, CD8-PE, CD19-APC...). Microscopie de fluorescence/confocale.",
+      "applications": "Dosage médicaments natifs fluorescents : quinine (Ex 350/Em 450 nm), tétracyclines, rifampicine, méthotrexate (Ex 302/Em 370). HPLC-fluorescence : statines (lovastatine, simvastatine → dérivation fluorescente des métabolites). TRFIA (LIA-mat) : dosage TSH (0,001 mUI/L), digoxine, vitamines, drogues. ELISA → TRFIA : ↑ 100×. Tests rapides antigéniques : fluorescence → meilleure sensibilité vs colori.",
+      "formula": "If = k × Φ × ε × l × c (faibles concentrations) | Équation Stern-Volmer : I₀/I = 1 + Kq × τ₀ × [Q] | Décalage Stokes = λem - λex (toujours > 0)",
+      "pharmacology": "TRFIA Europium : kit TSH 3ème génération (sensibilité 0,001 mUI/L), INR par méthode optique, dosage HbA1c. Cytométrie CD4/CD8 : suivi VIH (CD4 < 200/µL → prophylaxie opportunistes). Immunofluorescence directe/indirecte (IFD/IFI) : AAN lupus (IFI Hep-2), anti-GBM (Goodpasture), dépôts IgA IgG C3 biopsie rénale. FISH (Fluorescence In Situ Hybridization) : amplification HER2, translocations chromosomiques BCR-ABL."
+    },
+    {
+      "file": "polarimetrie_dichroisme.glb",
+      "name": "Polarimétrie et Dichroïsme Circulaire",
+      "category": "Spectroscopie optique",
+      "desc": "Propriétés optiques des molécules chirales. Mesure de l'activité optique (rotation spécifique) et de la conformation des biomolécules.",
+      "definition": "Lumière polarisée plane : oscillation du champ électrique dans un plan. Molécule chirale : tourne le plan de polarisation → activité optique. Dextrogyre (+) : rotation vers la droite. Lévogyre (-) : vers la gauche. Rotation spécifique [α]D²⁰ = rotation mesurée × 100 / (l × c).",
+      "polarimetrie": "Polarimètre (saccharimètre) : source lumineuse monochromatique (raie D sodium 589 nm) → polariseur → tube contenant l'échantillon → analyseur → détecteur. Applications : contrôle qualité des substances chirales, suivi cinétique réactions, dosage sucres (saccharimétrie).",
+      "dichroisme_circulaire": "DC (Dichroïsme Circulaire) : une molécule chirale absorbe différemment les composantes gauche (LCP) et droite (RCP) de la lumière circulairement polarisée. Δε = εL - εR. Spectre DC (CD spectrum) → signature conformationnelle : hélice α (minima 208 + 222 nm, maximum 193 nm), feuillet β (minimum 216 nm, maximum 198 nm), pelote statistique. Détermination de la structure secondaire des protéines. Spectre CD UV lointain (far-UV) : structures secondaires. Spectre CD UV proche (near-UV) : environnement résidus aromatiques (tertiaire).",
+      "applications": "Pharmacopée : [α]D^20 pour molécules chirales (dextrose, lactose, lévothyroxine, camphre). Contrôle de l'excès énantiomérique (ee%) lors synthèse asymétrique. DC : stabilité protéines thérapeutiques (mAbs, insuline, GH) → détection changements de conformation. Énantiomères : même [α] valeur, signes opposés.",
+      "formula": "[α]D²⁰ = α × 100 / (l × c) | α = rotation observée (degrés) | l = longueur tube (dm) | c = concentration (g/100mL) | Exemple : D-Glucose [α]D = +52,7° ; L-Glucose [α]D = -52,7°",
+      "pharmacology": "Lévothyroxine L-T4 : [α]D = +16 à +22° (forme L active). D-thyroxine : inactivée enzymatiquement, non active. Ibuprofène racémique : inversion R→S in vivo. Contrôle purine chirales (nucléosides antiviraux) : configuration β obligatoire. DC protéines thérapeutiques : hélice α insuline, mAbs → contrôle stabilité lot à lot."
+    }
+  ]
+}

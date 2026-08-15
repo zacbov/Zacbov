@@ -1,0 +1,1022 @@
+{
+  "Parasites": [
+    {
+      "file": "plasmodium_falciparum.glb",
+      "name": "Plasmodium falciparum",
+      "desc": "Agent du paludisme tropical, le plus meurtrier",
+      "classification": "Apicomplexe (Sporozoaire)",
+      "vecteur": "Anopheles femelle (piqûre nocturne)",
+      "cycle": "Cycle HUMAIN : 1. Piqûre anophèle → sporozoïtes → foie (phase pré-érythrocytaire, asymptomatique, 7–10j). 2. Mérozoïtes libérés → invasion des globules rouges (phase érythrocytaire). 3. Trophozoïte → schizonte → 16–32 mérozoïtes (lyse des GR = accès fébrile). 4. Gamétocytes (formes sexuées). Cycle MOUSTIQUE : 5. Gamétocytes → intestin de l'anophèle → gamètes → zygote → ookinète → oocyste → sporozoïtes → glandes salivaires.",
+      "pathologies": "Paludisme grave (falciparum = P. falciparum uniquement) : neuropaludisme (convulsions, coma — mortalité 20–25 %), anémie hémolytique sévère, syndrome de détresse respiratoire, insuffisance rénale aiguë, hypoglycémie. 249 millions de cas/an, 608 000 décès (2022) — enfants < 5 ans en Afrique subsaharienne.",
+      "virulence": "PfEMP1 (cytoadhérence des GR parasités aux endothéliums → séquestration vasculaire → neuropaludisme). Hémozéine (pigment du paludisme — immuno-activatrice). Protéases (plasmepsines — dégradation de l'hémoglobine → hème libéré — cible des amino-4-quinoléines).",
+      "traitements": "Artéméther-luméfantrine (Riamet® — 1ère ligne non grave), artésunate IV (forme grave — urgence). Méfloquine, atovaquone/proguanil (Malarone® — prophylaxie et traitement). Chloroquine (résistances > 95 % pour falciparum). Primaquine/tafénoquine (radicale du foie pour P. vivax).",
+      "resistance": "Résistance artémisinine émergente (Asie du Sud-Est, Afrique de l'Est) : mutation PfKelch13. Résistance chloroquine (pfcrt K76T). Résistance méfloquine, pyriméthamine. Urgence mondiale. Vaccin RTS,S/AS01 (Mosquirix® — approbation OMS 2021) : 30–40 % d'efficacité.",
+      "vecteur_type": "Moustique",
+      "cycle_parasitaire_resume": "① Piqûre anophèle femelle → injection sporozoïtes → foie (schizogonie hépatique, 7-10j, silencieux)\n② Méroïtes hépatiques → globules rouges → trophozoïtes → schizontes → méroïtes érythrocytaires (cycle 48h P. falciparum)\n③ Rupture hématie → fièvre tierce → nouvelle invasion GR\n④ Gamétocytes → repas sanguin anophèle → sporogonie (moustique, 10-14j) → sporozoïtes glandes salivaires → transmission",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "plasmodium_vivax.glb",
+      "name": "Plasmodium vivax",
+      "desc": "Paludisme des zones tempérées, hypnozoïtes hépatiques",
+      "classification": "Apicomplexe (Sporozoaire)",
+      "vecteur": "Anopheles (multiples espèces)",
+      "cycle": "Similaire à P. falciparum. Particularité : HYPNOZOÏTES (formes dormantes hépatiques pouvant persister des mois à années → rechutes à distance). Cycle érythrocytaire de 48h (fièvre tierce).",
+      "pathologies": "Paludisme tertiaire bénin (fièvre toutes les 48h). Rarement grave (splénomégalie, anémie). Rechutes ++ (hypnozoïtes). 133 millions de cas/an. Distribution large (Amérique du Sud, Asie, Moyen-Orient). Protégés par absence d'antigène Duffy (populations africaines).",
+      "virulence": "Hypnozoïtes (latence hépatique — mécanisme de rechute). Invasion spécifique antigène Duffy (DARC) — populations africaines résistantes.",
+      "traitements": "Chloroquine (sensible dans la majorité des zones). Primaquine ou tafénoquine (élimination des hypnozoïtes — radical cure). Test G6PD OBLIGATOIRE avant primaquine/tafénoquine (risque hémolyse si déficit G6PD). Prophylaxie : chloroquine dans zones sensibles, atovaquone/proguanil ailleurs.",
+      "resistance": "Résistance chloroquine émergente (Papouasie-Nouvelle-Guinée, Asie du Sud). Résistance primaquine possible.",
+      "vecteur_type": "Moustique",
+      "cycle_parasitaire_resume": "① Piqûre anophèle → sporozoïtes → foie → HYPNOZOÏTES dormants (P. vivax/ovale — source de rechutes à distance, mois-années)\n② Réveil hypnozoïtes → méroïtes → GR (cycle 48h — fièvre tierce bénigne)\n③ Gamétocytes → anophèle → sporogonie → sporozoïtes\n④ Rechutes possibles sans nouvelle piqûre (hypnozoïtes hépatiques)",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "toxoplasma_gondii.glb",
+      "name": "Toxoplasma gondii",
+      "desc": "Apicomplexe, zoonose du chat, danger fœtal",
+      "classification": "Apicomplexe (Coccidies)",
+      "vecteur": "Ingestion d'oocystes (déjections de chat) ou de kystes tissulaires (viande crue)",
+      "cycle": "Cycle COMPLET chez le chat (hôte définitif) : oocystes sporulés fécaux. Cycle ASEXUÉ chez les hôtes intermédiaires (humains, ovins, bovins, rongeurs) : tachyzoïtes (phase aiguë, multiplication rapide) → bradyzoïtes (phase chronique, kystes tissulaires dans le cerveau et les muscles — persistance à vie). Séroprévalence : 30–50 % des adultes français.",
+      "pathologies": "Immunocompétents : asymptomatique (90 %) ou adénopathies bénignes. DANGER FŒTAL : toxoplasmose congénitale si primo-infection durant la grossesse → choriorétinite, hydrocéphalie, calcifications intracrâniennes, retard mental. IMMUNODÉPRIMÉS (SIDA CD4 < 100) : toxoplasmose cérébrale (abcès multiples — urgence).",
+      "virulence": "Invasion active par 'conoïde' (apicomplexe). Détournement de la vacuole parasitophore (blocage fusion phagolysosomale). Protéines de sécrétion RON/ROP/MIC (invasion et manipulation cellulaire).",
+      "traitements": "Toxoplasmose cérébrale (SIDA) : pyriméthamine + sulfadiazine + acide folinique (6 semaines → prophylaxie secondaire). Primo-infection grossesse : spiramycine (Rovamycine® — réduit transmission fœtale). Fœtus atteint : pyriméthamine + sulfadiazine. Immunocompétent : traitement rarement nécessaire.",
+      "resistance": "Résistances acquises rares. Pyriméthamine-résistance possible (mutation DHFR).",
+      "vecteur_type": "Alimentaire",
+      "cycle_parasitaire_resume": "① Chat (hôte définitif) → oocystes dans fèces → sol/eau/légumes contaminés\n② Ingestion oocystes ou kystes (viande peu cuite) → sporozoïtes → tachyzoïtes (forme invasive aiguë)\n③ Réponse immune → bradyzoïtes dans kystes tissulaires (cerveau, muscle, œil — latence vie entière)\n④ Réactivation (immunodépression) → tachyzoïtes → toxoplasmose cérébrale/oculaire\n⑤ Transmission materno-fœtale (primo-infection grossesse) → tachyzoïtes transplacentaires",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "leishmania.glb",
+      "name": "Leishmania sp.",
+      "desc": "Protozoaire flagellé, leishmaniose viscérale ou cutanée",
+      "classification": "Kinétoplastidé (Excavé)",
+      "vecteur": "Phlébotome femelle (Phlebotomus en Ancien Monde, Lutzomyia en Nouveau Monde) — piqûre crépusculaire/nocturne",
+      "cycle": "1. Piqûre de phlébotome → promastigotes métacycliques (flagellés, infectieux) dans la peau. 2. Phagocytose par macrophages. 3. Transformation en amastigotes (sans flagelle, multiplication dans le phagolysosomale → résistance à l'acidité). 4. Lyse du macrophage → dissémination. 5. Phlébotome ingère amastigotes lors de la piqûre → transformation en promastigotes dans l'intestin. Zoonose (chien, rongeurs).",
+      "pathologies": "L. donovani/infantum : leishmaniose viscérale (Kala-azar) — splénomégalie, hépatosplénomégalie, pancytopénie, fièvre, cachexie → mortelle sans traitement. L. major/tropica/braziliensis : leishmaniose cutanée (ulcère indolore chronique). L. braziliensis : mucocutanée (destruction nasale mutilante).",
+      "virulence": "Survie dans les macrophages (inhibition de la fusion phago-lysosome, résistance au pH acide). LPG (lipophosphoglycane — antiphagocytaire). Modulation de la réponse immunitaire (IL-10, TGF-β).",
+      "traitements": "Amphotéricine B liposomale (AmBisome® — 1ère ligne viscérale, dose totale 21 mg/kg). Miltéfosine (Impavido® — oral, 28j — 1ère ligne orale). Antimoniate de méglumine (Glucantime® — IM, toxique). Pentamidine, paromomycine. Pas de vaccin humain disponible.",
+      "resistance": "Résistance à l'antimoniate en augmentation (Bihar, Inde > 60 %). Résistance à la miltéfosine (mutations du transporteur).",
+      "vecteur_type": "Phlébotome",
+      "cycle_parasitaire_resume": "① Phlébotome femelle (Phlebotomus/Lutzomyia) pique → injection promastigotes (forme flagellée)\n② Macrophages hôte → phagocytose → amastigotes (forme intracellulaire sans flagelle, multiplication)\n③ Lyse macrophage → nouveaux macrophages infectés → dissémination\n④ Repas sanguin phlébotome → amastigotes → promastigotes dans intestin → glandes salivaires → transmission",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "trypanosoma_brucei.glb",
+      "name": "Trypanosoma brucei",
+      "desc": "Trypanosomiase africaine, maladie du sommeil",
+      "classification": "Kinétoplastidé (Excavé)",
+      "vecteur": "Mouche tsé-tsé (Glossina — piqûre diurne)",
+      "cycle": "1. Glossina injecte trypomastigotes métacycliques → tissu sous-cutané → sang (phase hémolymphatique). 2. Réplication par fission binaire (trypomastigotes sanguins — variation antigénique VSG). 3. Phase cérébrale (franchissement BHE) → méningo-encéphalite. 4. La glossina ingère trypomastigotes → transformation en epimastigotes dans l'intestin → migration glandes salivaires.",
+      "pathologies": "Trypanosomiase humaine africaine (THA) — maladie du sommeil. Phase 1 (hémolymphatique) : fièvre, adénopathies (signe de Winterbottom — ganglions cervicaux postérieurs). Phase 2 (neurologique) : inversion du cycle veille-sommeil, troubles psychiatriques, coma → mort. T.b. gambiense (Afrique occidentale) : évolution lente. T.b. rhodesiense (Afrique orientale) : rapide.",
+      "virulence": "Variation antigénique VSG (Variant Surface Glycoprotein) — changement répété de l'antigène de surface → évasion immunitaire. Kinetosome (ADN mitochondrial modifié — cible thérapeutique).",
+      "traitements": "Phase 1 : pentamidine (T.b. gambiense), suramine (T.b. rhodesiense). Phase 2 : éflornithine + nifurtimox (NECT — 1ère ligne gambiense), fexinidazole (oral — révolution 2019). Acoziborole (oral — phase 3 prometteuse — dose unique). Pas de vaccin.",
+      "resistance": "Résistance au mélarsoprol (arsenical — ancienne phase 2) en augmentation (30 % en certaines zones).",
+      "vecteur_type": "Mouche tsé-tsé",
+      "cycle_parasitaire_resume": "① Mouche tsé-tsé (Glossina) → injection trypomastigotes métacycliques dans peau\n② Trypomastigotes sang/lymphe (phase 1 hémolymphatique) → dissémination systémique\n③ Franchissement BHE → trypanomastigotes dans LCR/SNC (phase 2 neurologique = sleeping sickness)\n④ Repas sanguin Glossina → trypomastigotes → intestin (épimastigotes) → glandes salivaires (trypomastigotes métacycliques) → transmission",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "taenia_solium.glb",
+      "name": "Taenia solium",
+      "desc": "Ver solitaire du porc, cysticercose cérébrale",
+      "classification": "Cestode (Ver plat segmenté)",
+      "vecteur": "Ingestion de viande de porc crue/insuffisamment cuite contenant des larves cysticerques",
+      "cycle": "Taeniasis (adulte intestinal) : ingestion de cysticerque → scolex avec 4 ventouses + couronne de crochets s'accroche à l'intestin grêle → proglottis matures libèrent des œufs (fèces). Cysticercose (larve dans tissues) : ingestion d'œufs de T. solium (contact fécal-oral, auto-infection) → oncosphères → larves (cysticerques) dans muscles, cerveau, œil.",
+      "pathologies": "Taeniasis : asymptomatique ou symptômes digestifs discrets (ver adulte 2–7 m dans l'intestin). Cysticercose : NEUROCYSTICERCOSE — 1ère cause d'épilepsie acquise dans les pays en développement (30 % des épilepsies en zones endémiques). Cysticerques cérébraux calcifiés → crises épileptiques, hypertension intracrânienne.",
+      "virulence": "Scolex (organe fixation — crochets + ventouses). Larves : évasion immunitaire (couche lamellaire antiphagocytaire). Taille de l'adulte : 2–12 m.",
+      "traitements": "Taeniasis : praziquantel (25 mg/kg dose unique) ou niclosamide. Neurocysticercose : albendazole (7–30j) + corticoïdes (réaction inflammatoire) ± praziquantel. Antiépileptiques. Chirurgie si hydrocéphalie.",
+      "resistance": "Résistances rares aux anthelminthiques. Principales difficultés : diagnostic et accès aux soins.",
+      "vecteur_type": "Alimentaire",
+      "cycle_parasitaire_resume": "① Humain mange viande de porc peu cuite contenant cysticerques → scolex se fixe intestin grêle\n② Ver adulte (taenia, 2-4m) dans intestin → proglottis mûrs + œufs (fèces)\n③ Porc ingère œufs → larves → cysticerques musculaires (hôte intermédiaire)\n④ CYSTICERCOSE HUMAINE (accidentelle) : ingestion d'œufs (mains sales, aliments) → larves → cysticerques cérébraux/oculaires/musculaires",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "schistosoma.glb",
+      "name": "Schistosoma sp.",
+      "desc": "Trématode, bilharziose, vers plats diœciques",
+      "classification": "Trématode (Ver plat) — dioïque (sexes séparés)",
+      "vecteur": "Larves cercaires libres dans l'eau douce (pénétration transcutanée — baignade, rizières)",
+      "cycle": "1. Œufs (fèces ou urine) → eau → miracidies → mollusque (Biomphalaria/Bulinus — hôte intermédiaire). 2. Multiplication asexuée → cercaires libres. 3. Pénétration transcutanée humaine → schistosomules → circulation → maturation en adultes dans les veines mésentériques ou vésicales. 4. Ponte des œufs (40–300/j/femelle) → migration transcriptionnelle vers lumière intestinale/vésicale → excrétion.",
+      "pathologies": "Phase aiguë : dermatite du baigneur, fièvre de Katayama (hypersensibilité). Phase chronique : S. mansoni/japonicum — fibrose hépatique, hypertension portale, ascite, splénomégalie. S. haematobium — bilharziose vésicale, hématurie chronique, carcinome vésical (groupe 1 CIRC). 250 millions de personnes infectées, 200 000 décès/an.",
+      "virulence": "Les œufs (et non les adultes) = principale cause des lésions (réaction granulomateuse). Adultes résistants à l'immunité (couverture d'antigènes de l'hôte). Femelles pondent dans la lumière vasculaire.",
+      "traitements": "Praziquantel (40 mg/kg en 2 doses ou 60 mg/kg — médicament essentiel OMS). Traitement préventif de masse (MDA) recommandé en zones endémiques. Pas de vaccin. Lutte contre les mollusques (niclosamide molluscicide).",
+      "resistance": "Résistance au praziquantel : signaux d'alerte (réduction de sensibilité), mécanisme incomplètement compris. Urgence préventive.",
+      "vecteur_type": "Eau douce / Cercaires",
+      "cycle_parasitaire_resume": "① Eau douce contaminée → cercaires (formes libres) pénètrent peau nue en quelques minutes\n② Schistosomules → circulation → poumons → foie → accouplement adultes (mâle et femelle)\n③ Vers adultes dans veines portales (S. mansoni) ou vésicales (S. haematobium) → pondent œufs avec épine\n④ Œufs traversent paroi intestin/vessie → fèces/urines → eau douce → miracidiums → mollusque Biomphalaria (hôte intermédiaire) → cercaires",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "ascaris_lumbricoides.glb",
+      "name": "Ascaris lumbricoides",
+      "desc": "Nématode intestinal, géohelminthiase la plus fréquente",
+      "classification": "Nématode (Ver rond)",
+      "vecteur": "Ingestion d'œufs embryonnés dans la terre ou les aliments souillés (oro-fécal)",
+      "cycle": "1. Ingestion d'œufs embryonnés → larves L2 éclosent dans l'intestin grêle. 2. Pénétration de la muqueuse intestinale → veine porte → foie → cœur droit → poumons (migration de Loeffler). 3. Larves L3 remontent les bronches → déglutition → intestin grêle → adultes. 4. Vers adultes (15–40 cm — le plus grand nématode intestinal humain) → ponte des œufs (200 000/j/femelle).",
+      "pathologies": "Syndrome de Loeffler (migration larvaire pulmonaire : toux, éosinophilie, opacités pulmonaires transitoires). Infestation massive : occlusion intestinale (accumulation de vers), migration ectopique (canaux biliaires, appendice → péritonite). Malnutrition chronique chez l'enfant. 800 millions de personnes infectées.",
+      "virulence": "Migration larvaire (réaction allergique). Volume des adultes. Compétition nutritionnelle (fer, protéines).",
+      "traitements": "Albendazole (400 mg dose unique — 1ère ligne) ou mébendazole (500 mg dose unique). Ivermectine. Traitements préventifs de masse (MDA) chez les enfants d'âge scolaire (OMS). Amélioration de l'hygiène et de l'assainissement.",
+      "resistance": "Résistances aux benzimidazoles documentées chez les animaux (polymorphisme β-tubuline). Émergence possible chez l'humain.",
+      "vecteur_type": "Féco-oral",
+      "cycle_parasitaire_resume": "① Ingestion œufs embryonnés (mains, aliments, sol) → larves éclosent intestin grêle\n② Larves traversent paroi intestinale → circulation → foie → poumons (cycle de Looss, 2 sem)\n③ Remontée trachéale → déglutition → intestin grêle → vers adultes (20-35 cm)\n④ Vers adultes (durée vie 1-2 ans) → œufs dans fèces → sol (embryonnement 2-4 sem)",
+      "level": 1,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "trichinella.glb",
+      "name": "Trichinella spiralis",
+      "desc": "Nématode musculaire, trichinellose par la viande",
+      "classification": "Nématode (Trichinellidae)",
+      "vecteur": "Ingestion de viande crue ou insuffisamment cuite de porc, sanglier, cheval, ours (larves enkystées)",
+      "cycle": "Cycle entièrement intravivipare chez un seul hôte. 1. Larves enkystées ingérées → libération dans l'intestin → adultes (3–4mm, 1–5j). 2. Femelles vivipares pondent des larves directement dans la muqueuse. 3. Larves via circulation → muscles striés squelettiques (diaphragme, masséter, intercostaux) → enkystement dans les cellules nourricières (nurse cells) → persistance des années.",
+      "pathologies": "Phase intestinale : diarrhée, nausées (1–7j). Phase d'invasion musculaire (7–30j) : fièvre, myalgies intenses, œdème facial, éosinophilie massive, CPK élevée. Phase d'enkystement : calcification progressive. Formes graves : myocardite, encéphalite. Épidémies liées au gibier.",
+      "virulence": "Larves dans les muscle 'nurse cells' (cellules nourricières modifiées — vaisseaux néoformés). Résistance à la digestion gastrique.",
+      "traitements": "Phase intestinale précoce : albendazole (7–14j) ou mébendazole. Phase tardive (myosite) : corticoïdes + albendazole. Prévention : cuisson de la viande (63°C cœur), congélation (-15°C / 20j — sauf T. nativa arctique résistante à la congélation).",
+      "resistance": "Résistances aux benzimidazoles : T. nativa naturellement moins sensible.",
+      "vecteur_type": "Alimentaire",
+      "cycle_parasitaire_resume": "① Ingestion viande peu cuite (porc, sanglier, cheval) contenant larves enkystées\n② Larves libérées → intestin grêle → vers adultes (quelques mm) → femelles pondent larves vivantes\n③ Larves L1 → circulation → muscles striés (diaphragme, intercostaux, masséter) → enkystement intramyocytaire (décennies)\n④ CYCLE FERMÉ CHEZ L'HUMAIN (impasse parasitaire) — transmission uniquement par consommation de chair infectée",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "entamoeba_histolytica.glb",
+      "name": "Entamoeba histolytica",
+      "desc": "Amibe pathogène, amibiase et abcès hépatique",
+      "classification": "Amibozone (Protozoaire)",
+      "vecteur": "Ingestion de kystes dans l'eau ou les aliments souillés (oro-fécal)",
+      "cycle": "1. Ingestion de kystes → excystation dans le côlon → trophozoïtes (forme mobile, pathogène). 2. Invasion de la muqueuse colique (ulcères en bouton de chemise — caractéristiques). 3. Dissémination hématogène → foie (abcès amibien) → rarement poumons, cerveau. 4. Enkystement → kystes excrétés dans les fèces (forme de résistance et de contagion).",
+      "pathologies": "Amibiase intestinale : diarrhée glairo-sanglante (rectorragies), colite ulcéreuse amibienne, colique. Amibiase invasive : abcès hépatique amibien (douleur HCD, fièvre, séro-diagnostic) — 1ère cause d'abcès hépatique dans les pays endémiques. 50 millions de cas/an, 70 000 décès/an.",
+      "virulence": "Lectine Gal/GalNAc (fixation aux entérocytes). Amoebapores (perforines — lyse cellulaire). Protéases à cystéine (EhCP1–8 — invasion tisssulaire). Phagocytose active des GR (érythrophagocytose — diagnostic microscopique).",
+      "traitements": "Métronidazole (750 mg × 3/j × 10j — trophozoïtes). Suivi : tiliquinol + tilbroquinol (Intetrix® — luminal) ou paromomycine pour éliminer les kystes résiduels. Drainage si abcès hépatique volumineux.",
+      "resistance": "Résistances au métronidazole rares mais décrites.",
+      "vecteur_type": "Féco-oral",
+      "cycle_parasitaire_resume": "① Ingestion kystes (eau, aliments, mains) → excystation intestin grêle\n② Trophozoïtes dans côlon → forme commensale (E. dispar) OU envahissante (E. histolytica)\n③ Trophozoïtes envahissants : ulcères muqueuse colique (colite amibienne) → bactériémie → abcès hépatique\n④ Enkystement (côlon) → kystes dans fèces → contamination eau/sol → nouveau cycle",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "trypanosoma_cruzi.glb",
+      "name": "Trypanosoma cruzi",
+      "desc": "Maladie de Chagas, trypanosomiase américaine",
+      "classification": "Kinétoplastidé (Excavé)",
+      "vecteur": "Réduve hématophage (Triatoma infestans, Rhodnius prolixus) — contamination par déjections (pas la piqûre), transfusion sanguine, voie orale (jus de fruits contaminés), transmission materno-fœtale",
+      "cycle": "1. Réduve défèque sur la peau après piqûre → trypomastigotes métacycliques pénètrent via muqueuse ou excoriation. 2. Invasion des macrophages et des cellules musculaires → transformation en amastigotes (multiplication intracellulaire). 3. Lyse cellulaire → libération de trypomastigotes sanguins. 4. Réservoir : réduve ingère trypomastigotes → epimastigotes dans l'intestin → trypomastigotes métacycliques dans les fèces.",
+      "pathologies": "Phase aiguë : signe de Romaña (œdème oculaire unilatéral — porte d'entrée conjonctivale), fièvre, myocardite aiguë (potentiellement mortelle). Phase chronique (10–30 ans plus tard) : cardiomyopathie chagasique chronique (arythmies, insuffisance cardiaque — 1ère cause de cardiomyopathie en Amérique latine), méga-œsophage, mégacôlon. 6–7 millions de personnes infectées, 12 000 décès/an.",
+      "virulence": "Invasion active de cellules non phagocytaires. Protéines trans-sialidases (évasion immunitaire). Réservoir intracellulaire dans les cardiomyocytes → persistance à vie.",
+      "traitements": "Benznidazole (Radanil® — 60 mg/kg/j × 60j — 1ère ligne, efficace en phase aiguë et congénitale). Nifurtimox (Lampit® — 10–15 mg/kg/j × 60–90j — 2e ligne). Efficacité phase chronique limitée. Pas de vaccin. Lutte anti-vectorielle (insecticides pyréthrinoïdes).",
+      "resistance": "Résistance au benznidazole et nifurtimox : mécanismes enzymatiques (réduction nitro) décrits. Préoccupation croissante.",
+      "vecteur_type": "Triatome",
+      "cycle_parasitaire_resume": "① Réduvidé (Triatoma/Rhodnius) pique + défèque → trypomastigotes métacycliques dans déjections\n② Grattage → pénétration cutanée/muqueuse → trypomastigotes → cellules (macrophages, cardiomyocytes, neurones)\n③ Amastigotes intracellulaires (multiplication) → trypomastigotes libérés → circulation sanguine\n④ Repas sanguin réduvidé → trypomastigotes ingérés → épimastigotes intestin → trypomastigotes métacycliques rectum → déjections",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "giardia_lamblia.glb",
+      "name": "Giardia lamblia",
+      "desc": "Protozoaire flagellé, diarrhée du voyageur et malabsorption",
+      "classification": "Diplomonadé (Excavé — archéprotiste)",
+      "vecteur": "Ingestion de kystes dans l'eau contaminée ou aliments souillés (oro-fécal). Résistance des kystes au chlore (nécessite filtration ou UV).",
+      "cycle": "1. Ingestion de 10–100 kystes (dose infectante faible). 2. Excystation dans le duodénum → trophozoïtes binucléés, biflagellés (8 flagelles), en forme de poire. 3. Adhésion à l'épithélium duodéno-jéjunal par disque ventral (ventouse mécanique — pas d'invasion tissulaire). 4. Multiplications par fission binaire. 5. Enkystement dans le côlon → kystes excrétés (semaines à mois).",
+      "pathologies": "Giardiose : diarrhée grasse malodorante (stéatorrhée), ballonnements, flatulences, crampes abdominales, nausées. Chronicité fréquente → malabsorption (graisses, vitamines liposolubles, lactose) → retard de croissance chez l'enfant. Asymptomatique dans 50 % des cas. 280 millions de cas symptomatiques/an — parasite intestinal le plus répandu dans le monde.",
+      "virulence": "Disque ventral (adhésion mécanique à l'entérocyte sans invasion). Variation antigénique des protéines de surface VSP (Variant-Specific Surface Proteins) → évasion immunitaire. Altération des jonctions serrées épithéliales → malabsorption.",
+      "traitements": "Métronidazole (500 mg × 3/j × 5–7j — 1ère ligne, efficacité 80–95 %). Tinidazole (2g dose unique — aussi efficace, mieux toléré). Albendazole (400 mg/j × 5j — alternative). Nitazoxanide (enfants). Traitement de l'eau : filtration (< 1 µm) ou UV (les kystes sont chloro-résistants).",
+      "resistance": "Résistance au métronidazole (5–20 % selon les régions) : mécanismes impliquant la pyruvate-ferrédoxine oxydoréductase. Tinidazole en alternative.",
+      "vecteur_type": "Féco-oral",
+      "cycle_parasitaire_resume": "① Ingestion kystes (eau, aliments) → excystation duodénum (dose infectieuse : 10-25 kystes!)\n② Trophozoïtes (piriformes, 2 noyaux, disque ventral adhésif) colonisent intestin grêle proximal\n③ Trophozoïtes → atrophie villosités → malabsorption (graisses, vitamines liposolubles, B12)\n④ Enkystement côlon distal → kystes dans fèces (résistants chlore, survie eau froide 2-3 mois)",
+      "level": 1,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "echinococcus_granulosus.glb",
+      "name": "Echinococcus granulosus",
+      "desc": "Cestode, hydatidose (kyste hydatique), zoonose majeure",
+      "classification": "Cestode (Ver plat — Cyclophyllidea)",
+      "vecteur": "Ingestion d'œufs excrétés par le chien (hôte définitif) via mains ou aliments souillés. Hôtes intermédiaires naturels : mouton, bœuf, porc.",
+      "cycle": "1. Œufs ingérés par l'humain (hôte intermédiaire accidentel) → oncosphères dans l'intestin grêle → pénétration de la muqueuse → circulation portale → foie (70 %), poumons (20 %), autres organes. 2. Développement du kyste hydatique (kyste uniloculaire à croissance lente) : membrane proligère interne (germinative) → protoscolex et vésicules-filles → liquide hydatique (antigénique). 3. Croissance sur des années (1–2 cm/an). Cycle ANIMAL : le chien s'infeste en ingérant les organes des hôtes intermédiaires (viscères).",
+      "pathologies": "Hydatidose (échinococcose kystique) : kyste hépatique (masse abdominale, ictère par compression biliaire), pulmonaire (hémoptysie, dyspnée), cérébral, osseux. Risque de RUPTURE du kyste → choc anaphylactique + dissémination (hydatidose secondaire multiple). E. multilocularis : échinococcose alvéolaire (envahissement « pseudo-tumoral » → fatale sans traitement). 1 million de cas prévalents.",
+      "virulence": "Croissance kystique silencieuse (asymptomatique des années). Liquide hydatique (anaphylaxie si rupture). Vésicules-filles (dissémination si rupture).",
+      "traitements": "Chirurgie (résection ou technique PAIR — Ponction-Aspiration-Injection-Réaspiration, guidée par écho). Albendazole 400 mg × 2/j (long cours — avant/après chirurgie, ou seul si inopérable). Mébendazole (2e ligne). E. multilocularis : albendazole au long cours + résection chirurgicale radicale si possible.",
+      "resistance": "Résistances aux benzimidazoles non documentées chez l'humain. Difficulté : mauvaise pénétration de l'albendazole dans le kyste.",
+      "vecteur_type": "Alimentaire",
+      "cycle_parasitaire_resume": "① Chien (hôte définitif) → proglottis + œufs dans fèces → contamination pâturages/eau\n② Humain/mouton ingère œufs → embryon hexacanthe perce intestin → circulation → foie (70%), poumon (20%), autres\n③ Kyste hydatique (membrane chitineuse + proligère) → protoscolex → vésicules filles (croissance lente, années)\n④ Mouton mange organes infectés (abattoir) → protoscolex → ver adulte chez chien → cycle",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "wuchereria_bancrofti.glb",
+      "name": "Wuchereria bancrofti",
+      "desc": "Filaire lymphatique, éléphantiasis, filariose de Bancroft",
+      "classification": "Nématode filarien (Spirurina)",
+      "vecteur": "Moustiques Culex (C. quinquefasciatus — zones tropicales), Aedes, Anopheles selon les régions — piqûre nocturne",
+      "cycle": "1. Moustique infeste libère des larves infectantes (L3) lors de la piqûre. 2. Larves → canaux lymphatiques → vers adultes (mâle 4 cm, femelle 8–10 cm) → vivent 5–8 ans dans les nœuds lymphatiques. 3. Femelles vivipares → microfilaires dans le sang (périodicité nocturne — adaptée aux vecteurs nocturnes). 4. Moustique ingère microfilaires → larves L1 → L3 infestantes dans les glandes salivaires.",
+      "pathologies": "Filariose lymphatique (FL) — principale cause mondiale d'éléphantiasis. Phase aiguë (ADL — Adénolymphangite Dermato-lymphangitique) : fièvre récurrente, lymphadénite, orchi-épididymite. Phase chronique : lymphœdème progressif (jambes, scrotum, seins), éléphantiasis (hypertrophie tissulaire irréversible), hydrocèle. 51 millions de personnes infectées, 120 millions à risque. Endémique dans 72 pays.",
+      "virulence": "Les vers adultes dans les lymphatiques → lymphangite et obstruction. Endosymbionte Wolbachia (bactérie intracellulaire obligatoire des filaires — cible thérapeutique clé).",
+      "traitements": "Diéthylcarbamazine (DEC — microfilaricide + macrofilaricide partiel). Ivermectine (microfilaricide). Albendazole (antifertilité du ver adulte). Programme OMS MDA : DEC + albendazole ou ivermectine + albendazole (zones co-endémiques onchocercose). Doxycycline 200 mg/j × 4–6 semaines (tue Wolbachia → stérilisation puis mort des adultes — révolution thérapeutique). Prévention : moustiquaires, répulsifs.",
+      "resistance": "Résistances à la DEC peu documentées. Résistances à l'ivermectine en surveillance.",
+      "vecteur_type": "Moustique",
+      "cycle_parasitaire_resume": "① Moustique (Culex quinquefasciatus ++) pique → larves L3 infestantes déposées sur peau\n② L3 → vaisseaux lymphatiques → vers adultes (mâle + femelle, 6-10 cm) → lymphangite\n③ Microfilaires (embryons) → sang périphérique (périodicité nocturne selon espèce)\n④ Repas sanguin moustique → microfilaires → larves L1→L2→L3 dans thorax moustique (10-14j) → transmission",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "cryptosporidium.glb",
+      "name": "Cryptosporidium parvum/hominis",
+      "classification": "Protozoaire apicomplexa — Cryptosporidiidae",
+      "desc": "Coccidies intracellulaires intestinales. Cause majeure de diarrhée chez l'immunodéprimé (SIDA : diarrhée profuse, mortelle). Résistant à la chloration.",
+      "cycle": "Ingestion oocystes (4 sporozoïtes, très résistants). Libération sporozoïtes → pénétration entérocytes → mérontes I → mérozoïtes I → mérontes II → mérozoïtes II → gamétocytes → oocystes (éliminés selles). Cycle court dans même hôte (auto-infestation).",
+      "vecteur": "Eau de boisson et de baignade (résiste 72h à chloration standard). Zoonose (bovins). Contamination fécale. Très faible dose infectante (10-30 oocystes).",
+      "pathologies": "Immunocompétent : diarrhée aiguë liquidienne spontanément résolutive (1-2 semaines). Immunodéprimé (CD4 < 100/µL) : diarrhée profuse (10-15 L/j), cholangiosclérose cryptosporidienne, perte de poids, déshydratation → fatal sans traitement ARV.",
+      "virulence": "Localisation intracellulaire mais extracytoplasmique → difficilement accessible aux traitements. Mécanismes protéines d'adhésion GP40-900.",
+      "traitements": "Immunocompétent : réhydratation. Immunodéprimé : nitazoxanide (seul traitement ayant AMM, efficacité partielle en l'absence d'immunité) + restauration immunité (ARV pour SIDA). Paromomycine (amine non résorbable). Pas de traitement curatif idéal.",
+      "resistance": "Résistance naturelle à la majorité des antiparasitaires usuels (métronidazole inactif !).",
+      "vecteur_type": "Féco-oral",
+      "cycle_parasitaire_resume": "① Ingestion oocystes (eau non filtrée, piscines, contact animal) — dose infectieuse très faible (10-100 oocystes)\n② Sporozoïtes → entérocytes (intracellulaires mais extracytoplasmiques = localisation unique)\n③ Mérontes type I (asexué) → méroïtes → reinfection (autoinfection) ET mérontes type II\n④ Gamétocytes → oocystes sporulés dans fèces (résistants au chlore, UV nécessaires)",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "trypanosoma_cruzi.glb",
+      "name": "Trypanosoma cruzi — Maladie de Chagas",
+      "classification": "Protozoaire flagellé — Kinetoplastea",
+      "desc": "Trypanosome américain, agent de la maladie de Chagas. Transmis par triatomes (punaises réduvides). Endémique Amérique latine, 6-7 millions malades.",
+      "cycle": "Piqûre triatome (Triatoma infestans, Rhodnius prolixus) → dépôt déjections infectantes → contamination par contact conjonctive/muqueuse/lésion cutanée. Trypomastigotes → pénétration macrophages/cellules muscle → amastigotes (réplication) → rupture cellule → trypomastigotes sanguins → ingestion par triatome → cycle complet. Transmission congénitale, transfusion, greffe.",
+      "vecteur": "Triatomes ('punaises des bois'). Piqûre nocturne. Réservoirs : rongeurs, tatous, chats, chiens.",
+      "pathologies": "Phase aiguë : chagome (inoculation cutanée), signe d'Romaña (œdème palpébral unilatéral), fièvre, syndrome mononucléosique. Cardiomyopathie chagasique chronique (arythmies, bloc AV, insuffisance cardiaque dilatée, mort subite). Mega-organes : mégaœsophage, mégacôlon (pléxus d'Auerbach détruits).",
+      "virulence": "Trans-sialidases de surface (évasion immunitaire). Auto-immunité contre tissus hôte (tropisme cardiaque). Evasion apoptose macrophages.",
+      "traitements": "Benznidazole (traitement de référence, recommandé OMS) : efficace en phase aiguë (>95% guérison). Nifurtimox. Limites : efficacité faible en phase chronique. Durée longue (60-90j). Effets indésirables fréquents (neuropathie, rash).",
+      "resistance": "Résistance benznidazole documentée (mutations nitroreductases). Nouvelles cibles : CYP51 (posaconazole — essais négatifs en chronique).",
+      "vecteur_type": "Triatome",
+      "cycle_parasitaire_resume": "① Triatome (punaise des assassins) pique → défèque → trypomastigotes métacycliques\n② Grattage → contamination plaie/muqueuse → cellules hôte → amastigotes (réplication)\n③ Amastigotes → trypomastigotes → lyse cellulaire → circulation → cardiomyocytes/SNA\n④ Repas sanguin triatome → cycle chez l'insecte (épimastigotes → trypomastigotes)",
+      "level": 3,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "leishmania_detail.glb",
+      "name": "Leishmania — Formes Cliniques et Traitement",
+      "classification": "Protozoaire flagellé — Trypanosomatidae",
+      "desc": "Protozoaires intracellulaires transmis par phlébotomes. Tropisme selon espèce : cutané, cutanéomuqueux ou viscéral (kala-azar). Zoonose majeure mondiale.",
+      "cycle": "Piqûre phlébotome femelle infectée → promastigotes (flagellés) → macrophages dermiques → amastigotes (intracellulaires, sans flagelle visible) → multiplication → lyse macrophage → dissémination. Phlébotome se nourrit → ingestion amastigotes → transformation promastigotes dans intestin phlébotome.",
+      "vecteur": "Phlébotomus (Ancien Monde), Lutzomyia (Nouveau Monde). Réservoirs : chiens (L.infantum), rongeurs, humain (L.donovani).",
+      "pathologies": "Leishmaniose cutanée (L.major, L.tropica, L.mexicana) : ulcère cutané (bouton d'Orient), auto-résolutif. Cutanéomuqueuse (L.braziliensis) : destructions naso-oropharyngées mutilantes. Viscérale (L.donovani, L.infantum = kala-azar) : fièvre, splénomégalie, hépatosplénomégalie, pancytopénie, amaigrissement → mortelle si non traitée. Leishmaniose du voyageur et co-infection VIH (réactivation).",
+      "virulence": "Survie dans macrophages : inhibition PKC, inhibition explosion oxydative, modulation TLR. Surface lipophosphoglycane (LPG) : protection.",
+      "traitements": "Viscérale : amphotéricine B liposomale AmBisome® (4-5mg/kg/j, 5-10j, référence en Europe/USA). Miltéfosine (orale, 28j, CI grossesse). Antimoniate de méglumine (Glucantime® IM/IV, ancien, toxicité cardiaque/pancréas). Paromomycine IM. Cutanée : cicatrisation spontanée possible, cryothérapie locale, antimoniate si récidive.",
+      "resistance": "Résistance antimoniés (Inde : > 60% L.donovani). Mécanisme : ↑ efflux (ABCC3), ↓ activation, ↑ glutathione/trypanothione.",
+      "vecteur_type": "Phlébotome",
+      "cycle_parasitaire_resume": "① Phlébotome femelle pique → promastigotes dans peau\n② Macrophages cutanés → amastigotes (multiplication intracellulaire)\n③ LCL : containment immun local → ulcère cutané\n④ LV (kala-azar) : dissémination amastigotes → foie/rate/moelle\n⑤ Phlébotome → amastigotes → promastigotes → glandes salivaires",
+      "level": 3,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "toxocara.glb",
+      "name": "Toxocara canis/cati — Toxocarose",
+      "classification": "Nématode — Ascarididae",
+      "desc": "Larves migrans viscérale ou oculaire. Parasite très fréquent du chien et chat (ascaris), accidentellement transmis à l'homme. Séroprévalence élevée (10-15% France).",
+      "cycle": "Ingestion œufs embryonnés (sols contaminés, mains sales, légumes) → libération larves intestin → migration tissulaire (foie, poumons, SNC, yeux) → Larva Migrans Viscérale (LMV). Pas de cycle adulte chez l'homme (hôte accidentel). Chien/chat : cycle complet (larves → adultes intestin).",
+      "vecteur": "Ingestion directe d'œufs (terrains contaminés par défécations chiens/chats non vermifugés). Pica (géophagie chez enfants). Ingestion de viande insuffisamment cuite (foie de poulet, lapin).",
+      "pathologies": "LMV (enfant 1-5 ans) : fièvre, hyperéosinophilie massive (> 1,5 G/L), hépatosplénomégalie, hypergammaglobulinémie. LMO (Larva Migrans Oculaire) : adolescents/adultes, granulome rétinien, perte vision (cécité possible si non traité). Forme neurologique : rare (larves SNC).",
+      "virulence": "Excrétion-sécrétions larvaires (TES antigens) → réaction immunologique granulomateuse. Évasion immunitaire par mimicry antigénique.",
+      "traitements": "Albendazole (400mg×2/j pendant 5j) : traitement de référence LMV. Corticoïdes associés si atteinte oculaire ou SNC (inflammation locale grave). Laser photocoagulation (LMO : détruire larve rétinienne). Prévention : vermifugation régulière chiens/chats, hygiène mains.",
+      "resistance": "Benzimidazoles (albendazole, mébendazole) actifs. Résistance rare chez nématodes vétérinaires (émergence).",
+      "vecteur_type": "Féco-oral",
+      "cycle_parasitaire_resume": "① Chien/chat → œufs Toxocara dans fèces → sol (survie des années)\n② Enfant ingère œufs (géophagie, bac à sable) → larves L2 intestin → 'larva migrans'\n③ Larves migrent foie, poumons, yeux, cerveau (viscéral) ou œil (oculaire) — IMPASSE PARASITAIRE (pas d'adultes chez humain)\n④ Larves enkystées dans tissus → réaction inflammatoire éosinophilique → granulome",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "ixodes_lyme.glb",
+      "name": "Ixodes scapularis/ricinus — Tiques et Borréliose de Lyme",
+      "classification": "Arachnide — Ixodidae",
+      "desc": "Tiques dures vecteurs de Borrelia burgdorferi (maladie de Lyme), Rickettsia, Babesia, Ehrlichia, encéphalite à tiques. Vecteur de nombreuses maladies émergentes.",
+      "cycle": "Cycle à 3 hôtes (larve → nymphe → adulte). Repas sanguin à chaque stade. Nymphe = principale stade vecteur pour l'homme (petite taille, difficile à voir). Borrelia : transmission après 36-48h d'attachement (fenêtre de prévention). Réservoir : rongeurs (mulots), cervidés.",
+      "vecteur": "Ixodes ricinus (Europe), I.scapularis (Amérique du Nord). Milieux humides, lisières forêts, herbes hautes. Activité : printemps-automne (T° > 7°C). Expansion géographique nord (réchauffement climatique).",
+      "pathologies": "Maladie de Lyme (Borrelia burgdorferi) : Phase 1 locale : érythème migrant (EM, > 5cm, expansion centrifuge, pathognomonique). Phase 2 disséminée : neuroborréliose (méningite, paralysie faciale, radiculopathie), cardite (BAV). Phase 3 tardive : arthrite de Lyme (genou ++). Autres infections transmises : Babesia microti (hémolyse), Rickettsia helvetica, TBE (tick-borne encephalitis).",
+      "virulence": "Borrelia : échappement immunité (variation antigénique OspC/VlsE). Injection d'inhibiteurs du complément via salive.",
+      "traitements": "Lyme phase 1 : doxycycline 100mg×2/j, 14j (adulte et enfant > 8 ans) ou amoxicilline (enfant < 8 ans, femme enceinte), azithromycine (allergie). Phase 2 neuro : ceftriaxone IV 14-21j. Prophylaxie post-piqûre : doxycycline 200mg dose unique si Ixodes attaché > 36h, < 72h après retrait. Retrait tique : tire-tique (rotation antihoraire), désinfection.",
+      "resistance": "Borrelia : résistance naturelle aminosides (pas d'utilisation). Fluoroquinolones faible activité. Doxycycline : résistance non décrite.",
+      "vecteur_type": "Tique",
+      "cycle_parasitaire_resume": "① Larve Ixodes (6 pattes) → repas sanguin sur rongeur infecté → Borrelia dans intestin tique\n② Mue → nymphe (8 pattes) → repas sanguin sur humain (STADE LE PLUS DANGEREUX — petite, peu visible)\n③ Transmission Borrelia ≥ 24-48h fixation → érythème migrant (début maladie de Lyme)\n④ Mue → adulte → repas sanguin → ponte → nouvelle génération (cycle 2-3 ans)",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "fasciola.glb",
+      "name": "Fasciola hepatica — Douve du Foie",
+      "classification": "Trématode — Fasciolidae",
+      "desc": "Grande douve du foie : trématode hermaphrodite, parasite des voies biliaires. Zoonose bovine/ovine accidentelle chez l'homme. Traitement spécifique : triclabendazole.",
+      "cycle": "Adulte dans voies biliaires (mouton, bovins, humain) → œufs dans bile → fèces → miracidies libres → Limnaea truncatula (mollusque aquatique, hôte intermédiaire) → cercaires → métacercaires sur végétaux aquatiques (cresson++) → ingestion humain → excystation duodénale → larves migrent paroi intestinale → foie → voies biliaires → adulte (30×13mm). Longue migration hépatique (2-3 mois).",
+      "vecteur": "Ingestion cresson sauvage, pissenlit, mâche contaminés par métacercaires. Eau de rivière contaminée. Zoonose bovine.",
+      "pathologies": "Phase d'invasion (migration larvaire hépatique) : douleur HCD, fièvre, hyperéosinophilie massive (> 2 G/L), hépatomégalie. Phase d'état (adultes dans voies biliaires) : angiocholite récidivante, lithiase biliaire, cirrhose biliaire secondaire (chronique). Biliaire obstructive → ictère.",
+      "virulence": "Protéases cystéine (cathepsine L) : migration tissulaire. Immunomodulation (désactivation macrophages).",
+      "traitements": "Triclabendazole (Egaten®) : seul traitement efficace sur toutes formes (migration + adulte). Dose unique 10mg/kg, ou 10mg/kg×2 si résistance. Remboursé sous ATU (Autorisation Temporaire d'Utilisation) en France. Albendazole et autres benzimidazoles : INEFFICACES. Bithionol : alternative (moins disponible).",
+      "resistance": "Triclabendazole résistance émergente (Australie, Europe) : mécanisme ↓ absorption, ↑ P-gp hépatique. Surveillance vétérinaire (ovins traités intensivement).",
+      "vecteur_type": "Alimentaire",
+      "cycle_parasitaire_resume": "① Ingestion métacercaires enkystées sur cresson/herbe humide\n② Larves → intestin → paroi → péritoine → foie (migration 6-8 semaines, phase aiguë)\n③ Vers adultes (30mm) dans voies biliaires → bilirubine + cholestase (phase chronique)\n④ Œufs dans bile → fèces → eau douce → miracidiums → Lymnaea (mollusque) → cercaires → métacercaires",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "anopheles_malaria.glb",
+      "name": "Anopheles — Vecteur du Paludisme",
+      "classification": "Arthropode — Diptera, Culicidae",
+      "desc": "Moustique femelle vecteur obligatoire du paludisme (Plasmodium spp.). Seule la femelle pique (besoin sanguin pour ovogenèse). 40 espèces vecteurs majeurs dont An. gambiae (Afrique subsaharienne, vecteur le plus efficace).",
+      "cycle": "Femelle anophèle pique hôte infecté → ingestion gamétocytes Plasmodium → fécondation dans estomac → oocyste → sporozoïtes migrent vers glandes salivaires → piqûre nouvel hôte → injection sporozoïtes. Incubation entomologique : 10-14j (T° dépendant).",
+      "vecteur": "An. gambiae (Afrique), An. darlingi (Amazonie), An. stephensi (Asie-Inde). Gîtes larvaires : eaux stagnantes, rizières, marigots. Activité nocturne (crépusculaire-aube). Espérance de vie femelle : 4-6 semaines.",
+      "pathologies": "Vecteur de Plasmodium (paludisme) : 247 millions cas/an, 619 000 morts (2022, OMS), 95% en Afrique. Transmission d'autres parasites rares (mais Anopheles = principalement vecteur Plasmodium).",
+      "virulence": "Vecteur passif. Efficacité vectorielle : capacité vectorielle (espèce × longévité × taux piqûre × infectivité).",
+      "traitements": "Lutte antivectorielle : MILD (moustiquaires imprégnées longue durée : deltaméthrine, perméthrine, pyriproxyfen), pulvérisation intradomiciliaire (PID). Répulsifs cutanés : DEET 30-50%, icaridine 20%, IR3535. Gestion gîtes larvaires. Vaccin RTS,S/AS01E (Mosquirix®) : efficacité 30-50% (OMS recommande Afrique subsaharienne depuis 2021). Vaccin R21/Matrix-M : efficacité 75-80%, OMS 2023. Médicaments antipaludiques (traitement/prophylaxie) : cf. Plasmodium falciparum.",
+      "resistance": "Résistance insecticides majeure : pyréthrinoïdes (An. gambiae Afrique). Mécanismes : mutations kdr (canaux sodium), amplification CYP enzymes (P450 CYP6M2, CYP6P3). Urgence santé publique.",
+      "vecteur_type": "Moustique",
+      "cycle_parasitaire_resume": "① Femelle Anopheles pique hôte infecté → ingère gamétocytes avec repas sanguin\n② Gamétocytes → gamètes → ookinète → oocyste paroi estomac → sporozoïtes\n③ Sporozoïtes migrent glandes salivaires → inoculés lors piqûre (10-14j après repas infectant)\n④ Caractéristiques vectorielles : repos en intérieur (endophile), piqûre nocturne, ponte eau stagnante claire",
+      "level": 1,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "taenia_solium.glb",
+      "name": "Taenia solium — Cysticercose",
+      "classification": "Cestode — Taeniidae",
+      "desc": "Ténia du porc. Double danger : téniasis intestinal (adulte) + cysticercose systémique/cérébrale (larve = cysticerque). Cause majeure d'épilepsie acquise en pays en développement.",
+      "cycle": "Humain hôte définitif (adulte intestinal, 2-7m) : ingestion viande porc crue/peu cuite contenant cysticerques → adulte dans intestin grêle (téniasis). Humain peut être hôte intermédiaire accidentel (cysticercose) : ingestion œufs (aliments contaminés, mains porteurs de T.solium intestinal, auto-infestation) → oncosphère → cysticerques dans muscles, cerveau, yeux, tissu sous-cutané.",
+      "vecteur": "Pas de vecteur. Transmission : viande porc (téniasis), eau/aliments contaminés par fèces humains (cysticercose). Cycle porcin : porcs ingèrent œufs (copropha) → cysticerques dans muscles.",
+      "pathologies": "Téniasis : asymptomatique souvent, troubles digestifs, anxiety (vision anneaux dans selles). Neurocysticercose (NCC) : crises épileptiques (cause la plus fréquente dans pays endémiques), HTIC, hydrocéphalie, signes focaux selon localisation. Yeux : cysticerque intra-oculaire (décollement rétine). Cysticercose musculaire/sous-cutanée : pseudo-tumeurs.",
+      "virulence": "Cysticerque : manteau anti-immunologique (protéines de surface), survie 10-30 ans dans SNC humain.",
+      "traitements": "Téniasis : praziquantel 10mg/kg dose unique (> 95% efficacité). Niclosamide alternative. NCC active : albendazole 400mg×2/j (15j) + corticoïdes (prévention œdème réactionnel lyse cysticerque) ± antiépileptiques. NCC calcifiée inactive : antiépileptiques seulement. Chirurgie : formes hydrocéphaliques (valve dérivation).",
+      "resistance": "Praziquantel : résistance non documentée chez Taenia. Albendazole : efficacité variable selon localisation (NCC intraparenchymateuse > extraparenchymateuse).",
+      "vecteur_type": "Féco-oral",
+      "cycle_parasitaire_resume": "① Humain (ou porc) ingère œufs de Taenia solium (mains sales, légumes crus, autoinfection)\n② Hexacanthe éclot → perfore intestin → circulation → cerveau/muscles/œil → CYSTICERQUE (vésicule 1-2 cm)\n③ Cysticerques cervicaux → épilepsie (réponse inflammatoire à mort du kyste)\n④ Si humain mange porc parasité non cuit → taeniasis intestinal (ver adulte, non cysticercose)",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "aedes.glb",
+      "name": "Aedes aegypti/albopictus — Vecteurs Arboviroses",
+      "classification": "Arthropode — Diptera, Culicidae",
+      "desc": "Moustiques vecteurs de dengue, chikungunya, Zika, fièvre jaune. Ae.aegypti (tropical), Ae.albopictus (tigre, invasion tempérée). Expansion mondiale avec changement climatique.",
+      "cycle": "Femelle pique hôte virémique → virus amplifié dans épithélium intestinal → migration salivaires (10-14j extrinsèque) → piqûre → transmission. Diurne/crépusculaire. Gîtes larvaires : eaux anthropiques (pots, pneus, gouttières). Ponte sur paroi du récipient au-dessus du niveau de l'eau.",
+      "vecteur": "Ae.aegypti (ICTV principal) : Afrique, Amérique, Asie tropicale. Ae.albopictus (tigre asiatique) : envahissant, Europe (France métropolitaine depuis 2004), résistant au froid, compétent pour > 20 arbovirus. Aedes : moustique diurne ++ (vs Anopheles nocturne).",
+      "pathologies": "Dengue (DENV 1-4) : 400 millions infections/an, 40 000 morts, dengue sévère (thrombopénie, hémorragie, choc). Chikungunya (CHIKV) : arthralgies invalidantes (chronicisation 30%). Zika (ZIKV) : microcéphalie fœtale (transmission materno-fœtale), syndrome de Guillain-Barré. Fièvre jaune : insuffisance hépatique + rénale, hémorragie.",
+      "virulence": "Ae.aegypti : haute compétence vectorielle dengue (salive immunomodulatrice + injection virions simultanée). Résistance insecticides ++ (fréquence monde entier).",
+      "traitements": "Dengue : soins de support (hydratation, attention signes d'alarme thrombopénie). Pas d'antiviral. Vaccin dengue Dengvaxia® (Sanofi) : séropositifs > 9 ans (CI séronégatifs : aggravation). Dengue TAK-003 (Qdenga®, Takeda) : 2 doses, non requis antécédent, disponible EU 2023. Fièvre jaune : vaccin vivant atténué 17D (très efficace). Zika : pas de vaccin ni antiviral. Chikungunya : vaccin VLA1553 (Ixchiq®, Valneva) 2023.",
+      "resistance": "Résistance insecticides massives (pyréthrinoïdes kdr, mécanismes enzymatiques). Stratégies alternatives : Wolbachia (inhibe réplication virale dans Ae.aegypti), mâles stériles (OIM), moustiques génétiquement modifiés (OX513A Oxitec).",
+      "vecteur_type": "Moustique",
+      "cycle_parasitaire_resume": "① Femelle Aedes pique humain virémique → ingère arbovirus (Dengue, Zika, Chikungunya, fièvre jaune)\n② Réplication virale intestin moustique (dissemination period, 7-14j) → glandes salivaires (période extrinsèque)\n③ Moustique infectant → inocule virus lors piqûre suivante → hôte vertébré → virémie\n④ Aedes aegypti : diurne, péridomestique, gîtes petits (boîtes de conserve, pneus, gouttières). Aedes albopictus : plus généraliste, adapté zones tempérées",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "strongyloides.glb",
+      "name": "Strongyloides stercoralis — Anguillulose",
+      "desc": "Nématode unique capable d'autoinfection endogène → hyperinfection sous corticoïdes/immunosuppresseurs. Risque vital en transplantation et hémato-oncologie.",
+      "classification": "Nématode (ver rond) — Classe Secernentea, Ordre Rhabditida. Parasite obligatoire intestinal. SEUL nématode avec cycle parthénogénétique dans l'hôte (femelles parasites uniquement).",
+      "vecteur": "Transmission transcutanée : larves filarioïdes L3 dans sol contaminé → pénètrent peau nue (pieds ++) lors contact avec terre/sable humide. Aussi : transmission orale (rare), nosocomiale (toilette), sexuelle (HSH). Autoinfection endogène (cycle interne) : larves rhabditoïdes → L3 dans côlon → repénètrent muqueuse/peau périanale → poumons → intestin sans sortir de l'hôte.",
+      "vecteur_type": "Sol / Larves",
+      "cycle_parasitaire_resume": "① Larves L3 infestantes dans sol → pénètrent peau (pieds, chevilles)\n② Circulation → poumons → trachée → déglutition → intestin grêle (duodénum/jéjunum)\n③ Femelles parthénogénétiques (sans mâle) pondent œufs dans muqueuse → larves rhabditoïdes (L1) dans fèces\n④ AUTOINFECTION ENDOGÈNE : L1→L3 dans côlon → repénètre muqueuse/peau périanale → poumons → intestin (cycle sans sortir de l'hôte)\n⑤ HYPERINFECTION (immunodépression) : autoinfection s'emballe → millions de larves → dissémination bactérienne (larves transportent bactéries intestinales → sepsis à Gram-)\n⑥ Sol : L1 → larves rhabditoïdes libres (cycle indirect) → L3 → nouveau cycle",
+      "cycle": "Cycle complexe à TROIS voies possibles : 1) DIRECTE (court) : L3 sol → peau → poumons → intestin → femelles parthénogénétiques → L1 fèces → L3 sol (3-4 sem). 2) INDIRECTE (long, sols tropicaux) : L1 fèces → générations libres mâles/femelles → L3 → peau. 3) AUTOINFECTION ENDOGÈNE (propre à Strongyloides) : L1 intestinale → L3 in situ → repénètre muqueuse colique/peau périanale → circuit pulmonaire → intestin. Cette troisième voie = mécanisme de PERSISTANCE décennale sans réinfection extérieure et de HYPERINFECTION sous immunosuppression.",
+      "pathologies": "① ANGUILLULOSE CHRONIQUE (immunocompétents, zones endémiques tropicales/subtropicales) : Souvent asymptomatique (80%). Larva currens (urticaire linéaire migrant 5-10 cm/h sur peau abdomen/fesses — PATHOGNOMONIQUE). Diarrhée intermittente, crampes, nausées. Éosinophilie sanguine (30-50% — signe d'appel important). ② ANGUILLULOSE AIGUË (primo-invasion) : pneumopathie de Löffler (larves pulmonaires → toux, wheezing, infiltrats transitoires), douleurs épigastriques + diarrhée. ③ SYNDROME D'HYPERINFECTION (URGENCE VITALE — immunodépression : corticoïdes > 15j, transplantation, hémopathies, HTLV-1) : Explosion de l'autoinfection → millions de larves L3 → dissémination ubiquitaire (poumons, foie, SNC, reins). Transport de bactéries intestinales par larves → SEPSIS POLYBACTÉRIEN GRAM- (E. coli, Klebsiella) → méningite → mortalité 50-90%. CONTRE-INDICATION aux corticoïdes sans dépistage préalable chez sujets exposés. ④ DISSÉMINATION (immunodéprimés extrêmes) : larves dans LCR (méningite), myocarde, pancréas.",
+      "virulence": "Autoinfection endogène (unique parmi nématodes) → persistance décennale sans réexposition. Parthénogenèse femelles parasites → multiplication sans mâle in situ. Rhabditases (protéases cutanées) → pénétration peau active. Transport bactérien par larves (séquence signal surface L3 → adhésion E. coli/Klebsiella) → sepsis. Modulation immune : L3 sécrète inhibiteurs calréticuline-like → ↓ réponse Th2/éosinophilique.",
+      "traitements": "1re LIGNE : Ivermectine (Stromectol®, Mectizan®) 200 µg/kg/j × 2j (J1+J2) PO — à jeun ou avec eau. Taux de guérison 95%. Mécanisme : agoniste glutamate-gabaergique (canal Cl⁻ → paralysie ver). HYPERINFECTION : ivermectine 200 µg/kg/j jusqu'à négativity parasitologique (souvent 14j ou +) + ATB large spectre (Gram-). ALTERNATIVE : Albendazole 400 mg × 2/j × 3j (efficacité 60-70% — inférieure ivermectine). DÉPISTAGE PRÉALABLE OBLIGATOIRE avant tout traitement corticoïde ou immunosuppresseur prolongé chez patients originaires de zones endémiques (Sérologie ELISA anti-Strongyloides, sensibilité 85-95%, ou coproculture Baermann). Sérologie peut rester positive après guérison.",
+      "resistance": "Résistances à l'ivermectine décrites chez animaux (mutations avr-14/glc-1 — canaux Cl⁻ glutamate) — rares chez l'humain. Pas de résistances cliniquement significatives confirmées en parasitologie humaine. Albendazole : efficacité inférieure (60-70%).",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "acanthamoeba.glb",
+      "name": "Acanthamoeba sp. — Kératite et Encéphalite Granulomateuse",
+      "desc": "Amibe libre ubiquitaire — kératite cornéenne chez porteurs de lentilles (douleur disproportionnée, ++ PHBM), encéphalite granulomateuse (EGA) chez immunodéprimés. Traitement long et complexe.",
+      "classification": "Amibe libre (protiste) — Phylum Amoebozoa, Classe Discosea, Ordre Centramoebida. Genre Acanthamoeba (>20 espèces — T4 génotype = 90% infections humaines). Double forme : trophozoïte (actif) et kyste (résistant).",
+      "vecteur": "Aucun vecteur arthropode — transmission environnementale directe. Eau du robinet, piscines, jacuzzis, eaux naturelles, sable, poussières, sol, climatiseurs, solutions d'entretien de lentilles mal conservées. KÉRATITE : contact eau contaminée avec lentilles de contact (port en douche/piscine/baignade = CI absolue). ENCÉPHALITE GRANULOMATEUSE : inhalation de kystes (voie nasopharyngée) ou cutanée (plaies) → dissémination hématogène au SNC.",
+      "vecteur_type": "Lentilles de contact / Eau",
+      "cycle_parasitaire_resume": "① Trophozoïte dans eau contaminée (surface cornée ou nasopharynx)\n② Kératite : trophozoïtes → adhésion MBP (mannose-binding protein) → cornée → invasion épithéliale → stroma → anneau immunitaire périneuraux\n③ Stress → ENKYSTEMENT (kyste double paroi résistant : endokyste + ectokyste — résiste chlore, UV, biocides)\n④ EGA : voie respiratoire/cutanée → bactériémie → franchissement BHE → granulomes cérébraux\n⑤ Pas de cycle intermédiaire → parasite à vie libre (pas d'hôte obligatoire)",
+      "cycle": "CYCLE SIMPLE À DEUX STADES : Trophozoïte (15-45 µm, acanthopodes = pseudopodes épineux caractéristiques, mobile, se nourrit de bactéries) ⇌ Kyste (10-25 µm, double paroi, endokyste polygonal, ectokyste externe — résistance extrême : eau chlorée, congélation, séchage, UV, biocides usuels). Enkystement déclenché par : stress osmotique, pH extrême, manque nutriments. Dékystation : conditions favorables → trophozoïte. Pas de stade larvaire, pas d'hôte intermédiaire. Multiplication par division binaire (trophozoïte). Température optimale 25-37°C (thermotolérant — contrairement aux amibes mésophiles).",
+      "pathologies": "① KÉRATITE À ACANTHAMOEBA (KA) — Pathologie princeps : Facteur de risque N°1 : PORT DE LENTILLES + contact eau (douche, piscine, mer, robinet avec lentilles). Incidence : 1-2/100 000 porteurs de lentilles en pays développés. Incubation 1-3 semaines. Douleur cornéenne DISPROPORTIONNÉE (signe d'orientation majeur — hyperalgésie neurotrophique — inflammation périneurale). Photophobie, larmoiement, rougeur. Examen lampe à fente : pseudo-dendrites → ulcère stromal → anneau immunitaire (infiltrat périphérique en anneau = quasi-pathognomonique, tardif). Diagnostic : microscopie confocale cornéenne (trophozoïtes/kystes — sensibilité 80-90%), PCR cornée, culture sur gélose avec E. coli en couche. Évolution sans traitement : kératomalacia → cécité, kératoplastie. ② ENCÉPHALITE GRANULOMATEUSE À ACANTHAMOEBA (EGA) : Immunodéprimés (VIH CD4 < 50, transplantés, corticoïdes prolongés, diabétiques). Évolution subaiguë (semaines-mois, ≠ Naegleria foudroyante). Céphalées + fièvre + déficits focaux + convulsions + conscience ↓. IRM : lésions annulaires multifocales, rehaussement annulaire. LCR : méningite lymphocytaire aspécifique, culture rarement positive (amibe fragile). Biopsie cérébrale ± PCR. Mortalité > 95% sans traitement (et élevée même traité). ③ SINUSITE/RHINITE À ACANTHAMOEBA (voie d'entrée EGA). ④ KÉRATITE SANS LENTILLES (eau de rivière, traumatisme cornéen + exposition).",
+      "virulence": "Acanthopodes (pseudopodes épineux) → invasion tissulaire active. MBP (mannose-binding protein) → adhésion glycoprotéines cornée. Protéases (sérine-protéase, métalloprotéase MIP-133) → dégradation MEC + collagène + fibronectine cornée. Phospholipases → lyse membranaires cellulaires. Facteur apoptotique (AIF-like) → apoptose cellules cornée/neurones. Résistance kyste : biocides, UV, chlore → traitement difficile.",
+      "traitements": "KÉRATITE (traitement LONG, 6-12 mois minimum) : ★ PHBM (Polyhexaméthylène Biguanide / Polyhexanide, 0,02-0,06%) — biguanide cationique → déstabilisation membrane amibienne → trophozoïtes ET kystes. ★ Chlorhexidine 0,02% (alternative ou association). Association PHBM + Propamidine iséthionate (Brolène® 0,1%) ou hexamidine — synergie amibicide + kysticicide. Voriconazole collyre (activité sur Acanthamoeba). FRÉQUENCE : horaire (toutes les heures) pendant 1 semaine, puis toutes les 2h, puis diminution progressive. DURÉE TOTALE : 6-12 mois (kystes !!). Corticoïdes : CI en phase active initiale (favorisent multiplication), discutés secondairement pour inflammation. Kératoplastie (greffe cornée) : séquelles, récidive possible sur greffe. EGA : combinaison de plusieurs agents (azithromycine + kétoconazole + miltefosine + pentosmidine IV) — aucun protocole standardisé — mortalité très élevée.",
+      "resistance": "Kystes résistants à : chlore (piscines), UV (lampe UV stérilisation insuff.), alcool (solutions lentilles alcooliques insuffisantes!), benzalkonium chloride, polyhexanide à concentration insuffisante. Solution peroxyde H₂O₂ (3%) : meilleure option lentilles (détruit kystes si contact ≥ 6h). Résistances au PHBM décrites si exposition prolongée. Pas d'antifungiques classiques efficaces sur les kystes.",
+      "level": 3,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "naegleria.glb",
+      "name": "Naegleria fowleri — Méningoencéphalite Amibienne Primitive",
+      "desc": "\"L'amibe mangeuse de cerveau\" — Méningoencéphalite amibienne primitive (MAP) foudroyante. Mortalité 97%. Eaux chaudes douces (lacs, rivières, sources thermales). Amphotéricine B + miltefosine.",
+      "classification": "Amibe libre thermophile — Phylum Percolozoa (anciennement Heterolobosea). Seule espèce du genre Naegleria pathogène chez l'humain. TROIS formes : trophozoïte, flagellé (transitoire, non infectieux), kyste.",
+      "vecteur": "Eau douce chaude (> 30°C) : lacs naturels (température estivale ++), rivières chaudes, sources géothermales, piscines non chlorées ou mal chlorées, jacuzzis, rinçages nasaux avec eau non stérilisée (Neti pot). TRANSMISSION NASALE EXCLUSIVE : eau aspirée dans les fosses nasales (plongeons, natation, eau de surface) → épithélium olfactif → nerf olfactif → bulbe olfactif → SNC (voie neurotrope directe). PAS de transmission interhumaine, PAS d'ingestion intestinale pathogène.",
+      "vecteur_type": "Eau douce / Cercaires",
+      "cycle_parasitaire_resume": "① Trophozoïtes dans eau douce chaude (> 25°C optimal — croissance > 42°C possible)\n② Aspiration eau nasale → trophozoïtes adhèrent épithélium olfactif\n③ Phagocytose cellules épithéliales → migration le long du nerf olfactif (tractus nerveux direct!)\n④ Bulbe olfactif → cerveau antérieur → dissémination intra-SNC (NO méningée/vasculaire)\n⑤ Destruction massive parenchyme cérébral (nécrose hémorragique) → décès 3-7j\n⑥ AUCUN passage par sang/intestin (≠ autres amibes)",
+      "cycle": "Cycle environnemental : Trophozoïte libre (10-35 µm, lobopodes, mange bactéries) ⇌ Forme flagellée transitoire (2 flagelles, 7-15 µm, apparaît lors de changement osmotique — non infectieuse) ⇌ Kyste (dormance en conditions défavorables). Développement optimal : 35-46°C (thermophile). Survie dans sol humide et eau chaude. Dans l'hôte humain : trophozoïtes UNIQUEMENT → invasion cérébrale foudroyante, pas de cycle parasitaire établi (impasse fatale).",
+      "pathologies": "MÉNINGOENCÉPHALITE AMIBIENNE PRIMITIVE (MAP) — URGENCE VITALE ABSOLUE : Incidence : rare (< 400 cas mondiaux documentés depuis 1962, CDC USA) mais mortalité 97%. Contexte épidémiologique : jeunes adultes/enfants, baignade en eau douce chaude (été, pays du Sud + USA Midwest/Sud, zones géothermales Nouvelle-Zélande/Islande). Incubation TRÈS COURTE : 1-9 jours (moyenne 5j). PHASE 1 (J1-J3) : céphalées sévères frontales/temporales (début brutal), fièvre élevée (40-41°C), nausées, vomissements. PHASE 2 (J3-J7) : raideur de nuque, photophobie, altération conscience, convulsions, coma, décès. DIAGNOSIC (souvent post-mortem) : LCR = hémorragique ou xanthochromique, méningite à prédominance polynucléaire (peut mimer méningite bactérienne), glucose normal/bas, protéines ↑↑. Trophozoïtes dans LCR frais (microscopie directe — mobiles!) OU PCR Naegleria (CNR). IRM : inflammation olfactive + nécrose cérébrale multilobes. DIAGNOSTIC DIFFÉRENTIEL : méningite bactérienne, HSV encéphalite. SURVIE : < 3% (< 5 survivants rapportés avec traitement intensif précoce).",
+      "virulence": "Cystéine protéases (NfCPs) → digestion protéines cellulaires hôte. Phospholipases → lyse membrane cellulaire neuronale. Contact-dependent killing (trogocytosis) : trophozoïtes mordent des fragments de membrane neuronale (« eating » littéral). Neuraminidase → dégradation glycoprotéines surface. Amoebapore (pore-forming protein) → insertion membranaire → lyse cellulaire. Motilité directionnelle (taxis chimique vers tissu nerveux → substance glutamate-like + acides aminés).",
+      "traitements": "URGENCE THÉRAPEUTIQUE — TRAITEMENT SANS ATTENDRE CONFIRMATION (mortalité < 3j si non traité) : ★ Amphotéricine B liposomale (AmBisome®) : 1,5 mg/kg/j IV INTRAVEINEUX + intraventriculaire (0,1-0,5 mg via dérivation) — mécanisme : liaison ergostérol (présent dans membrane Naegleria) → perméabilisation → mort amibienne. ★ Miltefosine (Impavido®, initialement anti-leishmanien) : 2 mg/kg/j PO × 28j — mécanisme : inhibiteur phosphocholine transférase → déstabilisation membrane → apoptose amibienne. Activité in vitro > amphotéricine. Obtenu en compassionnel (CDC Emergency Operations). ★ Fluconazole/Voriconazole IV (activité complémentaire). ★ Azithromycine IV (activité synergique in vitro). ★ Dexaméthasone IV (controversée — réduire l'oedème cérébral). PROTOCOLE RECOMMANDÉ (5 survivants documentés) : Amphotéricine B IV + intraventriculaire + miltefosine PO + azithromycine IV + dexaméthasone IV + hypothermie thérapeutique (32-34°C). PRÉVENTION : éviter immersion nasale en eaux douces chaudes stagnantes (pince-nez), stérilisation eau Neti pot (ébullition ou filtre 0,2 µm).",
+      "resistance": "Pas de résistances acquises documentées (trop peu de cas traités pour établir données). Sensibilité aux polyènes (amphotéricine B) — cible ergostérol membranaire. Sensibilité à la miltefosine — cible phospholipides membranaires. Chlore des piscines : EFFICACE (0,5-1 ppm) → aucun cas dans piscines bien entretenues. Eau du robinet peut contenir N. fowleri (cas rinçages nasaux USA) → risque si eau chaude stagnante (réseaux eau chaude).",
+      "level": 3,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "babesia.glb",
+      "name": "Babesia microti — Babésiose",
+      "desc": "Protozoaire intra-érythrocytaire transmis par tique Ixodes. Co-infection possible avec Borrelia (Lyme) et Anaplasma. Transmission transfusionnelle. Forme grave chez aspléniés/immunodéprimés.",
+      "classification": "Protozoaire apicomplexe — Classe Piroplasmea, Ordre Piroplasmorida. Genre Babesia (> 100 espèces). Espèces humaines : B. microti (Amériques — Ixodes scapularis), B. divergens (Europe — Ixodes ricinus, virulence ++), B. duncani (Côte Ouest USA), B. venatorum (Europe). CYCLE PROCHE DU PALUDISME mais sans stade hépatique.",
+      "vecteur": "Tique Ixodes scapularis (USA Est — vecteur principal Lyme + Babesia + Anaplasma), Ixodes ricinus (Europe — B. divergens). STADE NYMPHE = stade le plus dangereux (minuscule, passée inaperçue, repas sanguin 36-48h nécessaires). Réservoir vertébré : campagnol à pattes blanches (Peromyscus leucopus, USA), bovins (B. divergens, Europe). TRANSMISSION TRANSFUSIONNELLE (sang total, plaquettes — parasites intra-GR) : 2e cause de mortalité par transfusion aux USA. TRANSMISSION TRANSPLACENTAIRE : documentée.",
+      "vecteur_type": "Tique",
+      "cycle_parasitaire_resume": "① Tique Ixodes (nymphe ++) pique → sporozoïtes injectés dans sang\n② Sporozoïtes → globules rouges → trophozoïtes → méroïtes (schizogonie intra-érythrocytaire, SANS stade hépatique ≠ Plasmodium)\n③ Rupture GR → méroïtes → nouveaux GR (fièvre hémolytique) \n④ TÉTRADE de Maltese cross (4 méroïtes en croix de Malte = pathognomonique Babesia)\n⑤ Repas sanguin tique → gamétocytes → sporogonie dans tique → sporozoïtes glandes salivaires\n⑥ CO-INFECTION Lyme (Borrelia) + Babesia + Anaplasma possible (même tique Ixodes)",
+      "cycle": "Cycle SIMPLIFIÉ (pas de stade hépatique) : Sporozoïte (tique) → GR humain → trophozoïte (en anneau, ressemble P. falciparum jeune) → méroïtes (schizogonie) → libération → invasion nouveaux GR. TÉTRADE DE MALTESE CROSS (4 méroïtes connectés en croix de Malte dans un GR) = caractéristique morphologique quasi-pathognomonique de Babesia. Chez la tique : gamétogonie (intestin) → oocystes → sporozoïtes (glandes salivaires) → transmission transovarienne chez Babesia (≠ Plasmodium).",
+      "pathologies": "① BABÉSIOSE LÉGÈRE-MODÉRÉE (immunocompétents, B. microti) : Incubation 1-6 semaines (tique) ou 1-9 sem (transfusion). Syndrome pseudo-grippal : fièvre (cyclique ou continue), myalgies, arthralgies, fatigue intense, céphalées. Anémie hémolytique (ictère, urines foncées), splénomégalie. Auto-limitée en 1-2 semaines mais fatigue persistante mois-années. ② BABÉSIOSE SÉVÈRE (facteurs de risque : asplénie — RISQUE VITAL, immunodépression, > 50 ans, co-infection Lyme) : Parasitémie > 10% (B. divergens +++) → hémolyse massive → anémie sévère → insuffisance rénale aiguë → SDRA → CIVD → choc → décès. B. divergens Europe : mortalité 40-50% chez aspléniés non traités. ③ CO-INFECTION (TIQUE IXODES) : Babesia + Borrelia burgdorferi (Lyme) + Anaplasma phagocytophilum → tableau mixte, réponse ATB différente (doxycycline efficace Lyme/Anaplasma, pas babesia). Penser co-infection si Lyme atypique ou rechute. ④ TRANSFUSIONNELLE : tableau plus sévère (pas d'immunité préalable, inoculum élevé).",
+      "virulence": "Invasion GR : EBA-175 like → récepteurs GR (glycophorine A, bande 3). Modification membrane GR → adhésion et rosette formation (≠ Plasmodium pas de séquestration). Hémolyse : schizogonie intra-érythrocytaire → libération radicaux libres oxygène + enzyme → lyse. Résistance splénique (asplénie → parasitémie incontrôlée). Cytokines inflammatoires (TNF-α, IL-6, IL-12) → choc.",
+      "traitements": "BABÉSIOSE LÉGÈRE-MODÉRÉE : ★ Atovaquone (Malarone® atovaquone + proguanil) 750 mg × 2/j PO + Azithromycine 500 mg J1 puis 250 mg/j × 7-10j — 1re LIGNE ambulatoire (tolérance +++). ★ Quinine 650 mg × 3/j PO + Clindamycine 600 mg × 3/j IV ou PO × 7-10j — ALTERNATIVE (efficacité équivalente, effets secondaires ++ : cinchonisme). BABÉSIOSE SÉVÈRE (parasitémie > 10%, SDRA, IR, hémolyse sévère) : Clindamycine IV (600 mg × 3/j) + Quinine IV × 7-10j. EXSANGUINOTRANSFUSION (échanges plasmatiques globulaires) si parasitémie > 10% ou hémolyse massive → réduction rapide charge parasitaire. B. divergens Europe : pentamidine historiquement (moins efficace) → préférer clindamycine + quinine. ASPLÉNIÉS : traitement 6 semaines (rechutes fréquentes). CO-INFECTION Lyme : ajouter doxycycline (efficace Lyme/Anaplasma, pas Babesia). TRANSFUSION : tests de dépistage Babesia sur dons de sang recommandés dans certains États USA (pas encore systématiques en France).",
+      "resistance": "Résistances atovaquone rapportées (mutation Cytochrome b — 256 position) chez immunodéprimés en traitement long. Ajouter azithromycine ou clindamycine si échec monothérapie. Quinine : pas de résistances documentées B. microti mais cinchonisme limitant. Pentamidine : résistances et efficacité insuffisante (abandonné B. divergens).",
+      "level": 3,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "enterobius.glb",
+      "name": "Enterobius vermicularis — Oxyurose",
+      "desc": "Ver intestinal le plus répandu au monde — 1 milliard de personnes infectées. Prurit anal nocturne pathognomonique. Transmissible dans la cellule familiale. Mébendazole/albendazole en dose unique.",
+      "classification": "Nématode (ver rond) — Classe Chromadorea, Ordre Rhabditida, Famille Oxyuridae. Seule espèce du genre Enterobius pathogène chez l'humain (E. gregorii = non validé). Ver blanc-ivoire : femelle 8-13 mm (queue effilée pointue = 'oxyure'), mâle 2-5 mm. Hôte EXCLUSIF humain (≠ zoonose).",
+      "vecteur": "AUTOINFECTION ET HÉTÉROINFECTION DIRECTE. Transmission féco-orale/mains : cycle mains-bouche (grattage anal nocturne → œufs sous ongles → ingestion). Inhalation œufs (literie, poussières domestiques — œufs légers, flottent dans l'air). AUCUN VECTEUR ARTHROPODE. Transmission intrafamiliale quasi-systématique (dose infectieuse très faible : 1-10 œufs). Résistance des œufs : 2-3 semaines dans l'environnement (T° ambiante, humidité).",
+      "vecteur_type": "Féco-oral",
+      "cycle_parasitaire_resume": "① Ingestion œufs embryonnés (mains, aliments, poussière, literie)\n② Éclosion larves L1 intestin grêle → migrations → caecum/côlon droit\n③ Vers adultes (mâle + femelle) dans caecum → accouplement\n④ NUIT : femelles migrent vers anus → déposent 10 000-20 000 œufs embryonnés sur peau périanale (prurit nocturne)\n⑤ Grattage → œufs sous ongles → contamination mains/literie → autoinfection ou transmission\n⑥ Durée vie ver adulte : 2-3 mois — cycle complet 3-6 semaines",
+      "cycle": "Cycle DIRECT (monoxène) sans hôte intermédiaire. Œufs embryonnés déposés sur peau périanale (nuit) → infectieux en quelques heures. Ingestion → larves → côlon → adultes → migration nocturne femelles vers anus → ponte. Migration féco-orale et inhalation. Durée de vie adulte : 2-3 mois. RÉTROINFECTION (rare) : œufs éclosent sur la peau périanale → larves remontent l'intestin (autoinfection rétrograde).",
+      "pathologies": "① OXYUROSE SIMPLE (la forme habituelle, 95%) : PRURIT ANAL NOCTURNE (pathognomonique — migration des femelles vers l'anus la nuit → dépôt d'œufs → irritation) → insomnie, agitation nocturne, excoriations périanales. Enfants +++ (3-10 ans), mais toute la famille. Douleurs abdominales (droit), nausées, irritabilité. ② COMPLICATIONS (rares) : Appendicite à oxyures (rôle discuté — ver dans appendice parfois trouvé). Vulvo-vaginite (filles — migration vers vagin) → leucorrhées, infections secondaires. Granulomes péritonéaux (migration aberrante). Prurit vulvaire chronique. Infection urinaire (girls). ③ TROUBLES PSYCHOSOMATIQUES (enfants) : insomnie chronique, troubles comportement, bruxisme (corrélation discutée). DIAGNOSTIC : Scotch test (ruban adhésif sur marge anale le matin avant toilette → microscopie → œufs en D caractéristiques, 50×30 µm). NFS : éosinophilie ABSENTE ou minimale (≠ autres helminthes — pas de migration viscérale).",
+      "virulence": "Virulence directe minimale. Mécanisme pathogène : irritation mécanique muqueuse anale par migration femelles + protéines de ponte (prurit). Pas d'invasion tissulaire. Pas de lyse cellulaire. Charge parasitaire : 100-1000 vers → prurit sévère.",
+      "traitements": "★ Mébendazole (Vermox®) 100 mg dose UNIQUE PO, à renouveler à J14 — 1re LIGNE (mécanisme : inhibiteur polymérisation tubuline β → ↓ absorption glucose par le ver → paralysie-mort). Taux de guérison > 95%. ★ Albendazole (Zentel®) 400 mg dose UNIQUE PO, renouveler J14 — alternative efficace. ★ Pyrantel pamoate (Combantrin®) 10 mg/kg dose UNIQUE, renouveler J14 — mécanisme : agoniste nicotinique → paralysie spastique ver. Disponible OTC (sans ordonnance). TRAITEMENT SIMULTANÉ DE TOUTE LA FAMILLE (obligatoire — sinon réinfection certaine). MESURES ASSOCIÉES (indispensables pour éviter réinfection) : Lavage mains avant repas + après WC (ongles courts), Changement literie/sous-vêtements J1+J14, Aspirateur (ne pas secouer draps — aérosols œufs). Pas de contre-indication grossesse pour pyrantel. Mébendazole/albendazole : déconseillés 1er trimestre.",
+      "resistance": "Pas de résistances documentées chez E. vermicularis. Résistances mébendazole décrites chez autres nématodes animaux (polymorphisme codons 167/198/200 β-tubuline) — non relevantes cliniquement chez l'humain actuellement. Echec thérapeutique = réinfection (famille non traitée) ou non-observance 2e dose.",
+      "level": 1,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "hirudo.glb",
+      "name": "Hirudo medicinalis — Sangsue médicinale",
+      "desc": "Annélide hirudinée — usage médical en chirurgie reconstructive (désengorgement veineux). Molécules thérapeutiques : hirudine (anticoagulant), destabilase, hyaluronidase. Vecteur accidentel de Aeromonas hydrophila.",
+      "classification": "Annélide — Phylum Annelida, Classe Clitellata, Sous-classe Hirudinea, Ordre Arhynchobdellida, Famille Hirudinidae. Espèce : Hirudo medicinalis (sangsue médicinale officinale). Espèces voisines : H. verbana (plus couramment utilisée en médecine), H. troctina. Corps segmenté 33 segments + ventouses antérieure/postérieure. Hermaphrodite. CLASSÉE EN DANGER D'EXTINCTION (protection légale — élevages agréés obligatoires).",
+      "vecteur": "Eaux douces stagnantes ou à courant lent, herbes aquatiques (marais, étangs, ruisseaux de plaine). HÔTES NATURELS : vertébrés aquatiques (grenouilles, poissons, mammifères). EN MÉDECINE : application directe sur la peau du patient (usage thérapeutique chirurgical). TRANSMISSION MICROBIENNE ACCIDENTELLE : Aeromonas hydrophila (bactérie commensale tube digestif sangsue) → infection locale post-hirudothérapie → antibioprophylaxie systématique obligatoire.",
+      "vecteur_type": "Sangsue",
+      "cycle_parasitaire_resume": "① Sangsue en eau douce → attachement vertébré aquatique ou humain (ventouse orale)\n② Morsure indolore (anesthésiques locaux dans salive — benzyl-alcool, carboxypeptidase B inhibiteur)\n③ Repas sanguin (5-15 mL) → anticoagulation locale par hirudine (inhibiteur thrombine direct)\n④ Repas dure 30-60 min → détachement spontané (réplétion) → digestion lente (6-9 mois)\n⑤ USAGE MÉDICAL : application post-chirurgie → drainage veines engorgées → sauvetage lambeaux",
+      "cycle": "CYCLE DE VIE COMPLET : Hermaphrodite croisé → ponte cocons dans sol humide → 2-3 mois incubation → jeunes sangsues → croissance lente (3-5 ans pour maturité). REPAS SANGUIN : unique (ou rare, 6-12 mois entre repas). Durée vie : 20-25 ans. En médecine : usage UNIQUE (sangsue détruite ou maintenue en quarantaine après usage — pas de réutilisation).",
+      "pathologies": "EN PARASITOLOGIE NATURELLE : Sangsue = ectoparasite externe temporaire. Morsure douloureuse réaction cutanée locale. Saignement prolongé (hirudine). Anémie (ingestion massive — rare). Obstruction voies respiratoires (ingestion accidentelle d'eau contenant larves de sangsue → fixation pharynx/larynx/trachée = HIRUDINIASE INTERNE — zones tropicales). USAGE MÉDICAL (HIRUDOTHÉRAPIE) : Indication principale : désengorgement veineux post-chirurgie reconstructive (lambeau libre, réimplantation doigt, oreille, sein — congestion veineuse compromettant survie du tissu). 1-3 sangsues/10 cm² de congestion × 2-4h/j × 5-10j. COMPLICATION PRINCIPALE : Infection à Aeromonas hydrophila (bacille Gram-négatif commensal intestin sangsue, aérobie-anaérobie facultatif) → cellulite, myonécrose, bactériémie → ANTIBIOPROPHYLAXIE SYSTÉMATIQUE OBLIGATOIRE (ciprofloxacine ou TMP/SMX × 5-10j car Aeromonas résiste amoxicilline/pénicillines). Allergie à la salive (rare). Saignement prolongé (hirudine — peut nécessiter compression). VIH/hépatites : Hirudo medicinalis PAS de transmission (pas de vecteur pour ces virus — usage unique obligatoire).",
+      "virulence": "MOLÉCULES SALIVAIRES ANTICOAGULANTES ET ANALGÉSIQUES (d'intérêt thérapeutique) : Hirudine (65 aa, 7 kDa) → inhibiteur direct et spécifique de la thrombine (IIa) — forme complexe 1:1 non covalent irréversible pratiquement → médicament synthétique : lépirudine (Refludan®, retraité), bivalirudine (Angiox®, ATC B01AE06 — analogues directs. Destabilase → dissolution thrombus frais (enzyme fibrinolytique). Hyaluronidase → dégradation acide hyaluronique → ↑ diffusion molécules salivaires. Anesthésiques locaux : Carboxypeptidase B inhibiteur, benzyl-alcool → morsure indolore. Calin → inhibiteur liaison collagène-facteur von Willebrand → ↓ agrégation plaquettaire.",
+      "traitements": "USAGE MÉDICAL COMME OUTIL THÉRAPEUTIQUE (pas comme pathogène à traiter). HIRUDOTHÉRAPIE POST-CHIRURGICALE : Application 1-3 sangsues par site de congestion → saignement contrôlé → désengorgement veineux. ANTIBIOPROPHYLAXIE SYSTÉMATIQUE : Ciprofloxacine 500 mg × 2/j PO pendant toute la durée du traitement par sangsues (Aeromonas résistant β-lactamines — ne pas utiliser amoxicilline ou augmentin !). Alternative : triméthoprime/sulfaméthoxazole (TMP/SMX). SURVEILLANCE LOCALE : volume saignement (compression si excessif), signes d'infection. HIRUDINIASE INTERNE : extraction endoscopique (ORL) ou chirurgicale. SURDOSAGE HIRUDINE (naturelle) : transfusion CG, pas d'antidote spécifique (≠ lépirudine IV thérapeutique → protamine inefficace, antidote = aucun — dialyse si surdosage lépirudine IV).",
+      "resistance": "Aeromonas hydrophila : résistance naturelle aux aminopénicillines (amoxicilline, ampicilline — β-lactamase chromosomique AmpC). SENSIBLE à : fluoroquinolones (ciprofloxacine), TMP/SMX, gentamicine, imipénème, ceftriaxone. Toujours antifongigramme de l'Aeromonas de la sangsue utilisée si disponible.",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Nitro-5 Imidazolés — Métronidazole, Tinidazole, Ornidazole",
+      "desc": "Classe d'antiprotozoaires intestinaux agissant par activation réductrice et génération de radicaux libres cytotoxiques.",
+      "classification": "Antiparasitaire — Anti-protistes intestinaux et cavitaires",
+      "vecteur": "Aucun (transmission fécale-orale ou sexuelle)",
+      "vecteur_type": "Aucun",
+      "cycle": "Pathogènes cibles : Entamoeba histolytica (amibiase), Giardia intestinalis (giardiase), Trichomonas vaginalis (trichomonose). Protozoaires anaérobies ou microaérophiles.",
+      "cycle_parasitaire_resume": "① Prodrogues nitroimidazolées pénètrent par diffusion simple\n② Réduction par pyruvate-ferrédoxine oxydoréductase (PFO) du parasite\n③ Génération radicaux libres : anion superoxyde + anion radical-nitro\n④ Fragmentation de l'ADN → cytotoxicité → mort parasitaire",
+      "pathologies": "Amibiase intestinale/hépatique (E. histolytica), giardiase (G. intestinalis), trichomonose (T. vaginalis), vaginose bactérienne. Formes invasives : abcès hépatique amibien. Infections anaérobies bactériennes (Clostridium, Bacteroides).",
+      "virulence": "Interaction exclusive avec la voie PFO (absente chez les mammifères — uniquement chez les anaérobies). Prodrogues inactives chez les cellules aérobies humaines → sélectivité antiparasitaire.",
+      "traitements": "Métronidazole : 500 mg × 3/j × 7–10j (amibiase, giardiase), 2 g dose unique (trichomonose). Tinidazole, ornidazole, secnidazole : prise unique (meilleure observance). Paromomycine en complément pour forme kystique. EFFETS ANTABUSE : contre-indication absolue avec alcool. Bonne biodisponibilité orale → diffusion tissulaire (placenta, lait, salive). CI grossesse (1er trimestre).",
+      "resistance": "Résistances rares pour les protistes intestinaux. Résistances décrites pour T. vaginalis (diminution de la PFO, réduction activation). Pas de résistance croisée avec les antibiotiques.",
+      "level": 3,
+      "pharmacocinetique": "Bonne biodisponibilité orale (absorption rapide après prise orale). Diffusion large : tissus, sécrétions, placenta, lait maternel, salive. Métronidazole : demi-vie ~8h, métabolisme hépatique. Tinidazole / Ornidazole / Secnidazole : prise unique (meilleure observance).",
+      "contre_indications": "EFFET ANTABUSE (disulfiram-like) : contre-indication absolue avec l'alcool — nausées, vomissements, tachycardie, bouffées vasomotrices. Grossesse : utilisation possible dès le 2e trimestre si nécessaire (CI au 1er trimestre pour métronidazole). Allaitement : interrompre pendant le traitement (passage dans le lait). Attention : passage placentaire documenté.",
+      "points_cles_cours": "Mécanisme : interaction avec la voie pyruvate-ferrédoxine oxydo-réductase (PFO) — équivalent de la voie pyruvate déshydrogénase des systèmes aérobies. Activation réductrice → génération radicaux libres (anion superoxyde + anion radical-nitro) → fragmentation ADN → cytotoxicité. Prodrogues actives UNIQUEMENT en milieu anaérobie/microaérophile. Sélectivité : voie PFO absente chez les mammifères. Métronidazole : famille des 5-nitro-imidazolés, également actif sur bactéries anaérobies (Clostridium, Bacteroides). Résistance bactérienne : efflux, gène nim.",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Paromomycine — Antiprotiste intestinal (Aminoglycoside)",
+      "desc": "Aminoglycoside à action locale intestinale, inhibiteur de la synthèse protéique des protistes — non absorbé par voie orale.",
+      "classification": "Antiparasitaire — Anti-protistes intestinaux (aminoglycoside)",
+      "vecteur": "Aucun (transmission fécale-orale)",
+      "vecteur_type": "Aucun",
+      "cycle": "Cibles : Entamoeba histolytica (formes kystiques intestinales), Giardia intestinalis, Cryptosporidium spp.",
+      "cycle_parasitaire_resume": "① Paromomycine ingérée par voie orale\n② Pas d'absorption intestinale → concentration locale élevée dans la lumière digestive\n③ Fixation sur sous-unités ribosomales du parasite (30S)\n④ Inhibition synthèse protéique → action parasitostatique/parasiticide locale",
+      "pathologies": "Amibiase intestinale asymptomatique (portage de kystes), cryptosporidiose (immunodéprimés, VIH), giardiase. Alternative au métronidazole pour les formes kystiques (non invasives). Leishmaniose viscérale (forme injectable — hors AMM France).",
+      "virulence": "Absence d'absorption intestinale : efficacité uniquement sur formes luminales → ne traite pas les formes extra-intestinales (abcès hépatique amibien).",
+      "traitements": "Paromomycine orale 500 mg × 3/j × 5–10j. EIG : néphrotoxicité et ototoxicité (si absorption systémique accidentelle). Complément indispensable au métronidazole pour éliminer les kystes d'E. histolytica (métronidazole actif sur formes végétatives seulement).",
+      "resistance": "Résistances naturelles rares. Potentiel d'ototoxicité/néphrotoxicité si usage systémique (comme tous les aminoglycosides).",
+      "level": 3,
+      "pharmacocinetique": "PAS d'absorption intestinale par voie orale — action locale uniquement dans la lumière digestive. Concentration locale élevée → efficacité luminale (formes kystiques). Forme injectable (IM) : usage hors AMM en France pour leishmaniose viscérale.",
+      "contre_indications": "EIG : néphrotoxicité et ototoxicité si absorption systémique accidentelle (comme tous les aminoglycosides). Ne pas utiliser en cas de pathologie rénale préexistante sans surveillance. Grossesse : prudence (ototoxicité fœtale potentielle si absorption).",
+      "points_cles_cours": "Antibiotique de la famille des aminoglycosides. Mécanisme : interférence avec les sous-unités ribosomales du parasite → inhibition synthèse protéique. Action LOCALE uniquement : pas d'absorption intestinale. Spectre : E. histolytica, G. intestinalis, Cryptosporidium spp. Même mécanisme que les aminosides antibactériens : fixation 30S → erreurs de lecture / inhibition traduction. Toxicités possibles : ototoxicité et toxicité rénale (identique aux aminosides).",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Anti-leishmaniens — Antimoniés, Miltefosine, Amphotéricine B",
+      "desc": "Traitements de la leishmaniose ciblant les formes amastigotes intracellulaires — trois classes aux mécanismes distincts.",
+      "classification": "Antiparasitaire — Anti-leishmaniens",
+      "vecteur": "Phlébotome (Lutzomyia, Phlebotomus) — femelle piquante",
+      "vecteur_type": "Insecte",
+      "cycle": "Leishmania spp. : protozoaire dimorphique — formes promastigotes (phlébotome) et amastigotes intracellulaires (macrophages de l'hôte). Leishmaniose viscérale (kala-azar), cutanée (bouton d'Orient), cutanéo-muqueuse.",
+      "cycle_parasitaire_resume": "① Piqûre phlébotome → injection promastigotes\n② Phagocytose par macrophages → transformation en amastigotes intracellulaires\n③ Multiplication dans les phagolysosomes (résistance à l'acidité)\n④ Lyse macrophage → dissémination (viscérale) ou persistance cutanée",
+      "pathologies": "Leishmaniose viscérale (Leishmania donovani, L. infantum) : fièvre prolongée, splénomégalie, pancytopénie, cachexie → mortelle sans traitement. Leishmaniose cutanée : ulcères cutanés persistants. L. cutanéo-muqueuse (L. braziliensis) : destruction muqueuses nasales/bucales. 1 million de cas/an.",
+      "virulence": "Survie dans phagolysosomes acides (inhibition de l'acidification par le parasite). Inhibition du burst oxydatif des macrophages. Evasion immunitaire par modulation TLR/NF-κB.",
+      "traitements": "① Amphotéricine B liposomale (AmBisome® 3–5 mg/kg/j IV) : GOLD STANDARD leishmaniose viscérale — complexation à l'ergostérol du parasite → formation de pores → mort cellulaire. Résistance quasi absente. Toxicité rénale atténuée par formulation liposomale.\n② Antimoniés pentavalents Sb⁵⁺ (antimoniate de méglumine, Glucantime®) : IM ou intra-lésionnelle (LC). Prodrogue → forme active Sb³⁺ → inhibition métabolisme énergétique (glycolyse, β-oxydation) → ↓ ATP + altération redox. EIG : cardiotoxicité (allongement QT), néphrotoxicité, toxicité pancréatique. Résistances croissantes.\n③ Miltefosine (Impavido® — voie orale unique) : alkylphosphocholine antitumorale réorientée. Mécanisme : altération membranaire phospholipidique + dysfonctionnement mitochondrial. Effet immunomodulateur macrophagique. EIG : TÉRATOGENICITÉ → contraception obligatoire pendant et 3 mois après le traitement.",
+      "resistance": "Résistances Sb⁵⁺ en hausse sur le sous-continent indien (jusqu'à 60 % en Bihar, Inde). Mécanismes : efflux, diminution de l'activation. Miltefosine : résistances émergentes décrites in vitro.",
+      "level": 3,
+      "pharmacocinetique": "Amphotéricine B liposomale (AmBisome®) : IV uniquement, cinétique non linéaire, accumulation tissulaire (foie, rate — macrophages = site d'action). Antimoniés pentavalents Sb5+ : IM ou intra-lésionnelle (leishmaniose cutanée). Pro-drogue → forme active Sb3+ (réduction intracellulaire). Miltefosine : per os, longue demi-vie (~7j), contre-indiquée si grossesse.",
+      "contre_indications": "Miltefosine : TÉRATOGÉNICITÉ → CONTRACEPTION OBLIGATOIRE pendant le traitement et 5 mois après (longue demi-vie). CI absolue en grossesse. Antimoniés Sb5+ : EIG — toxicité cardiaque (allongement QT → ECG surveillance), rénale et pancréatique. Résistances documentées (Inde > 60% L. donovani). Amphotéricine B conventionnelle : TOXICITE RENALE +++ → préférer formulation liposomale.",
+      "points_cles_cours": "Actifs sur les formes AMASTIGOTES INTRACELLULAIRES (dans les phagolysosomes des macrophages). Amphotéricine B liposomale = gold standard leishmaniose viscérale. Antimoniés Sb5+ = pro-drogue → Sb3+ (forme active) : inhibition métabolisme énergétique (glycolyse, β-oxydation) → ↓ production ATP + altération équilibre Redox. Miltefosine (alkylphosphocholine, antitumoral) : altération membranaire par interaction phospholipides + dysfonctionnement mitochondrial chez Leishmania + effet immunomodulateur sur la réponse macrophagique.",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Anti-toxoplasmiques — Pyriméthamine, Sulfadiazine, Spiramycine",
+      "desc": "Traitements de la toxoplasmose ciblant la voie de synthèse des folates (pyriméthamine/sulfadiazine) ou les ribosomes parasitaires (spiramycine).",
+      "classification": "Antiparasitaire — Anti-toxoplasme / Anti-pneumocystis",
+      "vecteur": "Aucun vecteur — ingestion d'oocystes ou de kystes (viande crue), transmission transplacentaire",
+      "vecteur_type": "Aucun",
+      "cycle": "Toxoplasma gondii : parasite obligatoirement intracellulaire. Hôte définitif : Felidae. Chez l'homme : formes tachyzoïtes (phase aiguë) et bradyzoïtes en kystes tissulaires (latence). Risque majeur : primo-infection gestationnelle (toxoplasmose congénitale) et réactivation chez l'immunodéprimé.",
+      "cycle_parasitaire_resume": "① Ingestion oocystes (chat) ou kystes (viande) → sporozoïtes ou bradyzoïtes libérés\n② Invasion cellules de la muqueuse intestinale → tachyzoïtes\n③ Dissémination hématogène → cerveau, rétine, muscles\n④ Passage transplacentaire possible (risque grave T2-T3)\n⑤ Immunodépression → réactivation des bradyzoïtes latents → encéphalite",
+      "pathologies": "Immunocompétent : syndrome mononucléosique bénin. Immunodéprimé (VIH < 100 CD4) : encéphalite toxoplasmique (abcès cérébraux multiples, mortalité élevée sans traitement). Grossesse : toxoplasmose congénitale (avortement, choriorétinite, hydrocéphalie). Pneumocystose (Pneumocystis jirovecii) : pneumonie interstitielle diffuse (immunodéprimés).",
+      "virulence": "Invasion active des cellules hôtes (rhoptries, micronèmes). Formation d'une vacuole parasitophore non fusionnée aux lysosomes. Evasion immunitaire (inhibition apoptose, modulation IL-12).",
+      "traitements": "① ASSOCIATION PYRIMÉTHAMINE (anti-folique, inhibiteur DHFR) + SULFADIAZINE (anti-folinique, inhibiteur DHPS) : double blocage chaîne synthèse folates → inhibition bases puriques → parasiticide. Toujours + acide folinique (prévention toxicité hématologique) + NFS 2×/semaine. EIG : cutanés (Syndrome de Stevens-Johnson, Lyell), hématologiques. CI : femme enceinte < 2ème trimestre.\n② COTRIMOXAZOLE (sulfadoxine + triméthoprime) : même mécanisme — 1ère ligne pneumocystose (Pneumocystis jirovecii). CI : femme enceinte, déficit en G6PD.\n③ SPIRAMYCINE (macrolide) : fixation sur ribosomes parasitaires → inhibition synthèse protéique → PARASITOSTATIQUE. Indications : immunocompétent + 1er trimestre grossesse (↓ transmission transplacentaire, ne traite pas le fœtus atteint). Bonne diffusion tissulaire.\n④ Atovaquone : inhibition chaîne transport électrons mitochondrial (complexe cyt bc1). Alternative si intolérance.",
+      "resistance": "Résistances rares pour T. gondii. Résistances cotrimoxazole pour Pneumocystis jirovecii (mutations DHPS) → surveiller.",
+      "level": 3,
+      "pharmacocinetique": "Pyriméthamine + Sulfadiazine : bonne diffusion tissulaire dont placenta. Cotrimoxazole (Sulfadoxine + Triméthoprime) : bonne biodisponibilité orale, diffusion LCR, pulmonaire. Spiramycine : macrolide, bonne diffusion placentaire — concentration dans les tissus fœtaux > sérum maternel.",
+      "contre_indications": "Cotrimoxazole : CI femme enceinte (défaut fermeture tube neural) + déficit G6PD (risque hémolyse). Sulfadiazine/Pyriméthamine : CI femme enceinte < 2e trimestre. EIG sulfamides : cutanés (Syndrome de Lyell, Syndrome de Stevens-Johnson) + hématologiques. Spiramycine : macrolide, bien tolérée → traitement de choix immunocompétent et 1er trimestre de grossesse.",
+      "surveillance_biologique": "NFS : 2×/semaine sous pyriméthamine (toxicité hématologique — anémie mégaloblastique). Acide folinique OBLIGATOIRE en complément de la pyriméthamine (prévention toxicité hématologique — ne pas confondre avec acide folique). Bilan rénal si sulfadiazine (cristallurie → hyperhydratation obligatoire). Surveillance tolérance cutanée (sulfamides).",
+      "points_cles_cours": "Double blocage voie synthèse folates : Anti-foliniques (Sulfadiazine/Sulfadoxine) = inhibiteur DHPS (dihydroptéroate synthétase). Anti-foliques (Pyriméthamine/Triméthoprime) = inhibiteur DHFR (dihydrofolate réductase). → Inhibition synthèse bases puriques → frein division parasitaire. TOUJOURS en association : Sulfadiazine + Pyriméthamine OU Sulfadoxine + Triméthoprime (Cotrimoxazole). Spiramycine (macrolide) : fixation ribosomes parasitaires → inhibition synthèse protéines = PARASITOSTATIQUE (≠ parasiticide). Usage : immunocompétent + 1er trimestre grossesse. Même mécanisme sulfamides que pour les bactéries : double blocage voie acide folique → baisse nucléotides → frein à la division.",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Antipaludiques — Artémisinines, Amino-4-Quinoléines, Arylaminoalcohols",
+      "desc": "Classes thérapeutiques du paludisme : artémisinines (CTA, action rapide), quinoléines (chloroquine, méfloquine, pipéraquine) et arylaminoalcohols (luméfantrine).",
+      "classification": "Antiparasitaire — Antipaludiques (érythrocytaires)",
+      "vecteur": "Anopheles femelle (piqûre nocturne)",
+      "vecteur_type": "Moustique",
+      "cycle": "Plasmodium spp. Cycle érythrocytaire (phase clinique) : invasion GR → trophozoïte → schizonte → lyse → libération mérozoïtes → accès fébrile. Cycle hépatique : sporozoïtes → schizogonie hépatique (préerythrocytaire, silencieuse). Hypnozoïtes (P. vivax, P. ovale) : formes dormantes hépatiques → rechutes tardives.",
+      "cycle_parasitaire_resume": "① Piqûre anophèle → sporozoïtes → foie (silencieux 7-14j)\n② Mérozoïtes hépatiques → invasion GR\n③ Trophozoïte → schizonte → 16-32 mérozoïtes → lyse (fièvre)\n④ Gamétocytes → repas sanguin moustique → sporogonie (10-14j)\n⑤ P. vivax/ovale : hypnozoïtes hépatiques → rechutes (primaquine requis)",
+      "pathologies": "Paludisme non grave : fièvre périodique (tierce/quarte), frissons, sudation. Paludisme grave (P. falciparum) : neuropaludisme, anémie sévère, hyperparasitémie > 5%, défaillances d'organes. 249 millions de cas/an (OMS 2022), 608 000 décès. Zone endémique : Afrique subsaharienne (>90% des décès).",
+      "virulence": "PfEMP1 : cytoadhérence des GR parasités (séquestration vasculaire). Digestion hémoglobine → hème → détoxification en hémozoïne. Perturbation métabolisme glucose de l'hôte.",
+      "traitements": "FORMES ÉRYTHROCYTAIRES — Traitement curatif (schizonticides) :\n① CTA (Combinaisons Thérapeutiques à base d'Artémisinine) — 1ère ligne OMS : Artémether-luméfantrine (Riamet®/Coartem®, 6 prises en 3j) ; Arténimol-pipéraquine (Eurartesim®, 3j). Artémisinines : activation par hème → radicaux libres alkylants → actions multiples. Rapid, très efficace, résistances émergentes (Asie, Afrique Est).\n② Artésunate IV : paludisme grave (remplace quinine IV). Quinine IV (Quinoforme®) : option grave si artésunate indisponible — risque allongement QT, hypoglycémie.\n③ Atovaquone-proguanil (Malarone®) : inhibition mitochondriale (atovaquone, complexe bc1) + inhibition DHFR (cycloguanil). Traitement et CHIMIOPROPHYLAXIE zone à risque élevé (prise quotidienne J-1 → J+7).\nCHIMIOPROPHYLAXIE : Atovaquone-proguanil (Malarone®) zones résistances ; Méfloquine (hebdomadaire) ; Doxycycline (quotidienne, zone impaludée).\nTRAITEMENT RADICAL (hypnozoïtes) : Primaquine (P. vivax, P. ovale) — CI : déficit G6PD (risque hémolyse). GAMÉTOCYTICIDE : Primaquine (lutte anti-transmission pour P. falciparum).",
+      "resistance": "Résistance chloroquine : quasi universelle pour P. falciparum (mutation pfcrt). Résistance artémisinine émergente : mutation PfKelch13 (Asie du Sud-Est → Afrique de l'Est, situation alarmante OMS). Résistance méfloquine (Asie du SE). Vaccin RTS,S/AS01 (Mosquirix® — OMS 2021, 30-40% efficacité). Vaccin R21/Matrix-M (Oxford, 2023, 75-80% efficacité).",
+      "level": 3,
+      "chimioprophylaxie": "3 molécules recommandées : ① Atovaquone-Proguanil (Malarone®) : 1-2j avant → 7j après retour. ② Méfloquine (Lariam®) : 10j avant → 3 semaines après. CI : troubles psychiatriques, épilepsie. ③ Doxycycline : 1j avant → 4 semaines après. CI : grossesse, enfant <8 ans. Action doxycycline sur Plasmodium : antibiotique tétracycline (ribosome 30S / apicoplaste).",
+      "traitement_stades_specifiques": "Traitement radical hypnozoïtes (P. vivax, P. ovale) : PRIMAQUINE → TEST G6PD OBLIGATOIRE avant (risque hémolyse si déficit). Traitement altruiste gamétocyticide (anti-transmission) : PRIMAQUINE. Pentamidine : inhibition synthèse ADN et protéines — également actif sur Leishmania. Atovaquone : inhibition spécifique chaîne transport électrons mitochondries — site d'action = complexe cytochrome bc1 (Cyt b). Également actif sur Toxoplasme et Pneumocystis.",
+      "points_cles_cours": "Classification par stade cible : ÉRYTHROCYTAIRES (schizonticides) : CTA (artémisinine + partenaire), quinine, atovaquone-proguanil. HÉPATIQUES LATENTS (hypnozoïtes) : primaquine uniquement. GAMÉTOCYTICIDES : primaquine. Artémisinines (artémether, arténimol, artésunate) : mécanismes multiples (vacuole digestive, ADN). Amino-4-quinoléines (pipéraquine) : inhibition cristallisation hème dans vacuole digestive. Arylaminoalcohols (méfloquine, luméfantrine) : même compartiment — mécanisme incomplètement élucidé. Doxycycline (tétracycline) : ribosome 30S → blocage fixation ARNt → stop synthèse protéique. Résistance : efflux / mutation cible / protection ribosomale.",
+      "pharmacocinetique": "Artémisinines (artémether, artésunate) : t½ court ~1h, voie IV/orale. Méfloquine : t½ long ~21 jours, voie orale. Atovaquone-proguanil : biodisponibilité améliorée par repas gras, voie orale. Doxycycline : biodisponibilité orale >90%, t½ 18-22h.",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Anti-helminthes — Benzimidazolés (Albendazole, Flubendazole, Triclabendazole)",
+      "desc": "Classe antiparasitaire agissant sur les microtubules des helminthes — inhibition polymérisation β-tubuline → paralysie et mort parasitaire.",
+      "classification": "Antiparasitaire — Anti-helminthes (benzimidazolés)",
+      "vecteur": "Aucun vecteur (transmission fécale-orale, ingestion larves, contact sol souillé)",
+      "vecteur_type": "Aucun",
+      "cycle": "Helminthes cibles : nématodes intestinaux (Ascaris, Enterobius, Strongyloides, Trichinella), cestodes (Taenia, Echinococcus), trématodes (Fasciola — triclabendazole uniquement). Absorption variable selon la molécule.",
+      "cycle_parasitaire_resume": "① Benzimidazolés fixent les dimères de β-tubuline parasitaire (affinité ×400 vs mammifères)\n② Inhibition polymérisation des microtubules\n③ Perturbation absorption glucose + blocage métabolisme énergétique → ↓ glycogène\n④ Paralysie et mort du parasite (expulsion)\n⚠ Pas d'action sur les LARVES",
+      "pathologies": "Ascaridiose (Ascaris lumbricoides — 1,5 milliard personnes), oxyurose (Enterobius vermicularis — la plus répandue en France), anguillulose (Strongyloides stercoralis — dissémination létale chez l'immunodéprimé), échinococcose (Echinococcus granulosus/multilocularis — kyste hydatique), distomatose (Fasciola hepatica).",
+      "virulence": "Benzimidazolés : spectre large. Absorption faible (flubendazole, albendazole) → action intraluminale + systémique pour Echinococcus (longue durée). Triclabendazole : métabolisé en sulfoxyde actif (CYP hépatique) → élimination biliaire → actif sur Fasciola adulte et immature.",
+      "traitements": "① FLUBENDAZOLE (Fluvermal®) : Enterobius vermicularis (prise unique 100 mg, répéter J15), Ascaris (3j), trichuriose. Absorption intestinale faible → action locale.\n② ALBENDAZOLE (Zentel®) : large spectre — Echinococcus spp. (traitement médical ou adjuvant chirurgie — cycles 28j prise / 14j pause), S. stercoralis, Taenia spp., Giardia (enfants). Absorption augmentée par repas gras.\n③ TRICLABENDAZOLE (Egaten®) : FASCIOLA HEPATICA (prise unique 10 mg/kg) — seul benzimidazolé actif sur les formes immatures. Métabolisme hépatique en sulfoxyde actif.\n⚠ Pas d'action sur les larves de nématodes (ex : larves d'Ascaris migrantes).",
+      "resistance": "Résistances croissantes en médecine vétérinaire (sélection). Chez l'homme : résistances triclabendazole pour Fasciola rapportées en Europe (Belgique, Pays-Bas). Résistances albendazole décrites pour E. granulosus.",
+      "level": 3,
+      "points_attention": "⚠️ PAS D'ACTION SUR LES LARVES (formes larvaires résistantes aux benzimidazolés). Flubendazole (absorption intestinale FAIBLE) : action principalement intraluminale. Albendazole (absorption faible mais systémique si pris avec repas gras) : spectre élargi — Echinococcus, Giardia (enfants). Triclabendazole : métabolisme hépatique → sulfoxyde actif + élimination biliaire → actif sur Fasciola hepatica (UNIQUEMENT benzimidazolé actif sur F. hepatica). Action ×400 plus affine sur β-tubuline parasitaire vs mammifères → sélectivité élevée.",
+      "contre_indications": "Albendazole : CI grossesse (tératogène animal → contraception recommandée). Triclabendazole : grossesse — données limitées, utiliser avec précaution. EIG flubendazole/albendazole : généralement bonne tolérance (faible absorption). Albendazole longue durée (échinococcose) : hépatotoxicité, alopécie, leucopénie — surveillance NFS + bilan hépatique.",
+      "points_cles_cours": "Mécanisme : fixation aux dimères de β-tubuline → inhibition polymérisation microtubules → perturbation absorption glucose → ↓ réserves glycogène → paralysie et mort du parasite (expulsé). Spectre : Flubendazole : E. vermicularis, A. lumbricoides. Triclabendazole : F. hepatica. Albendazole : Taenia spp. dont Echinococcus spp., E. vermicularis, A. lumbricoides, S. stercoralis, G. intestinalis (enfants). Structure bicyclique (benzènique + imidazole).",
+      "pharmacocinetique": "Flubendazole : absorption intestinale faible → action locale (intraluminale). Albendazole : absorption faible mais augmentée par les graisses alimentaires → distribution systémique (utile Echinococcus). Métabolite actif : albendazole sulfoxyde. Triclabendazole : métabolisme hépatique → sulfoxyde actif → élimination biliaire → concentrations élevées dans les voies biliaires (actif Fasciola).",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Ivermectine — Anti-nématodes et Ectoparasites",
+      "desc": "Macrolactone avermectine inhibant la neurotransmission des invertébrés par agonisme des canaux Cl⁻ glutamate/GABA — sélectivité chez l'homme par imperméabilité de la BHE.",
+      "classification": "Antiparasitaire — Anti-helminthes / Antiparasitaire externe (avermectine)",
+      "vecteur": "Variable selon le parasite cible",
+      "vecteur_type": "Variable",
+      "cycle": "Cibles : Strongyloides stercoralis, Onchocerca volvulus, microfilaires (Wuchereria bancrofti), Sarcoptes scabiei, Pediculus humanus. Issu de la fermentation de Streptomyces avermitilis (Actinomycètes).",
+      "cycle_parasitaire_resume": "① Ivermectine agoniste haute affinité canaux Cl⁻ glutamate-dépendants (absents mammifères) ou GABA-dépendants (SNC mammifère protégé par BHE)\n② Hyperpolarisation cellules neuromusculaires des invertébrés\n③ Blocage dépolarisation par flux Cl⁻ entrant\n④ Paralysie neuromusculaire et mort du parasite",
+      "pathologies": "Anguillulose (S. stercoralis) : hyperinfection létale chez l'immunodéprimé. Onchocercose (O. volvulus, 'cécité des rivières' — vecteur Simulium). Filariose lymphatique (W. bancrofti — éléphantiasis). Gale (S. scabiei) surtout forme norvégienne. Pédiculose (P. humanus — alternative à l'application topique). Utilisation possible dans COVID-19 — études non concluantes.",
+      "virulence": "Sélectivité majeure parasite/hôte : canaux Cl⁻ glutamate-dépendants absents chez les mammifères + protection BHE pour canaux GABA. Margé thérapeutique large chez l'homme sain (attention : patients avec déficit MDR1/P-gp).",
+      "traitements": "ANGUILLULOSE : ivermectine 200 µg/kg dose unique (répéter à J15 si hyperinfection). ONCHOCERCOSE : 150 µg/kg/an (traitement de masse OMS, programme APOC). FILARIOSE : 150 µg/kg + diéthylcarbamazine (albendazole selon zone). GALE : 200 µg/kg dose unique à renouveler J15 — traitement de 1ère ligne gale norvégienne et épidémies. PÉDICULOSE : lotion ivermectine 0,5% (application topique unique). Praziquantel (Biltricide®) — cestodes/trématodes : voir fiche dédiée.",
+      "resistance": "Résistances émergentes chez les nématodes vétérinaires (strongles ovins). Chez l'homme : résistances S. stercoralis très rares. Polymorphismes MDR1/P-gp : ↑ biodisponibilité cérébrale → risque neurologique (à surveiller patients co-traitement)",
+      "level": 3,
+      "pharmacocinetique": "Macrolactone de la classe des avermectines. Issu de la fermentation de Streptomyces avermitilis. Bonne absorption orale, pic 4h, t½ ~12h. Lipophile : distribution tissulaire large. Attention patients avec déficit MDR1/P-gp : ↑ biodisponibilité cérébrale → risque neurologique (neurotoxicité).",
+      "points_cles_cours": "Mécanisme : agoniste de haute affinité des canaux Cl⁻ glutamate-dépendants (absents chez les mammifères) OU GABA-dépendants (SNC mammifère protégé par la BHE) des cellules nerveuses et musculaires des invertébrés et cellules digestives des helminthes → hyperpolarisation → blocage dépolarisation → paralysie neuromusculaire et mort du parasite. Sélectivité : 2 niveaux — canaux Cl⁻ glutamate-dépendants ABSENTS chez mammifères + BHE. Spectre : Nématodes (S. stercoralis, O. volvulus, microfilaires W. bancrofti) + Ectoparasites (Sarcoptes scabiei, Pediculus humanus).",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Praziquantel — Anti-trématodes et Anticestodes",
+      "desc": "Antihelminthique agissant sur la perméabilité membranaire des téguments et muscles des vers plats — influx Ca²⁺ → tétanisation, vacuolisation et mort parasitaire.",
+      "classification": "Antiparasitaire — Anti-trématodes et Anti-cestodes",
+      "vecteur": "Eau douce (schistosomes, cercaires), ingestion (Taenia)",
+      "vecteur_type": "Eau / Ingestion",
+      "cycle": "Schistosoma spp. : trématodes hématophages. Cycle : œufs → miracidium → mollusque eau douce → cercaires → pénétration cutanée → vers adultes veineux. Taenia spp. (solium, saginata) : cestodes intestinaux. Cycle : hôte intermédiaire (porc/bœuf) → ingestion viande insuffisamment cuite → ténia adulte.",
+      "cycle_parasitaire_resume": "① Contact eau douce → cercaires de Schistosoma pénètrent la peau\n② Migration vers système veineux porte/mésentérique/vésical\n③ Vers adultes pondent des œufs → réaction granulomateuse (fibrose hépatique)\n④ Taenia : ingestion larves cysticerques (viande crue) → ver adulte intestinal 3-10 m\n⑤ Cysticercose (T. solium) : ingestion œufs → larves disséminées (cerveau, muscles)",
+      "pathologies": "Schistosomiase (bilharziose) : 200 millions de personnes infectées. Forme aigüe : fièvre de Katayama. Forme chronique : fibrose hépatosplénique (S. mansoni/japonicum), hématurie/cancer vessie (S. haematobium). Taeniasis : ver adulte intestinal (diarrhées, douleurs). Cysticercose cérébrale (T. solium) : épilepsie, hypertension intracrânienne.",
+      "virulence": "Mécanisme praziquantel : modification perméabilité membranaire des téguments/muscles → INFLUX Ca²⁺ → tétanisation et paralysie musculaire + vacuolisation et destruction des téguments + action synergique avec réponse immunitaire → élimination des vers. EFFET SUR FORMES ADULTES UNIQUEMENT (pas les vers immatures). Bonne tolérance avec quelques phénomènes immunopathologiques liés à la lyse parasitaire.",
+      "traitements": "SCHISTOSOMIASE : praziquantel 40 mg/kg en dose unique (ou 2×20 mg/kg le même jour). TAENIASIS : 10 mg/kg dose unique (hors AMM). Albendazole en alternative (Taenia, Echinococcus). Triclabendazole pour Fasciola hepatica (seul actif sur formes immatures). Association praziquantel + albendazole pour certaines parasitoses mixtes. Bonne biodisponibilité orale, métabolisme hépatique rapide.",
+      "resistance": "Résistances praziquantel rapportées pour S. mansoni (Afrique de l'Ouest, Égypte). Mécanismes partiellement élucidés (mutations canaux Ca²⁺, efflux). Pas d'alternative validée si résistance confirmée.",
+      "level": 3,
+      "points_cles_cours": "Mécanisme : modification perméabilité membranaire des téguments ET muscles → INFLUX Ca²⁺ → ① Muscles : tétanisation et paralysie. ② Téguments : vacuolisation et destruction. Action synergique avec la réponse immunitaire → élimination des vers. Effet sur les formes ADULTES >>> vers immatures. Bonne tolérance ; quelques phénomènes immunopathologiques liés à la lyse parasitaire. Spectre : Schistosoma spp. (1ère ligne), Taenia spp. (hors AMM).",
+      "pharmacocinetique": "Bonne absorption orale, métabolisme hépatique important (effet premier passage). t½ 1-3h. Distribution large incluant LCR (neurocysticercose). Biodisponibilité augmentée par repas riche en glucides. Élimination urinaire.",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Polyènes Antifongiques — Amphotéricine B et Nystatine",
+      "desc": "Antifongiques fongicides se liant à l'ergostérol membranaire fongique pour former des pores — large spectre, toxicité rénale majeure atténuée par formulations liposomales.",
+      "classification": "Antifongique — Polyènes (macrolactones polyéniques)",
+      "vecteur": "Aucun (mycoses endogènes ou inhalation spores)",
+      "vecteur_type": "Aucun",
+      "cycle": "Champignons cibles : Candida spp., Aspergillus spp., Cryptococcus neoformans. Produit par Streptomyces nodosus (actinomycètes). Macrolactone polyénique amphiphile. Nystatine : usage topique uniquement. Amphotéricine B : usage systémique IV.",
+      "cycle_parasitaire_resume": "① Amphotéricine B se fixe à l'ergostérol de la membrane fongique\n② Formation de pores transmembranaires\n③ Fuite de K⁺ intracellulaire → perte d'intégrité membranaire\n④ Mort cellulaire fongique (FONGICIDE à forte dose)\n⑤ Formulations liposomales → réduction fixation aux membranes des cellules humaines (↓ toxicité rénale)",
+      "pathologies": "Mycoses profondes invasives : candidoses systémiques, aspergilloses invasives (immunodéprimés), cryptococcoses (méningite à Cryptococcus chez VIH), mucormycoses. Leishmaniose viscérale (off-label, action sur ergostérol de Leishmania). Décolonisation digestive orale (nystatine buvable).",
+      "virulence": "L'ergostérol fongique (absent chez les mammifères qui possèdent du cholestérol) confère la sélectivité. Quasi absence de résistances primaires acquises — avantage majeur vs triazolés. Nystatine : non absorbée → uniquement muqueuses. Amphotéricine B IV : distribution tissulaire large.",
+      "traitements": "AMPHOTÉRICINE B IV (AmBisome® liposomal, Abelcet® complexe lipidique) : 3–5 mg/kg/j IV. 1ère ligne mucormycose, candidose invasive sévère, méningite à Cryptococcus (+ 5-fluorocytosine). TOXICITE RENALE +++ : créatinine × 2, hypokaliémie, hypomagnésémie. Pré-hydratation IV obligatoire. Formulations lipidiques : ↓ 60% néphrotoxicité. NYSTATINE : suspension buvable (candidose oropharyngée), ovules vaginaux (candidose vulvovaginale). Pas d'indication systémique. EIG AmB IV : syndrome frisson-hyperthermie lors perfusion (prémédication par paracétamol/antihistaminiques).",
+      "resistance": "Résistance amphotéricine B rare (mutation ERG3/ERG5/ERG6 → altération ergostérol). Candida auris : résistance naturelle à l'amphotéricine B (espèce émergente d'importance critique OMS 2022). Résistance Aspergillus terreus naturelle.",
+      "level": 3,
+      "points_cles_cours": "Macrolactone polyénique amphiphile. Produit par Streptomyces nodosus (Actinomycètes). Mécanisme : formation de COMPLEXES avec l'ERGOSTÉROL membranaire fongique → formation de pores transmembranaires → fuite K⁺ intracellulaire → perte fluidité membranaire → mort cellulaire. FONGICIDE à forte dose sur levures ET filamenteux. Nystatine : absorption ↓ → usage topique (suspension buvable, capsules vaginales). AmB IV : antifongique à large spectre — mycoses profondes : candidoses systémiques, aspergilloses invasives, cryptococcoses, mucormycoses, leishmaniose. TOXICITE RENALE +++ → formulations lipidiques (liposomes AmBisome® ou complexé phospholipides) pour réduire néphrotoxicité.",
+      "pharmacocinetique": "Amphotéricine B IV : cinétique non linéaire, fixation protéique >90%. t½ biphasique : phase initiale ~24h, phase terminale >15 jours (accumulation tissulaire). Nystatine : absorption orale quasi nulle → usage topique/luminal exclusivement. AmB liposomale (AmBisome®) : Cmax réduit, accès macrophages/réticuloendothélial → moins néphrotoxique que la forme conventionnelle.",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Triazolés Antifongiques — Fluconazole, Voriconazole, Posaconazole, Isavuconazole",
+      "desc": "Antifongiques azolés systémiques inhibant la lanostérol 14-déméthylase (CYP51/ERG11) — spectre élargi des triazolés de 2e génération vs imidazolés.",
+      "classification": "Antifongique — Azolés/Triazolés (inhibiteurs CYP51)",
+      "vecteur": "Aucun (inhalation spores pour Aspergillus, flore endogène pour Candida)",
+      "vecteur_type": "Aucun",
+      "cycle": "Champignons cibles : Candida spp. (levures), Aspergillus spp. (moisissures — sauf fluconazole inactif). Mécanisme : inhibition du CYP51 fongique (lanostérol 14-déméthylase, ERG11) → accumulation méthylstérols toxiques → déficit ergostérol → altération fluidité membranaire.",
+      "cycle_parasitaire_resume": "① Azolé entre dans la cellule fongique\n② Fixation sur le cytochrome P450 CYP51/ERG11 (lanostérol 14-déméthylase)\n③ Blocage conversion lanostérol → ergostérol\n④ Accumulation méthylstérols toxiques (14α-méthylstérols)\n⑤ Altération fluidité membranaire → fongistatique/fongicide selon espèce et concentration",
+      "pathologies": "Candidoses oro-pharyngées, œsophagiennes, vulvovaginales (fluconazole). Candidose invasive/fongémie (echinocandines ou AmB si grave). Aspergillose invasive (voriconazole 1ère ligne — pneumonie, sinusite chez immunodéprimés). Prophylaxie mycoses chez greffés/neutropéniques (posaconazole). Méningite à Cryptococcus (fluconazole relais après AmB+5FC). Mucormycose (isavuconazole).",
+      "virulence": "Triazolés > imidazolés : sélectivité ERG11 fongique × 100-1000 vs CYP humains → biodisponibilité orale possible. INHIBITION CYP3A4 et CYP2C19 humains + P-gp → NOMBREUSES INTERACTIONS MÉDICAMENTEUSES (tacrolimus ×5, ciclosporine, statines, AVK, benzodiazépines, sulfamides, antiépileptiques).",
+      "traitements": "① FLUCONAZOLE (Triflucan®) : VO/IV, biodisponibilité >90%, t½ 30h. Candida spp. (sauf C. krusei résistant naturel, C. glabrata inconstant). Candidose oro-pharyngée 50-200 mg/j × 7-14j. Meningite Cryptococcus : 400-800 mg/j (relais AmB).\n② ITRACONAZOLE (Sporanox®) : VO, lipophile +++, absorption variable. Levures + Aspergillus. Surveillance taux plasmatique obligatoire.\n③ VORICONAZOLE (Vfend®) : VO/IV (~96% biodisponibilité). 1ère LIGNE ASPERGILLOSE INVASIVE. Levures. EIG : troubles visuels transitoires (photopsies, 30%), photosensibilisation, hépatotoxicité. TDM obligatoire (taux cible 1-5 mg/L).\n④ POSACONAZOLE (Noxafil®) : VO, lipophile +++. Spectre élargi (mucor). Prophylaxie greffes/leucémies. TDM obligatoire.\n⑤ ISAVUCONAZOLE (Cresemba®) : VO/IV, biodisponibilité >90%, spectre élargi. 1ère ligne mucormycose (alternative AmB). Moins d'interactions QT vs autres azolés.",
+      "resistance": "Résistances Candida albicans : mutations ERG11, surexpression efflux (CDR1, MDR1). C. glabrata naturellement moins sensible. C. krusei : résistance naturelle fluconazole. Aspergillus fumigatus : mutations TR34/L98H ERG11 (résistance triazolés — émergence environnementale par fongicides agricoles). C. auris : multirésistance triazolés+échinocandines+AmB (émergence majeure OMS 2022).",
+      "level": 3,
+      "pharmacocinetique": "Fluconazole : VO & IV, biodisponibilité >90%, t½ 30h. Itraconazole : VO, très lipophile +++, biodisponibilité variable (à jeun). Voriconazole : VO & IV, biodisponibilité ~96%. Posaconazole : VO, très lipophile +++. Isavuconazole : VO & IV, biodisponibilité >90%.",
+      "contre_indications": "INHIBITION CYP3A4, CYP2C19 + P-gp → INTERACTIONS MÉDICAMENTEUSES MAJEURES : tacrolimus, ciclosporine, statines, AVK, sulfamides hypoglycémiants, benzodiazépines, antiépileptiques → risque surdosage, surveillance thérapeutique recommandée. Voriconazole : troubles visuels transitoires, photosensibilisation, hépatotoxicité — surveillance vision + bilan hépatique + taux plasmatique (TDM). Fluconazole CI grossesse (sauf dose unique candidose vaginale).",
+      "surveillance_biologique": "Bilan hépatique systématique. TDM (suivi thérapeutique plasmatique) recommandé pour itraconazole, voriconazole, posaconazole. Voriconazole : surveiller vision (troubles visuels transitoires). Fluconazole : CI Candida krusei (résistance naturelle) et C. glabrata ±.",
+      "points_cles_cours": "Mécanisme : inhibition lanostérol 14-déméthylase dépendante du cytochrome P450 (CYP51/ERG11) → blocage conversion lanostérol → ergostérol → accumulation méthylstérols toxiques → altération fluidité membranaire. Triazolés > imidazolés : meilleure sélectivité ERG11 fongique → biodisponibilité systémique possible. Imidazolés (miconazole, éconazole, bifonazole, kétoconazole) : même cible, usage TOPIQUE uniquement. Spectre triazolés : Levures (Candida spp., Cryptococcus spp.) + Moisissures (Aspergillus spp. — SAUF fluconazole inactif).",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Échinocandines — Caspofungine, Micafungine, Anidulafungine",
+      "desc": "Antifongiques agissant sur la paroi fongique par inhibition de la β-(1,3)-glucane synthase (FKS1) — fongicides sur Candida, fongistatiques sur Aspergillus, uniquement IV.",
+      "classification": "Antifongique — Échinocandines (lipopeptides semi-synthétiques)",
+      "vecteur": "Aucun",
+      "vecteur_type": "Aucun",
+      "cycle": "Lipopeptides semi-synthétiques issus de champignons (Aspergillus nidulans et apparentés). Ciblent la β-(1,3)-glucane synthase (enzyme FKS1) de la paroi fongique — absente chez les mammifères → sélectivité élevée.",
+      "cycle_parasitaire_resume": "① Échinocandine fixe la β-(1,3)-glucane synthase (sous-unité FKS1) de la paroi fongique\n② Inhibition synthèse des β-(1,3)-glucanes (composant essentiel rigidité paroi)\n③ Fragilisation et perte d'intégrité de la paroi fongique\n④ Lyse osmotique → mort cellulaire (FONGICIDE sur Candida)\n⑤ Sur Aspergillus : effet sur les apex des hyphes en croissance → FONGISTATIQUE",
+      "pathologies": "Candidoses invasives/fongémies (1ère ligne recommandations ESCMID, surtout si C. glabrata, C. krusei, C. auris, ou état grave). Aspergilloses invasives en 2ème ligne (après triazolés). Prophylaxie chez neutropéniques sévères (micafungine). Colonisation sur biomatériaux (cathéters) : action sur les biofilms de Candida (avantage unique vs triazolés et polyènes).",
+      "virulence": "Cible (β-1,3-glucane synthase) absente chez l'homme → excellent profil de tolérance. Administration IV uniquement (mauvaise biodisponibilité orale — peptide lipophile). Efficacité maintenue sur C. glabrata et C. auris souvent résistants aux triazolés. Action sur biofilms : avantage pour candidémies sur cathéter.",
+      "traitements": "① CASPOFUNGINE (Cancidas®) : 70 mg J1 puis 50 mg/j IV. Candidose invasive, aspergillose en 2ème ligne, candidose réfractaire.\n② MICAFUNGINE (Mycamine®) : 100-150 mg/j IV. Candidose invasive + prophylaxie greffes (BMT).\n③ ANIDULAFUNGINE (Ecalta®) : 200 mg J1 puis 100 mg/j IV. Candidose invasive. Dégradation chimique spontanée (pas de métabolisme hépatique → avantage si insuffisance hépatique). Bonne tolérance globale des 3 molécules. EIG rares : phlébite site IV, élévation transaminases (surveillance hépatique). Pas d'interactions CYP (≠ azolés).",
+      "resistance": "Mutations FKS1/FKS2 (hot spots) → résistances échinocandines (C. glabrata, C. auris). Surveillance CMI obligatoire si candidémie récidivante sous traitement. C. parapsilosis : sensibilité réduite naturelle (tolérance).",
+      "level": 3,
+      "points_cles_cours": "Lipopeptides semi-synthétiques issus d'Aspergillus nidulans. Mécanisme : inhibition β-(1,3)-glucane synthase (enzyme FKS1) → ↓ synthèse β-(1,3)-glucanes (composant essentiel rigidité paroi fongique) → perte d'intégrité paroi → lyse osmotique → mort cellulaire. Cible ABSENTE chez les mammifères → excellent profil de tolérance. Administration IV uniquement (mauvaise biodisponibilité orale). Activité : FONGICIDE sur Candida spp. (dont biofilms) + FONGISTATIQUE sur Aspergillus spp. Mycoses profondes : 1ère ligne candidoses invasives sévères.",
+      "pharmacocinetique": "IV uniquement (mauvaise biodisponibilité orale). t½ 9-15h (anidulafungine ~24h). Fixation protéique >97%. Métabolisme hépatique (caspofungine), hydrolyse chimique (anidulafungine). Pas d'élimination rénale active. Peu d'interactions médicamenteuses (pas substrat CYP3A4 majeur).",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Antifongiques Topiques — Imidazolés, Allylamines, Morpholines, Ciclopirox",
+      "desc": "Antifongiques à usage local pour mycoses superficielles : imidazolés (inhibition CYP51), terbinafine (squalène époxidase), amorolfine (Δ14 réductase/isomérase) et ciclopirox (métabolisme énergétique).",
+      "classification": "Antifongique — Usage topique (mycoses superficielles)",
+      "vecteur": "Contact direct (dermatophytes) ou flore endogène (Candida, Malassezia)",
+      "vecteur_type": "Contact",
+      "cycle": "Dermatophytes (Trichophyton, Microsporum, Epidermophyton) : champignons kératinophiles des ongles, cheveux, peau. Candida spp. : levures commensales opportunistes. Malassezia furfur : pytiriasis versicolor.",
+      "cycle_parasitaire_resume": "VOIE SYNTHÈSE ERGOSTÉROL (cible commune) :\n① Bifonazole → inhibe HMG-CoA réductase\n② Terbinafine/allylamines → inhibe squalène époxidase (ERG1) → ↑ squalène toxique\n③ Imidazolés/triazolés topiques → inhibent lanostérol 14-déméthylase (CYP51/ERG11)\n④ Amorolfine/morpholines → inhibent Δ14 réductase (ERG24) + C8-C7 isomérase (ERG2)\n⑤ Ciclopirox → perturbation absorption AA/ions + métabolisme énergétique",
+      "pathologies": "Dermatophyties : tinea pedis (pied d'athlète), tinea unguium (onychomycose, traitement long), tinea corporis (herpès circiné), tinea capitis (enfants). Candidoses cutanéo-muqueuses : intertrigo, candidose vulvovaginale, muguet. Pytiriasis versicolor (Malassezia furfur).",
+      "virulence": "Imidazolés topiques (bifonazole, miconazole, éconazole, kétoconazole) : spectre large (dermatophytes + Candida + Malassezia), pénétration cutanée variable, usage local uniquement (pas de biodisponibilité systémique significative). Triazolés topiques → pas disponibles en topique local.",
+      "traitements": "① IMIDAZOLÉS TOPIQUES : bifonazole, éconazole, miconazole, kétoconazole (crème, solution, lotion, ovule) — 2-4 semaines selon localisation. Spectre : dermatophytes + Candida + Malassezia. Application 1-2×/j.\n② TERBINAFINE (Lamisil® — allylamine) : crème/solution filmogène topique ou VO (onychomycose : 250 mg/j × 6-12 semaines). Fongicide sur dermatophytes, fongistatique sur Candida, inactive sur Malassezia. RÉMANENCE +++ dans tissus kératinisés (ongles, cheveux). EIG VO : hépatotoxicité (surveillance transaminases).\n③ AMOROLFINE (Loceryl® — morpholine) : solution filmogène ongles uniquement. Δ14-réductase (ERG24) + C8-C7 isomérase (ERG2) → accumulation fécostérol. Application hebdomadaire. Durée 6-12 mois (onychomycose).\n④ CICLOPIROX OLAMINE (Mycoster® — pyridone) : crème/solution filmogène. Spectre très large (dermatophytes + Candida + certaines moisissures + bactéries Gram+/-). Mécanisme : inhibition absorption d'acides aminés et d'ions via la membrane → perturbation métabolisme énergétique. Fongistatique.",
+      "resistance": "Résistances terbinafine (mutation squalène époxidase ERG1) : T. rubrum (Angleterre, Pays-Bas). Résistances azolés topiques rares. Candida auris : résistance échinocandines + triazolés + AmB → traitement topique inefficace pour formes invasives.",
+      "level": 3,
+      "points_cles_cours": "4 classes ciblant la voie de synthèse de l'ergostérol : ① ALLYLAMINES (Terbinafine) : inhibition squalène époxidase ERG1 → accumulation squalène toxique → déplétion ergostérol → altération fluidité membranaire. Affinité ERG1 fongique ×100-1000 vs mammifères. Rémanence +++ tissus kératinisés. Fongicide/dermatophytes, fongistatique/Candida. Inactive sur Malassezia. ② MORPHOLINES (Amorolfine) : inhibition Δ14-réductase (ERG24) + C8-C7 isomérase (ERG2). ③ IMIDAZOLÉS (Miconazole, Éconazole, Bifonazole, Kétoconazole) : inhibition lanostérol 14-déméthylase CYP P450 ERG11 → méthylstérols toxiques. Spectre : dermatophytes + Candida + Malassezia furfur (Pytiriasis versicolor). ④ PYRIDONES (Ciclopirox/Ciclopyroxolamine) : agit sur métabolisme énergétique (≠ ergostérol). Fongistatique, spectre large (dermatophytes, Candida, certaines moisissures). + Propriétés antibactériennes sur bactéries Gram+/Gram−.",
+      "pharmacocinetique": "Imidazolés topiques : absorption percutanée faible (<10%) → exposition systémique minimale. Terbinafine topique et orale : rémanence +++ dans tissus kératinisés (peau, ongles, cheveux) → persistance après arrêt du traitement. VO : biodisponibilité ~70%, t½ 17h. Amorolfine (solution filmogène) : pénétration onguéale élevée, libération prolongée.",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "5-Fluorocytosine (5-FC) — Antifongique Bloquant les Acides Nucléiques",
+      "desc": "Antifongique fongistatique inhibant la synthèse des acides nucléiques et des protéines — toujours utilisé en association pour prévenir les résistances.",
+      "classification": "Antifongique — Antimétabolite (analogue pyrimidine)",
+      "vecteur": "Aucun",
+      "vecteur_type": "Aucun",
+      "cycle": "Champignons cibles : Cryptococcus neoformans/gattii, Candida spp. (fongistatique). Prodrogue activée uniquement par les cellules fongiques possédant la cytosine désaminase (absente chez les mammifères).",
+      "cycle_parasitaire_resume": "① 5-Fluorocytosine pénètre cellule fongique par cytosine perméase\n② Cytosine désaminase fongique → désamination → 5-fluorouracile (5-FU)\n③ 5-FU → 5-F(d)UMP → inhibition thymidylate synthétase → ARRÊT SYNTHÈSE ADN\n④ 5-FU → 5-FUTP → incorporation ARNm → ARRÊT SYNTHÈSE PROTÉIQUE\n⑤ Mammifères : absence de cytosine désaminase → sélectivité → peu de toxicité si dose normale",
+      "pathologies": "Méningite cryptococcique (VIH, immunodéprimés — traitement standard : amphotéricine B liposomale + 5-FC pendant 2 semaines d'induction, puis fluconazole). Candidose systémique (en association). Usage exclusivement IV. Jamais en monothérapie.",
+      "virulence": "Mécanisme dual (ADN + ARN) → synergie avec amphotéricine B. Association obligatoire pour éviter l'émergence rapide de résistances (mutations cytosine perméase ou cytosine désaminase). Monitoring plasmatique obligatoire (fenêtre thérapeutique étroite : 25-100 µg/mL).",
+      "traitements": "5-FLUOROCYTOSINE IV : 100 mg/kg/j en 4 perfusions. TOUJOURS EN ASSOCIATION (AmB liposomale + 5-FC = gold standard méningite cryptococcique). Durée d'induction : 2 semaines minimum. Relais : fluconazole 400 mg/j (consolidation 8 semaines) puis 200 mg/j (maintenance à vie si VIH). EIG : myélosuppression (leucopénie, thrombopénie — dose-dépendant), hépatotoxicité, nausées. NFS hebdomadaire obligatoire.",
+      "resistance": "Résistances naturelles : Aspergillus spp., Cryptococcus neoformans var. gattii (partiellement). Résistances acquises rapides si monothérapie : mutations cytosine désaminase (FUR1), cytosine perméase (FCY2). Association AmB+5FC évite résistances émergentes sous traitement.",
+      "level": 3,
+      "pharmacocinetique": "Administration IV uniquement. Fenêtre thérapeutique ÉTROITE → TDM obligatoire. Bonne diffusion LCR (méningite cryptococcique). Prodrogue activée UNIQUEMENT par les cellules fongiques possédant la cytosine désaminase (absente chez les mammifères → sélectivité).",
+      "points_cles_cours": "Mécanisme DUAL (ADN + protéines) : ① 5-FC pénètre par cytosine perméase → cytosine désaminase fongique → 5-fluoro-uracile (5-FU) ② 5-FU → 5-F(d)UMP → inhibition thymidylate synthétase → ARRÊT SYNTHÈSE ADN ③ 5-FU → 5-FUTP → incorporation dans ARNm → ARRÊT SYNTHÈSE PROTÉIQUE. FONGISTATIQUE. Spectre : Cryptococcus spp., Candida spp. TOUJOURS EN ASSOCIATION pour éviter résistances rapides (mutations cytosine désaminase FUR1 ou cytosine perméase FCY2). Synergie avec amphotéricine B = gold standard méningite cryptococcique. EIG : cytopénie, hépatotoxicité → NFS + bilan hépatique.",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Sarcoptes scabiei — Gale",
+      "desc": "Acarien microscopique (200-400 µm) creusant des sillons dans l'épiderme humain — gale = dermatose parasitaire prurigineuse parmi les plus fréquentes au monde (> 200 millions de cas/an).",
+      "classification": "Arthropode — Classe Arachnida, Ordre Sarcoptiformes, Famille Sarcoptidae. Acarien obligatoirement humain (hors hôte : survie < 3 jours). 8 pattes (adulte). Corps ovalaire, aplati ventro-dorsalement.",
+      "vecteur": "Contact direct prolongé peau-à-peau (> 15 min) : mains, poignets, rapports sexuels, literie, vêtements. Pas de vecteur arthropode intermédiaire. Gale norvégienne (croûteuse) : transmission indirecte possible (literie/vêtements — forte charge parasitaire).",
+      "vecteur_type": "Contact direct",
+      "cycle": "1. Femelle fécondée creuse un sillon intradermique (stratum corneum) → pond 2-3 œufs/jour pendant 4-6 semaines. 2. Larves (6 pattes) éclosent → gagnent surface cutanée → mues → nymphes → adultes (8 pattes). 3. Mâles adultes en surface — accouplement → mort. 4. Cycle complet : 15-17 jours. Charge parasitaire habituelle : 5-15 femelles (gale commune) vs des milliers à millions (gale norvégienne).",
+      "cycle_parasitaire_resume": "① Contact direct → acarien adulte femelle fécondée → creuse sillon intradermique (stratum corneum, vitesse 2-3 mm/j)\n② Ponte 2-3 œufs/j dans le sillon × 4-6 sem\n③ Larves L1 (6 pattes) → mues successives → nymphe → adulte (8 pattes) en 15-17 jours\n④ Adultes mâles en surface → fécondation → mort rapide\n⑤ Réaction immuno-allergique (IgE, éosinophiles) → prurit intense (délai 3-6 semaines primo-infestation, quelques jours si réinfestation)",
+      "pathologies": "GALE COMMUNE : Prurit intense, à recrudescence nocturne (chaud lit → activité acarien). Sillons scabieux (trajets sinueux gris blanchâtres — espaces interdigitaux, poignets, face interne coudes, mamelons, ombilic, organes génitaux masculins). Vésicules perlées, nodules scabieux (penis, scrotum — lésions pathognomoniques). Épargne visage (adulte) et dos (zone de pression). GALE NORVÉGIENNE (croûteuse) : immunodéprimés (VIH, corticothérapie prolongée, HTLV-1, âge extrême). Croûtes hyperkératosiques, peu prurigineuses, extrêmement contagieuses (millions d'acariens). COMPLICATIONS : surinfection bactérienne (impétiginisation → staphylococcie, streptococcie → glomérulonéphrite post-streptococcique). Eczématisation. Prurit persistant post-thérapeutique (≠ échec — réaction allergique résiduelle).",
+      "virulence": "Protéases scabiei (dégradation stratum corneum + modulation immunité). Pas d'organe de vol ni de saut — diffusion uniquement par contact. Résistance hors hôte limitée (< 3 jours à T° ambiante — désinfestation environnementale : 3 jours de non-utilisation suffisent).",
+      "traitements": "TRAITEMENT TOPIQUE (gale commune) — 1ère LIGNE : Perméthrine crème 5% (Lyclear®, Topiscab®) : application corps entier (sous le cou) × 8-12h → rinçage. Répéter à J8. Efficacité > 95%. Benzoate de benzyle lotion 10% (nourrisson), 25% (adulte) : 2 applications J1-J2. Soufre précipité 5-10% : grossesse, nourrisson < 2 mois. TRAITEMENT SYSTÉMIQUE — GALE NORVÉGIENNE / ÉPIDÉMIES / ÉCHECS TOPIQUES : Ivermectine 200 µg/kg dose unique PO à renouveler J8-J15. TRAITEMENT SIMULTANÉ de TOUS les contacts proches (famille, partenaires) — obligatoire. DÉCONTAMINATION linge/literie : lavage 60°C ou mise en sac 72h. PRURIT POST-TRAITEMENT : hydroxyzine, dermocorticoïdes locaux (réaction inflammatoire résiduelle — attendre 4 sem avant de conclure à l'échec).",
+      "resistance": "Résistances perméthrine décrites en Australie (mutations dans les gènes des canaux Na⁺ voltage-dépendants). Résistances ivermectine très rares chez l'humain. En cas d'échec : vérifier l'application correcte (cause principale) et le traitement simultané des contacts.",
+      "pharmacocinetique": "Perméthrine (topique) : pyréthrinoïde synthétique, absorption cutanée faible → sécurité toxicologique élevée. CI relative grossesse (précaution 1er trim). Ivermectine systémique : cf. fiche Ivermectine.",
+      "points_cles_cours": "Diagnostic CLINIQUE : prurit nocturne + sillon scabieux (espaces interdigitaux, poignets, organes génitaux) ± contexte épidémique (collectivité). Dermoscopie : signe du delta-wing (acarien en bout de sillon). Test à l'encre de Chine (sillon se colore). Principes thérapeutiques : TRIPLE obligation — traitement du malade + traitement simultané des contacts + décontamination de l'environnement. Perméthrine : mécanisme = ouverture persistante canaux Na⁺ voltage-dépendants des neurones → dépolarisation prolongée → paralysie. Ivermectine : canaux Cl⁻ glutamate-dépendants → paralysie. Prurit persistant 2-4 semaines post-traitement ≠ échec thérapeutique.",
+      "points_attention": "⚠️ Gale norvégienne = urgence de santé publique (extrêmement contagieuse). ⚠️ Traitement impératif de TOUS les contacts simultanément (risque de ping-pong). ⚠️ Perméthrine CI nourrisson < 2 mois → soufre. ⚠️ Prurit post-traitement peut durer 4 semaines → ne pas reprendre le traitement trop tôt.",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Pediculus humanus — Poux (capitis & corporis)",
+      "desc": "Insecte hématophage obligatoire, ectoparasite du cuir chevelu (P. h. capitis) ou des vêtements (P. h. corporis). Très fréquent chez l'enfant scolarisé. P. h. corporis : vecteur potentiel du typhus épidémique et de la fièvre des tranchées.",
+      "classification": "Arthropode — Classe Insecta, Ordre Phthiraptera, Sous-ordre Anoplura, Famille Pediculidae. 3 paires de pattes (griffes adaptées à la saisie des cheveux/poils). 2 variétés de la même espèce : P. h. capitis (cheveux), P. h. corporis (vêtements). Lente = œuf soudé à la tige pilaire ou fibre textile.",
+      "vecteur": "Contact direct tête-à-tête (P. h. capitis). Partage de vêtements/literie (P. h. corporis). Pas de saut ni de vol. Survie hors hôte : 1-2 jours (adulte), 10 jours (lente). P. h. corporis : vecteur biologique de Rickettsia prowazekii (typhus épidémique), Bartonella quintana (fièvre des tranchées), Borrelia recurrentis (fièvre récurrente).",
+      "vecteur_type": "Contact direct",
+      "cycle": "1. Femelle adulte fixe des lentes (œufs) sur cheveux/fibres textiles. 2. Éclosion en 7-10 jours → nymphes (3 stades). 3. Adulte en 17-22 jours. Durée de vie adulte : 30-40 jours. Repas sanguin toutes les 4-6h (indispensable — mort en 24-48h sans repas). La femelle pond 6-10 lentes/jour.",
+      "cycle_parasitaire_resume": "① Femelle adulte fixe lente (ciment chitineux imperméable) à 3-4 mm du cuir chevelu ou sur fibre vestimentaire\n② Éclosion nymphe J7-10 (T° 28-32°C optimale — T° froide bloque développement)\n③ Nymphe 1→2→3 → adulte en 9-12j supplémentaires (cycle total ~20 jours)\n④ Adulte pique toutes les 4-6h → salive anticoagulante → prurit (réaction allergique)\n⑤ P. h. corporis : ingère Rickettsia/Bartonella → excrète dans fèces → grattage → contamination plaie",
+      "pathologies": "PÉDICULOSE DU CUIR CHEVELU (P. h. capitis) : Prurit occipital et rétro-auriculaire (sites de prédilection). Lentes blanches sur tige pilaire (distinguer des pellicules : lentes non détachables à la traction). Impétiginisation possible (grattage + surinfection bactérienne). Adénopathies cervicales postérieures. PÉDICULOSE CORPORELLE (P. h. corporis) : Prurit généralisé. Lésions de grattage (stries linéaires). Mélanodermie (peau bronzée en cas d'infestation chronique). MALADIES VECTORISÉES (P. h. corporis uniquement) : Typhus épidémique (R. prowazekii), Fièvre des tranchées (B. quintana), Fièvre récurrente épidémique (B. recurrentis) — maladies de précarité et de guerre.",
+      "virulence": "Salive à propriétés anticoagulantes + allergènes → prurit. Le pou ne saute pas et ne vole pas — diffusion exclusivement par contact direct. Lentes résistantes aux pédiculicides (paroi chitineuse imperméable aux insecticides → traitement mécanique souvent nécessaire).",
+      "traitements": "PÉDICULOSE CAPITIS — TRAITEMENTS TOPIQUES : Diméticone (huile siliconée) 4% ou 92% (Linicin®, Paranix®) : action mécanique (asphyxie) — pas de résistance possible, sécurité +++ (nourrisson ≥ 6 mois). PREMIÈRE LIGNE en France. Perméthrine 1% (disponibilité variable). Malathion 0,5% (organophosphoré — résistances fréquentes). Ivermectine lotion 0,5% : 10 min puis rinçage — si > 2 traitements physiques échoués. TECHNIQUE : application sur cheveux secs, laisser agir selon produit, peigne à dents serrées (lente-combe) pour éliminer lentes. RENOUVELER à J7-J10. PÉDICULOSE CORPORELLE : lavage vêtements 60°C (ou 48h congélateur). Pas de traitement topique nécessaire si décontamination textile complète.",
+      "resistance": "Résistances aux pyréthrinoïdes (perméthrine, deltaméthrine) très fréquentes en Europe (mutations kdr — knock-down resistance : modification canaux Na⁺ voltage-dépendants) → préférer diméticone (mécanique). Résistances malathion décrites. Pas de résistance possible aux produits mécaniques (diméticone, huiles).",
+      "pharmacocinetique": "Diméticone : polymère non absorbé, action physique pure (pas de métabolisme, pas de CI notable). Perméthrine topique : absorption faible, faible toxicité systémique. Malathion : organophosphoré — précautions asthme, grossesse.",
+      "points_cles_cours": "P. h. capitis vs P. h. corporis : même espèce, habitats différents. Diagnostic : lentes à 3-4 mm du cuir chevelu (vs pellicules libres). Prédilection zones occipitale et rétro-auriculaire. Résistances pyréthrinoïdes = problème majeur en Europe → diméticone (action mécanique) = 1ère ligne. P. h. corporis = SEUL pou vecteur de maladies graves (typhus, fièvre des tranchées, fièvre récurrente). Aucune prophylaxie médicamenteuse. Traitement de la literie/vêtements obligatoire.",
+      "points_attention": "⚠️ Résistances pyréthrinoïdes fréquentes → ne pas utiliser en 1ère ligne. ⚠️ Les lentes vides restent fixées aux cheveux même après traitement réussi → ne pas retraiter inutilement. ⚠️ Nourrisson < 6 mois : diméticone seulement (peigne mécanique). ⚠️ P. h. corporis : penser aux maladies vectorisées (typhus) en contexte de précarité.",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Pthirus pubis — Morpion (pou du pubis)",
+      "desc": "Insecte hématophage spécifique des poils courts et épais (pubis, aisselles, cils, sourcils) — morphologie crabiforme distinctive. Transmission essentiellement sexuelle. Ne vectorise aucun pathogène.",
+      "classification": "Arthropode — Classe Insecta, Ordre Phthiraptera, Sous-ordre Anoplura, Famille Pthiridae. Espèce distincte de Pediculus (corps large et court 'en crabe', pattes de préhension massive sur poils épais). 1,5-2 mm. 3 paires de pattes dont la 2e et 3e très développées (griffes crochues adaptées aux poils épais).",
+      "vecteur": "Transmission sexuelle (contact direct corps-à-corps). Partage de linge/serviettes possible (rare). Survie hors hôte < 24h. Infeste les poils pubiens, périnéaux, axillaires, péri-ombilicaux, cils/sourcils (enfant surtout). Chez l'enfant : contamination par les parents (cils) — différent de l'adulte — contexte de protection de l'enfance à évaluer.",
+      "vecteur_type": "Contact direct",
+      "cycle": "Cycle similaire à Pediculus. Lente collée à la base du poil. Éclosion J8. Adulte en 15-20 jours. Durée vie adulte : 3-4 semaines. La femelle pond 3 lentes/j. Pique toutes les 4-6h. Dépend strictement des poils épais (ne survit pas sur cheveux fins).",
+      "cycle_parasitaire_resume": "① Femelle adulte fixe lente à la base des poils pubiens/axillaires/cils\n② Éclosion nymphe J7-10\n③ Nymphe → adulte en 15-20j (cycle complet ~20 jours)\n④ Adulte hématophage → piqûres → maculae caeruleae (taches bleues ardoisées = réaction inflammatoire/hémorragique locale pathognomoniques)\n⑤ Transmission interhumaine lors contact intime prolongé",
+      "pathologies": "PHTIRIASE PUBIENNE : Prurit pubien intense (surtout nocturne). Maculae caeruleae (taches bleues ardoisées) — PATHOGNOMONIQUES (réaction locale à la salive). Œufs sur poils, adultes visibles à l'œil nu (difficiles à voir — confondus avec squames). ATTEINTE CILIAIRE (ophtalmophtiriasis) : fréquente chez l'enfant (contamination familiale). Prurit palpébral, blépharite, conjonctivite irritative. Lentes visibles à la lampe à fente. Impétiginisation possible (grattage). PAS de maladies vectorisées décrites pour P. pubis.",
+      "virulence": "Répertoire très limité (uniquement poils épais) → niche écologique restreinte. Pas vecteur de pathogènes. Salive allergisante (maculae caeruleae). Infestation souvent concomitante d'autres IST → dépistage systématique recommandé.",
+      "traitements": "TRAITEMENT TOPIQUE : Perméthrine crème 5% ou lotion 1% : application zones pileuses concernées × 10 min → rinçage. Répéter J7-J10. Malathion 0,5% : application × 12h. Diméticone : option possible. CILS : NE PAS utiliser d'insecticides → risque oculaire. Application de vaseline épaisse 2×/j × 8-10j (asphyxie mécanique) + extraction manuelle des lentes/adultes à la pince. Onguent ophtalmique à base de vaseline (Lacrilube®). PARTENAIRES SEXUELS : traitement simultané obligatoire. DÉPISTAGE IST : syphilis, VIH, gonorrhée, chlamydiae — concomittance fréquente.",
+      "resistance": "Résistances pyréthrinoïdes possibles (mêmes mécanismes kdr que Pediculus). En cas d'échec perméthrine → malathion ou diméticone. Résistances moins documentées que pour P. h. capitis.",
+      "points_cles_cours": "Morphologie distinctive : 'en crabe' (corps large, pattes postérieures massives) → facile à distinguer de Pediculus. Maculae caeruleae (taches bleues ardoisées) = signe quasi-pathognomonique. Transmission essentiellement sexuelle → TOUJOURS dépister les autres IST. Traitement ciliaire = vaseline (CI insecticides oculaires). Chez l'enfant avec atteinte ciliaire : contamination parentale (contexte protection enfance à évaluer).",
+      "points_attention": "⚠️ Maculae caeruleae = taches bleues ardoisées au niveau des piqûres = signe distinctif. ⚠️ Cils : vaseline uniquement (JAMAIS d'insecticide oculaire). ⚠️ TOUJOURS dépister les IST associées. ⚠️ Chez l'enfant : atteinte ciliaire à évaluer dans un contexte de protection de l'enfance.",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Ctenocephalides felis/canis — Puces",
+      "desc": "Insectes hématophages aptères à pattes sauteuses — ectoparasites des carnivores domestiques piquant l'humain occasionnellement. Hôte intermédiaire de Dipylidium caninum (téniasis). Xenopsylla cheopis (puce du rat) : vecteur de la peste.",
+      "classification": "Arthropode — Classe Insecta, Ordre Siphonaptera (aptères, corps latéralement comprimé). Ctenocephalides felis (puce du chat — aussi présente sur le chien), C. canis (puce du chien). Xenopsylla cheopis : puce du rat — vecteur principal de la peste bubonique. Corps brun-roux, 1-4 mm, pattes postérieures puissantes (saut 150× longueur corps).",
+      "vecteur": "Contact avec animaux (chiens, chats) et leur environnement. La puce ne vit pas en permanence sur l'hôte — phases à terre (larves, nymphes, adultes en attente). Larves dans litière animale, tapis, moquettes. Survie adulte sans repas : 2-12 mois. Xenopsylla cheopis (puce du rat) : vecteur de Yersinia pestis (régurgitation pendant repas sanguin).",
+      "vecteur_type": "Arthropode",
+      "cycle": "1. Femelle adulte pond œufs sur hôte (90% tombent dans l'environnement). 2. Larve (3 stades, photophobe, vit dans litière/sol). 3. Nymphe en cocon (survie 1 an dans l'environnement — très résistante). 4. Adulte émergent stimulé par vibrations/CO2/chaleur (d'où l'émergence massive après retour de vacances). 5. Cycle complet : 2-4 semaines en conditions optimales (25°C, humidité 70%).",
+      "cycle_parasitaire_resume": "① Adulte → repas sanguin sur chien/chat (ou humain) → ponte 20-50 œufs/j (tombent dans environnement)\n② Larves photophobes dans moquette/litière → 3 stades larvaires → nymphe (cocon soyeux résistant ++)\n③ Adulte en diapause dans cocon (jusqu'à 12 mois sans repas)\n④ Vibrations/CO2/chaleur → émergence adulte → saut sur hôte → repas\n⑤ Ctenocephalides ingère Dipylidium caninum (cysticercoïde) → larve dans intestin humain si ingestion accidentelle → TÉNIASIS à Dipylidium",
+      "pathologies": "CHEZ L'HUMAIN — PIQÛRES : Prurit intense — papules excoriées. Piqûres groupées 'en petit-déjeuner de puces' (2-3 piqûres alignées). Réaction allergique locale (DAPP — dermatite allergique aux piqûres de puces, surtout chez l'animal). TÉNIASIS À DIPYLIDIUM CANINUM : ingestion accidentelle de puces (larve contenant cysticercoïde) → surtout enfants → prurit anal + proglottis mobiles dans fèces (aspect grain de riz). MALADIES VECTORISÉES : Yersinia pestis (puce du rat X. cheopis) → PESTE (bubonique, septicémique, pulmonaire — urgence mondiale notifiable OMS). Rickettsia typhi → typhus murin. Bartonella henselae → maladie des griffes du chat (la puce dépose des fèces infectées sur la peau/pelage du chat).",
+      "virulence": "Salive antigénique → réactions allergiques. Longue survie environnementale (nymphe). Cocon imperméable à la plupart des insecticides. Réservoirs zoonotiques multiples. Dipylidium : hôte intermédiaire = puce (adulte seulement, après ingestion de proglottis).",
+      "traitements": "TRAITEMENT TRIPLE (simultané et obligatoire) : 1) ANIMAL : insecticides vétérinaires (fipronil spot-on, imidaclopride, sélamectine). 2) ENVIRONNEMENT : insecticides domiciliaires à action rémanente (perméthrine spray) + IGR = inhibiteurs de croissance des insectes (méthoprène, pyriproxyfène — bloquent mue des larves). Aspiration systématique tapis/moquettes/fentes (retire 50% des nymphes mécaniquement). Lavage 60°C literie animale. 3) HUMAIN : antihistaminiques, dermocorticoïdes locaux (prurit/réaction allergique). TÉNIASIS À DIPYLIDIUM : praziquantel 10 mg/kg dose unique ou niclosamide. Vermifugation simultanée de l'animal.",
+      "resistance": "Résistances fipronil décrites (C. felis — Europe, Australie). Résistances pyréthrinoïdes fréquentes. IGR (méthoprène, pyriproxyfène) : pas de résistances décrites (cible développement larvaire — mécanisme distinct des adultes). Solution : rotation des principes actifs.",
+      "points_cles_cours": "La puce = problème ENVIRONNEMENTAL autant que parasitaire : 95% des puces sont dans l'environnement (oeufs, larves, nymphes), seulement 5% sur l'animal. Triple traitement obligatoire : animal + maison + suivi vétérinaire. IGR (régulateurs de croissance) = clé pour rompre le cycle larvaire. Dipylidium caninum : ingestion de puce (pas piqûre) → téniasis de l'enfant. Xenopsylla cheopis = vecteur de la PESTE (Yersinia pestis) : maladie réémergente en Asie, Afrique, Madagascar. Maladie des griffes du chat (Bartonella henselae) : transmise par fèces de puce (la griffure = porte d'entrée cutanée des fèces de puce déposées sur la peau du chat).",
+      "points_attention": "⚠️ 95% des puces dans l'environnement → traitement du logement INDISPENSABLE. ⚠️ Cocon de nymphe résistant à tous les insecticides → aspiration mécanique obligatoire. ⚠️ Retour de vacances (maison vide > 2 semaines) = risque d'émergence massive. ⚠️ Dipylidium = penser chez enfant avec prurit anal et grains de riz dans les selles.",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Cimex lectularius — Punaise de lit",
+      "desc": "Insecte hématophage nocturne, aptère, ectoparasite temporaire de l'humain — résurgence mondiale depuis les années 2000 (voyages, résistances insecticides). Ne transmet aucun pathogène démontré mais provoque d'importantes nuisances physiques et psychologiques.",
+      "classification": "Arthropode — Classe Insecta, Ordre Hemiptera (punaises vraies), Famille Cimicidae. Cimex lectularius (zones tempérées), C. hemipterus (zones tropicales). Corps ovalaire brun-roux, aplati dorso-ventralement (5-7 mm adulte). Aptère. Glandes odorantes : odeur caractéristique (acide butyrique, aldéhydes).",
+      "vecteur": "Aucun vecteur (la punaise EST le parasite). Diffusion passive : bagages, vêtements, meubles d'occasion, transports. Pas de saut ni de vol. Sort la nuit uniquement (photophobe). Se nourrit 5-10 min puis retourne dans ses refuges (fissures, matelas, cadres, prises électriques). Survie sans repas : 12-18 mois. PAS DE TRANSMISSION DE PATHOGÈNES DÉMONTRÉE.",
+      "vecteur_type": "Contact direct",
+      "cycle": "1. Femelle pond 200-500 œufs (collés dans refuges, 1-5/j). 2. Nymphes 5 stades (chaque stade nécessite un repas sanguin). 3. Adulte en 6-8 semaines (T° 23°C). Durée vie adulte : 6-18 mois. Cycle complet : 1-3 mois. La punaise ne réside pas sur le corps — vit dans l'environnement proche du lit.",
+      "cycle_parasitaire_resume": "① Adulte sort la nuit → CO2 et chaleur corporelle guident la punaise → repas sanguin 5-10 min\n② Piqûre indolore (anesthésique dans salive) + anticoagulant → découverte matinale\n③ Repas → retour refuge (fissures, coutures matelas, cadre de lit, socles de prises)\n④ Femelle fécondée pond jusqu'à 500 œufs dans refuges → nymphes (5 stades, 1 repas/stade)\n⑤ Adulte en 6-8 semaines → longue survie sans repas (12-18 mois)",
+      "pathologies": "RÉACTIONS CUTANÉES : Piqûres groupées, alignées en ligne (signe du 'petit-déjeuner, déjeuner, dîner' — 3 piqûres alignées = caractéristique). Papules érythémateuses prurigineuses à recrudescence nocturne. Vésicules (réaction allergique). 30% des sujets asymptomatiques (primo-contact). Réaction allergique sévère possible (urticaire géante, angio-œdème) — rare. Zones exposées : cou, épaules, bras, jambes (zones découvertes). IMPACT PSYCHOLOGIQUE : insomnies, anxiété, impact professionnel/social, stigmatisation. PAS DE MALADIE VECTORISÉE DÉMONTRÉE (VIH, hépatites théoriquement détectés dans punaises — pas de transmission à l'humain prouvée). SIGNES D'INFESTATION : taches de sang séché sur literie, fèces noirâtres (points noirs sur matelas/cadre), odeur caractéristique, mues nymphales.",
+      "virulence": "Salive : anesthésiques locaux (piqûre indolore) + anticoagulants. Pas de pathogène vectorisé démontré. Résistances insecticides majeures. Capacité à détecter le CO2 et la chaleur corporelle à distance. Survie prolongée sans repas = difficulté d'éradication majeure.",
+      "traitements": "TRAITEMENT NON CHIMIQUE (prioritaire) : Chaleur : 50°C × 2h (étuve pour vêtements/literie). Froid : -18°C × 4 jours. Aspiration mécanique systématique (matelas, fissures, plinthes). Housse anti-punaise pour le matelas. TRAITEMENT CHIMIQUE (professionnel recommandé) : Pyréthrinoïdes (perméthrine spray) : résistances fréquentes. Néonicotinoïdes (imidaclopride). Organophosphorés (chlorpyrifos) : usage professionnel. Poudre de diatomite (silice) : action mécanique (perforation cuticule → déshydratation) — peu de résistances. Fumigation (sulfuryle de fluorure) : cas graves. MÉDICAL : antihistaminiques oraux + dermocorticoïdes topiques (prurit/réaction allergique). PRÉVENTION VOYAGE : inspecter matelas/coutures à l'hôtel. Bagages en dehors du lit.",
+      "resistance": "Résistances pyréthrinoïdes très fréquentes (mutations kdr + surexpression mono-oxygénases P450). Résistances à de nombreux insecticides classiques → désinsectisation professionnelle avec associations et rotations. Poudre de diatomite = alternative sans résistance possible (mécanique). Nécessite souvent 2-3 traitements à 2 semaines d'intervalle.",
+      "points_cles_cours": "Punaise de lit NE TRANSMET PAS de pathogènes (contrairement à la puce du rat). Signe caractéristique : piqûres groupées en ligne (2-3 piqûres alignées). Diagnostic : fèces noires (sang digéré) sur coutures matelas + odeur. Traitement = gestion environnementale (non chimique en priorité). Résistances pyréthrinoïdes massives → diatomite ou néonicotinoïdes. Survie sans repas 12-18 mois → déménager ne suffit pas. Impact psychologique majeur = dimension santé mentale à ne pas négliger.",
+      "points_attention": "⚠️ PAS de pathogène vectorisé démontré (contrairement aux idées reçues). ⚠️ Résistances pyréthrinoïdes très fréquentes → ne pas utiliser seuls. ⚠️ Survie sans repas 18 mois → déménager SANS traitement = inefficace. ⚠️ Impact santé mentale souvent sous-estimé. ⚠️ Déclaration conseillée au bailleur/syndic.",
+      "level": 2,
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "level": 4,
+      "name": "Loa loa — Loase (filaire africaine)",
+      "desc": "Filariose strictement africaine spécifique de l'homme, vecteur Chrysops : œdème de Calabar et passage sous-conjonctival du ver adulte.",
+      "classification": "Nématode (Filaire tissulaire)",
+      "vecteur": "Chrysops (taon)",
+      "vecteur_type": "Insecte",
+      "cycle": "Ver rond de 2 à 7 cm de long, longévité >15 ans, strictement africain et spécifique de l'homme. Filaire dans le derme/tissu conjonctif, microfilaires sanguines (à périodicité diurne). Vecteur = Chrysops.",
+      "cycle_parasitaire_resume": "① Piqûre de Chrysops → larves infestantes dans le derme\n② Maturation en vers adultes (tissu conjonctif sous-cutané), longévité >15 ans\n③ Émission de microfilaires sanguines\n④ Reprise par le Chrysops lors d'un repas sanguin",
+      "pathologies": "Incubation muette >3 mois. ŒDÈME DE CALABAR (tuméfaction fugace prurigineuse, migratrice). Passage SOUS-CONJONCTIVAL du ver adulte (visible à l'œil). Passage du ver sous la peau. Complications neurologiques, cardiaques ou rénales possibles, notamment en cas de forte charge microfilarienne.",
+      "virulence": "Migration du ver adulte dans les tissus sous-cutané et conjonctival. Risque d'encéphalopathie iatrogène si traitement microfilaricide administré en cas de forte microfilarémie.",
+      "traitements": "Microfilaricide : ivermectine (Mectizan®). Macrofilaricide : diéthylcarbamazine (Notézine®) à dose croissante. ATTENTION : la doxycycline (anti-Wolbachia) est INEFFICACE sur Loa loa (absence de Wolbachia symbiotique). Risque d'effets secondaires graves (encéphalopathie) si charge parasitaire élevée → ± corticoïdes. Extraction de la filaire adulte possible.",
+      "resistance": "Pas de transmission interhumaine directe. Prévention : répulsifs, lutte anti-vectorielle. Dans les campagnes de traitement de masse, la loase contre-indique l'ivermectine à forte microfilarémie (risque neurologique) → albendazole seul si endémie de loase.",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "level": 4,
+      "name": "Onchocerca volvulus — Onchocercose (« cécité des rivières »)",
+      "desc": "Filaire cutanéo-dermique, vecteur simulie : onchocercomes, dermites et cécité — 2ᵉ cause infectieuse de cécité en Afrique. Maladie tropicale négligée.",
+      "classification": "Nématode (Filaire cutanéo-dermique)",
+      "vecteur": "Simulie (Simulium spp.)",
+      "vecteur_type": "Insecte",
+      "cycle": "Mâle 2-3 cm, femelle ~50 cm, durée de vie 10-15 ans. Microfilaires dans le DERME. Vecteur = simulie (mouche se développant près des rivières à courant rapide). 250 millions de personnes en zone d'endémie (Afrique 99 % des cas, 31 pays ; Amérique latine), 21 millions de sujets atteints.",
+      "cycle_parasitaire_resume": "① Piqûre de simulie → larves dans le derme\n② Vers adultes enkystés (onchocercomes), longévité 10-15 ans\n③ Microfilaires dermiques migrant dans la peau et l'œil\n④ Reprise par la simulie lors d'un repas sanguin (gîtes près des rivières rapides)",
+      "pathologies": "Porteurs sains = réservoirs de parasites. KYSTES dermiques (onchocercomes). Manifestations cutanées (dermites prurigineuses). COMPLICATIONS OCULAIRES → CÉCITÉ après 10-15 ans (« cécité des rivières ») : 2ᵉ cause infectieuse de cécité en Afrique. Obstacle au développement des zones rurales fertiles. Liens épidémiologiques entre épilepsie et onchocercose. Maladie tropicale négligée.",
+      "virulence": "Migration des microfilaires dans le derme et les structures oculaires → réaction inflammatoire chronique. Wolbachia symbiotiques impliquées dans la pathogénie.",
+      "traitements": "Microfilaricide : IVERMECTINE (Mectizan®). Macrofilaricide : doxycycline (mort des Wolbachia, bactéries symbiotiques des vers adultes), 4-6 semaines. Répéter les cures. Diéthylcarbamazine CONTRE-INDIQUÉE (réaction de Mazzotti sévère, atteinte oculaire).",
+      "resistance": "Diagnostic : clinique + épidémiologie, mise en évidence des microfilaires (biopsie cutanée exsangue), PCR/détection ADN, sérologie. PROGRAMME OMS — MDA (mass drug administration) à l'ivermectine depuis 1993 : 1 prise annuelle pendant 12-15 ans (durée de vie des adultes), efficace si >65 % de la population. Niger = 1er pays d'Afrique sans transmission (janvier 2025).",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "level": 4,
+      "name": "Dracunculus medinensis — Dracunculose (ver de Guinée)",
+      "desc": "Filariose de Médine en voie d'éradication : femelle de 60-100 cm émergeant par ulcération cutanée, contamination par l'eau de boisson contenant des Cyclops.",
+      "classification": "Nématode (Filaire)",
+      "vecteur": "Cyclops (copépode d'eau douce)",
+      "vecteur_type": "Eau / Ingestion",
+      "cycle": "Femelle gravide 60-100 cm vivant dans les tissus sous-cutanés. 10-14 mois après la contamination, elle provoque une ulcération du derme ; à chaque contact avec l'eau, la cuticule se rompt et libère les larves, ingérées par un copépode (Cyclops). L'homme s'infecte en buvant de l'eau contenant des Cyclops parasités.",
+      "cycle_parasitaire_resume": "① Ingestion d'eau contenant des Cyclops parasités\n② Libération des larves dans l'intestin → maturation sous-cutanée (10-14 mois)\n③ Femelle gravide → ulcération cutanée (souvent membre inférieur)\n④ Contact avec l'eau → libération des larves → ingestion par Cyclops",
+      "pathologies": "Ulcération cutanée douloureuse (souvent au membre inférieur) avec émergence du ver, surinfections bactériennes possibles. Maladie invalidante des populations rurales déshéritées. Afrique intertropicale, Moyen-Orient, Inde (3,5 millions de cas en 1980, 20 pays).",
+      "virulence": "Migration et émergence du ver adulte par voie cutanée ; libération des larves au contact de l'eau.",
+      "traitements": "Pas de traitement médicamenteux spécifique : EXTRACTION PROGRESSIVE du ver (enroulement lent sur un bâtonnet), soins locaux, prévention des surinfections.",
+      "resistance": "Cycle UNIQUEMENT HUMAIN historiquement → ÉRADICATION POSSIBLE (objectif OMS depuis 1981, marqueur de l'accès à l'eau potable). Prévention : protéger l'eau de la contamination, filtration de l'eau de boisson, dépistage des cas. ÉMERGENCE de réservoirs animaux (chiens au Tchad >600 infectés, chats, babouins ; rôle des poissons/grenouilles non cuits) compliquant l'éradication.",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "level": 4,
+      "name": "Larva migrans cutanée — Ankylostomes animaux",
+      "desc": "Pénétration transcutanée de larves d'ankylostomes du chien/chat (Ancylostoma caninum, A. brasiliensis) : trajet serpigineux prurigineux, impasse parasitaire.",
+      "classification": "Nématode (Ankylostome animal — impasse parasitaire)",
+      "vecteur": "Sol contaminé (larves)",
+      "vecteur_type": "Sol / Larves",
+      "cycle": "Larves d'ankylostomes parasitant normalement l'animal (Ancylostoma caninum, A. brasiliensis), présentes dans les sols chauds et humides souillés par les déjections de chiens/chats. Contamination par marche pieds nus ou couchage sur la plage. Chez l'homme (impasse parasitaire), les larves finissent par mourir sous la peau après avoir circulé. Régions chaudes et humides du globe.",
+      "cycle_parasitaire_resume": "① Déjections de chien/chat → larves dans le sol chaud et humide\n② Pénétration transcutanée chez l'homme (plage, pieds nus)\n③ Migration intra-épidermique (impasse parasitaire)\n④ Mort spontanée des larves sous la peau après quelques semaines",
+      "pathologies": "Papules puis TRAJET SERPIGINEUX inflammatoire progressant de ~3 cm/jour, PRURIT +++. Retour à une peau normale 2-4 semaines après le passage de la larve. Dure quelques semaines. Diagnostic différentiel avec la larva currens (Strongyloides).",
+      "virulence": "Migration intra-épidermique des larves (incapables de compléter leur cycle chez l'homme, hôte non adapté).",
+      "traitements": "Ivermectine : 2 comprimés à 200 µg/kg en une prise. Alternative : albendazole. Hyperéosinophilie sanguine ; diagnostic clinique (aspect des lésions + contexte).",
+      "resistance": "Prévention : éviter le contact cutané direct avec les sols/sables souillés (chaussures sur les plages à risque), lutte contre le parasitisme animal.",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P-gp / MDR</title>
+<style>
+
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1e2530;--border:#30363d;
+  --accent:#7ee787;--accent2:#58a6ff;--accent3:#f78166;--accent4:#d2a8ff;--accent5:#ffa657;
+  --text:#e6edf3;--muted:#8b949e;--radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+h1{text-align:center;padding:24px 16px 8px;font-size:1.6rem;font-weight:700;
+   background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:20px}
+
+/* NAV TABS */
+.nav-wrap{overflow-x:auto;padding:0 16px;border-bottom:1px solid var(--border)}
+.nav{display:flex;gap:4px;min-width:max-content;padding-bottom:0}
+.nav-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:10px 14px;
+  font-size:.8rem;font-weight:600;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap}
+.nav-btn:hover{color:var(--text)}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* PANELS */
+.panels{padding:20px 16px;max-width:1100px;margin:0 auto}
+.panel{display:none}
+.panel.active{display:block}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.card-title{font-size:1rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.row{display:flex;flex-wrap:wrap;gap:12px}
+.col{flex:1;min-width:260px}
+
+/* CONTROLS */
+label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;margin-top:10px}
+input[type=range]{width:100%;accent-color:var(--accent2)}
+input[type=number],select{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:6px;padding:7px 10px;font-size:.85rem;width:100%}
+.btn{background:var(--accent2);color:#000;border:none;border-radius:6px;padding:8px 18px;
+  font-size:.85rem;font-weight:700;cursor:pointer;transition:.15s}
+.btn:hover{opacity:.85}
+.btn-green{background:var(--accent)}
+.btn-red{background:var(--accent3)}
+.btn-purple{background:var(--accent4)}
+.btn-orange{background:var(--accent5)}
+.btn-sm{padding:5px 12px;font-size:.78rem}
+
+/* BADGES / CHIPS */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:700}
+.ok{background:#1a3a1a;color:#7ee787;border:1px solid #2d5a2d}
+.warn{background:#3a2a00;color:#ffa657;border:1px solid #5a4200}
+.err{background:#3a0000;color:#f78166;border:1px solid #5a1a00}
+
+/* CANVAS */
+canvas{display:block;border-radius:8px;border:1px solid var(--border)}
+
+/* STAT TABLE */
+.stat-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.stat-table th{background:var(--surface2);padding:6px 10px;text-align:left;color:var(--muted);font-weight:600}
+.stat-table td{padding:5px 10px;border-bottom:1px solid var(--border)}
+.stat-table tr.highlight td{background:#1a3a1a;color:var(--accent)}
+.stat-table tr.highlight-err td{background:#3a0000;color:var(--accent3)}
+
+/* PEDIGREE */
+.pedigree-ctrl{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+#ped-canvas{cursor:crosshair}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)}
+.legend-box{width:14px;height:14px;border-radius:2px}
+
+/* IMMUNO */
+.immuno-cell{cursor:pointer;transition:.2s;filter:drop-shadow(0 0 4px transparent)}
+.immuno-cell:hover{filter:drop-shadow(0 0 8px var(--accent2));transform-origin:center}
+.info-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;
+  font-size:.82rem;line-height:1.6;min-height:80px}
+.info-box strong{color:var(--accent2)}
+.cytokine{display:inline-block;background:#1e2f4a;color:var(--accent2);border-radius:4px;
+  padding:1px 7px;font-size:.72rem;margin:1px}
+
+/* PGP */
+.cell-viz{position:relative;width:100%;height:240px;background:#0d1a0d;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.pgp-pump{position:absolute;display:flex;align-items:center;justify-content:center;
+  border-radius:8px;font-size:.7rem;font-weight:700}
+
+/* TITRATION */
+#titration-canvas{background:#111}
+
+/* RANGE DISPLAY */
+.range-val{display:inline-block;background:var(--surface2);border-radius:4px;padding:1px 8px;
+  font-size:.8rem;color:var(--accent5);font-weight:700;margin-left:8px}
+
+/* RESULT BOX */
+.result{background:var(--surface2);border-radius:8px;padding:12px 16px;margin-top:10px;font-size:.85rem;line-height:1.7}
+.result .key{color:var(--accent4);font-weight:700}
+
+body{padding:12px;min-height:100vh}
+.panel{display:none}
+.panel.active{display:block}
+</style>
+</head>
+<body>
+<div class="panel active" id="p0">
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <div class="card-title">🔴 Paramètres P-gp / MDR</div>
+      <label>Médicament</label>
+      <select id="pgp-drug" onchange="pgpDraw()">
+        <option value="doxo">Doxorubicine</option>
+        <option value="vinc">Vincristine</option>
+        <option value="taxo">Taxol (Paclitaxel)</option>
+      </select>
+      <label>Expression P-gp <span class="range-val" id="pgp-expr-val">1×</span></label>
+      <input type="range" id="pgp-expr" min="1" max="20" step="1" value="1" oninput="pgpDraw()">
+      <label>Inhibiteur P-gp</label>
+      <select id="pgp-inhib" onchange="pgpDraw()">
+        <option value="0">Aucun</option>
+        <option value="0.5">Vérapamil (partiel −50%)</option>
+        <option value="0.8">Élacridar (fort −80%)</option>
+        <option value="0.95">Tariquidar (complet −95%)</option>
+      </select>
+      <label>Induction chronique</label>
+      <select id="pgp-induc" onchange="pgpDraw()">
+        <option value="0">Pas d'induction</option>
+        <option value="5">Exposition × 1 semaine (+5×)</option>
+        <option value="10">Exposition × 1 mois (+10×)</option>
+        <option value="20">Résistance établie (+20×)</option>
+      </select>
+      <button class="btn btn-red btn-sm" style="margin-top:12px;width:100%" onclick="pgpApplyDrug()">Appliquer le médicament</button>
+      <button class="btn btn-sm" style="margin-top:6px;width:100%" onclick="pgpReset()">Réinitialiser</button>
+      <div id="pgp-result" class="result" style="margin-top:12px"></div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card">
+      <div class="card-title">🔬 Visualisation Cellulaire</div>
+      <canvas id="pgp-canvas" width="460" height="300" style="width:100%;background:#0a1a0a;border-radius:8px"></canvas>
+      <div id="pgp-evolution" style="margin-top:10px"></div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+
+function syncAll(){
+  document.querySelectorAll('input[type=range]').forEach(r=>{
+    const vid=r.id+'-val';
+    const el=document.getElementById(vid);
+    if(el) el.textContent=parseFloat(r.value).toFixed(2);
+  });
+  // specific displays
+  [['hw-q','hw-q-val',2],['drift-n','drift-n-val',0],['drift-g','drift-g-val',0],
+   ['drift-p','drift-p-val',2],['pk-dose','pk-dose-val',0],['pk-vd','pk-vd-val',0],
+   ['pk-ke','pk-ke-val',2],['pk-ka','pk-ka-val',2],['pk-f','pk-f-val',2],['pk-tinf','pk-tinf-val',2],
+   ['md-dose','md-dose-val',0],['md-ke','md-ke-val',2],['md-ka','md-ka-val',2],
+   ['md-vd','md-vd-val',0],['md-tau','md-tau-val',0],['md-n','md-n-val',0],
+   ['cq-cv','cq-cv-val',2],['tit-ca','tit-ca-val',2],['tit-va','tit-va-val',0],
+   ['tit-cb','tit-cb-val',2],['pgp-expr','pgp-expr-val',0]
+  ].forEach(([id,dv,d=2])=>{
+    const r=document.getElementById(id),el=document.getElementById(dv);
+    if(r&&el) el.textContent=parseFloat(r.value).toFixed(d);
+  });
+}
+document.querySelectorAll('input[type=range]').forEach(r=>{
+  r.addEventListener('input',syncAll);
+});
+syncAll();
+
+// ============================================================
+// UTILS
+// ============================================================
+function showPanel(i,btn){
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const inits=[pgpDraw];
+  setTimeout(()=>inits[i]&&inits[i](),50);
+}
+function rangeSync(id,display,dec=2){
+  const el=document.getElementById(id);
+  const dv=document.getElementById(display);
+  if(el&&dv){dv.textContent=parseFloat(el.value).toFixed(dec);}
+}
+function syncAll(){
+  [['hw-q','hw-q-val'],['drift-n','drift-n-val',0],['drift-g','drift-g-val',0],
+   ['drift-p','drift-p-val'],['pk-dose','pk-dose-val',0],['pk-vd','pk-vd-val',0],
+   ['pk-ke','pk-ke-val'],['pk-ka','pk-ka-val'],['pk-f','pk-f-val'],['pk-tinf','pk-tinf-val'],
+   ['md-dose','md-dose-val',0],['md-ke','md-ke-val'],['md-ka','md-ka-val'],
+   ['md-vd','md-vd-val',0],['md-tau','md-tau-val',0],['md-n','md-n-val',0],
+   ['cq-cv','cq-cv-val'],['tit-ca','tit-ca-val'],['tit-va','tit-va-val',0],
+   ['tit-cb','tit-cb-val'],['pgp-expr','pgp-expr-val',0]
+  ].forEach(([id,dv,d=2])=>rangeSync(id,dv,d));
+}
+document.querySelectorAll('input[type=range]').forEach(r=>{
+  r.addEventListener('input',syncAll);
+});
+syncAll();
+
+// ============================================================
+// PANEL 8 : P-gp / MDR
+// ============================================================
+let pgpHistory=[];
+let pgpInternalConc=80;
+
+const DRUGS_PGP={
+  doxo:{name:'Doxorubicine',color:'#f78166',substrate:true,base:80},
+  vinc:{name:'Vincristine',color:'#d2a8ff',substrate:true,base:70},
+  taxo:{name:'Paclitaxel',color:'#58a6ff',substrate:true,base:75},
+};
+function pgpDraw(){
+  const expr=parseInt(document.getElementById('pgp-expr').value)||1;
+  const inhib=parseFloat(document.getElementById('pgp-inhib').value)||0;
+  const induc=parseInt(document.getElementById('pgp-induc').value)||0;
+  const drugId=document.getElementById('pgp-drug').value;
+  const drug=DRUGS_PGP[drugId];
+  const exprEffective=Math.max(1,expr+induc);
+  document.getElementById('pgp-expr-val').textContent=exprEffective+'×';
+
+  const canvas=document.getElementById('pgp-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#0a1a0a';ctx.fillRect(0,0,W,H);
+
+  // Cell membrane
+  const memTop=60,memBot=240,memL=80,memR=380;
+  ctx.fillStyle='#1a3a1a';
+  ctx.beginPath();ctx.roundRect(memL,memTop,memR-memL,memBot-memTop,20);ctx.fill();
+  ctx.strokeStyle='#2d5a2d';ctx.lineWidth=2;
+  ctx.beginPath();ctx.roundRect(memL,memTop,memR-memL,memBot-memTop,20);ctx.stroke();
+
+  // Nucleus
+  ctx.fillStyle='#0f2a0f';ctx.strokeStyle='#1e4a1e';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.ellipse(230,150,55,40,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#56d364';ctx.font='10px sans-serif';ctx.textAlign='center';
+  ctx.fillText('Noyau',230,154);
+
+  // P-gp pumps on membrane
+  const nPumps=Math.min(Math.ceil(exprEffective/2)+1,8);
+  for(let i=0;i<nPumps;i++){
+    const px=memL+20+(i*(memR-memL-40)/Math.max(nPumps-1,1));
+    const py=memTop-10;
+    const eff=1-inhib;
+    ctx.fillStyle=eff>0.3?`rgba(247,129,102,${0.4+eff*0.6})`:'rgba(88,166,255,0.6)';
+    ctx.fillRect(px-8,py,16,20);
+    ctx.fillStyle='#e6edf3';ctx.font='8px monospace';ctx.textAlign='center';
+    ctx.fillText('P-gp',px,py+14);
+    // Arrow (efflux)
+    if(eff>0.05){
+      ctx.strokeStyle=`rgba(247,129,102,${eff})`;ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px,py-25);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(px,py-25);ctx.lineTo(px-5,py-18);ctx.moveTo(px,py-25);ctx.lineTo(px+5,py-18);ctx.stroke();
+    }
+  }
+
+  // Drug molecules (concentration bars)
+  const effluxFactor=(exprEffective*(1-inhib));
+  const internalPct=Math.max(5,100-effluxFactor*5);
+  const barH=Math.max(4,internalPct*0.7);
+  ctx.fillStyle=drug.color+'99';
+  ctx.fillRect(300,memBot-barH-10,50,barH);
+  ctx.fillStyle=drug.color;ctx.font='9px monospace';ctx.textAlign='center';
+  ctx.fillText(`${Math.round(internalPct)}%`,325,memBot-barH-14);
+  ctx.fillText('intra',325,memBot-4);
+
+  // External drug
+  ctx.fillStyle=drug.color+'44';
+  ctx.fillRect(300,30,50,25);
+  ctx.fillStyle=drug.color;ctx.font='9px monospace';ctx.textAlign='center';
+  ctx.fillText('100%',325,45);ctx.fillText('extrav.',325,60);
+
+  // Labels
+  ctx.fillStyle='#8b949e';ctx.font='10px sans-serif';ctx.textAlign='center';
+  ctx.fillText(`Expression P-gp : ${exprEffective}×`,230,H-15);
+  ctx.fillText(`Cellule ${induc>5?'RÉSISTANTE':'sensible'}`,230,H-3);
+
+  // Apoptosis indicator
+  const apopt=internalPct>40?'Mort cellulaire probable':'Survie cellulaire';
+  const apoptColor=internalPct>40?'#f78166':'#7ee787';
+  ctx.fillStyle=apoptColor;ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+  ctx.fillText(apopt,230,memTop-22);
+
+  // Legend
+  ctx.fillStyle='#d2a8ff';ctx.font='9px sans-serif';ctx.textAlign='left';
+  ctx.fillText(drug.name,memL,H-3);
+
+  document.getElementById('pgp-result').innerHTML=
+    `<span class="key">${drug.name}</span> — Substrat P-gp : oui<br>`+
+    `<span class="key">Expression P-gp</span> = ${exprEffective}× (induction: +${induc}×)<br>`+
+    `<span class="key">Inhibition P-gp</span> = ${(inhib*100).toFixed(0)}%<br>`+
+    `<span class="key">Concentration intracellulaire</span> ≈ ${Math.round(internalPct)}% de la dose<br>`+
+    (induc>0?`<span class="badge ${induc>10?'err':'warn'}">⚠ Phénotype MDR — sélection clones résistants</span>`:'<span class="badge ok">✓ Cellule sensible</span>')+
+    (inhib>0?`<br><span class="badge ok">✓ Inhibiteur P-gp actif → restauration partielle sensibilité</span>`:'');
+}
+function pgpApplyDrug(){
+  const expr=parseInt(document.getElementById('pgp-expr').value)||1;
+  const induc=parseInt(document.getElementById('pgp-induc').value)||0;
+  const newExpr=Math.min(20,expr+3);
+  document.getElementById('pgp-expr').value=newExpr;
+  if(document.getElementById('pgp-induc').value==='0'&&newExpr>5)
+    document.getElementById('pgp-induc').value='5';
+  pgpDraw();
+  const evo=document.getElementById('pgp-evolution');
+  const msg=newExpr>15?'🔴 Résistance établie — P-gp très surexprimée':
+    newExpr>8?'🟡 Induction en cours — phénotype MDR émergent':
+    '🟢 Cellule sensible — exposition initiale';
+  evo.innerHTML=`<div style="font-size:.82rem;margin-top:4px">${msg}<br><small style="color:var(--muted)">P-gp : ${newExpr}× → cliquer à nouveau pour accentuer l\'induction</small></div>`;
+}
+function pgpReset(){
+  document.getElementById('pgp-expr').value=1;
+  document.getElementById('pgp-induc').value=0;
+  document.getElementById('pgp-inhib').value=0;
+  document.getElementById('pgp-evolution').innerHTML='';
+  pgpDraw();
+}
+setTimeout(pgpDraw,100);
+
+// Init all
+window.addEventListener('resize',()=>{
+  const active=document.querySelector('.nav-btn.active');
+  if(active)active.click();
+});
+
+// Auto-init
+setTimeout(()=>{
+  const inits=[pgpDraw];
+  const idx=0;
+  if(inits[idx]) inits[idx]();
+},100);
+
+</script>
+</body>
+</html>

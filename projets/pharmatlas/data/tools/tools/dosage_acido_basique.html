@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dosage Acido-Basique</title>
+<style>
+
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1e2530;--border:#30363d;
+  --accent:#7ee787;--accent2:#58a6ff;--accent3:#f78166;--accent4:#d2a8ff;--accent5:#ffa657;
+  --text:#e6edf3;--muted:#8b949e;--radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+h1{text-align:center;padding:24px 16px 8px;font-size:1.6rem;font-weight:700;
+   background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:20px}
+
+/* NAV TABS */
+.nav-wrap{overflow-x:auto;padding:0 16px;border-bottom:1px solid var(--border)}
+.nav{display:flex;gap:4px;min-width:max-content;padding-bottom:0}
+.nav-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:10px 14px;
+  font-size:.8rem;font-weight:600;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap}
+.nav-btn:hover{color:var(--text)}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* PANELS */
+.panels{padding:20px 16px;max-width:1100px;margin:0 auto}
+.panel{display:none}
+.panel.active{display:block}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.card-title{font-size:1rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.row{display:flex;flex-wrap:wrap;gap:12px}
+.col{flex:1;min-width:260px}
+
+/* CONTROLS */
+label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;margin-top:10px}
+input[type=range]{width:100%;accent-color:var(--accent2)}
+input[type=number],select{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:6px;padding:7px 10px;font-size:.85rem;width:100%}
+.btn{background:var(--accent2);color:#000;border:none;border-radius:6px;padding:8px 18px;
+  font-size:.85rem;font-weight:700;cursor:pointer;transition:.15s}
+.btn:hover{opacity:.85}
+.btn-green{background:var(--accent)}
+.btn-red{background:var(--accent3)}
+.btn-purple{background:var(--accent4)}
+.btn-orange{background:var(--accent5)}
+.btn-sm{padding:5px 12px;font-size:.78rem}
+
+/* BADGES / CHIPS */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:700}
+.ok{background:#1a3a1a;color:#7ee787;border:1px solid #2d5a2d}
+.warn{background:#3a2a00;color:#ffa657;border:1px solid #5a4200}
+.err{background:#3a0000;color:#f78166;border:1px solid #5a1a00}
+
+/* CANVAS */
+canvas{display:block;border-radius:8px;border:1px solid var(--border)}
+
+/* STAT TABLE */
+.stat-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.stat-table th{background:var(--surface2);padding:6px 10px;text-align:left;color:var(--muted);font-weight:600}
+.stat-table td{padding:5px 10px;border-bottom:1px solid var(--border)}
+.stat-table tr.highlight td{background:#1a3a1a;color:var(--accent)}
+.stat-table tr.highlight-err td{background:#3a0000;color:var(--accent3)}
+
+/* PEDIGREE */
+.pedigree-ctrl{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+#ped-canvas{cursor:crosshair}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)}
+.legend-box{width:14px;height:14px;border-radius:2px}
+
+/* IMMUNO */
+.immuno-cell{cursor:pointer;transition:.2s;filter:drop-shadow(0 0 4px transparent)}
+.immuno-cell:hover{filter:drop-shadow(0 0 8px var(--accent2));transform-origin:center}
+.info-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;
+  font-size:.82rem;line-height:1.6;min-height:80px}
+.info-box strong{color:var(--accent2)}
+.cytokine{display:inline-block;background:#1e2f4a;color:var(--accent2);border-radius:4px;
+  padding:1px 7px;font-size:.72rem;margin:1px}
+
+/* PGP */
+.cell-viz{position:relative;width:100%;height:240px;background:#0d1a0d;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.pgp-pump{position:absolute;display:flex;align-items:center;justify-content:center;
+  border-radius:8px;font-size:.7rem;font-weight:700}
+
+/* TITRATION */
+#titration-canvas{background:#111}
+
+/* RANGE DISPLAY */
+.range-val{display:inline-block;background:var(--surface2);border-radius:4px;padding:1px 8px;
+  font-size:.8rem;color:var(--accent5);font-weight:700;margin-left:8px}
+
+/* RESULT BOX */
+.result{background:var(--surface2);border-radius:8px;padding:12px 16px;margin-top:10px;font-size:.85rem;line-height:1.7}
+.result .key{color:var(--accent4);font-weight:700}
+
+body{padding:12px;min-height:100vh}
+.panel{display:none}
+.panel.active{display:block}
+</style>
+</head>
+<body>
+<div class="panel active" id="p0">
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <div class="card-title">🧪 Paramètres du Dosage</div>
+      <label>Acide dosé</label>
+      <select id="tit-acid" onchange="titDraw()">
+        <option value="acide_acetique">Acide acétique (Ka=1.8e-5)</option>
+        <option value="acide_chlorhydrique">Acide chlorhydrique (fort)</option>
+        <option value="acide_phosphorique">Acide phosphorique (Ka1=7.5e-3)</option>
+      </select>
+      <label>Concentration acide (mol/L) <span class="range-val" id="tit-ca-val">0.10</span></label>
+      <input type="range" id="tit-ca" min="0.01" max="0.5" step="0.01" value="0.1" oninput="titDraw()">
+      <label>Volume acide (mL) <span class="range-val" id="tit-va-val">20</span></label>
+      <input type="range" id="tit-va" min="5" max="50" step="1" value="20" oninput="titDraw()">
+      <label>Concentration NaOH (mol/L) <span class="range-val" id="tit-cb-val">0.10</span></label>
+      <input type="range" id="tit-cb" min="0.01" max="0.5" step="0.01" value="0.1" oninput="titDraw()">
+      <div id="tit-result" class="result" style="margin-top:12px"></div>
+      <div style="margin-top:12px">
+        <div class="card-title" style="font-size:.88rem">🎨 Choix de l'indicateur</div>
+        <div id="tit-indicators"></div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card">
+      <div class="card-title">📈 Courbe pH = f(V<sub>NaOH</sub>)</div>
+      <canvas id="titration-canvas" width="460" height="320" style="width:100%"></canvas>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===== PANEL 8 : P-gp / MDR ===== -->
+<script>
+
+function syncAll(){
+  document.querySelectorAll('input[type=range]').forEach(r=>{
+    const vid=r.id+'-val';
+    const el=document.getElementById(vid);
+    if(el) el.textContent=parseFloat(r.value).toFixed(2);
+  });
+  // specific displays
+  [['hw-q','hw-q-val',2],['drift-n','drift-n-val',0],['drift-g','drift-g-val',0],
+   ['drift-p','drift-p-val',2],['pk-dose','pk-dose-val',0],['pk-vd','pk-vd-val',0],
+   ['pk-ke','pk-ke-val',2],['pk-ka','pk-ka-val',2],['pk-f','pk-f-val',2],['pk-tinf','pk-tinf-val',2],
+   ['md-dose','md-dose-val',0],['md-ke','md-ke-val',2],['md-ka','md-ka-val',2],
+   ['md-vd','md-vd-val',0],['md-tau','md-tau-val',0],['md-n','md-n-val',0],
+   ['cq-cv','cq-cv-val',2],['tit-ca','tit-ca-val',2],['tit-va','tit-va-val',0],
+   ['tit-cb','tit-cb-val',2],['pgp-expr','pgp-expr-val',0]
+  ].forEach(([id,dv,d=2])=>{
+    const r=document.getElementById(id),el=document.getElementById(dv);
+    if(r&&el) el.textContent=parseFloat(r.value).toFixed(d);
+  });
+}
+document.querySelectorAll('input[type=range]').forEach(r=>{
+  r.addEventListener('input',syncAll);
+});
+syncAll();
+
+// ============================================================
+// UTILS
+// ============================================================
+function showPanel(i,btn){
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const inits=[titDraw];
+  setTimeout(()=>inits[i]&&inits[i](),50);
+}
+function rangeSync(id,display,dec=2){
+  const el=document.getElementById(id);
+  const dv=document.getElementById(display);
+  if(el&&dv){dv.textContent=parseFloat(el.value).toFixed(dec);}
+}
+function syncAll(){
+  [['hw-q','hw-q-val'],['drift-n','drift-n-val',0],['drift-g','drift-g-val',0],
+   ['drift-p','drift-p-val'],['pk-dose','pk-dose-val',0],['pk-vd','pk-vd-val',0],
+   ['pk-ke','pk-ke-val'],['pk-ka','pk-ka-val'],['pk-f','pk-f-val'],['pk-tinf','pk-tinf-val'],
+   ['md-dose','md-dose-val',0],['md-ke','md-ke-val'],['md-ka','md-ka-val'],
+   ['md-vd','md-vd-val',0],['md-tau','md-tau-val',0],['md-n','md-n-val',0],
+   ['cq-cv','cq-cv-val'],['tit-ca','tit-ca-val'],['tit-va','tit-va-val',0],
+   ['tit-cb','tit-cb-val'],['pgp-expr','pgp-expr-val',0]
+  ].forEach(([id,dv,d=2])=>rangeSync(id,dv,d));
+}
+document.querySelectorAll('input[type=range]').forEach(r=>{
+  r.addEventListener('input',syncAll);
+});
+syncAll();
+
+// ============================================================
+// PANEL 7 : DOSAGE ACIDO-BASIQUE
+// ============================================================
+const INDICATORS=[
+  {name:'Hélianthine',range:[3.1,4.4],col1:'#e74c3c',col2:'#f39c12',pKa:3.4},
+  {name:'Rouge de méthyle',range:[4.4,6.2],col1:'#e74c3c',col2:'#f1c40f',pKa:5.1},
+  {name:'Phénol rouge',range:[6.8,8.4],col1:'#f39c12',col2:'#c0392b',pKa:7.9},
+  {name:'Phénolphtaléine',range:[8.2,10.0],col1:'incolore',col2:'#9b59b6',pKa:9.1},
+  {name:'Bleu de thymol',range:[8.0,9.6],col1:'#f1c40f',col2:'#3498db',pKa:8.9},
+];
+function titDraw(){
+  syncAll();
+  const acid=document.getElementById('tit-acid').value;
+  const Ca=parseFloat(document.getElementById('tit-ca').value);
+  const Va=parseFloat(document.getElementById('tit-va').value);
+  const Cb=parseFloat(document.getElementById('tit-cb').value);
+  const Kw=1e-14;
+  const acidProps={
+    acide_acetique:{Ka:1.8e-5,strong:false,name:'CH₃COOH'},
+    acide_chlorhydrique:{Ka:1e3,strong:true,name:'HCl'},
+    acide_phosphorique:{Ka:7.5e-3,strong:false,name:'H₃PO₄ (1ère dissociation)'},
+  };
+  const{Ka,strong,name}=acidProps[acid];
+  const Veq=Ca*Va/Cb; // mL
+
+  const VbMax=Veq*2.2;
+  const nPts=300;
+  const pts=[];
+  for(let i=0;i<=nPts;i++){
+    const Vb=VbMax*i/nPts;
+    let pH;
+    const n_a=Ca*Va/1000, n_b=Cb*Vb/1000;
+    const V=Va+Vb;
+    if(Vb<Veq*0.001){
+      if(strong){pH=-Math.log10(Ca);}
+      else{const H=(-Ka+Math.sqrt(Ka*Ka+4*Ka*Ca))/2;pH=-Math.log10(H);}
+    } else if(Math.abs(Vb-Veq)<0.01){
+      if(strong){pH=7;}
+      else{
+        const Cs=n_a/V*1000;
+        const Kb=Kw/Ka;
+        const OH=Math.sqrt(Kb*Cs);
+        pH=14+Math.log10(OH);
+      }
+    } else if(Vb<Veq){
+      if(strong){const excess=n_a-n_b;pH=-Math.log10(excess/V*1000);}
+      else{const ratio=n_b/(n_a-n_b);pH=(-Math.log10(Ka)+Math.log10(ratio));}
+    } else {
+      const excess=n_b-n_a;
+      const Oh=excess/V*1000;
+      pH=14+Math.log10(Oh);
+    }
+    pH=Math.max(0,Math.min(14,pH));
+    pts.push({Vb,pH});
+  }
+
+  // Calc pH at equivalence
+  const pHeq=pts.reduce((prev,curr)=>Math.abs(curr.Vb-Veq)<Math.abs(prev.Vb-Veq)?curr:prev).pH;
+
+  const canvas=document.getElementById('titration-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  const pad={l:45,r:20,t:20,b:40};
+  const gW=W-pad.l-pad.r,gH=H-pad.t-pad.b;
+  ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+  const xS=gW/VbMax,yS=gH/14;
+
+  // Indicator zones
+  INDICATORS.forEach(ind=>{
+    const y1=pad.t+gH-(ind.range[1]*yS),y2=pad.t+gH-ind.range[0]*yS;
+    ctx.fillStyle='rgba(255,255,255,0.03)';
+    ctx.fillRect(pad.l,y1,gW,y2-y1);
+  });
+
+  // Equivalence vertical line
+  ctx.strokeStyle='rgba(247,129,102,0.6)';ctx.setLineDash([5,4]);ctx.lineWidth=1.5;
+  const xEq=pad.l+Veq*xS;
+  ctx.beginPath();ctx.moveTo(xEq,pad.t);ctx.lineTo(xEq,pad.t+gH);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#f78166';ctx.font='10px monospace';ctx.textAlign='center';
+  ctx.fillText(`Veq=${Veq.toFixed(1)}mL`,xEq,pad.t+10);
+  ctx.fillText(`pH=${pHeq.toFixed(1)}`,xEq,pad.t+22);
+
+  // Horizontal pH line at pHeq
+  ctx.strokeStyle='rgba(126,231,135,0.4)';ctx.setLineDash([4,4]);ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(pad.l,pad.t+gH-pHeq*yS);ctx.lineTo(pad.l+gW,pad.t+gH-pHeq*yS);
+  ctx.stroke();ctx.setLineDash([]);
+
+  // Curve
+  ctx.strokeStyle='#58a6ff';ctx.lineWidth=2.5;
+  ctx.beginPath();
+  pts.forEach((p,i)=>{
+    const x=pad.l+p.Vb*xS,y=pad.t+gH-p.pH*yS;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Axes
+  ctx.strokeStyle='#30363d';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+gH);
+  ctx.lineTo(pad.l+gW,pad.t+gH);ctx.stroke();
+  for(let pH=0;pH<=14;pH+=2){
+    const y=pad.t+gH-pH*yS;
+    ctx.fillStyle='#8b949e';ctx.font='10px monospace';ctx.textAlign='right';
+    ctx.fillText(pH,pad.l-4,y+4);
+    ctx.strokeStyle='#1e2530';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+gW,y);ctx.stroke();
+  }
+  for(let i=0;i<=5;i++){
+    const v=VbMax*i/5,x=pad.l+v*xS;
+    ctx.fillStyle='#8b949e';ctx.font='10px monospace';ctx.textAlign='center';
+    ctx.fillText(v.toFixed(1),x,pad.t+gH+14);
+  }
+  ctx.fillStyle='#8b949e';ctx.font='11px sans-serif';ctx.textAlign='center';
+  ctx.fillText(`V NaOH (mL)`,pad.l+gW/2,H-2);
+  ctx.save();ctx.translate(12,pad.t+gH/2);ctx.rotate(-Math.PI/2);
+  ctx.fillText('pH',0,0);ctx.restore();
+
+  document.getElementById('tit-result').innerHTML=
+    `<span class="key">Dosage :</span> ${name} (${Ca.toFixed(2)} mol/L × ${Va}mL) par NaOH (${Cb.toFixed(2)} mol/L)<br>`+
+    `<span class="key">V équivalence</span> = ${Veq.toFixed(2)} mL &nbsp;|&nbsp; <span class="key">pH(Veq)</span> = ${pHeq.toFixed(2)}<br>`+
+    (!strong?`<span class="key">pKa</span> = ${(-Math.log10(Ka)).toFixed(2)} &nbsp;|&nbsp; demi-neutralisation : pH = pKa = ${(-Math.log10(Ka)).toFixed(2)}`:'Acide fort : saut de pH abrupt');
+
+  // Indicator recommendations
+  let indHTML='';
+  INDICATORS.forEach(ind=>{
+    const ok=pHeq>=ind.range[0]&&pHeq<=ind.range[1];
+    const badge=ok?`<span class="badge ok">✓ Adapté</span>`:`<span class="badge err">✗ Non adapté</span>`;
+    indHTML+=`<div style="margin:3px 0;font-size:.8rem">${badge} <strong>${ind.name}</strong> — zone ${ind.range[0]}–${ind.range[1]}, couleur : <span style="color:${ok?'var(--accent)':'var(--muted)'}">${ind.col1}→${ind.col2}</span></div>`;
+  });
+  document.getElementById('tit-indicators').innerHTML=indHTML;
+}
+setTimeout(titDraw,100);
+
+</script>
+</body>
+</html>

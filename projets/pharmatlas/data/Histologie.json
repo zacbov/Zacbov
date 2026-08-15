@@ -1,0 +1,923 @@
+{
+  "Histologie": [
+    {
+      "name": "Épithélium pavimenteux simple",
+      "desc": "Épithélium d'échange — une seule couche de cellules aplaties — endothélium et mésothélium",
+      "_icon": "🟦",
+      "histo_type": "Tissu épithélial",
+      "localisation": "Revêtement interne des vaisseaux sanguins et lymphatiques (endothélium), séreuses (mésothélium : plèvre, péritoine, péricarde), alvéoles pulmonaires (pneumocytes I), capsule de Bowman (glomérule rénal).",
+      "structure": "Monocouche de cellules très aplaties (comme des carreaux de sol vus de dessus). Noyau allongé et peu bombé, visible en vue latérale. Cellules à contour polygonal, jointives, cytoplasme mince et homogène. Membrane basale fine sous-jacente.",
+      "cellules_principales": [
+        "Cellules endothéliales (vaisseaux)",
+        "Cellules mésothéliales (séreuses)",
+        "Pneumocytes de type I (alvéoles — 95% de la surface alvéolaire)"
+      ],
+      "fonctions": "Échanges passifs (O₂, CO₂, eau, solutés par gradient). Barrière sélective (filtre glomérulaire). Production de médiateurs vasoactifs (NO, prostacycline). Réduction des frictions (séreuses). Transport de molécules par pinocytose.",
+      "colorations": {
+        "HES": "Noyaux violets aplatis (hématoxyline). Cytoplasme éosinophile très mince, difficile à distinguer. Cellules jointives 'en mosaïque' vues de face.",
+        "PAS": "Positif faible (glycoprotéines membranaires). Lame basale PAS+ (collagène IV, laminine).",
+        "Masson": "Cellules vertes (cytoplasme mince). Lame basale bleue fine. Collagène sous-jacent bleu/vert.",
+        "notes": "IHC : CD31, CD34, VWF (endothéliums). Cytokératine (mésothélium). T1α/podoplanine (pneumocytes I). Calrétinine+, WT1+ (mésothéliome malin)."
+      },
+      "aspects_microscopiques": [
+        "Cellules très aplaties : noyau elliptique bombant dans la lumière — aspect 'dos de baleine'",
+        "Vue de profil : la cellule ressemble à une 'crêpe' avec un noyau en son centre",
+        "Vue de face : cellules polygonales à contour irrégulier, jointives (endothélium de frottis)",
+        "Pas de microvillosités, pas de cils — adapté à l'échange passif rapide",
+        "Jonctions intercellulaires : jonctions serrées (tight junctions) +++ → étanchéité sélective"
+      ],
+      "pathologies_associees": "Athérosclérose (dysfonction endothéliale), infarctus du myocarde (ischémie endothéliale), œdème pulmonaire (lésions pneumocytes I), mésothéliome (tumeur mésothélium — amiante), syndrome néphrotique (atteinte podocytes glomérulaires).",
+      "pertinence_pharmacie": "L'endothélium vasculaire est la CIBLE PRINCIPALE des médicaments cardiovasculaires. La production de NO endothélial est stimulée par les statines (effets pléiotropes), les IEC, les sartans. Les pneumocytes I (épithélium pavimenteux des alvéoles) sont la cible des lésions induites par bléomycine, busulfan, nitrofurantoïne (fibrose pulmonaire iatrogène). Le mésothéliome est traité par pemetrexed + cisplatine.",
+      "points_cles": [
+        "Une seule couche de cellules plates = épithélium pavimenteux SIMPLE",
+        "Endothélium : origine mésodermique mais structure histologique identique à un épithélium",
+        "Pneumocytes I = 95% surface alvéolaire mais seulement 40% des cellules alvéolaires",
+        "Lame basale = glycoprotéines (collagène IV, laminine, fibronectine) + protéoglycanes → PAS+",
+        "Toutes les cellules touchent la membrane basale (monocouche) — critère clé vs stratifié"
+      ],
+      "liens_pharmacologie": [
+        "Statines (↑ NO endothélial — effets pléiotropes)",
+        "IEC/Sartans (protection vasculaire endothéliale)",
+        "Nitrés / NO (vasodilatation endothélium-dépendante)",
+        "Pemetrexed + Cisplatine (mésothéliome)",
+        "Bléomycine ⚠ (fibrose pulmonaire par lésion pneumocytes I)",
+        "Nitrofurantoïne ⚠ (fibrose pulmonaire)"
+      ],
+      "cas_clinique": "Patient de 62 ans, tabagique, dyspnée progressive. Scanner : épaississement pleural bilatéral avec calcifications. Biopsie : prolifération de cellules cubiques/fusiformes sur fond fibro-hyalin. IHC : calrétinine+, WT1+, CD5/6+. Diagnostic : mésothéliome pleural malin (épithélioïde). Traitement : pemetrexed + cisplatine ± pembrolizumab."
+    },
+    {
+      "name": "Épithélium prismatique simple",
+      "desc": "Épithélium absorbant/sécrétant — cellules hautes en colonne — intestin, vésicule biliaire, col utérin",
+      "_icon": "🟩",
+      "histo_type": "Tissu épithélial",
+      "localisation": "Intestin grêle et côlon (entérocytes + cellules caliciformes), estomac (cellules à mucus), vésicule biliaire, trompes de Fallope (cilié), endomètre utérin (cilié), tubes collecteurs rénaux, canaux biliaires, glandes exocrines.",
+      "structure": "Monocouche de cellules hautes et étroites (hauteur > largeur). Noyau ovoïde basal ou central, alignés en rangée régulière (aspect 'en palissade'). Pôle apical libre avec microvillosités (plateau strié / bordure en brosse dans l'intestin). Cellules caliciformes (goblet cells) intercalées : mucus qui pousse le noyau en bas, cytoplasme apical translucide gonflé.",
+      "cellules_principales": [
+        "Entérocytes (absorption — 90% des cellules intestinales)",
+        "Cellules caliciformes / Goblet cells (mucus — 10% intestin grêle, 30% côlon)",
+        "Cellules entéroendocrines (sérotonine, sécrétine, CCK, GIP)",
+        "Cellules de Paneth (défensines — cryptes)",
+        "Colonocytes (côlon)",
+        "Cellules ciliées (trompes, trachée)"
+      ],
+      "fonctions": "Absorption des nutriments (entérocytes : acides aminés, glucose via SGLT1, acides gras). Sécrétion de mucus protecteur (cellules caliciformes). Sécrétion d'hormones gastro-intestinales. Brassage et transport par les cils (trompes). Barrière physique et immunologique (IgA sécrétoire, défensines).",
+      "colorations": {
+        "HES": "Entérocytes éosinophiles (rose), noyaux basaux violets alignés 'en palissade'. Cellules caliciformes : cytoplasme apical clair (mucine non colorée). Plateau strié à l'apex des entérocytes (liseré éosinophile homogène).",
+        "PAS": "FORTEMENT POSITIF : mucus des cellules caliciformes (magenta intense). Glycocalyx du plateau strié (rose pâle). Lame basale PAS+.",
+        "Masson": "Cellules en vert. Fibres de collagène du chorion en bleu. Cellules caliciformes claires (mucine non fixée).",
+        "notes": "Bleu Alcian pH 2,5 : mucines acides (côlon, bronches). Bleu Alcian pH 1,0 : mucines sulfatées. IHC : chromogranine A + synaptophysine (cellules entéroendocrines). CD3 (LIE — >25/100 entérocytes dans cœliaque). Ki67 (prolifération — cryptes seulement en condition normale)."
+      },
+      "aspects_microscopiques": [
+        "Noyaux 'en palissade' : régularité remarquable, tous au même niveau → monocouche organisée",
+        "Plateau strié = microvillosités (1000/cellule, L=1µm) densément emballées → augmente surface ×600",
+        "Cellules caliciformes : cytoplasme apical en 'gobelet' gonflé de mucine PAS+ (magenta), noyau refoulé à la base",
+        "Jonctions serrées apicales entre entérocytes : barrière paracellulaire sélective (tight junctions = zonula occludens)",
+        "Renouvellement rapide (3-5 jours) → très sensibles aux chimiothérapies anti-mitotiques → mucosites"
+      ],
+      "pathologies_associees": "Maladie de Crohn (inflammation transmurale — épaississement pariétal, fistules). Rectocolite hémorragique (inflammation limitée à la muqueuse). Cancer colorectal (adénocarcinome). Sprue/maladie cœliaque (atrophie villositaire totale — biopsie duodénale D2). Tumeur carcinoïde (cellules entéroendocrines). Syndrome de Barrett (métaplasie œsophagienne : squameux → cylindrique).",
+      "pertinence_pharmacie": "Le renouvellement rapide de l'épithélium intestinal (3-5 jours) explique la mucosité comme EI fréquent des chimiothérapies (5-FU, méthotrexate, irinotécan). Les transporteurs intestinaux (SGLT1, GLUT2, PEPT1, NPC1L1) sont cibles pharmacologiques : acarbose (alpha-glucosidases), ézétimibe (NPC1L1), valaciclovir (PEPT1). La barrière intestinale régule la biodisponibilité orale de la plupart des médicaments.",
+      "points_cles": [
+        "Épithélium prismatique SIMPLE = 1 couche de cellules HAUTES (noyaux basaux 'en palissade')",
+        "Plateau strié = microvillosités densément emballées → ×600 la surface d'absorption intestinale",
+        "Mucines PAS+ (magenta) = marqueur clé des cellules caliciformes et des adénocarcinomes mucineux",
+        "Renouvellement rapide (3-5 j) → cible des chimiothérapies → mucosites (EI fréquent)",
+        "Cellules de Paneth (cryptes) : granules éosinophiles apicaux = défensines (antibiotiques endogènes)"
+      ],
+      "liens_pharmacologie": [
+        "5-FU / Oxaliplatine / Irinotécan ⚠ (mucosites — atteinte épithélium intestinal en prolifération)",
+        "Méthotrexate ⚠ (mucosites — anti-folique)",
+        "Acarbose (inhibiteur alpha-glucosidases bordure en brosse)",
+        "Ézétimibe (inhibiteur NPC1L1 entérocyte)",
+        "Valaciclovir (absorption via PEPT1 entérocyte)",
+        "Bévacizumab (cancer colorectal — anti-VEGF)",
+        "Cétuximab/Panitumumab (cancer colorectal KRAS wt — anti-EGFR)"
+      ]
+    },
+    {
+      "name": "Épithélium pseudostratifié cilié",
+      "desc": "Épithélium respiratoire — aspect faussement stratifié — voies aériennes supérieures",
+      "_icon": "💨",
+      "histo_type": "Tissu épithélial",
+      "localisation": "Fosses nasales, nasopharynx, larynx, trachée, bronches souches et lobaires. Aussi : épididyme (non cilié, stéréocils), oreille interne.",
+      "structure": "Monocouche de cellules de hauteurs différentes, TOUTES attachées à la membrane basale, mais n'atteignant PAS toutes la surface luminale — aspect 'faussement stratifié'. Noyaux à 2-3 niveaux apparents. Cellules ciliées : cils longs (7µm) battant 12-15 fois/s. Cellules caliciformes intercalées. Cellules basales de remplacement (courtes). Cellules entéroendocrines / de Kulchitsky. Lame basale épaisse (épaississement dans l'asthme).",
+      "cellules_principales": [
+        "Cellules ciliées (70% — tapis mucociliaire)",
+        "Cellules caliciformes (20% — mucus)",
+        "Cellules basales (10% — cellules souches de renouvellement)",
+        "Cellules entéroendocrines / de Kulchitsky (neuroendocrine)"
+      ],
+      "fonctions": "Transport mucociliaire (escalator mucociliaire) : les cils battent coordonnément en 'onde métachronale' pour déplacer le tapis de mucus vers le pharynx → déglutition ou expectoration. Défense immunitaire de 1ère ligne. Sécrétion de mucus (cellules caliciformes). Réchauffement et humidification de l'air.",
+      "colorations": {
+        "HES": "Noyaux à 2-3 niveaux (pseudo-stratification). Cils visibles en 'frange' apicale éosinophile. Mucus des cellules caliciformes translucide. Lame basale épaisse sous-jacente.",
+        "PAS": "Fortement positif pour les mucines des caliciformes (magenta). Lame basale PAS+.",
+        "Masson": "Cytoplasme cellulaire vert/rouge. Lame basale et collagène sous-épithélial bleu (souvent épaissi dans l'asthme).",
+        "notes": "IHC : TTF-1 (facteur transcription pulmonaire) pour marquer l'origine bronchique. MUC5AC (caliciformes superficielles), MUC5B (glandes sous-muqueuses). AC-tubuline (cils). Électronique : axonème des cils = 9+2 microtubules + bras de dynéine."
+      },
+      "aspects_microscopiques": [
+        "PSEUDO-stratifié = 1 seule couche (toutes sur la MB), mais noyaux à des hauteurs différentes",
+        "Cils = '9+2' microtubules (axonème) + bras de dynéine → motilité ATP-dépendante (12-15 battements/s)",
+        "Escalator mucociliaire : 10-20 mm/min vers le pharynx → 99% des particules >5µm éliminées",
+        "Tabac : paralysie des cils + métaplasie pavimenteuse → perte de l'escalator → infections récurrentes",
+        "Asthme : hypertrophie caliciformes, épaississement lame basale, infiltrat éosinophilique sous-épithélial"
+      ],
+      "pathologies_associees": "Asthme (inflammation éosinophilique, hyper-réactivité bronchique, remodelage bronchique). BPCO (emphysème + bronchite chronique = métaplasie pavimenteuse de l'épithélium). Cancer bronchique (carcinome épidermoïde, adénocarcinome TTF-1+, SCLC = neuroendocrine). Dyskinésie ciliaire primitive (syndrome de Kartagener : situs inversus + bronchiectasies + infertilité). Mucoviscidose (CFTR muté → mucus épais → obstruction + Pseudomonas).",
+      "pertinence_pharmacie": "La muqueuse respiratoire est la PORTE D'ENTRÉE des médicaments inhalés. L'efficacité des aérosols dépend de la taille des particules (1-5µm pour atteindre les bronchioles). La mucoviscidose (CFTR muté) est traitée par des modulateurs de CFTR (ivacaftor, lumacaftor, tezacaftor, elexacaftor = Trikafta®). Le tabac paralyse les cils et provoque une métaplasie pavimenteuse → ↑ risque cancer bronchique.",
+      "points_cles": [
+        "Pseudo-stratifié : 1 couche sur la MB, noyaux à plusieurs niveaux → ne pas confondre avec un épithélium stratifié",
+        "Escalator mucociliaire = 1ère ligne de défense anti-infectieuse — paralysé par le tabac et les infections virales",
+        "Cils = structure '9+2' (axonème) ; dyskinésie ciliaire primitive si bras de dynéine absents (syndrome de Kartagener)",
+        "Tabac → paralysie ciliaire → métaplasie pavimenteuse (irréversible) → BPCO/cancer épidermoïde",
+        "CFTR (canal Cl⁻) régule la composition du mucus : mutation F508del → mucoviscidose → Trikafta®"
+      ],
+      "liens_pharmacologie": [
+        "Corticoïdes inhalés (Becotide®, Pulmicort® — anti-inflammatoire asthme/BPCO)",
+        "Bêta-2 agonistes inhalés (Ventoline®, Serevent® — bronchodilatation)",
+        "Ipratropium/Tiotropium (anticholinergiques — BPCO)",
+        "N-acétylcystéine/Ambroxol (mucolytiques — ↓ viscosité mucus)",
+        "Ivacaftor/Trikafta® (modulateurs CFTR — mucoviscidose)",
+        "Omalizumab (anti-IgE — asthme allergique sévère)",
+        "Mépolizumab (anti-IL5 — asthme éosinophilique sévère)"
+      ]
+    },
+    {
+      "name": "Épithélium transitionnel (urothélium)",
+      "desc": "Épithélium unique — capable de distension — voies urinaires basses",
+      "_icon": "🫙",
+      "histo_type": "Tissu épithélial",
+      "localisation": "Bassinet et calices rénaux, uretères, vessie, urètre proximal. Propre aux mammifères pour les voies urinaires.",
+      "structure": "Épithélium STRATIFIÉ particulier, capable de distension. 4-7 couches de cellules en état rétracté. Couche basale : cellules cuboïdes petites. Couches intermédiaires : cellules polyédriques. Couche superficielle : CELLULES PARAPLUIE (umbrella cells) — grandes cellules binucléées, convexes vers la lumière, en 'dôme'. Spécialisations apicales : plaques asymétriques membranaires (uroplakins UPK1-3) imperméabilisant la surface.",
+      "cellules_principales": [
+        "Cellules parapluie / umbrella cells (couche superficielle — imperméabilisation)",
+        "Cellules intermédiaires polyédriques",
+        "Cellules basales (renouvellement lent — 3-6 mois)"
+      ],
+      "fonctions": "Imperméabilité à l'urine concentrée (acide, urée, NH₄⁺, cristaux) grâce aux uroplakins et aux jonctions occludentes. Distensibilité (plicature quand vide, étirement quand plein). Protection contre les agents potentiellement toxiques de l'urine. Défense contre les infections (sécrétion de protégines, mucine).",
+      "colorations": {
+        "HES": "Couches cellulaires régulières. Cellules parapluie superficielles : grandes, claires (cytoplasme pâle), souvent binucléées, dôme convexe. En vessie vide : 4-7 couches, cellules arrondies. En vessie pleine : 2-3 couches, cellules aplaties.",
+        "PAS": "PAS+ (glycoprotéines des uroplakins en surface). Lame basale PAS+.",
+        "Masson": "Cellules en vert. Couche conjonctive sous-muqueuse (lamina propria) bleue.",
+        "notes": "IHC : Uroplakin II et III (marqueurs spécifiques d'urothélium) — essentiels pour distinguer les carcinomes urothéliaux des adénocarcinomes dans les biopsies vésicales. GATA3 (urothélium + sein — utile pour identifier les métastases)."
+      },
+      "aspects_microscopiques": [
+        "Cellules parapluie = clé diagnostique : grandes, binucléées, dôme convexe, couche superficielle",
+        "Distension : état distendu = 2-3 couches, état rétracté = 4-7 couches (les mêmes cellules changent d'aspect !)",
+        "Uroplakins (UPK) : protéines transmembranaires formant des 'plaques asymétriques' → imperméabilité de la surface",
+        "Binucléarité des cellules parapluie = marqueur de différenciation terminale",
+        "E. coli adhère aux uroplakins (FimH + mannose sur UPK) → mécanisme d'infection urinaire +++"
+      ],
+      "pathologies_associees": "Cancer de la vessie (carcinome urothélial : 90% des cancers vésicaux — tabac et amines aromatiques). Carcinome in situ (CIS) vésical. Infections urinaires récidivantes (adhésion E. coli aux uroplakins). Cystite interstitielle. Lithiase urinaire (traumatisme chronique de l'urothélium).",
+      "pertinence_pharmacie": "Le cancer de la vessie est traité par BCG intravésical (immunothérapie locale — activation macrophages et NK) ou chimiothérapie intravésicale (mitomycine C, épirubicine). Les formes invasives : cisplatine-gemcitabine. Immunothérapie (nivolumab, pembrolizumab — anti-PD-1/PD-L1). La cyclophosphamide cause une cystite hémorragique par acroléine (métabolite toxique) → prévention par mesna (chélateur de l'acroléine).",
+      "points_cles": [
+        "Urothélium = épithélium transitionnel = épithélium STRATIFIÉ distensible (aspect variable selon état de réplétion)",
+        "Cellules parapluie (umbrella cells) : binucléées, grandes, dôme convexe = couche superficielle IMPERMÉABLE",
+        "Uroplakins (UPK) : marqueurs IHC spécifiques des carcinomes urothéliaux (+ GATA3)",
+        "Tabac = principal facteur de risque du cancer vésical (amines aromatiques → excrétées dans les urines)",
+        "Cyclophosphamide ⚠ cystite hémorragique (acroléine = métabolite toxique) → prévention par MESNA obligatoire"
+      ],
+      "liens_pharmacologie": [
+        "BCG intravésical (immunothérapie cancer vésical non invasif)",
+        "Mitomycine C intravésicale (chimiothérapie locale)",
+        "Cisplatine-Gemcitabine (cancer vésical invasif systémique)",
+        "Nivolumab/Pembrolizumab (cancer vésical métastatique — anti-PD-1)",
+        "Cyclophosphamide ⚠ → Cystite hémorragique → MESNA (prévention obligatoire)",
+        "Oxybutynine/Solifénacine (anticholinergiques — hyperactivité vésicale)"
+      ]
+    },
+    {
+      "name": "Épithélium pavimenteux stratifié",
+      "desc": "Épithélium de protection mécanique — pluricouches de cellules aplaties — peau et muqueuses",
+      "_icon": "🧱",
+      "histo_type": "Tissu épithélial",
+      "localisation": "Kératinisé : épiderme cutané (peau). Non kératinisé : muqueuse buccale, œsophage, vagin, cornée. Limite : jonction cutanéo-muqueuse (lèvres, anus, orifices).",
+      "structure": "Multiple couches de cellules. Seule la couche basale (stratum germinativum) est en contact avec la membrane basale et se divise activement. De la profondeur à la surface (kératinisé) : (1) Stratum germinativum : petites cellules cuboïdes, mitoses+. (2) Stratum spinosum : cellules polyédriques reliées par des desmosomes. (3) Stratum granulosum : granules de kératohyaline (basophiles). (4) Stratum corneum : squames mortes, sans noyau, kératine. Muqueuses non kératinisées : pas de couches 3 et 4 → cellules superficielles avec noyaux.",
+      "cellules_principales": [
+        "Kératinocytes (90% — cellules de progression)",
+        "Mélanocytes (5% — couche basale — pigmentation)",
+        "Cellules de Langerhans (3% — couche spinosum — présentation Ag)",
+        "Cellules de Merkel (2% — couche basale — mécanorécepteurs)"
+      ],
+      "fonctions": "Protection mécanique contre les traumatismes et l'abrasion. Barrière hydrique (kératine + céramides → étanche). Barrière chimique et microbienne. Thermorégulation. Immunosurveillance (cellules de Langerhans).",
+      "colorations": {
+        "HES": "Kératinisé : couche basale bleu-violet (mitoses+), couches intermédiaires roses, couche cornée rose pâle/acellulaire (squames sans noyau). Non kératinisé : couches multiples avec noyaux visibles à tous les niveaux.",
+        "PAS": "Kératine PAS négatif. Glycogène PAS+ dans les muqueuses non kératinisées. Lame basale PAS+.",
+        "Masson": "Collagène dermique bleu (sous-épithélium). Épithélium en vert.",
+        "notes": "IHC kératinocytes : cytokératines (MNF116, AE1/AE3 pan-cytokératine). Mélanocytes : HMB45, Melan-A. Cellules de Langerhans : CD1a, S100, langérine. Cellules de Merkel : CK20 (marqueur positif) + synaptophysine."
+      },
+      "aspects_microscopiques": [
+        "Couche basale = SEULE couche proliférative (mitoses). Renouvellement : 28-40 jours (peau), 5-10 j (muqueuse buccale)",
+        "Desmosomes (stratum spinosum) : jonctions intercellulaires solides → résistance mécanique. Pemphigus : auto-Ac anti-desmogléine → bulles intraépidermiques (acantholyse)",
+        "Granules de kératohyaline (stratum granulosum) = précurseurs de la kératine (filaggrine, involucrine)",
+        "Couche cornée = squames mortes, kératine + lipides (céramides) → barrière étanche",
+        "Psoriasis : renouvellement accéléré × 7 (4-5 j vs 28 j normaux) → parakératose + squames blanches nacre"
+      ],
+      "pathologies_associees": "Carcinome basocellulaire (cellules basales — 80% des cancers cutanés). Carcinome épidermoïde (kératinocytes différenciés — 15%). Mélanome (mélanocytes). Psoriasis (renouvellement accéléré + infiltrat neutrophilique). Dermatite atopique (défaut filaggrine → ↓ barrière). Pemphigus vulgaire (auto-Ac anti-desmogléine 3). Pemphigoïde bulleuse (auto-Ac anti-BP180/BP230).",
+      "pertinence_pharmacie": "La peau est la CIBLE de nombreux médicaments topiques (glucocorticoïdes, rétinoïdes, kératolytiques). La barrière cutanée régule la biodisponibilité des médicaments transdermiques (nitrés, fentanyl, œstrogènes, rivastigmine — lipophiles <500 Da). Les kératinocytes expriment CYP1A1, CYP1B1 → métabolisme local. Psoriasis : méthotrexate, cyclosporine, biologiques (anti-TNF, anti-IL-17, anti-IL-23).",
+      "points_cles": [
+        "Stratum germinativum (basale) : couche proliférative UNIQUE — mitoses fréquentes — renouvellement 28 j (peau)",
+        "Stratification : germinativum → spinosum → granulosum → corneum (+ lucidum sur paumes/plantes)",
+        "Non kératinisé (muqueuses) : pas de couches granulosum et corneum → cellules superficielles avec noyaux",
+        "Pemphigus vulgaire = auto-Ac anti-desmogléine 3 → bulles intraépidermiques (acantholyse)",
+        "Médicaments transdermiques : fentanyl, nitrés, œstrogènes, testostérone, rivastigmine (lipophiles, PM <500 Da)"
+      ],
+      "liens_pharmacologie": [
+        "Rétinoïdes topiques/systémiques (acné, psoriasis — normalisent kératinisation)",
+        "Méthotrexate (psoriasis — anti-prolifératif kératinocytes)",
+        "Adalimumab/Sécukinumab/Ixékizumab (psoriasis — anti-TNF, anti-IL-17)",
+        "Vismodégib (carcinome basocellulaire avancé — inhibiteur Hedgehog)",
+        "Nivolumab/Pembrolizumab (mélanome — anti-PD-1)",
+        "Médicaments transdermiques : fentanyl, nitrés, œstrogènes, testostérone, rivastigmine, clonidine"
+      ]
+    },
+    {
+      "name": "Tissu conjonctif lâche",
+      "desc": "Tissu de soutien non spécialisé — matrice extracellulaire abondante — trame de la plupart des organes",
+      "_icon": "🕸️",
+      "histo_type": "Tissu conjonctif",
+      "localisation": "Chorion des muqueuses (sous les épithéliums), couche sous-cutanée lâche, adventice des vaisseaux, tissu de remplissage entre les organes, mésentère, capsules organiques (couche interne), autour des nerfs et des vaisseaux.",
+      "structure": "Cellules peu nombreuses et dispersées dans une matrice extracellulaire (MEC) abondante et peu dense. Fibres de collagène type I et III (fines, non jointives), fibres élastiques (élastine), fibres de réticuline (collagène III). Substance fondamentale : protéoglycanes (acide hyaluronique, chondroïtine sulfate, héparane sulfate) + glycoprotéines d'adhésion (fibronectine, laminine). Population cellulaire mixte : résidents (fibroblastes, mastocytes, macrophages) + passagers (lymphocytes, plasmocytes, éosinophiles, neutrophiles en inflammation).",
+      "cellules_principales": [
+        "Fibroblastes (synthèse collagène, fibronectine — cellule résidente principale)",
+        "Macrophages résidents / histiocytes",
+        "Mastocytes (histamine, héparine, tryptase, cytokines)",
+        "Lymphocytes / Plasmocytes (immunité adaptative)",
+        "Adipocytes (rarement)",
+        "Cellules endothéliales (capillaires)"
+      ],
+      "fonctions": "Soutien mécanique souple. Nutrition des épithéliums avoisinants (avasculaires). Défense immunitaire (macrophages, mastocytes, lymphocytes). Réparation tissulaire (fibroblastes → cicatrisation). Migration cellulaire (métastases, inflammation). Réservoir hydrique.",
+      "colorations": {
+        "HES": "Aspect lacunaire, peu cellulaire. Fibres de collagène roses fines et dispersées. Matrice fondamentale pâle (bleue-grise). Quelques noyaux de fibroblastes (fusiformes, allongés). Mastocytes : cytoplasme granuleux (mal visible en HES).",
+        "PAS": "PAS+ modéré (protéoglycanes de la substance fondamentale, glycoprotéines d'adhésion). Membrane basale des capillaires PAS++.",
+        "Masson": "Fibres de collagène en BLEU (++ — distinctes et identifiables). Cytoplasme cellulaire en rouge. Tissu musculaire en rouge/orangé.",
+        "Argentaffin": "Réticuline (fibres de collagène III) = noir au nitrate d'argent. Encercle capillaires et cellules basales. Détruite dans les fibroses avancées.",
+        "notes": "Bleu de Toluidine ou Giemsa : granules de mastocytes (métachromasie — violet → rouge-violet). Alcian Blue : glycosaminoglycanes (turquoise). IHC : CD68 (macrophages), Tryptase (mastocytes), CD3/CD20 (lymphocytes T/B), Vimentine (fibroblastes)."
+      },
+      "aspects_microscopiques": [
+        "Fibres collagène = ROSE en HES (éosinophiles), BLEU au Masson, NOIR à l'argentique (réticuline = collagène III)",
+        "Fibroblastes : noyaux fusiformes allongés, peu de cytoplasme visible → les cellules les plus représentées du TC lâche",
+        "Mastocytes : métachromatiques au bleu de Toluidine (granules : héparine + histamine + tryptase + chymase)",
+        "Substance fondamentale : invisible en HES mais PAS+ et Alcian Blue+ (glycosaminoglycanes = GAG)",
+        "Chorion = TC lâche sous-épithélial : siège principal de l'inflammation dans les muqueuses (GALT, Crohn, RCH)"
+      ],
+      "pathologies_associees": "Fibrose (excès de dépôt de collagène → cirrhose hépatique, fibrose pulmonaire IPF, sclérodermie). Mastocytose systémique (prolifération mastocytes). Syndrome d'Ehlers-Danlos (défaut biosynthèse collagène → hyperélasticité, fragilité vasculaire). Liposarcome (tumeur des adipocytes). Réaction inflammatoire aiguë (afflux de neutrophiles, œdème).",
+      "pertinence_pharmacie": "Les fibroblastes du TC lâche sont la SOURCE du collagène pathologique dans les fibroses hépatiques (TGF-β → activation des cellules stellaires hépatiques). Les mastocytes du TC contiennent de l'HÉPARINE (source historique de l'anticoagulant) et de l'HISTAMINE (cible des antihistaminiques H1). La substance fondamentale contient l'acide hyaluronique (cible des injections esthétiques, viscoélastiques ophtalmologie, lubrifiant articulaire — Synvisc®).",
+      "points_cles": [
+        "TC lâche = MATRICE abondante + cellules DISPERSÉES (fibroblastes, macrophages, mastocytes)",
+        "Masson : collagène BLEU = colonne vertébrale du TC → fibrose si excès (→ cirrhose, IPF, sclérodermie)",
+        "Mastocytes = source HÉPARINE (anticoagulant) + HISTAMINE (cible anti-H1) + TRYPTASE (marqueur IHC)",
+        "Réticuline (collagène III) argentaffin : encercle capillaires et structures glandulaires → effondrée dans les fibroses avancées",
+        "TGF-β = principal inducteur de fibrose → cible thérapeutique (pirfénidone, nintédanib, anti-TGF-β)"
+      ],
+      "liens_pharmacologie": [
+        "Pirfénidone/Nintédanib (fibrose pulmonaire idiopathique — ↓ TGF-β/PDGF fibroblastes)",
+        "Antihistaminiques H1 (antagonistes récepteur histamine des mastocytes — allergie)",
+        "Héparine (anticoagulant extrait historiquement des mastocytes des muqueuses)",
+        "Hyaluronidase (dissolution acide hyaluronique — injections esthétiques)",
+        "Colchicine (fibrose hépatique — ↓ collagénogenèse)",
+        "Méthotrexate/Azathioprine (fibrose hépatique auto-immune)"
+      ]
+    },
+    {
+      "name": "Tissu osseux compact (os cortical)",
+      "desc": "Tissu conjonctif minéralisé — résistance maximale — diaphyse des os longs",
+      "_icon": "🦴",
+      "histo_type": "Tissu conjonctif spécialisé",
+      "localisation": "Diaphyse des os longs (fémur, tibia, humérus). Couche corticale superficielle de tous les os. Contient l'os cortical organisé en ostéons (systèmes de Havers).",
+      "structure": "Organisation en OSTÉONS (systèmes de Havers) : cylindres concentriques de lamelles osseuses autour d'un canal central (canal de Havers) contenant vaisseaux + nerfs. Lamelles osseuses (collagène type I minéralisé = hydroxyapatite Ca₁₀(PO₄)₆(OH)₂). Ostéocytes : dans les lacunes, reliés par des canalicules (prolongements cytoplasmiques). Canaux de Volkmann : perpendiculaires aux ostéons, relient les canaux de Havers. Périoste (externe) et Endoste (interne) : sièges des cellules ostéogéniques.",
+      "cellules_principales": [
+        "Ostéocytes (cellules matures — dans les lacunes)",
+        "Ostéoblastes (synthèse matrice osseuse → deviennent ostéocytes)",
+        "Ostéoclastes (résorption osseuse — cellules géantes multinucléées TRAP+)",
+        "Cellules bordantes (périoste/endoste — quiescence)",
+        "Cellules souches mésenchymateuses (CSMO — précurseurs ostéoblastes)"
+      ],
+      "fonctions": "Résistance mécanique (compression ET traction). Protection des organes internes. Hématopoïèse (moelle rouge dans l'os spongieux). Réservoir calcique (99% du Ca corporel) et phosphorique. Régulation phosphocalcique (PTH, calcitonine, vitamine D, FGF23). Osséointegration des prothèses.",
+      "colorations": {
+        "HES": "Lacunes ostéocytaires sombres (noyaux aplatis). Lamelles concentriques autour du canal de Havers (rose pâle). Canal de Havers central (vide, entouré de lamelles). Les ostéocytes ont de longs prolongements dans les canalicules.",
+        "PAS": "PAS+ faible (glycoprotéines de la matrice, ostéocalcine, ostéonectine). Lame basale des vaisseaux du canal de Havers PAS++.",
+        "Masson": "Collagène osseux en BLEU (fort signal). Distingue os (bleu) de cartilage (bleu-turquoise) et muscle (rouge).",
+        "Argentaffin": "Von Kossa : minéralisation (phosphate calcique = noir). Alizarine Rouge S : dépôts de calcium (rouge). IHC : ostéocalcine, RUNX2 (ostéoblastes). TRAP (tartrate-resistant acid phosphatase) = marqueur ostéoclastes.",
+        "notes": "Immunofluorescence : collagène type I (matrice), ostéopontine, BMP-2/4 (différenciation). Histomorphométrie os : trabéculation quantifiée sur biopsies iliaques pour ostéoporose."
+      },
+      "aspects_microscopiques": [
+        "Ostéon (système de Havers) = canal de Havers central + lamelles concentriques + ostéocytes dans les lacunes reliés par canalicules",
+        "Canaux de Volkmann : perpendiculaires, relient les canaux de Havers entre eux → nutrition de tout l'os",
+        "Ostéocytes : cellules 'prisonnières' de la matrice, prolongements dans les canalicules → mécano-sensors + régulation phospho-calcique",
+        "Ostéoclastes : géants MULTINUCLÉÉS (20-100 noyaux), TRAP+, lacune de Howship (résorption) → cibles des bisphosphonates",
+        "Couplage formation-résorption (RANK/RANKL/OPG) : déréglé dans l'ostéoporose → cible des bisphosphonates et du dénosumab"
+      ],
+      "pathologies_associees": "Ostéoporose (raréfaction des travées osseuses — ↓ DMO — ↑ risque fracture). Ostéomalacie/rachitisme (défaut de minéralisation — vit. D). Maladie de Paget (remodelage osseux anarchique). Ostéosarcome (tumeur osseuse primitive — enfants/adolescents). Ostéonécrose aseptique (bisphosphonates, corticoïdes). Métastases osseuses (sein, prostate, poumon, thyroïde, rein).",
+      "pertinence_pharmacie": "L'os est la CIBLE des bisphosphonates (inhibition ostéoclastes via ↓ farnésyl-pyrophosphate synthase → apoptose ostéoclastes — traitement ostéoporose, maladie de Paget, métastases osseuses) et du dénosumab (anti-RANKL — ostéoporose, métastases osseuses, tumeur à cellules géantes). La vitamine D + calcium sont essentiels pour la minéralisation. Les corticoïdes au long cours provoquent une ostéoporose cortisonique (↑ RANKL, ↓ absorption Ca²⁺, ↓ ostéoblastes).",
+      "points_cles": [
+        "Os compact = organisation en OSTÉONS (cylindres de Havers) : canal central + lamelles concentriques + ostéocytes",
+        "Minéralisation : hydroxyapatite Ca₁₀(PO₄)₆(OH)₂ = 65% du poids os. Von Kossa = noir (test de minéralisation)",
+        "Couplage RANK/RANKL/OPG : balance ostéoblastes/ostéoclastes → cible bisphosphonates + dénosumab",
+        "Ostéoclastes : géants, multinucléés, TRAP+, lacune de Howship (résorption). Bisphosphonates → apoptose ostéoclastes",
+        "Ostéonécrose mâchoire (ONMJ) : complication bisphosphonates IV + dénosumab (↓ irrigation + remodelage)"
+      ],
+      "liens_pharmacologie": [
+        "Bisphosphonates (alendronate, zolédronique — ostéoporose, métastases osseuses, maladie de Paget)",
+        "Dénosumab (anti-RANKL — ostéoporose, métastases osseuses, tumeur à cellules géantes)",
+        "Tériparatide (PTH recombinante — ostéoporose sévère — stimule ostéoblastes)",
+        "Vitamine D + Calcium (prévention et traitement de l'ostéomalacie/ostéoporose)",
+        "Zométa® (bisphosphonate IV) ⚠ ONMJ (ostéonécrose mâchoire — dentiste avant traitement)"
+      ]
+    },
+    {
+      "name": "Tissu adipeux blanc (WAT)",
+      "desc": "Tissu de réserve énergétique — uniloculaire — siège de la lipolyse et de la lipogenèse",
+      "_icon": "🍔",
+      "histo_type": "Tissu conjonctif spécialisé",
+      "localisation": "Tissu sous-cutané (hypoderme), espace rétropéritonéal, mésentère, épiploon, dépôts périviscéraux (péricardique, périrénal), moelle osseuse (adipocytes de remplacement).",
+      "structure": "Adipocytes UNILOCULAIRES (1 seule vacuole lipidique géante occupant 95% du volume cellulaire, repoussant le noyau en périphérie). Noyau aplati à la périphérie — aspect 'chevalière' ou 'bague à chaton'. En histologie standard, la vacuole lipidique est VIDE (solvants ont dissous les lipides → lacune optique). Stroma conjonctif fin avec fibroblastes, macrophages résidents, cellules endothéliales. Capillaires nombreux. Fibres de réticuline autour de chaque adipocyte.",
+      "cellules_principales": [
+        "Adipocytes matures (uniloculaires — réserve lipidique)",
+        "Pré-adipocytes (cellules souches mésenchymateuses différenciées)",
+        "Macrophages résidents (M1 dans l'obésité — pro-inflammatoires)",
+        "Cellules endothéliales capillaires",
+        "Fibroblastes du stroma"
+      ],
+      "fonctions": "Réservoir énergétique (triglycérides → acides gras libres par lipolyse hormonale — catécholamines, glucagon → HSL). Isolation thermique. Protection mécanique. ORGANE ENDOCRINE (leptine, adiponectine, résistine, TNF-α, IL-6).",
+      "colorations": {
+        "HES": "Cellules sphériques de grande taille (50-150 µm). Vacuole lipidique VIDE (blanc) — lipides dissous par solvants organiques. Noyau aplati et refoulé en périphérie (aspect 'chevalière'). Cytoplasme réduit à un mince croissant. Stroma conjonctif peu dense entre les lobules adipeux.",
+        "PAS": "PAS négatif (lipides non colorés par PAS). Lame basale des adipocytes PAS+.",
+        "Masson": "Adipocytes vides (blanc/rose pâle). Stroma conjonctif bleu (fin septa fibreux).",
+        "notes": "Oil Red O (sur coupes congelées, à frais) : lipides en ROUGE = méthode de référence pour visualiser les lipides. Soudan III/IV : lipides orangé. IHC : vimentine, S100 (adipocytes). Perilipin (marqueur membranaire des vacuoles lipidiques = droplet membrane protein)."
+      },
+      "aspects_microscopiques": [
+        "Vacuole lipidique VIDE en HES (lipides dissous par solvants) → lacune optique ronde, noyau aplati en périphérie",
+        "Oil Red O (coupe congelée = tissu frais non inclus en paraffine) = SEULE méthode standard pour colorer les lipides (rouge vif)",
+        "Adipocytes uniloculaires = blanc (WAT) ≠ adipocytes multiloculaires = brun (BAT) — pas de confusion possible",
+        "En obésité : hypertrophie des adipocytes (600-900 µm) + recrutement macrophages M1 → inflammation chronique basse intensité + résistance à l'insuline",
+        "Tissu adipeux = ORGANE ENDOCRINE : leptine (satiété), adiponectine (insulino-sensibilisant), résistine (résistance insuline)"
+      ],
+      "pathologies_associees": "Obésité (hypertrophie adipocytaire + inflammation chronique → résistance à l'insuline → DT2, NAFLD, syndrome métabolique). Liposarcome (tumeur maligne des adipocytes — rétropéritonéal). Lipodystrophie (redistribution anormale des graisses — antiprotéases VIH, corticoïdes). Stéatose hépatique (NAFLD/NASH — accumulation lipidique dans les hépatocytes).",
+      "pertinence_pharmacie": "Les médicaments antiprotéases du VIH (ritonavir, lopinavir) provoquent une LIPODYSTROPHIE (redistribution anormale des graisses → bosse de bison + lipoatrophie faciale). Les thiazolidinédiones (pioglitazone) sont des agonistes PPARγ → différenciation adipocytes → ↑ sensibilité insuline (mais aussi prise de poids, œdèmes). La GLP-1 (liraglutide, sémaglutide) réduit le tissu adipeux viscéral.",
+      "points_cles": [
+        "Adipocytes blancs (WAT) : UNILOCULAIRES, vacuole vide en HES, noyau en 'bague à chaton'",
+        "Lipides : Oil Red O (congelé) = rouge, Soudan III/IV = orange — PAS et HES ne colorent PAS les lipides",
+        "WAT = organe endocrine (leptine → satiété, adiponectine → insulino-sensibilisant, TNF-α → résistance insuline dans obésité)",
+        "PPARγ (récepteur nucléaire) = chef d'orchestre de la différenciation adipocytaire → cible des thiazolidinédiones",
+        "Lipolyse hormonale : catécholamines → adénylate cyclase → AMPc → PKA → phosphorylation HSL → libération AGL"
+      ],
+      "liens_pharmacologie": [
+        "Sémaglutide/Liraglutide (GLP-1 analogues — obésité — ↓ graisses viscérales + satiété)",
+        "Pioglitazone (agoniste PPARγ — DT2 — ↑ sensibilité insuline + ↑ masse adipeuse sous-cutanée)",
+        "Orlistat (inhibiteur lipase pancréatique — absorption graisses intestinales)",
+        "Antiprotéases VIH ⚠ lipodystrophie (redistribution graisses)",
+        "Corticoïdes ⚠ lipodystrophie (redistribution centripète — syndrome de Cushing iatrogène)"
+      ]
+    },
+    {
+      "name": "Muscle lisse viscéral",
+      "desc": "Tissu musculaire involontaire — contraction lente et tonique — parois des organes creux",
+      "_icon": "🌀",
+      "histo_type": "Tissu musculaire",
+      "localisation": "Paroi des vaisseaux sanguins (media), tube digestif (musculaire muqueuse + musculaire propre), voies urinaires (uretère, détrusor vésical), utérus (myomètre), bronches, iris de l'œil, canal déférent.",
+      "structure": "Cellules fusiformes (spindle-shaped) uninucléées, longues (20-500 µm), noyau central ovoïde au repos — se raccourcit et prend un aspect en 'tire-bouchon' à la contraction. Pas de striations (actine et myosine en réseau oblique). Cellules reliées par des jonctions gap (communication électrique). Organisation en faisceaux entourés de réticuline. Innervation autonome (sympathique → adrénaline, parasympathique → Ach).",
+      "cellules_principales": [
+        "Cellules musculaires lisses (myocytes lisses / léiomyocytes — cellule principale)",
+        "Fibroblastes interstitiels",
+        "Cellules interstitielles de Cajal (pacemakers du tube digestif — c-KIT+)"
+      ],
+      "fonctions": "Contraction tonique prolongée (fatigue lente). Régulation du tonus vasculaire (TA). Péristaltisme digestif. Vidange vésicale (détrusor). Accouchement (myomètre). Bronchospasme (bronches). Régulation pupillaire (iris).",
+      "colorations": {
+        "HES": "Cellules fusiformes roses, noyaux centraux ovoïdes allongés. En coupe transversale : cellules rondes avec point central (noyau) ou sans noyau. Pas de striations visibles. Faisceaux organisés en direction variable dans le TC interstitiel.",
+        "PAS": "Glycogène cytoplasmique PAS+ (modéré).",
+        "Masson": "Cellules musculaires en rouge. TC interstitiel en bleu (distingue muscle et fibrose — utile dans les tumeurs utérines).",
+        "notes": "IHC : actine muscle lisse (SMA/α-SMA) = marqueur standard des léiomyocytes ET des myofibroblastes (fibrose → EI des cellules de Ito hépatiques activées). Desmine. Caldesmone (spécifique muscle lisse différencié). PAS de troponine T ou I (muscle strié uniquement)."
+      },
+      "aspects_microscopiques": [
+        "Pas de striations (vs muscle strié) — actine et myosine en réseau oblique — pas de sarcomère régulier",
+        "Noyau central unique, ovoïde au repos → spiralé/en tire-bouchon à la contraction (caractéristique diagnostique clé)",
+        "Jonctions gap (connexines) : couplage électrique des cellules musculaires lisses → contraction synchronisée d'un organe creux",
+        "SMA (alpha-smooth muscle actin) = marqueur IHC des cellules musculaires lisses AND des myofibroblastes (fibrose)",
+        "Cellules de Cajal (c-KIT+) = pacemakers du tube digestif — réseau entre couches musculaires → cibles des GIST"
+      ],
+      "pathologies_associees": "Léiomyome (fibromes utérins — tumeur bénigne fréquente des cellules musculaires lisses utérines). Léiomyosarcome (maligne — rétropéritonéal, utérin). HTA (hypertrophie de la media artériolaire). Asthme (hypertrophie muscle lisse bronchique + hyper-réactivité). Achalasie (défaut de relaxation du sphincter œsophagien inférieur — ↓ plexus d'Auerbach). Syndrome du côlon irritable.",
+      "pertinence_pharmacie": "Le muscle lisse est la CIBLE de nombreux médicaments : antihypertenseurs (inhibiteurs calciques, alpha-bloquants sur vaisseaux), bronchodilatateurs (bêta-2 agonistes sur bronches), alpha-bloquants (sphincter urétral dans HBP), agents utérotoniques/utérolytiques (ocytocine, atosiban), nitrates (vasodilatation veineuse). Les GIST (tumeurs stromales gastro-intestinales) expriment c-KIT → traitement par imatinib (inhibiteur c-KIT).",
+      "points_cles": [
+        "Pas de striations → muscle LISSE vs muscle strié (striations/myofibrilles organisées en sarcomères)",
+        "Noyau central unique + aspect en tire-bouchon à la contraction = caractéristique diagnostique",
+        "SMA+ (alpha-smooth muscle actin) = marqueur IHC du muscle lisse ET des myofibroblastes de la fibrose",
+        "Cellules de Cajal = pacemakers digestifs (réseau ICC — c-KIT+) → cibles des GIST (Gleevec® = imatinib)",
+        "Léiomyome utérin (fibrome) = tumeur bénigne la plus fréquente de la femme — SMA+ / desmine+ / caldesmone+"
+      ],
+      "liens_pharmacologie": [
+        "Inhibiteurs calciques (amlodipine, nifédipine — muscle lisse vasculaire → HTA, angor)",
+        "Bêta-2 agonistes (salbutamol, formotérol — muscle lisse bronchique → bronchospasme)",
+        "Alpha-bloquants (tamsulosine — muscle lisse sphincter urétral → HBP)",
+        "Ocytocine/Méthylergométrine (utérotoniques — accouchement/hémorragie post-partum)",
+        "Atosiban (antagoniste ocytocine — tocolyse — arrêt travail prématuré)",
+        "Imatinib/Sunitinib (GIST — tumeurs stromales gastro-intestinales — c-KIT sur cellules de Cajal)"
+      ]
+    },
+    {
+      "name": "Muscle strié squelettique",
+      "desc": "Tissu musculaire volontaire — contraction rapide et forcée — locomotion et posture",
+      "_icon": "💪",
+      "histo_type": "Tissu musculaire",
+      "localisation": "Muscles squelettiques de tout l'organisme (muscles locomoteurs, muscles respiratoires, plancher pelvien, muscles masticateurs, muscles extra-oculaires).",
+      "structure": "Cellules MULTINUCLÉÉES géantes (myofibres = fibres musculaires) : 50-100 µm de diamètre, plusieurs centimètres de long. Noyaux MULTIPLES (plusieurs centaines/cellule) en position PÉRIPHÉRIQUE (sous le sarcolemme). Striations transversales visibles (sarcomères : bandes A sombres = myosine, bandes I claires = actine, ligne Z au centre des bandes I, ligne M au centre des bandes A). Organisation en fascicules entourés de périmysium (TC + vaisseaux). Endomysium (TC entre fibres). Épimysium (TC externe).",
+      "cellules_principales": [
+        "Myofibres (cellules musculaires multinucléées)",
+        "Cellules satellites (cellules souches musculaires — sous la lame basale — Pax7+)",
+        "Fibroblastes du périmysium/endomysium",
+        "Cellules endothéliales capillaires (1 capillaire/myofibre ≈ 1:1)"
+      ],
+      "fonctions": "Contraction volontaire rapide et puissante. Maintien de la posture. Thermogenèse (60% de la chaleur du corps). Métabolisme glucidique (25% de la capture du glucose après un repas). Réservoir d'acides aminés (catabolisme en jeûne prolongé).",
+      "colorations": {
+        "HES": "STRIATIONS TRANSVERSALES très régulières (alternance bandes sombres A / claires I). Noyaux MULTIPLES en périphérie (sous le sarcolemme). Cytoplasme éosinophile abondant. Fibres de taille variable (50-100 µm). Fascicules séparés par le périmysium (TC rose).",
+        "PAS": "Glycogène cytoplasmique PAS++ (abondant — réserve énergétique). Lame basale des fibres musculaires PAS+.",
+        "Masson": "Fibres musculaires en rouge. Périmysium/endomysium en bleu. Permet de distinguer fibres musculaires (rouge) de fibres conjonctives (bleu) — essentiel dans les biopsies musculaires.",
+        "notes": "IHC : myosine (marqueur générique), desmine (filament intermédiaire musculaire), actinine-α (protéine de la ligne Z), dystrophine (sous-sarcolemmal — marqueur membranaire). Typage fibres : myosine ATPase (pH 4,3/9,4) sur coupes congelées → type I (lentes) / IIa / IIb (rapides). Dystrophine ABSENTE dans la myopathie de Duchenne."
+      },
+      "aspects_microscopiques": [
+        "Striations transversales = organisation en SARCOMÈRES (unité contractile) : bandes A (myosine) + bandes I (actine) + ligne Z",
+        "Noyaux MULTIPLES PÉRIPHÉRIQUES = clé diagnostique vs muscle cardiaque (noyau central unique) vs muscle lisse (noyau central unique)",
+        "Fibres type I (lentes, oxydatives, rouge, fatigue résistante) vs fibres type IIb (rapides, glycolytiques, blanches, fatigue rapide)",
+        "Cellules satellites = cellules souches musculaires (quiescentes, sous la lame basale, Pax7+) → régénération après lésion",
+        "Dystrophine (membrane sarcoplasmique) absente dans DMD (Duchenne) → lien membranaire-cytosquelette cassé → nécrose musculaire"
+      ],
+      "pathologies_associees": "Myopathie de Duchenne (absence dystrophine — gène DMD lié à l'X — nécrose musculaire + infiltration graisseuse). Myopathie de Becker (dystrophine réduite ou de taille anormale). Polymyosite/Dermatomyosite (myosite auto-immune — infiltrat lymphocytaire). Rhabdomyolyse (lyse musculaire massive — statines, traumatismes → myoglobinurie → IRA). Sarcopénie (perte masse musculaire liée à l'âge). Myasthénie grave (auto-Ac anti-AChR ou anti-MuSK).",
+      "pertinence_pharmacie": "La rhabdomyolyse (nécrose musculaire massive) est un effet indésirable des STATINES (surtout à forte dose + interactions CYP3A4 = simvastatine + inhibiteurs). Elle libère la myoglobine dans le sang → précipitation rénale → IRA (tubulonécrose aiguë). La myasthénie grave (auto-Ac anti-AChR) est traitée par anticholinestérasiques (néostigmine, pyridostigmine). Les curares bloquent la jonction neuromusculaire (anesthésie générale). L'atrophie musculaire spinale (SMA — SMN1 muté) est traitée par nusinersen et thérapie génique (onasemnogène).",
+      "points_cles": [
+        "Multinucléé (noyaux multiples périphériques) + striations transversales = MUSCLE STRIÉ SQUELETTIQUE",
+        "Sarcomère = ligne Z → ligne Z (1,5-3,5 µm) : bande I (actine seule) + bande A (myosine+actine) + bande H (myosine seule) + ligne M",
+        "Rhabdomyolyse : nécrose musculaire → CPK ↑↑ + myoglobinurie → IRA tubulaire — hydratation IV + alcalinisation urinaire",
+        "Statines ⚠ : myopathie/rhabdomyolyse (dose-dépendant, ↑ si inhibiteurs CYP3A4) → surveillance CPK avant et pendant",
+        "Dystrophine : protéine sous-sarcoplasmique absente dans DMD → exon skipping (éteplirsen) + thérapie génique (onasemnogène)"
+      ],
+      "liens_pharmacologie": [
+        "Statines ⚠ (rhabdomyolyse — surveillance CPK — CI si CPK > 5×N)",
+        "Pyridostigmine/Néostigmine (inhibiteurs AChE — myasthénie grave)",
+        "Curares dépolarisants/non-dépolarisants (blocage jonction neuromusculaire — anesthésie)",
+        "Nusinersen/Risdiplam (SMA — splicing SMN2)",
+        "Éteplirsen/Golodirsen (DMD — exon skipping dystrophine)",
+        "Rituximab (polymyosite/dermatomyosite réfractaire — anti-CD20)"
+      ]
+    },
+    {
+      "name": "Muscle cardiaque (myocarde)",
+      "desc": "Tissu musculaire involontaire strié — contraction rythmique automatique — paroi cardiaque",
+      "_icon": "❤️",
+      "histo_type": "Tissu musculaire",
+      "localisation": "Paroi des oreillettes et ventricules cardiaques. Fibres de Purkinje (système de conduction — cardiomyocytes modifiés). Nœud sinusal (SA) et nœud atrio-ventriculaire (AV).",
+      "structure": "Cellules MONONUCLÉÉES ou binucléées (cardiomyocytes) à noyau CENTRAL unique (ovoïde). Striations transversales (comme muscle squelettique). Longueur : 80-100 µm, diamètre : 10-20 µm. STRIES SCALARIFORMES (disques intercalaires) : jonctions intercalaires transversales entre les cardiomyocytes — très caractéristiques, aspect d'échelle. Disques intercalaires = desmosomes (jonctions mécaniques) + jonctions gap Cx43 (communication électrique, couplage). Ramifications : les fibres cardiaques se ramifient et s'anastomosent (réseau 3D). Vascularisation très riche (1 capillaire/cardiomyocyte).",
+      "cellules_principales": [
+        "Cardiomyocytes (fibres musculaires cardiaques)",
+        "Fibroblastes cardiaques (50% des cellules du cœur)",
+        "Cellules endothéliales coronaires",
+        "Péricytes",
+        "Cellules du système de conduction (His, Purkinje)"
+      ],
+      "fonctions": "Contraction rythmique et automatique (automatisme cardiaque). Propulsion du sang (débit cardiaque). Production de facteurs natriurétiques (BNP, ANP) en réponse à la surcharge de pression/volume. Régulation hormonale de la TA.",
+      "colorations": {
+        "HES": "STRIES SCALARIFORMES (disques intercalaires) fortement colorées et transversales = PATHOGNOMONIQUE du muscle cardiaque en HES. Noyau CENTRAL unique. Striations transversales des myofibrilles. Fibres ramifiées et anastomosées. Cardiomyocytes éosinophiles.",
+        "PAS": "Glycogène cytoplasmique PAS++ (réserve locale, diminué après ischémie). Glycoprotéines des disques intercalaires PAS+.",
+        "Masson": "Fibres musculaires en rouge. Tissu fibreux interstitiel en bleu (↑ dans la fibrose post-IDM ou cardiomyopathie dilatée — corrèle avec la fonction systolique).",
+        "notes": "IHC : troponine T cardiaque (cTnT), troponine I cardiaque (cTnI) — marqueurs SPÉCIFIQUES du cardiomyocyte. Connexine 43 (Cx43) = jonctions gap cardiaques. ANP/BNP (sécrétés en réponse à l'étirement). GATA4 (facteur transcription cardiaque). Myoglobine : commun cœur ET muscle squelettique → non spécifique."
+      },
+      "aspects_microscopiques": [
+        "DISQUES INTERCALAIRES (stries scalariformes) = SEUL SIGNE PATHOGNOMONIQUE du muscle cardiaque en HES",
+        "Noyau CENTRAL unique (≠ muscle squelettique = multiple périphérique) ou parfois binucléé",
+        "Fibres cardiaques ANASTOMOSÉES (réseau) ≠ muscle squelettique (fibres parallèles non anastomosées)",
+        "Jonctions gap (connexine 43) des disques intercalaires : couplage électrique → propagation PA de cellule en cellule → contraction synchronisée",
+        "Troponines cardiaques (cTnI, cTnT) = BIOMARQUEURS de la nécrose cardiomyocytaire (IDM) — dosage plasmatique ultra-sensible"
+      ],
+      "pathologies_associees": "Infarctus du myocarde (IDM) : nécrose de coagulation (12-24 h → cardiomyocytes éosinophiles, noyaux pycnotiques → infiltrat neutrophilique → macrophages → fibrose cicatricielle). Cardiomyopathie dilatée (dilatation + dysfonction systolique). Cardiomyopathie hypertrophique (désorganisation des fibres — 'whirling pattern'). Myocardite virale (parvovirus B19 — infiltrat lymphocytaire). Amylose cardiaque (dépôts amyloïdes — rouge Congo + biréfringence).",
+      "pertinence_pharmacie": "Les cardiomyocytes sont la cible des cardiotoxiques (anthracyclines : doxorubicine → cardiomyopathie dilatée — mécanisme ROS + dépôts de fer). La troponine cardiaque (biomarqueur de nécrose) est indispensable au diagnostic de l'IDM (hs-TnI ou hs-TnT). Les médicaments antiarythmiques ciblent les canaux ioniques des cardiomyocytes (amiodarone, lidocaïne). Le BNP/NT-proBNP (sécrétés par les cardiomyocytes surchargés) est le biomarqueur de l'insuffisance cardiaque.",
+      "points_cles": [
+        "Muscle cardiaque : noyau CENTRAL unique + stries scalariformes (disques intercalaires) + fibres anastomosées",
+        "Disques intercalaires = desmosomes (mécaniques) + jonctions gap Cx43 (électriques) → couplage cardiomyocytes",
+        "Troponine I/T cardiaque = biomarqueur de nécrose cardiomyocytaire (IDM) — dosage plasmatique ultra-sensible (hs-cTn)",
+        "Anthracyclines ⚠ cardiomyopathie (doxorubicine, épirubicine — dose cumulée dépendante — mécanisme ROS + fer)",
+        "BNP/NT-proBNP : sécrétés par cardiomyocytes surchargés → biomarqueur IC (diagnostic + suivi + pronostic)"
+      ],
+      "liens_pharmacologie": [
+        "Doxorubicine/Épirubicine ⚠ (cardiomyopathie — surveillance FEVG échocardiographique)",
+        "Trastuzumab ⚠ (cardiomyopathie réversible — HER2+ — surveillance FEVG)",
+        "Amiodarone (antiarythmique — ↓ excitabilité cardiomyocyte — QT long)",
+        "Digoxine (↑ Ca²⁺ intracellulaire cardiomyocyte — insuffisance cardiaque — marge étroite)",
+        "Ivabradine (inhibiteur canaux If du nœud SA — bradycardisant sélectif — insuffisance cardiaque)",
+        "Sacubitril/Valsartan Entresto® (insuffisance cardiaque — ↑ BNP endogène + ↓ AT1)"
+      ]
+    },
+    {
+      "name": "Neurone",
+      "desc": "Unité fonctionnelle du système nerveux — cellule excitable — transmission de l'influx nerveux",
+      "_icon": "🧠",
+      "histo_type": "Tissu nerveux",
+      "localisation": "Cerveau (cortex cérébral, noyaux gris centraux), cervelet, tronc cérébral, moelle épinière, ganglions périphériques (sensitifs, végétatifs), plexus entériques (Auerbach, Meissner).",
+      "structure": "Cellule hautement différenciée (postmitotique). Corps cellulaire (soma/péricaryon) : gros noyau rond central clair, nucléole proéminent (synthèse ARNr élevée). Cytoplasme basophile : corps de Nissl (REG = ribosomes → visibles à la coloration de Nissl au crésyl violet). Prolongements : DENDRITES (arbre dendritique = réception du signal, courts, ramifiés) et AXONE (unique, long, transmission → terminal axonique = synapse). Gaine de myéline (cellules de Schwann en périphérie, oligodendrocytes dans le SNC).",
+      "cellules_principales": [
+        "Neurones (toutes variétés morphologiques : unipolaires, bipolaires, multipolaires)",
+        "Cellules de Schwann (SNP — myéline + tissu de soutien)",
+        "Oligodendrocytes (SNC — myéline)",
+        "Astrocytes (soutien, nutrition, BHE)",
+        "Microglie (macrophages résidents du SNC)",
+        "Cellules épendymaires (revêtement des cavités ventriculaires)"
+      ],
+      "fonctions": "Réception et intégration des signaux (dendrites + soma). Génération du potentiel d'action (cône d'émergence axonal). Transmission de l'influx nerveux (axone ± myéline). Libération de neurotransmetteurs (terminaisons axonales). Régulation des fonctions viscérales, motrices, sensorielles, cognitives.",
+      "colorations": {
+        "HES": "Corps cellulaire volumineux, noyau vésiculeux rond clair avec nucléole proéminent (rose). Cytoplasme éosinophile contenant des corps de Nissl (basophiles). Axone pâle long (souvent non visible sur coupe). Neuropile environnant (entrelacs d'axones et dendrites).",
+        "PAS": "PAS faible (glycogène réduit — neurones consomment tout). Lame basale capillaires PAS++.",
+        "Masson": "Corps cellulaire rouge. Axones myélinisés peu colorés. TC de soutien bleu.",
+        "Argentaffin": "Méthode de Cajal au nitrate d'argent : neurofibrilles intraaxonales (argent = noir). Méthode de Golgi : neurones individuels complets (noirs sur fond jaune — révèle l'arborisation dendritique totale). Corps de Nissl : coloration au crésyl violet (basophilie du REG). Bielschowsky : plaques séniles + dégénérescence neurofibrillaire dans Alzheimer.",
+        "notes": "IHC : NSE (énolase neuro-spécifique), MAP2 (protéine dendritique), NF-H (neurofilament lourd axonal), synaptophysine/chromogranine A (vésicules synaptiques), NeuN (noyaux neuronaux). GFAP (astrocytes). S100 (cellules de Schwann, astrocytes). CD68 (microglie)."
+      },
+      "aspects_microscopiques": [
+        "Corps de Nissl (REG) = basophiles (crésyl violet), identifient les corps cellulaires des neurones → disparaissent dans la chromatolyse (réponse à la lésion axonale)",
+        "Noyau GRAND, ROND, vésiculeux, clair, avec nucléole proéminent = haute activité transcriptionnelle",
+        "Méthode de Golgi (nitrate d'argent) : colore aléatoirement mais complètement quelques neurones → révèle l'arborisation dendritique totale",
+        "Neurones postmitotiques : sans remplacement (sauf hippocampe et bulbe olfactif — neurogénèse adulte limitée)",
+        "Synaptophysine/Chromogranine A = marqueurs IHC des terminaisons synaptiques ET des tumeurs neuroendocrines (carcinoïdes, SCLC, phéochromocytome)"
+      ],
+      "pathologies_associees": "Maladie d'Alzheimer (plaques β-amyloïde extracellulaires + dégénérescence neurofibrillaire Tau — cortex association). Maladie de Parkinson (perte neurones dopaminergiques substantia nigra + corps de Lewy = agrégats α-synucléine). Épilepsie (hyperexcitabilité neuronale). Tumeurs cérébrales (gliomes = tumeurs des cellules gliales — GFAP+). Tumeurs neuroendocrines (synaptophysine/chromogranine A+). AVC (infarctus ischémique → nécrose neuronale).",
+      "pertinence_pharmacie": "Les neurones sont les CIBLES des anesthésiques généraux (canaux Na⁺ → blocage PA), des antiépileptiques (canaux Na⁺, Ca²⁺, GABA), des antidépresseurs (recapture des NT), des antidouleurs (récepteurs opioïdes µ). La BHE (barrière hémato-encéphalique = jonctions serrées astrocytes + cellules endothéliales) limite le passage de nombreux médicaments → nécessité de molécules lipophiles ou de systèmes de transport actifs. La maladie d'Alzheimer est ciblée par les inhibiteurs de cholinestérase (donépézil, rivastigmine) et les anti-NMDA (mémantine).",
+      "points_cles": [
+        "Corps de Nissl (REG basophile) = marqueur cytologique du corps neuronal → chromatolyse = réponse à la lésion axonale",
+        "Synaptophysine/Chromogranine A = marqueurs ESSENTIELS des tumeurs neuroendocrines (carcinoïdes, SCLC, phéo, médullaire thyroïde)",
+        "BHE = jonctions serrées astrocytes-endothélium → limitent passage médicaments → lipophilie ou transport actif nécessaire",
+        "Neurones = postmitotiques (pas de renouvellement sauf hippocampe) → sensibilité aux neurotoxiques (alcool, chimiothérapies)",
+        "Alzheimer : plaques amyloïdes (Aβ) + dégénérescence neurofibrillaire (Tau hyperphosphorylée) → colorations argentiques + IHC"
+      ],
+      "liens_pharmacologie": [
+        "Donépézil/Rivastigmine/Galantamine (inhibiteurs AChE — Alzheimer — ↑ acétylcholine synaptique)",
+        "Lévodopa/Carbidopa + Agonistes dopaminergiques (Parkinson — restaure dopamine nigro-striée)",
+        "Lamotrigine/Valproate/Lévétiracétam (antiépileptiques — canaux ioniques neuronaux)",
+        "Morphine/Fentanyl (récepteurs opioïdes µ — analgésie)",
+        "Anesthésiques généraux (canaux Na⁺ / GABA — bloquent PA / ↑ inhibition)",
+        "Témozolomide (glioblastome — alkylant ADN)"
+      ]
+    },
+    {
+      "name": "Foie — Architecture hépatique",
+      "desc": "Organe central du métabolisme et de la détoxification — lobule hépatique — acinus de Rappaport",
+      "_icon": "🫀",
+      "histo_type": "Organe",
+      "localisation": "Quadrant supérieur droit. Poids ~1,5 kg. Double vascularisation : artère hépatique (oxygène) + veine porte (nutriments depuis intestin). Double fonction : exocrine (bile) + endocrine (protéines plasmatiques, facteurs de coagulation).",
+      "structure": "Unité structurale : LOBULE HÉPATIQUE (polygonal, ~1 mm). Centre du lobule : veinule centrale (veine centro-lobulaire). Angles du polygone : ESPACES PORTES (triade portale = branche portale + branche artérielle + canal biliaire + lymphatique). Hépatocytes rangés en travées de 1-2 cellules (lames hépatocytaires) radialement depuis le centre. Entre les travées : SINUSOÏDES hépatiques (capillaires fenestrés, à flot lent → contact intime sang/hépatocytes). Cellules sinusoïdales : cellules de Kupffer (macrophages résidents), cellules endothéliales sinusoïdales (fenestrées, sans lame basale), cellules étoilées de Ito (lipocytes — espace de Disse → myofibroblastes si fibrose). Espace de Disse : microvilli hépatocytaires → maximise échanges. GRADIENT DE ZONATION : zone 1 (péri-portale, O₂++, néoglucogenèse) → zone 3 (centrolobulaire, hypoxie relative, CYP450 +++, sensible hépatotoxiques).",
+      "cellules_principales": [
+        "Hépatocytes (80% du parenchyme — cellules polyvalentes, polygonales, 1-2 noyaux ronds centraux)",
+        "Cellules de Kupffer (macrophages résidents des sinusoïdes — 20% des cellules — phagocytose — CD68+)",
+        "Cellules endothéliales sinusoïdales (fenestrées sans lame basale — échanges sans filtre)",
+        "Cellules de Ito / Cellules étoilées (lipocytes — espace de Disse — vitamine A → myofibroblastes si TGF-β → fibrose)",
+        "Cholangiocytes (épithélium biliaire des canaux — CK7+)"
+      ],
+      "fonctions": "Métabolisme des glucides (glycogénèse, glycogénolyse, néoglucogenèse — zone 1). Métabolisme lipidique (β-oxydation, cétogenèse, synthèse VLDL). Synthèse des protéines plasmatiques (albumine, facteurs de coagulation II, VII, IX, X). Detoxification (CYP450 zone 3 — biotransformations médicaments). Sécrétion biliaire. Stockage (glycogène, vitamines liposolubles, fer). Catabolisme de l'hème (bilirubine).",
+      "colorations": {
+        "HES": "Travées hépatocytaires radiaires depuis la veinule centrale. Hépatocytes polygonaux, cytoplasme éosinophile granuleux, 1-2 noyaux centraux ronds. Sinusoïdes minces entre les travées. Triades portales : espace clair avec vaisseaux + canal biliaire (épithélium cuboïde CK7+).",
+        "PAS": "Glycogène hépatocytaire FORTEMENT PAS+ (rouge/magenta). Diminué après jeûne ou cirrhose. Lame basale des vaisseaux PAS+.",
+        "Masson": "Tissu conjonctif portal et fibres portoseptales en BLEU. Parenchyme hépatique en rouge. Score METAVIR fibrose F0-F4 quantifiable. Cirrhose = fibrose extensive avec nodules de régénération.",
+        "Argentaffin": "Perls (bleu de Prusse) : dépôts de fer (hémochromatose). Rouge Congo : dépôts amyloïdes. Orcéine de Shikata : HBsAg (hépatite B). IHC : HBsAg (hépatite B), CK7/CK19 (cholangiocytes), CD68 (Kupffer), α-SMA (cellules étoilées activées/fibrose).",
+        "notes": "Score METAVIR : fibrose F0 (aucune) → F1 (portale) → F2 (quelques septa) → F3 (nombreux septa) → F4 (cirrhose). Nécrose A0-A3. Gold standard : biopsie hépatique percutanée. Alternatives : Fibroscan (élastométrie) + FibroTest (biochimique)."
+      },
+      "aspects_microscopiques": [
+        "Triades portales (espaces portes) = veine porte + artère hépatique + canal biliaire (± lymphatique) → AUX ANGLES du lobule hexagonal",
+        "Veinule centro-lobulaire (VCL) = AU CENTRE du lobule → sang zone 3 (hypoxique) sort ici",
+        "Zonation : zone 1 (péri-portale, O₂++, néoglucogenèse) ↔ zone 3 (centrolobulaire, CYP450 +++, sensible aux hépatotoxiques)",
+        "Cellules de Ito (stellaires, espace de Disse) : stockent vit. A → activées par TGF-β → myofibroblastes → FIBROSE → cirrhose",
+        "Score METAVIR fibrose hépatique : F0 (aucune) → F1 → F2 → F3 → F4 (cirrhose) — guide le traitement antiviral VHC"
+      ],
+      "pathologies_associees": "Hépatite virale B et C (nécrose hépatocytaire + inflammation portale + fibrose progressive). Cirrhose (fibrose extensive avec nodules de régénération — alcool, VHC, VHB, NASH, auto-immune). NAFLD/NASH (stéatose ± nécrose ± fibrose — obésité/DT2). Hépatotoxicité médicamenteuse (DILI). Hépatocarcinome (CHC — sur cirrhose). Insuffisance hépatique aiguë (paracétamol, isoniazide, champignons — Amanita phalloides).",
+      "pertinence_pharmacie": "Le foie est L'ORGANE CENTRAL du métabolisme des médicaments (biotransformations = CYP450 zone 3). La plupart des médicaments sont métabolisés dans les hépatocytes par les CYP (CYP3A4, CYP2C9, CYP2D6). L'insuffisance hépatique réduit l'effet de premier passage et allonge les demi-vies. La bilirubine est conjuguée par l'UGT1A1 dans les hépatocytes — hyperbilirubinémie si dysfonction (ictère). La zonation explique la NÉCROSE CENTROLOBULAIRE (zone 3) du paracétamol (NAPQI produit par CYP2E1/3A4 en zone 3).",
+      "points_cles": [
+        "Triades portales = veine porte + artère hépatique + canal biliaire (aux angles du lobule hexagonal)",
+        "Zone 3 centrolobulaire = siège des CYP450 (biotransformations médicaments) ET zone sensible aux hépatotoxiques (paracétamol → NAPQI zone 3)",
+        "Score METAVIR fibrose (F0-F4) évalué sur biopsie hépatique — guide traitement antiviral VHC",
+        "Cellules de Ito (étoilées) → myofibroblastes (TGF-β) → fibrose → cirrhose — cibles thérapeutiques futures",
+        "UGT1A1 (conjugaison bilirubine) dans hépatocytes → polymorphisme UGT1A1 = syndrome de Gilbert, ictère à l'irinotécan"
+      ],
+      "liens_pharmacologie": [
+        "Sofosbuvir/Velpatasvir/Glécaprévir (VHC — antiviraux AAD — guérison virologique >95%)",
+        "Entécavir/Ténofovir (VHB chronique — suppression virale prolongée)",
+        "N-acétylcystéine (antidote paracétamol — reconstitution GSH — à donner dans les 8 h)",
+        "Pirfénidone/Nintédanib (fibrose — ↓ activation cellules de Ito)",
+        "Sorafénib/Atézolizumab+Bévacizumab (CHC avancé)",
+        "Rifampicine ⚠ inducteur CYP3A4 ++ (↓ nombreux médicaments par induction hépatique)"
+      ]
+    },
+    {
+      "name": "Rein — Glomérule et Tubules",
+      "desc": "Organe de filtration et de régulation hydro-électrolytique — néphron — boucle de Henlé",
+      "_icon": "🫘",
+      "histo_type": "Organe",
+      "localisation": "Espace rétropéritonéal, flancs (droit et gauche). ~1 million de néphrons/rein. Cortex rénal (glomérules + tubules contournés) + Médullaire rénale (boucles de Henlé + tubes collecteurs).",
+      "structure": "GLOMÉRULE (corpuscule de Malpighi) : peloton de capillaires (endothélium fenestré), entourés de podocytes (épithélium viscéral — pieds podocytaires sur la membrane basale glomérulaire = MBG), et en dehors de la capsule de Bowman (épithélium pariétal — pavimenteux simple). Cellules mésangiales (contraction + phagocytose). TUBULE CONTOURNÉ PROXIMAL (TCP) : épithélium prismatique simple avec plateau strié abondant (microvilli denses), cellules éosinophiles, noyaux basaux. ANSE DE HENLÉ : branche descendante mince (pavimenteux simple), branche ascendante épaisse (cuboïde à prismatique — NKCC2). TUBULE CONTOURNÉ DISTAL (TCD) : épithélium cuboïde plus clair, moins de microvilli que TCP. TUBE COLLECTEUR (TC) : cellules principales (ENaC/aldostérone) et cellules intercalées A/B (H⁺/HCO₃⁻). MACULA DENSA (jonction TCD-artériole afférente) : détection NaCl → sécrétion rénine.",
+      "cellules_principales": [
+        "Podocytes (épithélium viscéral glomérulaire — WT-1+, synaptopodine+, néphrine+)",
+        "Cellules endothéliales glomérulaires (fenestrées)",
+        "Cellules mésangiales",
+        "Cellules des tubules (selon segment — TCP : PGP, OAT1/3 ; TCD : NCC ; TC : ENaC)",
+        "Cellules macula densa (nerf — capteur NaCl)",
+        "Cellules juxta-glomérulaires (rénine — JGA)"
+      ],
+      "fonctions": "Filtration glomérulaire (DFG ~125 mL/min/1,73m²). Réabsorption (TCP : 65% filtrat — Na⁺, glucose, aa, HCO₃⁻, eau). Concentration des urines (boucle de Henlé — gradient cortico-médullaire). Régulation pH (TCD + TC). Régulation K⁺ (TCD + TC). Endocrine : rénine (JGA), EPO (péritubulaire), calcitriol (CYP27B1 : 25-OH-vit D → 1,25(OH)₂D₃).",
+      "colorations": {
+        "HES": "Glomérule : peloton capillaire de petits capillaires, noyaux des podocytes en périphérie, espace urinaire clair (entre glomérule et capsule de Bowman). TCP : épithélium éosinophile prismatique avec plateau strié apical dense → 'bordure en brosse'. TCD : épithélium cuboïde, moins éosinophile que TCP.",
+        "PAS": "Membrane basale glomérulaire (MBG) FORTEMENT PAS++ = structure PAS la plus visible du rein. Plateau strié des TCP PAS+ (glycoprotéines). Cellules mésangiales PAS+ (matrice mésangiale).",
+        "Masson": "Fibrose glomérulaire ou interstitielle en bleu (↑ dans les néphropathies chroniques). MBG et matrice mésangiale en bleu clair.",
+        "Argentaffin": "Argent méthenamine Jones : MBG et matrice mésangiale noires = GOLD STANDARD néphropathie. Spikes sous-épithéliaux (GEM), dépôts sous-endothéliaux (lupus). IF directe : fluorescence linéaire (anti-MBG = Goodpasture), granulaire (immunocomplexes), absence (lésions minimes).",
+        "notes": "IF directe sur biopsie FRAÎCHE : IgA (Berger), IgG+C3 (GEM, lupus), C3 seul (GNMP type II). IHC : WT-1 (podocytes), CD31 (endothélium), collagène IV (MBG), PLA2R (80% des GEM primitives — anti-PLA2R = diagnostic sérologique). Microscopie électronique : effacement des pieds podocytaires (syndrome néphrotique à lésions minimes)."
+      },
+      "aspects_microscopiques": [
+        "MBG (membrane basale glomérulaire) PAS++ = structure la plus caractéristique du glomérule → épaississement = néphropathie diabétique",
+        "Podocytes = épithélium viscéral glomérulaire — pieds podocytaires sur MBG → filtration sélective — synaptopodine, néphrine (marqueurs IHC)",
+        "TCP = épithélium prismatique éosinophile + plateau strié très dense → réabsorption majeure (65% filtrat) — cible des néphrotoxiques",
+        "Jones (argent méthenamine) = gold standard glomérulopathie : 'spikes' (GEM) = dépôts sous-épithéliaux avec projections argentiques de la MBG",
+        "Macula densa → rénine → SRAA → TA : cible des IEC (captopril, énalapril) et des sartans (losartan)"
+      ],
+      "pathologies_associees": "Syndrome néphrotique (protéinurie > 3g/j — effacement des pieds podocytaires à la MEB). Glomérulonéphrite à IgA de Berger (dépôts mésangiaux IgA). Glomérulopathie membranéuse (GEM — dépôts sous-épithéliaux — anti-PLA2R). Néphropathie diabétique (épaississement MBG + hyalinose nodulaire de Kimmelstiel-Wilson). Néphropathie lupique (immunocomplexes). Maladie de Goodpasture (anti-MBG — IF linéaire).",
+      "pertinence_pharmacie": "Le rein est l'organe d'ÉLIMINATION de la plupart des médicaments hydrophiles (filtration glomérulaire + sécrétion tubulaire via OAT1/OAT3/OCT2/MATE). La créatininémie et le DFG guident l'adaptation posologique (antibiotiques, AOD, metformine, gabapentine). Les néphrotoxiques (AINS — ↓ prostaglandines rénales, aminosides, cisplatine, produits de contraste iodés) endommagent principalement le TCP (nécrose tubulaire aiguë). Le syndrome de Fanconi (atteinte TCP) : perte de glucose, aa, phosphate, bicarbonate dans les urines.",
+      "points_cles": [
+        "MBG PAS++ = repère le plus visible en histologie rénale → épaississement = néphropathie diabétique (hyalinose de Kimmelstiel-Wilson)",
+        "Jones (argent méthenamine) = gold standard glomérulopathie : 'spikes' = dépôts sous-épithéliaux + projection argent de la MBG (GEM)",
+        "Syndrome de Fanconi : atteinte TCP → perte glucose + aa + phosphate + urate + bicarbonate dans urines → TDF (ténofovir), métaux lourds",
+        "Macula densa → rénine → SRAA : cible des IEC et des sartans — protection rénale dans la néphropathie diabétique",
+        "AINS ⚠ néphrotoxicité : ↓ PGE2 rénale → ↓ DFG → IRA fonctionnelle — triplette AINS+IEC+diurétique = IRA"
+      ],
+      "liens_pharmacologie": [
+        "IEC/Sartans (protection glomérulaire — ↓ pression intraglomérulaire — néphropathie diabétique)",
+        "AINS ⚠ (↓ DFG — IRA fonctionnelle — CI si IRC)",
+        "Aminosides ⚠ (nécrose tubulaire aiguë TCP — monitoring concentrations +++)",
+        "Cisplatine ⚠ (néphrotoxicité — TCP — nausées, hypomagnésémie, IRA)",
+        "Furosémide (NKCC2 anse de Henlé — diurétique puissant)",
+        "Ténofovir TDF ⚠ syndrome de Fanconi (TCP — surveillance DFG, phosphorémie)"
+      ]
+    },
+    {
+      "name": "Intestin grêle — Villosités et Cryptes",
+      "desc": "Organe d'absorption majeur — architecture villosités/cryptes — surface d'absorption ×600",
+      "_icon": "🌿",
+      "histo_type": "Organe",
+      "localisation": "Duodénum (25 cm), jéjunum (~2,5 m), iléon (~3,5 m). Commence à l'angle de Treitz. Se termine à la valvule iléocæcale.",
+      "structure": "Organisation stratifiée en 4 couches : MUQUEUSE (épithélium + chorion + musculaire muqueuse), SOUS-MUQUEUSE (TC dense + plexus de Meissner), MUSCULAIRE PROPRE (couche circulaire interne + longitudinale externe + plexus d'Auerbach entre les deux), SÉREUSE (mésothélium péritonéal). La muqueuse porte des VILLOSITÉS (projections 0,5-1,5 mm) et des CRYPTES DE LIEBERKÜHN (invaginations épithéliales = siège des cellules souches). Duodénum : glandes de Brunner dans la sous-muqueuse (mucus alcalin). Iléon : plaques de Peyer (amas lymphoïdes sous-muqueux). Valvules conniventes de Kerckring (plis circulaires).",
+      "cellules_principales": [
+        "Entérocytes (absorption — villosités)",
+        "Cellules caliciformes (mucus — villosités + cryptes)",
+        "Cellules de Paneth (défensines — fond des cryptes, duodénum/jéjunum)",
+        "Cellules entéroendocrines (hormones GI — Lgr5+ dans les cryptes = cellules souches intestinales)",
+        "Lymphocytes intraépithéliaux (LIE — surveillance immunitaire — CD3+/CD8+)"
+      ],
+      "fonctions": "Absorption des nutriments (glucides via SGLT1/GLUT2, protéines via transporteurs AA, lipides via micelles → chylomicrons → lymphatiques). Sécrétion hormonale (sécrétine duodénum, CCK duodénum-jéjunum, GLP-1 iléon). Défense immunitaire (IgA sécrétoire, GALT). Contrôle de la motilité (plexus d'Auerbach).",
+      "colorations": {
+        "HES": "Villosités (doigts de gant épithéliaux) bordées d'entérocytes (prismatiques, plateau strié) + caliciformes (cytoplasme apical clair). Chorion villosital : TC lâche avec lymphatique central (chylifère), capillaires, cellules immunocompétentes. Cryptes : épithélium plus cuboïde, mitoses nombreuses (Ki67+), cellules de Paneth au fond (granules éosinophiles proéminents).",
+        "PAS": "Plateau strié PAS+. Mucus des caliciformes fortement PAS+. Lame basale PAS+.",
+        "Masson": "TC du chorion bleu, muscles (musculaire muqueuse et propre) rouge, épithélium vert.",
+        "notes": "IHC : chromogranine A + synaptophysine (cellules entéroendocrines). CD3 (LIE — augmentés dans cœliaque = >25/100 entérocytes). Ki67 (mitoses = index prolifération — uniquement dans les cryptes normalement). Lgr5 (marqueur des cellules souches intestinales — fond des cryptes). Lysozyme (cellules de Paneth). CD10/villina (plateau strié)."
+      },
+      "aspects_microscopiques": [
+        "Villosités = index d'absorption : rapport V/C (villosité/crypte) → atrophie villositaire TOTALE dans la maladie cœliaque",
+        "Cellules de Paneth (fond des cryptes) : cytoplasme FORTEMENT éosinophile (granules de défensines/lysozyme) — caractéristiques",
+        "Cellules souches (cryptes) = seule zone proliférative (Ki67+) — migrent de la crypte vers le sommet de la villosité en 3-5 jours",
+        "Plaques de Peyer (iléon) = amas lymphoïdes sous-muqueux → production IgA sécrétoire → immunité muqueuse",
+        "Cœliaque : >25 LIE/100 entérocytes + atrophie villositaire = critères diagnostiques (biopsie duodénale D2)"
+      ],
+      "pathologies_associees": "Maladie cœliaque (atrophie villositaire totale + ↑ LIE + anticorps anti-transglutaminase → régime sans gluten). Cancer colorectal (adénocarcinome : voie APC-Wnt). Maladie de Crohn (inflammation transmurale — granulomes + fissures). Syndrome de Whipple (Tropheryma whipplei — histiocytes PAS+ dans le chorion duodénal). Carcinoïde (tumeur entéroendocrine — synaptophysine/chromogranine A+). GIST (c-KIT+ — plexus d'Auerbach).",
+      "pertinence_pharmacie": "L'intestin grêle contient les transporteurs essentiels pour l'absorption des médicaments oraux : PEPT1 (valaciclovir, énalapril), P-gp/MDR1 (efflux de nombreux médicaments), OATP2B1 (jus de pamplemousse interaction). Les mucosites intestinales sont la complication majeure des chimiothérapies. La maladie de Crohn est traitée par des biologiques (anti-TNF : infliximab, adalimumab ; anti-intégrine : védolizumab ; anti-IL-12/23 : ustékinumab).",
+      "points_cles": [
+        "Maladie cœliaque : atrophie villositaire + ↑ LIE (>25/100 entérocytes) + ac anti-transglutaminase IgA = triade diagnostique",
+        "Cellules de Paneth = granules éosinophiles denses au fond des cryptes → défensines = antibiotiques endogènes → absentes dans la maladie de Crohn",
+        "NET (tumeur entéroendocrine) : synaptophysine + chromogranine A + Ki67 (<2% G1, 3-20% G2) → classification OMS",
+        "PEPT1 (SLC15A1) dans les entérocytes : transporte di/tripeptides ET certains médicaments (valaciclovir, énalapril, ampicilline) → prodrogue stratégie",
+        "Jus de pamplemousse ⚠ inhibiteur OATP1A2 et CYP3A4 intestinal → ↑ biodisponibilité statines, ciclosporine, fexofénadine"
+      ],
+      "liens_pharmacologie": [
+        "5-FU/Oxaliplatine/Irinotécan ⚠ mucosites intestinales",
+        "Infliximab/Adalimumab (Crohn — anti-TNF)",
+        "Védolizumab (Crohn/RCH — anti-intégrine α4β7 intestinal sélectif)",
+        "Ustékinumab (Crohn — anti-IL-12/23)",
+        "Everolimus/Octréotide (tumeurs neuroendocrines — NET)",
+        "Imatinib (GIST — c-KIT/PDGFRA — Gleevec®)"
+      ]
+    },
+    {
+      "name": "Poumon — Alvéoles et Parenchyme",
+      "desc": "Organe des échanges gazeux — alvéoles — barrière alvéolo-capillaire",
+      "_icon": "🫁",
+      "histo_type": "Organe",
+      "localisation": "Cage thoracique (droit : 3 lobes, gauche : 2 lobes). Parenchyme pulmonaire : bronches → bronchioles terminales → bronchioles respiratoires → canaux alvéolaires → sacs alvéolaires → alvéoles (~500 millions).",
+      "structure": "Alvéole : sac d'air polyhédrique (~0,2 mm de diamètre). Paroi alvéolaire (septum alvéolaire) : PNEUMOCYTES TYPE I (95% de la surface, pavimenteux simples, mince → échanges gazeux) + PNEUMOCYTES TYPE II (5% de la surface mais 60% des cellules, cuboïdes, volumineux, TTF-1+, synthèse du SURFACTANT = corps lamellaires + lipides DPPC) + capillaires intra-alvéolaires (endothélium fenestré). BARRIÈRE ALVÉOLO-CAPILLAIRE (épaisseur 0,2-0,5 µm) = pneumocyte I + lame basale fusionnée + endothélium capillaire. MACROPHAGES ALVÉOLAIRES ('cellules à poussière') en liberté dans la lumière. Interstitium alvéolaire : fibroblastes + collagène I/III + élastine.",
+      "cellules_principales": [
+        "Pneumocytes type I (95% surface — échanges gazeux — T1α/podoplanine+)",
+        "Pneumocytes type II (synthèse surfactant — TTF-1+, NapsinA+, SP-B+ — cellules souches du poumon)",
+        "Macrophages alvéolaires (épuration — poussières, bactéries — CD68+)",
+        "Cellules endothéliales capillaires",
+        "Fibroblastes de l'interstitium alvéolaire"
+      ],
+      "fonctions": "Échanges gazeux (O₂ diffusion alvéole → sang ; CO₂ du sang → alvéole) via la barrière alvéolo-capillaire. Synthèse du surfactant (pneumocytes II : DPPC + SP-A/B/C/D) → ↓ tension superficielle → prévient le collapsus alvéolaire. Épuration des particules (macrophages alvéolaires). Immunité locale (IgA sécrétoire).",
+      "colorations": {
+        "HES": "Paroi alvéolaire MINCE (< 0,5µm). Pneumocytes I : noyaux aplatis, cytoplasme très mince. Pneumocytes II : cuboïdes, plus élevés, noyaux ronds clairs. Macrophages alvéolaires dans la lumière : cytoplasme abondant, parfois pigments de charbon (anthracose = points noirs dans les macrophages = PATHOGNOMONIQUE du tabagisme).",
+        "PAS": "Lame basale fusionnée pneumocyte-endothélium PAS++. Surfactant intraluminal PAS+ léger.",
+        "Masson": "Fibres de collagène de l'interstitium alvéolaire en bleu — augmentées dans la fibrose pulmonaire (IPF — sous-pleurale + honeycombing).",
+        "Argentaffin": "Bleu de Prusse (Perls) : pigments de fer dans les macrophages alvéolaires (sidérophages) → hémosidérose pulmonaire (insuffisance cardiaque gauche chronique). IHC : TTF-1 (thyroid transcription factor 1) = marqueur SPÉCIFIQUE des pneumocytes II et des adénocarcinomes pulmonaires. NapsinA (pneumocytes II, adénocarcinomes). p40/CK5/6 (carcinome épidermoïde). CD56/synaptophysine (SCLC — neuroendocrine).",
+        "notes": "Corps lamellaires (ultrastructure pneumocyte II) = réserves de surfactant — contiennent DPPC + SP-A/B/C/D. Corps de Weibel-Palade = non pneumocytaires mais endothéliaux (vWF). Membranes hyalines = fibrine + débris pneumocytes sur paroi alvéolaire → SDRA."
+      },
+      "aspects_microscopiques": [
+        "Barrière alvéolo-capillaire (0,2-0,5 µm) = pneumocyte I + lame basale fusionnée + endothélium → diffusion rapide O₂/CO₂",
+        "Pneumocytes II = cellules cuboïdes, noyaux ronds, TTF-1+ → cellules souches du poumon après lésion (se différencient en pneumocytes I)",
+        "Corps lamellaires (ultrastructure pneumocyte II) = réserves de surfactant — déficit → SDNN (prématuré)",
+        "Macrophages anthracosiques (charbon) = macrophages chargés de particules de carbone → signe histologique du tabagisme",
+        "Sidérophages (macrophages chargés de fer) → insuffisance cardiaque gauche (extravasation érythrocytes) → Perls+ (bleu de Prusse)"
+      ],
+      "pathologies_associees": "Pneumonie (exsudat alvéolaire fibrineux + neutrophiles + érythrocytes → condensation). SDRA (lésion alvéolaire diffuse — DAD : membranes hyalines = fibrine + débris pneumocytes). IPF (fibrose interstitielle sous-pleurale + foyers de fibroblastes = UIP pattern). Cancer du poumon (adénocarcinome TTF-1/NapsinA+, carcinome épidermoïde p40/CK5+, SCLC CD56+/synaptophysine+). COVID-19 (DAD + thrombi microvasculaires).",
+      "pertinence_pharmacie": "La surface alvéolaire est la cible des médicaments inhalés. La fibrose pulmonaire est traitée par pirfénidone et nintédanib (anti-fibrotiques). La bléomycine provoque une fibrose pulmonaire par lésion des pneumocytes I (cumulative). Le dossier TTF-1 (IHC) est indispensable pour classifier les cancers pulmonaires (adénocarcinome pulmonaire primitif vs métastase). L'amiodarone peut causer une pneumopathie interstitielle (toxicité phospholipidique).",
+      "points_cles": [
+        "Pneumocytes II = TTF-1+ (IHC) = marqueur des adénocarcinomes pulmonaires ET des pneumocytes II normaux",
+        "Sidérophages (Perls bleu) = signe indirect hémosidérose = insuffisance cardiaque gauche chronique ou hémorragie alvéolaire",
+        "Surfactant (DPPC + SP-B/C) → ↓ tension superficielle → prévient collapsus alvéolaire → déficit = SDNN → traitement : surfactant exogène",
+        "Membranes hyalines = fibrine + débris pneumocytes sur paroi alvéolaire → SDRA = lésion alvéolaire diffuse (DAD)",
+        "Bléomycine ⚠ fibrose pulmonaire (dose-dépendante, irréversible) → dosage cumulatif obligatoire — risque ↑ si O₂ haute concentration"
+      ],
+      "liens_pharmacologie": [
+        "Pirfénidone/Nintédanib (IPF — anti-fibrotique)",
+        "Béractant/Poractant alfa (surfactant exogène — SDNN prématuré)",
+        "Corticoïdes inhalés/LABA (asthme — épithélium bronchique/alvéolaire)",
+        "Bléomycine ⚠ (fibrose pulmonaire — dose cumulée)",
+        "Amiodarone ⚠ (pneumopathie interstitielle — phospholipidose)",
+        "Pembrolizumab/Atézolizumab (cancer poumon — anti-PD-1/PD-L1)",
+        "Osimertinib (adénocarcinome poumon EGFR muté T790M — TKI 3e génération)"
+      ]
+    },
+    {
+      "name": "Pancréas — Exocrine et Endocrine",
+      "desc": "Glande mixte — sécrétion exocrine digestive + sécrétion endocrine insuline/glucagon",
+      "_icon": "🥞",
+      "histo_type": "Organe",
+      "localisation": "Région épigastrique, en arrière de l'estomac (rétropéritonéal). Tête (dans le cadre duodénal), corps, queue (touche la rate). Canal de Wirsung (principal) → ampoule de Vater.",
+      "structure": "PANCRÉAS EXOCRINE (85% du parenchyme) : ACINI SÉREUX — grappes de cellules pyramidales, noyaux basaux, zymogènes éosinophiles apicaux (proenzymes : trypsinogène, chymotrypsinogène, proélastase, lipase, amylase). CELLULES CENTROACINEUSES à la jonction acinus-canal intercalaire (noyaux clairs, pas de granulations). PANCRÉAS ENDOCRINE (15%) : ÎLOTS DE LANGERHANS — amas cellulaires pâles disséminés dans le parenchyme exocrine, très vascularisés. Disposition concentrique : cellules β (insuline, centre, 70%), cellules α (glucagon, périphérie), cellules δ (somatostatine, dispersion), cellules PP (polypeptide pancréatique).",
+      "cellules_principales": [
+        "Acinarocytes (enzymes digestives — proenzymes = zymogènes)",
+        "Cellules centroacineuses (bicarbonate)",
+        "Cellules canalaires (bicarbonate, mucus — CK7+ — CFTR dans mucoviscidose)",
+        "Cellules β des îlots (insuline — centre de l'îlot)",
+        "Cellules α des îlots (glucagon — périphérie)",
+        "Cellules δ des îlots (somatostatine)",
+        "Cellules PP (polypeptide pancréatique)"
+      ],
+      "fonctions": "Sécrétion exocrine : enzymes digestives (amylase, lipase, protéases) + bicarbonate (tampon acide gastrique) → 1,5-2 L/j. Sécrétion endocrine : insuline (↓ glycémie), glucagon (↑ glycémie), somatostatine (régulation de l'insuline/glucagon).",
+      "colorations": {
+        "HES": "Acini séreux : cellules pyramidales entourant une lumière centrale, noyaux basaux ronds, cytoplasme apical éosinophile-granuleux (zymogènes). Îlots de Langerhans : amas cellulaires pâles (faiblement colorés = manque de granules), bien délimités par une capsule conjonctive fine, très vascularisés. Transition nette entre acini exocrines (foncés) et îlots endocrines (clairs).",
+        "PAS": "Zymogènes des acinarocytes PAS+ (modéré). Glycogène des cellules β PAS++ (important).",
+        "Masson": "Acini exocrines en rouge-orangé. Stroma conjonctif intralobulaire bleu. Fibrose dans la pancréatite chronique (collagène bleu ++, remplacement des acini).",
+        "notes": "IHC standard des îlots : insuline (cellules β — centre îlot), glucagon (cellules α — périphérie), somatostatine (cellules δ), chromogranine A (toutes les cellules endocrines), synaptophysine. Ki67 (index prolifératif des TNE pancréatiques : G1 <2%, G2 3-20%, G3 >20%). Amyloïde/IAPP (amyline — DT2 — Congo Rouge+)."
+      },
+      "aspects_microscopiques": [
+        "Îlots de Langerhans : pâles et bien délimités dans le parenchyme exocrine foncé (acini) — clé diagnostique",
+        "Cellules β (insuline) = centre de l'îlot (70%), cellules α (glucagon) = périphérie → disposition concentrique",
+        "Zymogènes (grains de sécrétion apicaux des acinarocytes) = proenzymes inactives → activées dans le duodénum → évite l'autodigestion",
+        "Pancréatite aiguë = activation prématurée des zymogènes DANS le pancréas → autodigestion (lipase, élastase, trypsine) → nécrose pancréatique",
+        "DT2 : amylose des îlots (IAPP/amyline — Congo Rouge+) + apoptose des cellules β → dysfonction β cellulaire progressive"
+      ],
+      "pathologies_associees": "Diabète de type 1 (destruction autoimmune des cellules β — anti-GAD, anti-IA2 — îlots remplacés par fibrose). Diabète de type 2 (dysfonction et amylose des cellules β — IAPP — Congo Rouge+). Pancréatite aiguë (autodigestion enzymatique). Pancréatite chronique (fibrose remplaçant les acini). Adénocarcinome pancréatique (canalaire : CK7+, CA19-9+). Insulinome (tumeur β bénigne). Syndrome de Zollinger-Ellison (gastrinome).",
+      "pertinence_pharmacie": "Le pancréas endocrine est la cible des médicaments antidiabétiques (sulfonylurées → canaux K-ATP des cellules β → sécrétion insuline ; GLP-1 analogues → ↑ sécrétion insuline glucose-dépendante ; DPP-4 inhibiteurs → ↑ GLP-1 endogène). L'insuline exogène remplace les cellules β détruites dans le DT1. La GLP-1 a des effets trophiques sur les cellules β (↑ masse β). Les GLP-1 et les DPP-4 inhibiteurs ont été associés à des pancréatites aiguës (signal pharmacovigilance — rôle causal non établi).",
+      "points_cles": [
+        "Îlots de Langerhans = clairs dans le parenchyme exocrine foncé (acini) — disposition concentrique α (périph) / β (centre)",
+        "Zymogènes = proenzymes inactives dans les acinarocytes → activation dans le duodénum → pancréatite si activation prématurée",
+        "DT1 : destruction autoimmune des cellules β (anti-GAD, anti-IA2) → îlots fibreux et vides / DT2 : amylose IAPP (Congo Rouge+)",
+        "Adénocarcinome pancréatique : CK7+, CA19-9+ → diagnostic tardif (pronostic sombre — <20% réséquable) → gemcitabine + nab-paclitaxel",
+        "GLP-1 analogues ⚠ pancréatite aiguë (signal pharmacovigilance — mécanisme débattu — hyperstimulation acini ?)"
+      ],
+      "liens_pharmacologie": [
+        "Insuline exogène (DT1 et DT2 avancé — remplacement cellules β)",
+        "GLP-1 analogues (sémaglutide, liraglutide — ↑ sécrétion insuline glucose-dépendante) ⚠ pancréatite",
+        "DPP-4 inhibiteurs (sitagliptine — ↑ GLP-1 endogène) ⚠ pancréatite (signal)",
+        "Sulfonylurées (glibenclamide — canaux K-ATP cellules β)",
+        "Gemcitabine/Nab-paclitaxel (adénocarcinome pancréatique)",
+        "Lanréotide/Octréotide (analogues somatostatine — TNE pancréatiques + NET iléales)"
+      ]
+    },
+    {
+      "name": "Glandes surrénales — Cortex et Médulla",
+      "desc": "Glande mixte — stéroïdogenèse (cortex) + catécholamines (médulla) — axe HPA et sympathique",
+      "_icon": "⚡",
+      "histo_type": "Organe",
+      "localisation": "Organes rétropéritonéaux au-dessus des reins (pôles supérieurs). Droit : triangulaire. Gauche : semi-lunaire. Poids : 4-6 g chacune.",
+      "structure": "CAPSULE conjonctive externe. CORTEX surrénalien (80% de la glande) — 3 zones de dehors en dedans : ZONA GLOMERULOSA (externe, cellules en amas/glomérules, minéralocorticoïdes = ALDOSTÉRONE — régulée par angiotensine II et K⁺) + ZONA FASCICULATA (intermédiaire = la plus épaisse, cellules en cordons radiaires parallèles, cytoplasme VACUOLÉ clair = lipides = précurseurs stéroïdes, glucocorticoïdes = CORTISOL — régulée par ACTH) + ZONA RETICULARIS (interne, cellules en réseau irrégulier, cytoplasme éosinophile compact, androgènes = DHEA/DHEAS). MÉDULLA SURRÉNALIENNE (20%) : cellules chromaffines en cordons ou amas, cytoplasme granuleux, veinules sinusoïdes, innervation sympathique préganglionnaire directe — catécholamines (adrénaline 80%, noradrénaline 20%).",
+      "cellules_principales": [
+        "Cellules de la zona glomerulosa (aldostérone — CYP11B2+)",
+        "Cellules de la zona fasciculata (cortisol — SF-1+, cellules vacuolées = 'spongieuses')",
+        "Cellules de la zona reticularis (androgènes — DHEA/DHEAS)",
+        "Cellules chromaffines / phéochromocytes (adrénaline/noradrénaline — chromogranine A+)",
+        "Cellules soutien (sustentaculum — S100+)",
+        "Cellules ganglionnaires sympathiques (médulla)"
+      ],
+      "fonctions": "Zona glomerulosa : sécrétion aldostérone (↑ réabsorption Na⁺, ↓ K⁺ — axe SRAA). Zona fasciculata : sécrétion cortisol (anti-inflammatoire, catabolisme protidique, lipolyse, néoglucogenèse — axe HPA). Zona reticularis : sécrétion DHEA/DHEAS (androgènes surrénaliens faibles). Médulla : sécrétion adrénaline/noradrénaline (réponse au stress — 'fight or flight').",
+      "colorations": {
+        "HES": "Cortex : 3 zones distinctes. Zona fasciculata = CELLULES VACUOLÉES CLAIRES (lipides dissous) = 'cellules spongieuses'. Zona glomerulosa = groupes de petites cellules. Zona reticularis = cellules éosinophiles denses en réseau. Médulla = cellules chromaffines larges, cytoplasme granuleux, entourées de vaisseaux sinusoïdes.",
+        "PAS": "Lipides des cellules corticales PAS négatif. Collagène capsule PAS+.",
+        "Masson": "Capsule et septa fibreux en bleu. Cortex et médulla en rouge.",
+        "Argentaffin": "Réaction chromaffine (dichromate de potassium) : brun oxydatif = catécholamines (médulla) = test histochimique historique du phéochromocytome. IHC : SF-1 (facteur stéroïdogénique — cellules corticales). Chromogranine A + synaptophysine (médulla et phéochromocytome). Inhibine α (cortex — distingue adénome corticosurrénalien d'un carcinome ou métastase). CYP11B2 (aldostérone synthase — zona glomerulosa). S100 (cellules de sustentaculum — phéochromocytome bénin bien entouré de S100+).",
+        "notes": "Phéochromocytome : règle des '10%' (10% bilatéral, 10% extra-surrénalien, 10% malin, 10% familial — maintenant dépassé : 30-40% héréditaires = SDHB/D, RET, VHL, NF1). Paragangliome : localisation extra-surrénalienne, même marqueurs IHC."
+      },
+      "aspects_microscopiques": [
+        "Zona fasciculata = CELLULES VACUOLÉES CLAIRES ('spongieuses') = cholestérol stocké = précurseurs de la stéroïdogenèse",
+        "Mnémotechnique zones corticales : 'GFR' de dehors en dedans = Glomerulosa (aldostérone) + Fasciculata (cortisol) + Reticularis (DHEA)",
+        "Réaction chromaffine (bichromate) = brun = phéochromocytes (médulla) → test histochimique historique des phéochromocytomes",
+        "Chromogranine A + synaptophysine = marqueurs IHC du phéochromocytome (médulla) et des tumeurs neuroendocrines",
+        "Inhibine α (IHC) = marqueur du cortex surrénalien → différencie l'adénome surrénalien (inhibine+) des métastases (inhibine-)"
+      ],
+      "pathologies_associees": "Maladie d'Addison (insuffisance surrénalienne primaire — destruction auto-immune des 3 zones). Syndrome de Cushing (hypercortisolisme — adénome hypophysaire ACTH = maladie de Cushing / adénome corticosurrénalien / corticothérapie iatrogène). Hyperaldostéronisme primaire de Conn (adénome zona glomerulosa). Phéochromocytome (tumeur des cellules chromaffines — HTA paroxystique). Carcinome corticosurrénalien (rare, agressif).",
+      "pertinence_pharmacie": "Les surrénales sont directement impliquées dans la pharmacologie des stéroïdes. La corticothérapie prolongée inhibe l'axe HPA → atrophie du cortex (zona fasciculata) → insuffisance surrénalienne à l'arrêt brutal → toujours décroissance progressive. Le phéochromocytome est préparé chirurgicalement par des alpha-bloquants (phénoxybenzamine) PUIS bêta-bloquants (jamais bêta-bloquants seuls). La métyrapone inhibe la 11β-hydroxylase (↓ cortisol) — test diagnostic de Cushing et traitement d'attente.",
+      "points_cles": [
+        "3 zones corticales = 'GFR' : Glomerulosa (aldostérone) + Fasciculata (cortisol) + Reticularis (DHEA) — de dehors en dedans",
+        "Zona fasciculata = cellules vacuolées 'spongieuses' = cholestérol stocké = précurseurs de la stéroïdogenèse",
+        "Phéochromocytome : chromogranine A + synaptophysine + réaction chromaffine → HTA paroxystique → chirurgie (préparation alpha PUIS bêta)",
+        "Corticothérapie prolongée → atrophie zona fasciculata → insuffisance surrénalienne si arrêt brutal → DÉCROISSANCE PROGRESSIVE obligatoire",
+        "Métyrapone (inhibiteur 11β-hydroxylase) → ↓ cortisol → test diagnostic de Cushing (si test positif = ACTH-dépendant)"
+      ],
+      "liens_pharmacologie": [
+        "Hydrocortisone/Prednisone (substitution insuffisance surrénalienne primaire)",
+        "Métyrapone/Kétoconazole (↓ production cortisol — Cushing en attente de chirurgie)",
+        "Phénoxybenzamine (alpha-bloquant — préparation chirurgie phéochromocytome — AVANT bêta-bloquant)",
+        "Spironolactone/Éplérénone (antagonistes aldostérone — hyperaldostéronisme de Conn)",
+        "ACTH/Tétracosactide (test de stimulation surrénalien diagnostique — Synacthène® 250 µg IV)",
+        "Mitotane (carcinome corticosurrénalien — adrénocorticolytique — seul traitement médical spécifique)"
+      ]
+    },
+    {
+      "name": "Tissu Cartilagineux (Hyalin, Élastique, Fibreux)",
+      "desc": "Tissu conjonctif spécialisé avasculaire — matrice extracellulaire riche en collagène et protéoglycanes, nutrition par diffusion — 3 types selon composition fibreuse",
+      "_icon": "🦴",
+      "histo_type": "Tissu conjonctif spécialisé",
+      "localisation": "Hyalin : cartilages articulaires, anneaux trachéaux, cartilages costaux, cartilages nasaux, surface condylaire fœtale. Élastique : oreille externe (pavillon), épiglotte, cartilage de Wrisberg, ligament jaune (adjacent). Fibreux : disques intervertébraux (annulus fibrosus), ménisques, symphyse pubienne, insertions tendons/ligaments (fibrocartilage).",
+      "structure": "ORGANISATION GÉNÉRALE : périchondre (2 couches : fibreuse externe + chondrogénique interne avec chondroblastes) + cartilage proprement dit (chondrocytes dans lacunes = chondroplastes, logés individuellement ou en groupes isogéniques). Matrice cartilagineuse = substrat amorphe + fibres. COLLAGÈNE II (tous types) + Aggrécane (CSPGs), versicane. TYPE HYALIN : fibres collagène II fines enchevêtrées (invisibles au microscope standard) → aspect vitreux/translucide. Fibres masquées par matrice dense. Zone superficielle (cellules aplaties), zone intermédiaire (cellules rondes isogéniques), zone profonde (hypertrophie). TYPE ÉLASTIQUE : fibres d'élastine abondantes + réseau de fibres oxytalaniniques → couleur jaunâtre macroscopique, visibles à l'orcéine/résorcine-fuchsine. Plus souple et résistant à la déformation. TYPE FIBREUX : fibres collagène I épaisses (type tendineuse) prédominantes, peu de matrice amorphe, rares chondrocytes en rangées entre les faisceaux → aspect intermédiaire tissu fibreux/cartilagineux.",
+      "cellules_principales": "Chondroblastes (actifs, périphériques, synthèse matrice — collagène II, aggrécane, lien protéines). Chondrocytes (matures, dans lacunes — entourés de halo pericellulaire riche en collagène VI = chondrone). Chondroclastes (résorption, semblables ostéoclastes). Cellules souches mésenchymateuses (dans périchondre chondrogénique).",
+      "fonctions": "Soutien mécanique flexible. Résistance aux compressions répétées (aggrécane = éponge chargée négativement → rétention eau → pression osmotique → amortissement). Glissement articulaire (hyalin, coefficient friction 0.001-0.003 — inférieur à glace sur glace). Croissance longitudinale osseuse fœtale et pédiatrique (cartilage hyalin = modèle ossification endochondrale). Maintien forme (élastique — oreille).",
+      "colorations": "HES : cartilage hyalin basophile (sulfates chondroïtine — bleu/violet). Alcian bleu : protéoglycanes sulfatés (bleu intense). PAS : glycoprotéines matricielles. Orcéine/résorcine-fuchsine : fibres élastiques (brun-rouge, type élastique). Trichrome de Masson : collagène (bleu/vert, fibro ++). Safranine-O/Fast Green (histochimie) : quantification protéoglycanes.",
+      "aspects_microscopiques": "Hyalin : matrice homogène bleu-violet (HES), lacunes rondes en groupes isogéniques (2-4 cellules), périchondre net. Pas de vaisseaux intrinsèques (nutrition diffusion). Zone de calcification (degré III articulaire). Élastique : réseau fibrillaire brun (orcéine), matrice moins dense, périchondre + visible. Fibreux : rangées de chondrocytes entre fascicules de collagène I (parallèles, biréfringents lumière polarisée), pas de périchondre réel.",
+      "pathologies_associees": "OSTÉOARTHROSE : dégradation cartilage hyalin articulaire (fibrillation, fissures, érosion → os sous-chondral → douleur, perte mobilité). MMP-13 (collagénase-3) + aggrecanases (ADAMTS-4/5). Cible : anti-IL-1β (non prouvé), anti-MMP en recherche, PRP (plasma riche plaquettes), cellules souches. CHONDROME/CHONDROSARCOME : tumeurs cartilage (chondrosarcome central = fréquent adulte, résistant chimio). POLYCHONDRITE RÉCIDIVANTE : auto-immun (anti-collagène II/IX) → destruction cartilage élastique (oreilles, nez, trachée, larynx). RELÂCHEMENT ARTICULAIRE (chondrolyse iatrogène : anesthésiques locaux intra-articulaires répétés → apoptose chondrocytes).",
+      "pertinence_pharmacie": "Glucosamine/chondroïtine sulfate (compléments alimentaires, action anti-ostéoarthrosique modeste, GAIT trial — Clegg 2006 NEJM). Acide hyaluronique (viscosupplémentation intra-articulaire : Sinovial®, Synvisc®). Corticoïdes intra-articulaires (effets chondrotoxiques à répétition). Anti-IL-1β/TNF-α (PR). Greffes cartilagineuses (ACI — autologous chondrocyte implantation)."
+    },
+    {
+      "name": "Tissu Adipeux Brun (BAT)",
+      "desc": "Tissu thermogène spécialisé — adipocytes multiloculaires riches en mitochondries et en UCP1 — découplage de la chaîne respiratoire → thermogenèse sans frisson",
+      "_icon": "🔥",
+      "histo_type": "Tissu conjonctif spécialisé",
+      "localisation": "Nouveau-né : abondant (nuque, scapulaire inter, axillaire, péri-rénal, péricardique). Adulte : régions paravertébrales cervicales + scapulaires + supra-claviculaires + péri-rénales + médiastinales. Détection par PET-FDG (captation intense, confondre avec tumeurs !). Volume ↑ en hiver et dans les régions froides.",
+      "structure": "Adipocytes bruns : petits, polyédriques. Multiples vacuoles lipidiques (multiloculaires ≠ adipocytes blancs uniloculaires). Cytoplasme abondant, éosinophile (mitochondries +++ → oxydation β). Noyau central ou paracentral rond. Tissu richement vascularisé (capillaires fenêtrés ++) et innervé (fibres sympathiques noradrénergiques). Stroma abondant, riche en fibres réticulaires (collagène III). UCP1 (thermogénine) : protéine 32 kDa de la membrane interne mitochondriale → court-circuit de la chaîne respiratoire → énergie libérée comme chaleur.",
+      "cellules_principales": "Adipocytes bruns classiques (BAT constitutif = BAT 'canonique'). Adipocytes beige (brite = brown-in-white) : apparus par brunissement du tissu adipeux blanc (WAT) sous stimulation sympathique/FGF21/irisin (FNDC5) → multiloculaires transitoires, UCP1+. Cellules souches adipocytaires brun/beige. Adipocytes blancs uniloculaires (proportion variable selon température/âge).",
+      "fonctions": "THERMOGENÈSE : β3-adrénergique (noradrénaline sympathique) → Gs → AMPc → PKA → ① TGL (triglycéride lipase, ATGL/HSL) → AGPI → ② Chaine respiratoire : oxydation β-Acyl-CoA → NADH/FADH₂ → complexes I-IV → mais UCP1 laisse passer H⁺ (sans synthèse ATP) → ΔΨ dissipé → chaleur. AGPI libèrent aussi l'UCP1 de l'inhibition par purine-nucléotides (GDP/GTP). Rôle métabolique : ↑ captation glucose/AGPI → amélioration sensibilité insuline dans DT2. BAT activé par exposition froid, exercice (irisin), FGF21.",
+      "colorations": "HES : cytoplasme granuleux éosinophile (mitochondries), vacuoles lipidiques multiples, noyaux arrondis — distingue du tissu adipeux blanc (1 grande vacuole). Oil Red O (sur coupe congelée) : lipides en rouge. Phosphotungstic acid hematoxylin (PTAH) : mitochondries bleues. IHC : UCP1 (anticorps marqueur spécifique BAT/beige) — gold standard histologique. GLUT1 (glucose transporter, ↑ BAT actif). Sympathique : TH (tyrosine hydroxylase) des fibres nerveuses.",
+      "aspects_microscopiques": "Lobules séparés par septa conjonctifs vasculaires. Adipocytes petits (~25-40 µm vs ~100 µm adipocytes blancs) avec multiples petites vacuoles lipidiques. Cytoplasme granuleux éosinophile dense (mitochondries). Noyau visible, central à subcentral. Abondants capillaires entre adipocytes. IHC UCP1+ confirme identité BAT.",
+      "pathologies_associees": "OBÉSITÉ : ↓ activité BAT chez individus obèses/diabétiques (corrélé avec BMI — ↓ PET-FDG BAT). Rôle protecteur BAT dans DT2 (↑ sensibilité insuline via captation ectopique glucose/lipides). PHÉOCHROMOCYTOME : ↑ catécholamines → activation massive BAT → hyperthermie, sueurs, HTA. HIBERNOME : tumeur bénigne rare du tissu adipeux brun résiduel (adulte — cervical, inter-scapulaire, axillaire). Thermogenèse néonatale : rôle critique (nouveau-né ne claque pas des dents → 100% thermogenèse chimique UCP1). SYNDROME DE CUSHING : cortisol → ↑ WAT + ↓ BAT activité.",
+      "pertinence_pharmacie": "β3-adrénergiques (mirabégron, approuvé vessie hyperactive → hors AMM activation BAT) : essais dans DT2/obésité. FGF21 recombinant/analogues (pegbelfermin) : ↑ brunissement WAT, essais NASH. Irisin/FNDC5 (exercice-induit). BAT transplantation expérimentale (améliore DT2 rongeurs). Cibles : UCP1 expression (agents PPARγ — thiazolidinediones, β3-agonistes, thyroïde hormones)."
+    },
+    {
+      "name": "Rate — Pulpe Rouge et Pulpe Blanche",
+      "desc": "Organe lymphoïde secondaire et filtre sanguin — immunité T/B adaptative (pulpe blanche) + recyclage érythrocytes et fer (pulpe rouge) + réservoir plaquettes",
+      "_icon": "🩸",
+      "histo_type": "Organe lymphoïde secondaire",
+      "localisation": "Hypocondre gauche, sous diaphragme. 100-150 g adulte, 12 cm longueur, axe grand à travers queue pancréas. Hile splénique (artère + veine spléniques). Enveloppée par capsule fibromusculaire + péritoine.",
+      "structure": "ORGANISATION : Capsule conjonctive (collagène I + cellules musculaires lisses — contraction → évacuation réserve). Trabécules (prolongements capsulaires, contenant vaisseaux). Parenchyme : PULPE BLANCHE (tissu lymphoïde) + PULPE ROUGE (tissu sinusoïde). PULPE BLANCHE : manchons lymphoïdes périartériolaires (PALS) autour des artérioles centrales → lymphocytes T (TCR+, CD4+, CD8+). Follicules lymphoïdes secondaires (avec centres germinatifs — lymphocytes B, cellules dendritiques folliculaires, macrophages tingibles) + lymphocytes B marginaux (zone marginale entre pulpe blanche et rouge — surveillance antigènes T-indépendants, polysaccharides). PULPE ROUGE : cordons de Billroth (macrophages, érythrocytes, plasmocytes, cellules NK) + sinus veineux à endothélium fenêtré (érythrocytes âgés filtrés) → artérioles → capillaires pennelés → sinus spléniques → veine splénique.",
+      "cellules_principales": "Lymphocytes T (PALS), Lymphocytes B (follicules + zone marginale), Macrophages de la pulpe rouge (phagocytose érythrocytes sénescents, recyclage Hb → bilirubine, fer → transferrine), Cellules dendritiques (présentation Ag). Plasmocytes (production anticorps, zone rouge). NK (innate defense). Plaquettes stockées (~30% pool circulant, hyper-séquestration hypersplénisme).",
+      "fonctions": "① IMMUNITÉ : initiation réponses immunes contre antigènes sanguins. Zone marginale : 1ère réponse T-indépendante (anti-polysaccharides bactériens — pneumocoque, méningocoque → raison vaccination obligatoire post-splénectomie). PALS : réponse T-dépendante. Centres germinatifs : maturation affinité anticorps. ② HÉMATOLOGIE : Filtration érythrocytes âgés/déformés (épreuve de déformabilité dans sinus fenêtrés — passage par fentes < 3 µm). Recyclage Hb : hème → biliverdine → bilirubine ; fer → transferrine-ferritine. ③ RÉSERVOIR : plaquettes (~30%), neutrophiles, monocytes. ④ HÉMATOPOÏÈSE extraméduliaire (fœtus +++, adulte si aplasie/myélofibrose).",
+      "colorations": "HES : pulpe blanche basophile (lymphocytes), pulpe rouge éosinophile (érythrocytes + sinusoïdes). PAS : glycoprotéines des sinusoïdes (membranes éosinophiles PAS+). Immunohistochimie : CD20 (LB follicules), CD3 (LT PALS), CD68 (macrophages pulpe rouge), CD21 (cellules dendritiques folliculaires, LB zone marginale), Ki-67 (prolifération centres germinatifs).",
+      "aspects_microscopiques": "Follicules spléniques (nodules Malpighi) avec centres germinatifs clairs visibles à faible grandissement. PALS autour artérioles centrales. Zone marginale mal définie chez humain (vs rongeurs). Sinus spléniques (étoilés) en pulpe rouge avec érythrocytes. Cordons de Billroth : amas cellulaires denses entre sinus. Capsule et trabécules contenant muscles lisses.",
+      "pathologies_associees": "SPLÉNOMÉGALIE : infection (paludisme +++, mononucléose EBV, leishmaniose), hémopathies (leucémies, lymphomes), cirrhose portale, maladies de stockage (Gaucher), anémies hémolytiques. HYPERSPLÉNISME : séquestration excessive (thrombopénie, neutropénie, anémie). Splénectomie : ↑ infections à bactéries encapsulées (pneumocoque, méningocoque, H. influenzae type b) → OPSI (Overwhelming Post-Splenectomy Infection) → urgence vitale, mortalité 50-70% sans traitement. VACCINATION OBLIGATOIRE pré-splénectomie (anti-pneumocoque, méningocoque, Hib + pénicilline V prophylactique à vie). INFARCTUS SPLÉNIQUE (drépanocytose, FA, thrombus splénique). RUPTURE (traumatisme, mononucléose).",
+      "pertinence_pharmacie": "Vaccins obligatoires post-asplénie (Prevenar 13®, Pneumovax 23®, méningocoque ACWY+B, Hib, typhoïde si voyages). Pénicilline V prophylactique (Ospen®) à vie chez l'asplénique. Rituximab (anti-CD20) : déplétion LB spléniques. Splénectomie thérapeutique (PTI réfractaire, sphérocytose, certains lymphomes). Myélofibrose : résection si splénomégalie douloureuse."
+    },
+    {
+      "name": "Thymus — Cortex et Médulla",
+      "desc": "Organe lymphoïde primaire de la maturation des lymphocytes T — sélection thymique positive (reconnaissance HLA) et négative (tolérance du soi) — involution progressive après puberté",
+      "_icon": "🫁",
+      "histo_type": "Organe lymphoïde primaire",
+      "localisation": "Médiastin antéro-supérieur, rétrosternal, entre poumons. 2 lobes reliés (droit > gauche). Poids : 12-15 g à naissance, 30-40 g à puberté (maximum), puis involution graisseuse → résidu fibrograisseux adulte. Vascularisation : branches artère thyroïdienne inférieure.",
+      "structure": "CAPSULE fibro-élastique → Trabécules → Lobules (100-200 µm). Chaque lobule : CORTEX (périphérique, dense, basophile) + MÉDULLAIRE (central, plus claire). CORTEX : thymocytes immatures denses (DN → DP : CD4-CD8- → CD4+CD8+) + cellules épithéliales corticales (CEC, forme réticulaire, MHC I + II) + macrophages (corps tingibles → phagocytose 95% thymocytes éliminés). MÉDULLA : thymocytes matures SP (CD4+ ou CD8+) + cellules épithéliales médullaires (MEM — expriment AIRE = Autoimmune Regulator → présentation antigènes périphériques pour sélection négative) + cellules dendritiques + macrophages + corpuscules de Hassall (structures concentriques épithéliales kératinisées — secrètent TSLP → induction Tregs).",
+      "cellules_principales": "THYMOCYTES : étapes DN1→DN2→DN3→DN4 (réarrangement TCRβ, checkpoint β-sélection) → DP (réarrangement TCRα, sélection positive) → SP CD4 ou SP CD8 (sélection négative → sortie médullaire). CELLULES ÉPITHÉLIALES : corticales (CEC, sélection positive, MHC I+II) + médullaires (MEM, sélection négative, AIRE+). CELLULES DENDRITIQUES (sélection négative). MACROPHAGES (nettoyage apoptose — corps tingibles). NKT, NK (minoritaires). CORPUSCLES DE HASSALL (CEM + kératohyaline, médiateurs immunotolérance).",
+      "fonctions": "MATURATION T : sélection positive (MHC-restriction — TCR reconnaît MHC = survie ; TCR ne reconnaît pas = mort par négligence ; ~5% survie). Sélection négative (délétion clonale ; TCR réagit trop fort contre soi-Ag présentés par MEM-AIRE → apoptose = tolérance centrale ; Treg induction). Production de lymphocytes T naïfs recirculants. IMMUNOTOLÉRANCE centrale : mutations AIRE → syndrome APS-1/APECED (polyendocrinopathie auto-immune — candidose + hypoparathyroïdie + maladie d'Addison). Corpuscules de Hassall : TSLP → DC tolérogènes → CD4+CD25+FOXP3+ Tregs.",
+      "colorations": "HES : cortex dense basophile (thymocytes), médulla plus claire, corpuscules de Hassall distinctifs (lamelles épithéliales concentriques éosinophiles). Immunohistochimie : CD3 (thymocytes), TdT (terminal déoxynucléotidyltransférase — thymocytes immatures, biopsie lymphomes), Keratin (cellules épithéliales), CD68 (macrophages corps tingibles), AIRE (IHC médulla — tolérance).",
+      "aspects_microscopiques": "Lobulation nette avec septa conjonctifs. Cortex dense (thymocytes DN→DP, petits, lymphocytes basophiles). Médulla plus claire (mélange cellules épithéliales larges + SP thymocytes + corpuscules de Hassall). Corpuscules de Hassall = structures concentriques lamellaires éosinophiles ± dégénérescence centrale kystique — pathognomoniques du thymus.",
+      "pathologies_associees": "THYMOME (tumeur épithéliale thymique) : association myasthénie (75% thymomes → anti-AChR, 15-20% myasthénies → thymome) + aplasie érythrocytaire pure + hypogammaglobulinémie. Chirurgie : thymectomie (améliore myasthénie même sans thymome). DIGEORGE (22q11.2 délétion) : aplasie thymique → immunodéficit T (lymphopénie T profonde), cardiopathie, hypoparathyroïdie. HYPERPLASIE THYMIQUE : myasthénie + maladies auto-immunes (Graves', PB), MNI. LYMPHOME THYMIC (TNKL — lymphome T thymique). THYMOLIPOME (bénin). Involution accélérée (carence nutritionnelle, glucocorticoïdes, irradiation — hémopathies).",
+      "pertinence_pharmacie": "Thymectomie dans myasthénie (guideline recommande chez patient <60 ans → ↑ rémission à 5 ans — MGTX trial). Immunosuppresseurs post-thymectomie (azathioprine, mycophénolate). Corticoïdes (involution thymique contrôlée). Reconstitution immunitaire post-greffe : thymopoïèse (TRECs). IL-7/IL-7R (signal survie thymocytes). Peptides thymiques (Thymosin α1 = Zadaxin® — immunomodulateur, enregistré dans certains pays pour CHB/VHC)."
+    },
+    {
+      "name": "Tissu Conjonctif Dense",
+      "desc": "Tissu conjonctif à prédominance de fibres collagènes de type I — résistance mécanique aux tractions directionnelles (tendons, ligaments) ou multidirectionnelles (derme)",
+      "_icon": "💪",
+      "histo_type": "Tissu conjonctif",
+      "localisation": "Régulier : tendons (force uni-axiale), ligaments articulaires, aponévroses, sclère. Semi-régulier : fascias. Irrégulier : derme réticulaire, capsules fibro-articulaires, périos/endoste, dure-mère.",
+      "structure": "COMPOSANTS : collagène I (80-90% protéines matricielles) en faisceaux ondulés (crimps — forme en zigzag à l'état au repos, se déroulent sous tension). Protéoglycanes (décorine, biglycane, fibromoduline — organisation fibrillaire). Eau liée. Élastine (< 5%) permettant récupération élastique. RÉGULIER : faisceaux collagène I strictement parallèles. Entre faisceaux : rangées de ténocytes (fibroblastes tendineux aplatis, pseudo-épithéliaux, noyaux ellipsoïdes en file longitudinale = rangées de ténocytes). Pas de vaisseaux dans faisceaux (avascularité relative → cicatrisation lente). Tendon enveloppé dans epitenon/paratenon. IRRÉGULIER : faisceaux entrecroisés en 3D → résistance multidirectionnelle (derme, aponévroses, capsules).",
+      "cellules_principales": "Fibroblastes/Ténocytes (tendons) : cellules plates à noyaux fusiformes (allongés) — synthèse collagène I, décorine, fibronectine. Très peu nombreuses (tissu dit 'pauvre en cellules'). Précurseurs dans endotenon/péritenon. Tendrocytes (matures, peu actifs). Cellules Kölliker = fibroblastes actifs lors remodel. Mastocytes (rares). Pas de macrophages résidents (sauf inflammation).",
+      "fonctions": "TENDONS : transmission force muscle → os (rapport 1:1 contraction/déplacement). Résistance à la traction : ~50-100 MPa (faisceaux collagène I orientés). Comportement viscoélastique (crimps, eau) → amortissement. LIGAMENTS : stabilisation articulaire, guidage mouvements. Proprioception (récepteurs de Golgi, fuseaux musculaires). DERME : résistance tension peau, prévention lacérations.",
+      "colorations": "HES : faisceaux collagène rose pâle/éosinophile (vagues), noyaux fusiformes en file. Trichrome de Masson : collagène bleu/vert vif, cytoplasme rouge. Van Gieson : collagène rose fuchsia, muscle jaune. Orcéine (élastine, peu). Lumière polarisée : biréfringence jaune-verte/rouge des faisceaux collagène I (dichroïsme avec Sirius Red).",
+      "aspects_microscopiques": "Régulier (tendon) : vue longitudinale = rangées parallèles fibroblastes/ténocytes entre faisceaux collagènes ondulés. Vue transversale : champs polygonaux de collagène avec ténocytes isolés. Peu de vaisseaux intrinsèques. Irrégulier (derme) : faisceaux entrecroisés à 120° sur 3 plans.",
+      "pathologies_associees": "TENDINOPATHIES (tendinose) : dégénérescence fibrillaire sans inflammation franche (neovascularisation, cellules aberrantes, fibres désorganisées). Ruptures : tendon d'Achille (fluoroquinolones = facteur de risque ++, tendinite hémorragique) ; coiffe des rotateurs. SYNDROME D'EHLERS-DANLOS (mutations COL5A1/2, COL1A1 selon type) : hyperélasticité cutanée, hyperlaxité articulaire. SCORBUT : carence vitamine C → ↓ hydroxylation proline/lysine (prolyl-hydroxylase) → collagène instable → ruptures vasculaires/tendineuses. CICATRISATION PATHOLOGIQUE : chéloïdes (surproduction collagène I/III).",
+      "pertinence_pharmacie": "Fluoroquinolones (ciprofloxacine, lévofloxacine) : tendinite et rupture tendineuse (Achille ++, risque ×3-11) — mécanisme : ↑ MMP + inhibition prolifération ténocytes + chélation magnésium → dégénérescence. Glucocorticoïdes injectés (péri-tendineux répétés) → dégénérescence collagène. Vitamine C (synthèse collagène post-chirurgie). PRP (facteurs de croissance PDGF/TGF-β → stimulation ténocytes). Thérapie oncologique : bevacizumab (anti-VEGF) → retard cicatrisation tendineuse."
+    },
+    {
+      "name": "Cellules de Sertoli et de Leydig (Testicule)",
+      "desc": "Deux populations cellulaires clés de la spermatogenèse — Sertoli (soutien spermatocytes, barrière hémato-testiculaire, inhibine) et Leydig (stéroïdogenèse, testostérone) — régulées par FSH et LH",
+      "_icon": "⚙️",
+      "histo_type": "Cellule spécialisée",
+      "localisation": "Sertoli : intratubulaire (épithélium séminifère — tubes séminifères contournés). Leydig : interstitium (tissu conjonctif lâche entre tubes séminifères, proche capillaires sanguins).",
+      "structure": "CELLULES DE SERTOLI : Grandes cellules pyramidales/columnaires ancrées sur la membrane basale → apex vers lumière tubulaire. Noyau basal volumineux, trilobé, nucléole proéminent. Junctions serrées entre cellules de Sertoli voisines = BARRIÈRE HÉMATO-TESTICULAIRE (BHT) divisant épithélium en compartiment basal [spermatogonies, spermatocytes primaires pré-leptotène] et luminal [spermatocytes II, spermatides, spermatozoïdes — antigènes de surface néo-générés, séquestrés de l'immunité]. Prolongements cytoplasmiques entourent spermatocytes/spermatides (nurturing). Corps de Charcot-Bottcher (cristalloïdes). CELLULES DE LEYDIG : Grandes cellules polyédriques, cytoplasme éosinophile granuleux (RE lisse abondant — stéroïdogenèse), lipofuschine, Reinke crystals (cristaux octaédriques caractéristiques — pathognomoniques Leydig humain). Noyau arrondi, nucléole proéminent. Groupes de cellules entre tubes.",
+      "cellules_principales": "Sertoli et Leydig (voir ci-dessus). Dans tubes séminifères : spermatogonies (Ad — sombres, réserve ; Ap — pâles, actives) → spermatocytes primaires (préméiotiques, longs) → spermatocytes II → spermatides rondes → spermatides allongées → spermatozoïdes (spermiation = libération dans lumière).",
+      "fonctions": "SERTOLI : ① Soutien physique des cellules germinales. ② BHT (immunoprotection — antigènes néonéo-exprimés de la méiose). ③ Phagocytose des corps résiduels. ④ Sécrétion : ABP (androgen-binding protein → concentration testostérone locale), inhibine B (rétrocontrôle − FSH), AMH (régression canaux de Müller développement), SCF (Steel factor → survie spermatogonies), testostérone locale. ⑤ Régulation spermatogenèse (FSH → FSHR Sertoli → AMPc → expression AR → réponse à testostérone). LEYDIG : ① Stéroïdogenèse (LH → LHCGR → AMPc → PKA → StAR → cholestérol → mitochondrie → pregnenolone → androstènedione → testostérone (CYP17A1, 3β-HSD)). ② Testostérone locale : difuse → Sertoli → spermatogenèse. Testostérone systémique : caractères sexuels secondaires, spermatogenèse, axe HPG.",
+      "colorations": "HES : Sertoli → noyaux pâles nucléolés sur membrane basale, cytoplasme éosinophile avec inclusions. Leydig → cytoplasme éosinophile granuleux, cristaux de Reinke (biréfringents sous lumière polarisée). PAS : membranes basales. Immunohistochimie : vimentine (Sertoli + Leydig), inhibine α (Leydig et Sertoli — excellent marqueur IHC), calretinin (Leydig), SF-1 (steroidogenic factor-1, Sertoli + Leydig).",
+      "aspects_microscopiques": "Coupe transversale tube séminifère : épithélium stratifié (4-8 couches selon cycle spermatogénèse). Sertoli : noyaux volumeux, clairs, nucléolés, basaux — au centre de rangées germinales. Spermatogonies (base), spermatocytes primaires (milieu), spermatides (apex, petits, triangulaires). Spermatozoïdes (têtes vers lumière). Interstitium : Leydig en clusters, cristaux de Reinke (pathognomoniques) ± granules lipidiques, riche vascularisation.",
+      "pathologies_associees": "AZOOSPERMIE : non-obstructive (spermatogenèse absente ou réduite — SCOS : syndrome des cellules de Sertoli seules, tubules avec Sertoli uniquement, IHC inhibine+ sans germinales). Obstructive (spermatogenèse normale, obstacle voies séminales). SYNDROME DE KLINEFELTER (47,XXY) : hyalinose tubulaire, ↓ Sertoli, ↑ Leydig hyperplasie, hypotrophie testiculaire → infertilité + ↑ FSH/LH. TUMEUR À CELLULES DE LEYDIG : ↑ testostérone (pubertédifférée précoce), Reinke++ IHC inhibine+. TUMEUR À CELLULES DE SERTOLI : rare, souvent bénigne, inhibine+. HYPOSPERMATOGENÈSE : ↓ production toutes étapes (chimiothérapie, radiation). AZF délétion chromosome Y (azoospermie factorielle génétique).",
+      "pertinence_pharmacie": "FSH recombinante (follitropine α — Gonal-F® ; follitropine β — Puregon®) : induction spermatogenèse dans hypogonadisme hypogonadotrope. LH/hCG recombinants (choriogonadotropine alfa — Ovitrelle®) : stimulation Leydig → testostérone. TRT (Testostérone) paradoxalement inhibe spermatogenèse (↓ FSH/LH intra-testiculaire). Sertoli cells transplant : exploration thérapeutique. Alkylants (cyclophosphamide, chlorambucil) : toxiques pour spermatogonies Ad (réserve) → azoospermie."
+    }
+  ]
+}

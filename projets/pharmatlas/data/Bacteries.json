@@ -1,0 +1,1745 @@
+{
+  "Bacteries": [
+    {
+      "file": "staphylococcus_aureus.glb",
+      "name": "Staphylococcus aureus",
+      "desc": "Cocci Gram+, pathogène opportuniste majeur",
+      "gram": "Gram positif",
+      "morphologie": "Cocci sphériques de 0,5–1 µm, regroupés en amas caractéristiques en 'grappes de raisin'. Immobiles, asporulés, aéro-anaérobies facultatifs.",
+      "habitat": "Flore commensale des fosses nasales (30 % porteurs sains), peau, muqueuses. Présent dans l'environnement hospitalier.",
+      "pathologies": "Infections cutanées (furoncles, impétigo, cellulite), pneumonies, endocardites, septicémies, ostéomyélites, intoxications alimentaires (entérotoxines thermostables), syndrome du choc toxique staphylococcique (TSST-1). SARM (résistant méticilline) = urgence infectieuse mondiale.",
+      "virulence": "Protéine A (fixation IgG), toxines (leucocidine de Panton-Valentine, TSST-1, exfoliatines), enzymes (coagulase, staphylokinase, hyaluronidase). Biofilm sur dispositifs médicaux.",
+      "antibiotiques": "Méticilline-sensible (SASM) : oxacilline, céfalosporines. SARM : vancomycine, linézolide, daptomycine, tigécycline. Rifampicine en association pour biofilm.",
+      "resistance": "SARM : mécanisme mecA (PBP2a modifiée). VISA/VRSA : résistance à la vancomycine (rare mais redouté). Résistance enzymatique (β-lactamases).",
+      "who_priority": "élevée",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — S. aureus (incluant SARM)",
+        "molecules": [
+          {
+            "molecule": "Oxacilline",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "SARM : CIM >2 ou mecA+"
+          },
+          {
+            "molecule": "Vancomycine",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "GISA : CIM 4–8 mg/L"
+          },
+          {
+            "molecule": "Linézolide",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": ""
+          },
+          {
+            "molecule": "Daptomycine",
+            "CIM_S": "≤1 mg/L",
+            "CIM_R": ">1 mg/L",
+            "note": "Non-susceptible si CIM >1"
+          },
+          {
+            "molecule": "Céfazoline",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": "SAMS uniquement"
+          },
+          {
+            "molecule": "Clindamycine",
+            "CIM_S": "≤0,25 mg/L",
+            "CIM_R": ">0,25 mg/L",
+            "note": "Test D-test (résistance inductible)"
+          }
+        ],
+        "resistance_emergente": "SCCmec IV/V (CA-MRSA). VISA/GISA (CIM vancomycine 4–8). Rare VRSA (CIM >16, vanA). Résistance daptomycine liée aux mutations mprF/cardiolipine."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "staphylococcus_epidermidis.glb",
+      "name": "Staphylococcus epidermidis",
+      "desc": "Staphylocoque coagulase-négative, infections nosocomiales",
+      "gram": "Gram positif",
+      "morphologie": "Cocci de 0,5–1,5 µm en amas ou paires. Colonies blanches crémeuses sur gélose. Coagulase négative (distinction de S. aureus).",
+      "habitat": "Flore commensale cutanée et muqueuse normale chez l'humain (principal staphylocoque de la peau).",
+      "pathologies": "Infections nosocomiales sur matériel étranger : cathéters veineux centraux, prothèses valvulaires, prothèses articulaires, implants. Endocardites sur valves prothétiques. Septicémies chez immunodéprimés et nouveau-nés prématurés.",
+      "virulence": "Formation de biofilm (ica operon — PNAG polysaccharide). Faible virulence intrinsèque mais biofilm très résistant aux antibiotiques et à l'immunité.",
+      "antibiotiques": "Souvent multirésistant. Vancomycine + rifampicine pour les biofilms. Retrait du matériel infecté souvent nécessaire.",
+      "resistance": "Résistance à la méticilline fréquente (mecA). Tolérance au sein du biofilm (phenotypique — non génétique).",
+      "who_priority": "élevée",
+      "antibiogramme": {
+        "note": "SCN — EUCAST 2024",
+        "molecules": [
+          {
+            "molecule": "Oxacilline",
+            "CIM_S": "≤0,25 mg/L",
+            "CIM_R": ">0,25 mg/L",
+            "note": "SERM très fréquent (≥80% nosocomial)"
+          },
+          {
+            "molecule": "Vancomycine",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": ""
+          },
+          {
+            "molecule": "Rifampicine",
+            "CIM_S": "≤0,06 mg/L",
+            "CIM_R": ">0,5 mg/L",
+            "note": "Jamais en monothérapie (résistance rapide)"
+          },
+          {
+            "molecule": "Linézolide",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": ""
+          }
+        ],
+        "resistance_emergente": "mecA/mecC ubiquitaire en milieu nosocomial. Résistance biofilm (↓ sensibilité à tous ATB). Linézolide résistant (cfr, optrA — émergence)."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "streptococcus_pyogenes.glb",
+      "name": "Streptococcus pyogenes",
+      "desc": "Streptocoque β-hémolytique groupe A (SGA)",
+      "gram": "Gram positif",
+      "morphologie": "Cocci ovoïdes de 0,5–1 µm en chaînettes. β-hémolyse complète sur gélose au sang. Catalase négative (différence des staphylocoques).",
+      "habitat": "Gorge et peau humaines. Transmission respiratoire et par contact direct.",
+      "pathologies": "Angine streptococcique (tonsillopharyngite), scarlatine (toxines érythrogènes), impétigo, érysipèle, cellulite nécrosante, fasciite nécrosante ('bactérie mangeuse de chair'), syndrome du choc toxique streptococcique. Complications post-infectieuses : rhumatisme articulaire aigu (RAA), glomérulonéphrite aiguë.",
+      "virulence": "Protéine M (antiphagocytaire), streptokinase, hyaluronidase, streptolysines O et S (hémolysines), exotoxines pyrогènes (superantigènes).",
+      "antibiotiques": "Pénicilline G/V de choix (pas de résistance acquise !). Amoxicilline. Macrolides si allergie. Céphalosporines.",
+      "resistance": "REMARQUABLE : aucune résistance acquise à la pénicilline après 70 ans d'utilisation. Résistance aux macrolides possible (MLSB).",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "streptococcus_pneumoniae.glb",
+      "name": "Streptococcus pneumoniae",
+      "desc": "Pneumocoque, diplocoque encapsulé",
+      "gram": "Gram positif",
+      "morphologie": "Cocci ovoïdes lancéolés par paires (diplocoques) ou courtes chaînes. Capsule polysaccharidique volumineuse (93 sérotypes). α-hémolyse (verdissante) sur gélose au sang.",
+      "habitat": "Nasopharynx de l'humain (portage asymptomatique 40 % des enfants). Transmission aérienne.",
+      "pathologies": "Pneumonie franche lobaire aiguë (PFLA), méningite bactérienne de l'adulte, otite moyenne aiguë (1ère cause), sinusite, bactériémie. Mortalité élevée aux âges extrêmes. Principale cause de pneumonie communautaire et de méningite bactérienne.",
+      "virulence": "Capsule polysaccharidique (antiphagocytaire), pneumolysine (cytotoxique), protéines de surface (PspA, PspC — fixation des facteurs du complément), IgA protéase.",
+      "antibiotiques": "Pénicilline G (si sensible), amoxicilline haute dose, céphalosporines 3G (céfotaxime, ceftriaxone), fluoroquinolones respiratoires. Méningite : céphalosporine 3G ± vancomycine.",
+      "resistance": "PSDP (pneumocoques de sensibilité diminuée à la pénicilline) : fréquent (20–30 % en France). Mécanisme : modification des PBP (PBP1a, 2x, 2b). Vaccins conjugués (PCV13, PCV20) réduisent la circulation des sérotypes résistants.",
+      "who_priority": "élevée",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — Pneumocoque (cibles méningite vs non-méningite distinctes)",
+        "molecules": [
+          {
+            "molecule": "Pénicilline G (méningite)",
+            "CIM_S": "≤0,06 mg/L",
+            "CIM_R": ">0,06 mg/L",
+            "note": "Seuil bas pour méningite"
+          },
+          {
+            "molecule": "Pénicilline G (non-méningite)",
+            "CIM_S": "≤0,5 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": ""
+          },
+          {
+            "molecule": "Amoxicilline",
+            "CIM_S": "≤0,5 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "Seuil non-méningite"
+          },
+          {
+            "molecule": "Céfotaxime (méningite)",
+            "CIM_S": "≤0,5 mg/L",
+            "CIM_R": ">0,5 mg/L",
+            "note": ""
+          },
+          {
+            "molecule": "Vancomycine",
+            "CIM_S": "≤1 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "Efficacité constante"
+          },
+          {
+            "molecule": "Lévofloxacine",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "FQSP de choix méningite adulte"
+          }
+        ],
+        "resistance_emergente": "PSDP (Pneumocoque de Sensibilité Diminuée à la Pénicilline) : France ~30%. Mutations PBP2x/PBP1a/PBP2b. PRSP (résistant) : CIM péni >2. XDR rare. Sérotypes 19A/3/6B couverts par PCV20."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "streptococcus_agalactiae.glb",
+      "name": "Streptococcus agalactiae",
+      "desc": "Streptocoque β-hémolytique groupe B (SGB)",
+      "gram": "Gram positif",
+      "morphologie": "Cocci en chaînettes, β-hémolyse, test CAMP positif (double hémolyse avec S. aureus — caractère diagnostique). Hydrolyse de l'hippurate.",
+      "habitat": "Flore vaginale et rectale normale chez 15–40 % des femmes (portage asymptomatique).",
+      "pathologies": "Infections néonatales graves : septicémie, méningite et pneumonie du nouveau-né (précoce < 7j ou tardive 7j–3 mois). Infections de la femme enceinte (chorioamniotite, endométrite). Infections chez adultes immunodéprimés et diabétiques.",
+      "virulence": "Capsule polysaccharidique (10 sérotypes — Ia, Ib, II–IX), protéine CAMP, hémolysine/cytolysine β-C5a peptidase (résistance au complément).",
+      "antibiotiques": "Pénicilline G ou amoxicilline (prophylaxie perpartum recommandée). Céphalosporines. Clindamycine si allergie.",
+      "resistance": "Généralement sensible à la pénicilline. Résistance aux macrolides en augmentation (20–30 %).",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "enterococcus_faecalis.glb",
+      "name": "Enterococcus faecalis",
+      "desc": "Entérocoque, cocci résistant intrinsèquement",
+      "gram": "Gram positif",
+      "morphologie": "Cocci ovoïdes seuls, en paires ou courtes chaînes. α ou γ-hémolyse. Croissance à 10–45 °C, en NaCl 6,5 %, à pH 9,6 (caractères de résistance remarquables).",
+      "habitat": "Flore intestinale normale humaine et animale (commensal dominant du côlon).",
+      "pathologies": "Infections urinaires nosocomiales, endocardites (2e cause après S. aureus), infections abdominales et pelviennes, bactériémies chez immunodéprimés.",
+      "virulence": "Substances d'agrégation (formation de biofilm), gélatinase, cytolysinе (hémolysine), phéromones sexuels (transfert de plasmides de résistance).",
+      "antibiotiques": "Ampicilline + gentamicine (synergie). Vancomycine. ERV (entérocoques résistants à la vancomycine) : linézolide, daptomycine, tigécycline.",
+      "resistance": "Résistance intrinsèque : toutes les céphalosporines, aminoglycosides à faible niveau, cotrimoxazole. ERV : gènes vanA/vanB — résistance à la vancomycine (émergence mondiale).",
+      "who_priority": "élevée",
+      "antibiogramme": {
+        "note": "EUCAST 2024",
+        "molecules": [
+          {
+            "molecule": "Ampicilline",
+            "CIM_S": "≤8 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "Résistance intrinsèque céphalosporines"
+          },
+          {
+            "molecule": "Vancomycine",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">16 mg/L",
+            "note": "ERV vanA (≥256) ou vanB (variable)"
+          },
+          {
+            "molecule": "Linézolide",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": "ERV : alternative majeure"
+          },
+          {
+            "molecule": "Daptomycine",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": "ERV : alternative"
+          },
+          {
+            "molecule": "Gentamicine (HLR)",
+            "CIM_S": "≤500 mg/L",
+            "CIM_R": ">500 mg/L",
+            "note": "HLR : perd synergie ampicilline+aminoside"
+          }
+        ],
+        "resistance_emergente": "ERV vanA (VRE) : France ~2–3% E. faecalis, 15–20% E. faecium. Transmissibilité plasmidique. Résistance linézolide (cfr, optrA, poxtA) et daptomycine émergente."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "bacillus_anthracis.glb",
+      "name": "Bacillus anthracis",
+      "desc": "Agent du charbon, bactérie sporogène",
+      "gram": "Gram positif",
+      "morphologie": "Bacilles larges de 1–1,5 × 3–10 µm en chaînes bambou caractéristiques. Capsule polypeptidique. Endospores centrales ou subterminal extrêmement résistants (décennies dans le sol).",
+      "habitat": "Spores persistant dans les sols d'élevage. Réservoir : herbivores (bovins, ovins, caprins, chevaux).",
+      "pathologies": "Charbon cutané (pustule maligne — 95 % des cas), charbon pulmonaire ('charbon des trieurs de laine' — mortalité > 80 % sans traitement), charbon gastro-intestinal. Agent de bioterrorisme (lettres à anthrax USA 2001).",
+      "virulence": "Plasmide pXO1 (toxine du charbon : facteur œdémato-gène = PA+EF ; facteur létal = PA+LF). Plasmide pXO2 (capsule poly-D-glutamate antiphagocytaire). Sporulation : mécanisme de résistance environnementale clé.",
+      "antibiotiques": "Ciprofloxacine ou doxycycline (prophylaxie post-exposition). Amoxicilline si souche sensible. Antitoxines (raxibacumab, obiltoxaximab) en complément.",
+      "resistance": "Naturellement sensible. Résistances génie génétique possibles (bioterrorisme).",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "clostridium_botulinum.glb",
+      "name": "Clostridium botulinum",
+      "desc": "Bacille sporulant producteur de la toxine botulique",
+      "gram": "Gram positif",
+      "morphologie": "Bacilles de 4–6 × 0,9–1,2 µm, sporulés (spore subterminale en 'raquette de tennis'). Strictement anaérobies. Présence d'une flagelle péritriche.",
+      "habitat": "Ubiquitaire dans les sols et sédiments. Spores résistant à l'ébullition 100 °C (destruction à 120 °C — stérilisation). Conserves artisanales, charcuteries, miels (nourrissons).",
+      "pathologies": "Botulisme alimentaire (ingestion de toxine préformée), botulisme par plaie, botulisme du nourrisson (colonisation intestinale). Paralysie flasque descendante, diplopie, dysarthrie, dysphagie → arrêt respiratoire.",
+      "virulence": "Neurotoxine botulique (BoNT A-G) : zinc-endoprotéase clivant SNARE (SNAP-25, VAMP, syntaxine) → blocage de la libération d'acétylcholine aux jonctions neuromusculaires. Toxine la plus puissante connue (DL50 ~1 ng/kg).",
+      "antibiotiques": "Sérothérapie antitoxinique (antitoxine trivalente ABE). Pénicilline G pour éradiquer la bactérie. Ventilation mécanique si insuffisance respiratoire. Usage médical de la toxine : Botox® (spasticité, rides, hyperhidrose).",
+      "resistance": "Résistance naturelle aux aminoglycosides. Sporulation = résistance environnementale majeure.",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "clostridium_difficile.glb",
+      "name": "Clostridioides difficile",
+      "desc": "C. diff, principale cause de diarrhée nosocomiale",
+      "gram": "Gram positif",
+      "morphologie": "Bacilles sporulés, anaérobies stricts, 3–16 × 0,5–2 µm. Colonies sur CCFA (milieu sélectif) jaune-verdâtre fluorescentes en UV. Spores très résistantes (alcool inefficace — décontamination chlorée obligatoire).",
+      "habitat": "Flore intestinale humaine minoritaire (5 % des adultes). Réservoir hospitalier majeur — spores persistant dans l'environnement.",
+      "pathologies": "Infections associées aux antibiotiques : colite pseudo-membraneuse, mégacôlon toxique (mortalité 30–50 %), diarrhée profuse. Principale cause de diarrhée nosocomiale (mortalité significative chez les personnes âgées).",
+      "virulence": "Toxine A (entérotoxine — diarrhée), toxine B (cytotoxine — destruction de la muqueuse), toxine binaire CDT (hypervirulence des souches NAP1/BI/027). Sporulation pour la persistance et la transmission.",
+      "antibiotiques": "Métronidazole (formes légères), vancomycine orale, fidaxomicine (prévention des récidives). Transplantation de microbiote fécal (TMF) pour les récidives multiples — efficacité > 90 %.",
+      "resistance": "Résistance au métronidazole en augmentation. Spores résistantes aux antibiotiques. Résistance naturelle aux céphalosporines et fluoroquinolones (favorise la sélection lors de l'antibiothérapie).",
+      "who_priority": "élevée",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — ICD",
+        "molecules": [
+          {
+            "molecule": "Métronidazole",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "Plus recommandé en 1ère ligne (IDSA 2021)"
+          },
+          {
+            "molecule": "Vancomycine orale",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "1ère ligne légère/modérée"
+          },
+          {
+            "molecule": "Fidaxomicine",
+            "CIM_S": "≤0,5 mg/L",
+            "CIM_R": ">0,5 mg/L",
+            "note": "1ère ligne ou récidive : ↓ récidive vs vancomycine"
+          },
+          {
+            "molecule": "Rifaximine",
+            "CIM_S": "≤8 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "Suivi fidaxomicine — prevention récidive"
+          },
+          {
+            "molecule": "Bezlotoxumab (Zinplava®)",
+            "CIM_S": "—",
+            "CIM_R": "—",
+            "note": "Anti-toxine B : prévention récidive (Ac monoclonal — non ATB)"
+          }
+        ],
+        "resistance_emergente": "Ribotype 027 (NAP1) : hyperproducteur toxines A et B + toxine binaire CDT → formes sévères. Ribotype 078 : zoonose, jeunes adultes. Résistance métronidazole croissante (raison changement recommandations). FMT (transplantation microbiote fécal) : >90% efficacité récidive multiple."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "mycobacterium_tuberculosis.glb",
+      "name": "Mycobacterium tuberculosis",
+      "desc": "Bacille de Koch (BK), agent de la tuberculose",
+      "gram": "Gram positif (Ziehl-Neelsen : BAAR)",
+      "morphologie": "Bacilles fins et légèrement incurvés de 0,2–0,5 × 1–4 µm. Acido-alcoolo-résistants (BAAR) — paroi riche en acides mycoliques (40–60 % du poids sec). Croissance lente (16–18h de temps de génération — culture 3–8 semaines).",
+      "habitat": "Parasite intracellulaire obligatoire des macrophages humains. Transmission aérienne (gouttelettes de Pflügge). Réservoir strictement humain.",
+      "pathologies": "Tuberculose pulmonaire (80 % des cas) : primo-infection, tuberculose maladie. Tuberculoses extra-pulmonaires : ganglionnaire, pleurale, osseuse (mal de Pott), méningée, miliaire (disséminée). 10 millions de nouveaux cas/an — 1,5 million de décès/an. 2e cause de mortalité infectieuse mondiale.",
+      "virulence": "Survie intracellulaire dans les macrophages (blocage de la fusion phago-lysosome), granulome tuberculeux (réponse Th1), lipoarabinomannane (LAM — immunosuppresseur), ESAT-6/CFP-10 (perforation membranaire).",
+      "antibiotiques": "Quadrithérapie de référence : isoniazide + rifampicine + pyrazinamide + éthambutol (2 mois), puis isoniazide + rifampicine (4 mois). TB-MR (multirésistante) : bédaquiline, délamanide, linézolide. TB-UR (ultrarésistante) : options très limitées.",
+      "resistance": "TB-MR : résistance isoniazide + rifampicine (500 000 cas/an). TB-UR : + fluoroquinolones et aminoglycosides. Mécanismes : mutations katG (isoniazide), rpoB (rifampicine).",
+      "who_priority": "critique",
+      "antibiogramme": {
+        "note": "OMS/ECDC 2024 — TB résistante",
+        "molecules": [
+          {
+            "molecule": "Isoniazide (INH)",
+            "CIM_S": "≤0,1 mg/L",
+            "CIM_R": ">0,1 mg/L",
+            "note": "katG (CMI haute) ou inhA (CMI basse)"
+          },
+          {
+            "molecule": "Rifampicine (RMP)",
+            "CIM_S": "≤0,5 mg/L",
+            "CIM_R": ">0,5 mg/L",
+            "note": "rpoB : marqueur MDR-TB"
+          },
+          {
+            "molecule": "Éthambutol (EMB)",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": "embB"
+          },
+          {
+            "molecule": "Pyrazinamide (PZA)",
+            "CIM_S": "≤100 mg/L",
+            "CIM_R": ">100 mg/L",
+            "note": "pncA"
+          },
+          {
+            "molecule": "Bédaquiline",
+            "CIM_S": "≤0,008 mg/L",
+            "CIM_R": ">0,008 mg/L",
+            "note": "MDR-TB/XDR-TB — ATPF synthase"
+          },
+          {
+            "molecule": "Linézolide",
+            "CIM_S": "≤0,5 mg/L",
+            "CIM_R": ">1 mg/L",
+            "note": "XDR-TB"
+          },
+          {
+            "molecule": "Prétomanide",
+            "CIM_S": "≤0,25 mg/L",
+            "CIM_R": ">0,25 mg/L",
+            "note": "Combinaison BPaL : bedaquiline+préto+linézolide"
+          }
+        ],
+        "resistance_emergente": "MDR-TB : résistance INH+RMP (France : ~1,5% nouveaux cas). XDR-TB : MDR + résistance FQ + injectable. Régime BPaL (TB-PRACTECAL 2022 : 89% conversion). Pre-XDR-TB (définition révisée OMS 2021 : MDR + FQ résistant). Diagnostic moléculaire : GeneXpert Ultra, WGS."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "listeria_monocytogenes.glb",
+      "name": "Listeria monocytogenes",
+      "desc": "Bacille intracellulaire des aliments réfrigérés",
+      "gram": "Gram positif",
+      "morphologie": "Petits bacilles de 0,4–0,5 × 0,5–2 µm, mobiles à 20–25 °C (flagelles), mobile par culbutes caractéristiques. Croissance à 4 °C (réfrigération inefficace). β-hémolytique.",
+      "habitat": "Environnement ubiquitaire (sol, eau, végétaux, animaux). Contamination alimentaire : fromages à pâte molle, charcuteries, graines germées, poissons fumés.",
+      "pathologies": "Listériose : syndrome grippal bénin chez l'immunocompétent. GRAVE chez femmes enceintes (avortement, mort fœtale, listériose néonatale), personnes âgées, immunodéprimés : septicémie, méningite, encéphalite. Mortalité 20–30 %.",
+      "virulence": "Listeriolysine O (LLO — pore membranaire permettant l'échappement phagolysosomique), ActA (polymérisation de l'actine — propulsion intracellulaire 'rocket tail'), internalines (invasion des cellules non phagocytaires).",
+      "antibiotiques": "Amoxicilline (ou ampicilline) + gentamicine. Cotrimoxazole. Résistance naturelle aux céphalosporines.",
+      "resistance": "Généralement sensible. Résistance aux céphalosporines intrinsèque (PBP modifiées). Résistances acquises rares mais émergentes.",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "neisseria_meningitidis.glb",
+      "name": "Neisseria meningitidis",
+      "desc": "Méningocoque, diplocoque Gram- encapsulé",
+      "gram": "Gram négatif",
+      "morphologie": "Diplocoques Gram négatifs en 'grain de café' (faces aplaties en regard), 0,6–1 µm. Encapsulés (13 sérogroupes — A, B, C, W, Y les principaux). Aérobie strict, oxydase positive.",
+      "habitat": "Rhinopharynx humain (5–10 % de porteurs asymptomatiques). Transmission aérienne. Épidémies en collectivités (méningites à méningocoque).",
+      "pathologies": "Méningite bactérienne purulente (urgence absolue), méningococcémie fulminante (purpura fulminans — CIVD, choc septique, amputations → décès en quelques heures), syndrome de Waterhouse-Friderichsen (insuffisance surrénalienne).",
+      "virulence": "Capsule polysaccharidique (antiphagocytaire), protéines de membrane externe (OMPs — variation antigénique), endotoxine LPS (méningococcémie), IgA1 protéase, pili (adhérence).",
+      "antibiotiques": "Pénicilline G ou ceftriaxone IV (urgence — traitement empirique immédiat). Prophylaxie des contacts : rifampicine ou ciprofloxacine. Vaccination : vaccins conjugués MenACWY, MenB (Bexsero®, Trumenba®).",
+      "resistance": "Résistance à la pénicilline par production de β-lactamase (rare) ou modification des PBP (fréquent). Résistance aux fluoroquinolones émergente.",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "neisseria_gonorrhoeae.glb",
+      "name": "Neisseria gonorrhoeae",
+      "desc": "Gonocoque, agent de la blennorragie",
+      "gram": "Gram négatif",
+      "morphologie": "Diplocoques en grain de café, 0,6–1 µm. Intracellulaires (dans les polynucléaires neutrophiles — caractère diagnostique). Non encapsulés. Aérobie strict, fragile (transport rapide).",
+      "habitat": "Parasite strict des muqueuses humaines (urètre, col utérin, rectum, pharynx, conjonctive). Transmission sexuelle exclusive (IST).",
+      "pathologies": "Urétrite gonococcique aiguë (homme), cervicite (femme souvent asymptomatique), salpingite (stérilité tubaire), ophtalmie néonatale (cécité), gonococcie disséminée (arthrite, dermatite). 87 millions de cas/an dans le monde (OMS).",
+      "virulence": "Pili (adhérence et variation antigénique), OpaA protéines (invasion cellulaire), IgA1 protéase, LOS (lipooligosaccharide), β-lactamases plasmidiques.",
+      "antibiotiques": "Ceftriaxone 500 mg IM dose unique (1ère ligne actuelle). Azithromycine en association. PLUS DE TRAITEMENT ORAL FIABLE — résistance généralisée.",
+      "resistance": "Superbactérie émergente : résistance à la pénicilline, tétracyclines, fluoroquinolones, azithromycine. Souches XDR résistantes à la ceftriaxone signalées. Menace thérapeutique majeure (OMS — priorité critique).",
+      "who_priority": "élevée",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — OMS priorité élevée (résistance multi-molécules)",
+        "molecules": [
+          {
+            "molecule": "Pénicilline G",
+            "CIM_S": "≤0,06 mg/L",
+            "CIM_R": ">1 mg/L",
+            "note": "PPNG (pénicillinase) : >30% monde"
+          },
+          {
+            "molecule": "Ciprofloxacine",
+            "CIM_S": "≤0,03 mg/L",
+            "CIM_R": ">0,06 mg/L",
+            "note": "Résistance >90% Asie, 40–60% Europe"
+          },
+          {
+            "molecule": "Azithromycine",
+            "CIM_S": "≤0,25 mg/L",
+            "CIM_R": ">0,5 mg/L",
+            "note": "Résistance croissante — retiré protocoles HAS 2023"
+          },
+          {
+            "molecule": "Ceftriaxone",
+            "CIM_S": "≤0,125 mg/L",
+            "CIM_R": ">0,125 mg/L",
+            "note": "1ère ligne unique : 1g IM/IV — souches HLR (FC428) émergentes"
+          },
+          {
+            "molecule": "Céfixime",
+            "CIM_S": "≤0,125 mg/L",
+            "CIM_R": ">0,125 mg/L",
+            "note": "Oral : seuil sensibilité très bas — alternative si ceftriaxone impossible"
+          },
+          {
+            "molecule": "Spectinomycine",
+            "CIM_S": "≤64 mg/L",
+            "CIM_R": ">64 mg/L",
+            "note": "Réservé allergie — non disponible France"
+          }
+        ],
+        "resistance_emergente": "XDR gonorrhoeae (ceftriaxone HLR + ciprofloxacine + azithromycine) : cas sporadiques Europe/Japon. Gènes penA, gyrA/parC, mtrR. 1ère ligne OMS/HAS : ceftriaxone 1g IM dose unique. Dépistage culture + antibiogramme systématique urétrite/cervicite."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "escherichia_coli.glb",
+      "name": "Escherichia coli",
+      "desc": "Entérobactérie commensale et pathogène versatile",
+      "gram": "Gram négatif",
+      "morphologie": "Bacilles de 1–1,5 × 2–6 µm, mobiles (flagelles péritriches), lactose +, oxydase −. Colonies roses sur milieu MacConkey. Croissance rapide (20 min de temps de génération).",
+      "habitat": "Flore intestinale dominante chez l'humain et les animaux (commensale). Indicateur de contamination fécale de l'eau et des aliments.",
+      "pathologies": "Infections urinaires (E. coli = 80 % des cystites), méningites néonatales (K1), septicémies, gastroentérites (ECEP, ECET, ECEI, ECEH — O157:H7 → syndrome hémolytique et urémique), infections nosocomiales multi-sites.",
+      "virulence": "Très variable selon pathotype : fimbriae P et type 1 (infections urinaires), flagelles, toxines (LT, ST, Shiga-toxines Stx1/Stx2), îlots de pathogénicité (PAI — LEE pour ECEH), capsule K.",
+      "antibiotiques": "Amoxicilline-clavulanate, cotrimoxazole, nitrofurantoïne (IU non compliquées). Céphalosporines 3G, fluoroquinolones, carbapénèmes (infections graves). ECBU avant traitement.",
+      "resistance": "EBLSE (E. coli producteurs de β-lactamases à spectre élargi) : 30–50 % des souches en ville. EPC (producteurs de carbapénèmases — KPC, NDM, OXA-48) : résistance quasi totale — urgence thérapeutique.",
+      "who_priority": "critique",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — Entérobactéries",
+        "molecules": [
+          {
+            "molecule": "Amoxicilline",
+            "CIM_S": "≤8 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "Résistance >50% communautaire France"
+          },
+          {
+            "molecule": "Amoxicilline-Clavulanate",
+            "CIM_S": "≤8 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": ""
+          },
+          {
+            "molecule": "Céfotaxime",
+            "CIM_S": "≤1 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "BLSE : CIM >2"
+          },
+          {
+            "molecule": "Imipénème",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "Carbapénémase si CIM >8 ou test Carba NP+"
+          },
+          {
+            "molecule": "Ciprofloxacine",
+            "CIM_S": "≤0,25 mg/L",
+            "CIM_R": ">0,5 mg/L",
+            "note": ""
+          },
+          {
+            "molecule": "Colistine",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "MCR-1 plasmidique (résistance transférable)"
+          },
+          {
+            "molecule": "Céftazidime-Avibactam",
+            "CIM_S": "≤8 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "KPC et OXA-48 (pas NDM)"
+          }
+        ],
+        "resistance_emergente": "BLSE CTX-M-15 (dominant). KPC (Klebsiella Pneumoniae Carbapenemase). NDM (New Delhi Metallo-β-lactamase) : résistance ceftazidime-avibactam. OXA-48 : hydrolyse carbapénèmes modérée. MCR-1 (plasmidique) : résistance colistine transférable."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "klebsiella_pneumoniae.glb",
+      "name": "Klebsiella pneumoniae",
+      "desc": "Entérobactérie encapsulée, résistance aux carbapénèmes",
+      "gram": "Gram négatif",
+      "morphologie": "Bacilles encapsulés de 0,3–1 × 0,6–6 µm, immobiles (pas de flagelle). Capsule épaisse mucillagineuse caractéristique (hypercapsulés : colonies mucoïdes). Lactose +.",
+      "habitat": "Flore intestinale normale (5–10 %). Environnement hospitalier (surfaces, dispositifs). Transmission nosocomiale par les mains.",
+      "pathologies": "Pneumonies nécrosantes sévères (alcooliques, diabétiques), infections urinaires nosocomiales, septicémies, abcès hépatiques (souches hypervirulentes asiatiques). Infections sur sondes et cathéters.",
+      "virulence": "Capsule polysaccharidique (73 sérotypes — K1, K2 hypervirulents), sidérophores (yersiniabactine, aérobactine), lipopolysaccharide, fimbriae type 1 et 3.",
+      "antibiotiques": "BLSE : céphalosporines 4G, carbapénèmes. KPC (carbapénémase) : options très limitées — colistine, tigécycline, ceftazidime-avibactam, ceftolozane-tazobactam. NDM : aztreonam-avibactam (récent).",
+      "resistance": "EPC-KPC (résistance aux carbapénèmes par KPC) : endémique aux USA, Grèce, Italie. OXA-48 : endémique au Maghreb, Turquie, France. NDM (New Delhi Metallo-β-lactamase) : Asie du Sud. Priorité CRITIQUE OMS.",
+      "who_priority": "critique",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — priorité critique OMS",
+        "molecules": [
+          {
+            "molecule": "Amoxicilline",
+            "CIM_S": "—",
+            "CIM_R": "Résistance intrinsèque",
+            "note": "β-lactamase chromosomique"
+          },
+          {
+            "molecule": "Céfotaxime",
+            "CIM_S": "≤1 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "BLSE CTX-M : 30–40% France"
+          },
+          {
+            "molecule": "Imipénème",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "KPC : CIM >8, OXA-48 : CIM variable"
+          },
+          {
+            "molecule": "Méropénème",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": ""
+          },
+          {
+            "molecule": "Céftazidime-Avibactam",
+            "CIM_S": "≤8 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "Efficace KPC/OXA-48, inefficace NDM"
+          },
+          {
+            "molecule": "Imipénème-Cilastatine-Relebactam",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": "KPC (Recarbrio®)"
+          },
+          {
+            "molecule": "Colistine",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "Dernier recours XDR"
+          }
+        ],
+        "resistance_emergente": "KPC (gène blaKPC plasmidique — USA, Grèce, Italie) : hydrolyse carbapénèmes + céphalosporines. NDM (Nouvelle-Delhi — Inde, Balkans, Afrique du Nord) : carbapénèmes + aztreonam. OXA-48 (Turquie, Maghreb, France) : carbapénèmes modérément. Hyperproduction AmpC + perte porines OmpK35/36 → résistance sans carbapénémase. XDR (extrêmement résistant) : sensible uniquement colistine ± tigécycline ± ceftazidime-avibactam."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "salmonella_typhi.glb",
+      "name": "Salmonella Typhi",
+      "desc": "Agent de la fièvre typhoïde",
+      "gram": "Gram négatif",
+      "morphologie": "Bacilles mobiles de 0,7–1,5 × 2–5 µm, flagelles péritriches, capsule Vi. Non fermenteur du lactose (milieu MacConkey : colonies incolores). H₂S positif.",
+      "habitat": "Parasite strict de l'humain. Transmission oro-fécale (eau, aliments contaminés). Endémique dans les pays à bas revenu (Asie du Sud, Afrique, Amérique Latine). 11–20 millions de cas/an.",
+      "pathologies": "Fièvre typhoïde : fièvre en plateau progressive, tuphos (torpeur), taches rosées lenticulaires, splénomégalie, complications (perforation intestinale, hémorragie digestive, choc septique). Mortalité 1–4 % sans traitement.",
+      "virulence": "Antigène Vi (antiphagocytaire — capsule), survie intracellulaire dans les macrophages (îlots de pathogénicité SPI-1 et SPI-2), LPS O:9 (endotoxine), flagelles H:d.",
+      "antibiotiques": "Fluoroquinolones (ciprofloxacine) ou azithromycine (formes non graves). Ceftriaxone IV (formes graves). Vaccins : Typhim Vi® (polysaccharidique) et Vivotif® (oral vivant atténué).",
+      "resistance": "Souches XDR (extensivement résistantes) émergentes en Asie du Sud : résistance aux fluoroquinolones + céphalosporines → azithromycine seule option orale.",
+      "who_priority": "élevée",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — Salmonella Typhi",
+        "molecules": [
+          {
+            "molecule": "Amoxicilline",
+            "CIM_S": "≤8 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": ""
+          },
+          {
+            "molecule": "Chloramphénicol",
+            "CIM_S": "≤8 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "MDR Typhi si résistance chloramphénicol+ampicilline+cotrimoxazole"
+          },
+          {
+            "molecule": "Ciprofloxacine",
+            "CIM_S": "≤0,06 mg/L",
+            "CIM_R": ">0,5 mg/L",
+            "note": "Seuil très bas — résistance Asie du Sud"
+          },
+          {
+            "molecule": "Ceftriaxone",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "XDR Typhi si résistant"
+          },
+          {
+            "molecule": "Azithromycine",
+            "CIM_S": "≤16 mg/L",
+            "CIM_R": ">16 mg/L",
+            "note": "MDR per os : azithromycine 1g/j"
+          },
+          {
+            "molecule": "Chloramphénicol+Ampicilline+Cotrimoxazole",
+            "CIM_S": "—",
+            "CIM_R": "Résistance simultanée = MDR-Typhi",
+            "note": "Fréquent Asie du Sud"
+          }
+        ],
+        "resistance_emergente": "XDR Typhi (Pakistan — H58/4.3.1) : MDR + QRDR (FQ résistant) + BLSE → sensible uniquement ceftriaxone IV et azithromycine. Emergence résistance ceftriaxone (BLSE) → pandémie XDR prévenue par Typhim Vi/Typhoid conjugate vaccine (OMS recommandé)."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "salmonella_enteritidis.glb",
+      "name": "Salmonella Enteritidis",
+      "desc": "Salmonelle non typhoïdique, toxi-infection alimentaire",
+      "gram": "Gram négatif",
+      "morphologie": "Bacilles mobiles, lactose −, H₂S +. Sérotype 1,9,12:g,m:- (antigènes somatiques O:9, flagellaires H:g,m). Colonies incolores sur MacConkey.",
+      "habitat": "Réservoir aviaire (poule, œufs — contamination de la coquille et du contenu). Salmonelles non typhoïdiques : réservoir animal large (volailles, bovins, reptiles).",
+      "pathologies": "Toxi-infections alimentaires collectives (TIAC) : gastroentérite aiguë (diarrhée fébrile, vomissements), bactériémie (immunodéprimés, drépanocytaires), ostéomyélite à Salmonella (drépanocytose).",
+      "virulence": "Envahissement de la muqueuse intestinale (îlots SPI-1 — système de sécrétion de type III), survie dans les macrophages, entérotoxine (STa).",
+      "antibiotiques": "Traitement symptomatique dans les formes légères. Fluoroquinolones ou céphalosporines 3G si bactériémie. Les antibiotiques prolongent le portage dans les formes simples.",
+      "resistance": "Résistance aux fluoroquinolones et aux céphalosporines en augmentation (S. Typhimurium variant ACSSuT).",
+      "who_priority": "élevée",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "helicobacter_pylori.glb",
+      "name": "Helicobacter pylori",
+      "desc": "Spirochète gastrique, ulcère et cancer gastrique",
+      "gram": "Gram négatif",
+      "morphologie": "Bacilles spiralés hélicoïdaux de 0,5–0,9 × 2–4 µm, très mobiles (flagelles unipolaires gainés). Microaérophile, oxydase +, uréase +++ (test respiratoire à l'urée ¹³C).",
+      "habitat": "Muqueuse gastrique humaine (Couche de mucus antral). Transmission oro-orale et oro-fécale. 50 % de la population mondiale infectée (surtout pays en développement).",
+      "pathologies": "Gastrite chronique active, ulcère gastroduodénal (95 % des ulcères duodénaux et 70 % des gastriques), adénocarcinome gastrique (3e cancer mondial en mortalité), lymphome MALT gastrique. Classé carcinogène groupe 1 (CIRC).",
+      "virulence": "Uréase (neutralise l'acidité gastrique), cytotoxine CagA (îlot de pathogénicité — oncoprotéine), VacA (vacuolisation cellulaire, apoptose), BabA (adhésine à l'antigène Lewis b).",
+      "antibiotiques": "Trithérapie 14j : IPP + amoxicilline + clarithromycine. Quadrithérapie si résistance aux macrolides : IPP + bismuth + métronidazole + tétracycline (Pylera®). Test de contrôle d'éradication (test respiratoire) obligatoire.",
+      "resistance": "Résistance à la clarithromycine : 25–30 % en France (cause principale d'échec). Résistance au métronidazole : 30–40 %. Résistance aux fluoroquinolones : 15–20 %.",
+      "who_priority": "élevée",
+      "antibiogramme": {
+        "note": "EUCAST 2024 / Maastricht VI (2022)",
+        "molecules": [
+          {
+            "molecule": "Clarithromycine",
+            "CIM_S": "≤0,25 mg/L",
+            "CIM_R": ">0,5 mg/L",
+            "note": "Résistance primaire France ~20% — test obligatoire avant traitement (EL1)"
+          },
+          {
+            "molecule": "Métronidazole",
+            "CIM_S": "≤8 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "Résistance primaire France ~35% (moindre impact en quadrithérapie)"
+          },
+          {
+            "molecule": "Lévofloxacine",
+            "CIM_S": "≤1 mg/L",
+            "CIM_R": ">1 mg/L",
+            "note": "Croissance résistance (>15%)"
+          },
+          {
+            "molecule": "Tétracycline",
+            "CIM_S": "≤1 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "Composante quadrithérapie bismuth"
+          },
+          {
+            "molecule": "Rifabutine",
+            "CIM_S": "≤1 mg/L",
+            "CIM_R": ">1 mg/L",
+            "note": "3e ligne — rescue (Talicia®)"
+          },
+          {
+            "molecule": "Amoxicilline",
+            "CIM_S": "≤0,12 mg/L",
+            "CIM_R": ">0,12 mg/L",
+            "note": "Résistance rare (<1%)"
+          }
+        ],
+        "resistance_emergente": "Résistance clarithromycine et fluoroquinolones en hausse → antibiogramme systématique avant traitement (biopsie). Quadrithérapie bismuth (PYLERA® : oméprazole+bismuth+tétracycline+métronidazole) recommandée 1ère ligne en France (HAS 2021). Triple thérapie guidée par culture si FQ sensible."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "pseudomonas_aeruginosa.glb",
+      "name": "Pseudomonas aeruginosa",
+      "desc": "Bacille non fermentant, redoutable nosocomial",
+      "gram": "Gram négatif",
+      "morphologie": "Bacilles de 0,5–1 × 1,5–5 µm, mobiles (flagelle polaire monotriche). Pigments caractéristiques : pyocyanine (bleue) et pyoverdine (fluorescente en UV — verte). Odeur de jasmin caractéristique. Aérobie strict, oxydase +.",
+      "habitat": "Environnement hydrique ubiquitaire (eaux, sols, plantes). Hôpital : robinets, respirateurs, piscines, endoscopes. Flore intestinale transitoire.",
+      "pathologies": "Infections nosocomiales graves : pneumonies sous ventilation mécanique (VAP — mortalité 30–50 %), infections urinaires sur sonde, bactériémies, infections de brûlures, otite externe maligne (diabétiques). Mucoviscidose : colonisation bronchique chronique (biofilm mucoid — inéradicable).",
+      "virulence": "LPS O-antigène (94 sérotypes), alginate (biofilm mucoid), toxines (exotoxine A — inhibition synthèse protéique, ExoS/T/U/Y — système de sécrétion T3SS), pyocyanine (stress oxydant), élastase, protéase alcaline.",
+      "antibiotiques": "Pipéracilline-tazobactam, céfépime, ceftazidime, aztréonam, carbapénèmes (imipénème, méropénème), ciprofloxacine, aminoglycosides (tobramycine). Toujours bithérapie initiale. Colistine en dernier recours.",
+      "resistance": "Multirésistance naturelle et acquise : pompes d'efflux (MexAB-OprM), β-lactamases (AmpC, MBL), imperméabilité (perte OprD), mutation des PBP. Priorité CRITIQUE OMS.",
+      "who_priority": "critique",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — Pseudomonas",
+        "molecules": [
+          {
+            "molecule": "Pipéracilline-Tazobactam",
+            "CIM_S": "≤16 mg/L",
+            "CIM_R": ">16 mg/L",
+            "note": "Inactivé AmpC hyperproduites"
+          },
+          {
+            "molecule": "Céftazidime",
+            "CIM_S": "≤8 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": ""
+          },
+          {
+            "molecule": "Méropénème",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "OprD ↓ + AmpC + pompe efflux"
+          },
+          {
+            "molecule": "Imipénème",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": "↓ OprD spécifique → résistance sélective imipénème"
+          },
+          {
+            "molecule": "Ciprofloxacine",
+            "CIM_S": "≤0,5 mg/L",
+            "CIM_R": ">1 mg/L",
+            "note": ""
+          },
+          {
+            "molecule": "Amikacine",
+            "CIM_S": "≤8 mg/L",
+            "CIM_R": ">16 mg/L",
+            "note": ""
+          },
+          {
+            "molecule": "Colistine",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": "Dernier recours"
+          },
+          {
+            "molecule": "Céftolozane-Tazobactam",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": "XDR/MDR sans carbapénémase (Zerbaxa®)"
+          }
+        ],
+        "resistance_emergente": "MDR/XDR par accumulation : ↓ OprD (carbapénèmes), surexpression pompes efflux MexAB-OprM/MexXY-OprM, AmpC hyperproduite, BLSE (PSE), métallo-β-lactamase VIM/IMP (NDM rare). Céftolozane-tazobactam : option XDR sans carbapénémase. Imipénème-relebactam (MDR). Ceftazidime-avibactam (VIM/IMP inactifs)."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "haemophilus_influenzae.glb",
+      "name": "Haemophilus influenzae",
+      "desc": "Cocco-bacille Gram-, méningites et ORL",
+      "gram": "Gram négatif",
+      "morphologie": "Cocco-bacilles pléomorphes de 0,2–0,4 × 0,3–2 µm. Exigeant nutritionnel (facteurs X et V — hémine et NAD). Colonies satellites autour du staphylocoque. 6 sérotypes capsulaires (a–f), non typables.",
+      "habitat": "Rhinopharynx humain (portage asymptomatique 60–80 % enfants). Transmission aérienne.",
+      "pathologies": "Hib (type b) : méningite bactérienne (enfants < 5 ans — éradiqué par le vaccin dans les pays vaccinés), épiglottite aiguë (urgence). Non typable : otites moyennes, sinusites, bronchites, exacerbations de BPCO. Pneumonies.",
+      "virulence": "Capsule polyribosyl-ribitol-phosphate (PRP — Hib), IgA protéase, adhésines (Hia, Hap), facteurs d'évitement immunitaire.",
+      "antibiotiques": "Amoxicilline-clavulanate, céphalosporines 3G (méningite : ceftriaxone IV). Rifampicine (prophylaxie contacts). Vaccin Hib conjugué : éradication des méningites à Hib dans les pays vaccinés.",
+      "resistance": "β-lactamases TEM-1 (amoxicilline-résistant) : 30 % en France. Résistance β-lactamase négative ampicilline-résistante (BLNAR) : mutations PBP3.",
+      "who_priority": "élevée",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "bordetella_pertussis.glb",
+      "name": "Bordetella pertussis",
+      "desc": "Agent de la coqueluche, bacille des voies respiratoires",
+      "gram": "Gram négatif",
+      "morphologie": "Cocco-bacilles de 0,2–0,5 × 0,5–2 µm, très fragiles. Croissance lente (3–6 jours sur gélose Bordet-Gengou). Aérobie strict, oxydase +.",
+      "habitat": "Strictement humain. Transmission aérienne par gouttelettes. Très contagieux (R₀ ~15). Endémique mondial avec cycles épidémiques.",
+      "pathologies": "Coqueluche : phase catarrhale (rhinite 1–2 sem.), phase paroxystique (quintes de toux suffocantes 'chant du coq', vomissements, cyanose — 2–6 sem.), phase de convalescence. GRAVE chez nourrissons (apnées, mort subite).",
+      "virulence": "Toxine pertussique (TP — ADP-ribosyltransférase, inhibant les protéines Gi → hyperleucocytose, lymphocytose), hémagglutinine filamenteuse (FHA — adhésion), pertactine, adénylate cyclase toxine (inhibe la phagocytose), trachéotoxine.",
+      "antibiotiques": "Azithromycine ou clarithromycine (traitement et prophylaxie contacts). Les antibiotiques n'écourtent pas la maladie déclarée mais réduisent la contagiosité. Vaccination DTCaP obligatoire.",
+      "resistance": "Résistances rares aux macrolides signalées. Résistance naturelle aux céphalosporines et fluoroquinolones.",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "yersinia_pestis.glb",
+      "name": "Yersinia pestis",
+      "desc": "Agent de la peste bubonique, zoonose historique",
+      "gram": "Gram négatif",
+      "morphologie": "Bacilles ovoïdes de 0,5–0,8 × 1–2 µm, immobiles, aspect bipolaire ('épingle de sûreté'). Croissance lente à 28 °C (température optimale — différent de 37 °C). Coloration de Wayson : bipolaire caractéristique.",
+      "habitat": "Zoonose des rongeurs (rats, marmottes, écureuils). Vecteur : puce du rat (Xenopsylla cheopis). Foyers persistants : Asie centrale, Afrique, Amérique.",
+      "pathologies": "Peste bubonique (bubon inguinal, axillaire ou cervical — adénopathie nécrotique douloureuse), peste septicémique (purpura, CIVD), peste pulmonaire (transmission interhumaine aérienne — mortalité > 90 % sans traitement). 3 grandes pandémies : Justinienne, Noire (XIV siècle), moderne.",
+      "virulence": "Pla (plasminogène activateur — invasion), Caf1/F1 (capsule antiphagocytaire à 37 °C), Yops (protéines d'effacement immunitaire), LPS hypotoxique (résistance au complément à 37 °C).",
+      "antibiotiques": "Streptomycine ou gentamicine (traitement de choix). Doxycycline, ciprofloxacine. Isolement respiratoire strict (forme pulmonaire). Agent de bioterrorisme potentiel (arme biologique).",
+      "resistance": "Souches naturellement sensibles. Souche MDR plasmidique décrite (Madagascar, 1995).",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "vibrio_cholerae.glb",
+      "name": "Vibrio cholerae",
+      "desc": "Agent du choléra, bacille à flagelle polaire",
+      "gram": "Gram négatif",
+      "morphologie": "Bacilles incurvés en virgule ('vibrios'), très mobiles (flagelle polaire monotriche — mobilité en 'vol de moucherons'). Oxydase +, croissance en eau salée, milieu TCBS (colonies jaunes).",
+      "habitat": "Eau douce et saumâtre (estuaires), zooplancton. Transmission oro-fécale (eau et aliments souillés). Pandémies : 7 pandémies documentées depuis 1817. Endémique en Asie du Sud, Haïti, Yémen.",
+      "pathologies": "Choléra : diarrhée aqueuse en 'eau de riz' massive (10–20 L/jour), vomissements → déshydratation sévère → choc hypovolémique → mort en quelques heures sans réhydratation. Asymptomatique dans 75 % des cas.",
+      "virulence": "Toxine cholérique CT (ADP-ribosyltransférase activant Gsα → ↑↑ AMPc → sécrétion chlorure intestinale massive), TCP (pili corégulé avec la toxine — colonisation), réservoir environnemental (biofilm, association au zooplancton).",
+      "antibiotiques": "RÉHYDRATATION PRIMORDIALE (SRO — solution de réhydratation orale). Antibiotiques (doxycycline, azithromycine) raccourcissent la durée. Vaccins oraux (Dukoral®, Shanchol®).",
+      "resistance": "O139 (nouveaux sérotypes), résistances aux tétracyclines et fluoroquinolones en augmentation dans les pays endémiques.",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "treponema_pallidum.glb",
+      "name": "Treponema pallidum",
+      "desc": "Spirochète agent de la syphilis",
+      "gram": "Gram négatif (Gram: non applicable — trop fin)",
+      "morphologie": "Spirochète de 0,1–0,18 × 5–20 µm, hélicoïdal régulier (6–14 spires), très mobile (rotation et flexion). Non cultivable in vitro. Visualisation : fond noir ou immunofluorescence.",
+      "habitat": "Strictement humain. Transmission sexuelle, materno-fœtale (syphilis congénitale), transfusionnelle (rare).",
+      "pathologies": "Syphilis primaire : chancre induré indolore (3–90 j). Syphilis secondaire : roséole, syphilides (3 mois–2 ans). Syphilis latente. Syphilis tertiaire (10–30 ans) : gommes, aortite, neurosyphilis (tabès, paralysie générale). Syphilis congénitale : mort fœtale, malformations. Recrudescence mondiale des IST.",
+      "virulence": "Evasion immunitaire (variation antigénique des protéines de membrane externe, réplication lente), invasion de tous les tissus (neurotropisme), interaction avec la matrice extracellulaire (fibronectine).",
+      "antibiotiques": "Pénicilline G benzathine IM (traitement de référence depuis 75 ans — JAMAIS de résistance acquise). Doxycycline si allergie pénicilline. Suivi sérologique (VDRL, TPHA).",
+      "resistance": "Remarquable : aucune résistance à la pénicilline. Résistance à l'azithromycine : fréquente (23S rRNA mutation).",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "borrelia_burgdorferi.glb",
+      "name": "Borrelia burgdorferi",
+      "desc": "Spirochète de Lyme, transmis par la tique",
+      "gram": "Gram négatif (spirochète)",
+      "morphologie": "Spirochète de 0,2–0,25 × 10–30 µm, irrégulièrement enroulé, très mobile. Microaérophile, croissance très lente (7–14 jours). Coloration de Giemsa ou immunofluorescence.",
+      "habitat": "Tiques Ixodes (I. ricinus en Europe, I. scapularis aux USA). Réservoirs : petits mammifères (souris sylvestre), cervidés. Endémique dans les zones forestières de l'hémisphère Nord.",
+      "pathologies": "Maladie de Lyme : érythème migrant (EM — pathognomonique, 3j–30j), phase disséminée précoce (cardite, paralysie faciale, méningite lymphocytaire), phase tardive (arthrite de Lyme, neuroborreliose chronique). 85 000 cas/an en France.",
+      "virulence": "Lipoprotéines de surface (Osp A-F — variation lors de la transmission), protéases (invasion de la matrice), évasion du complément (CRASPs — protéines de fixation de facteurs du complément).",
+      "antibiotiques": "Doxycycline (forme cutanée, neurologique adulte). Amoxicilline (enfants, grossesse). Ceftriaxone IV (formes graves — cardite, neuroborreliose). Durée : 14–28 jours selon la forme.",
+      "resistance": "Résistances acquises rares. Résistance naturelle aux fluoroquinolones.",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "mycoplasma_pneumoniae.glb",
+      "name": "Mycoplasma pneumoniae",
+      "desc": "Plus petite bactérie autonome, sans paroi",
+      "gram": "Gram négatif (Gram: non applicable — pas de paroi)",
+      "morphologie": "Bactérie dépourvue de paroi cellulaire (pas de peptidoglycane). Forme pléomorphe, filamenteuse. Très petites (0,1–0,8 µm). Non cultivable sur gélose standard. Croissance très lente (3–6 semaines).",
+      "habitat": "Voies respiratoires humaines. Transmission aérienne. Épidémies cycliques tous 4–7 ans (collectivités).",
+      "pathologies": "Pneumonie atypique (PAC atypique) chez enfants et adultes jeunes : début insidieux, toux sèche tenace, fièvre modérée, radiographie décalée par rapport aux signes cliniques. Complications extrapulmonaires : anémie hémolytique (agglutinines froides), myocardite, encéphalite, érythème multiforme (Stevens-Johnson).",
+      "virulence": "Adhésine P1 (fixation au récepteur sialylé des cellules épithéliales respiratoires — ciliostase), peroxyde d'hydrogène et radicaux libres (cytotoxicité), mimétisme moléculaire (antigènes I des globules rouges → agglutinines froides).",
+      "antibiotiques": "Macrolides (azithromycine, clarithromycine) de 1ère ligne. Doxycycline. Fluoroquinolones. RÉSISTANTS AUX β-LACTAMINES (pas de paroi — cibles des β-lactamines).",
+      "resistance": "Résistance aux macrolides émergente (mutation 23S rRNA) : 10–30 % en France, > 90 % en Chine. Résistance intrinsèque à tous les agents actifs sur la paroi (β-lactamines, vancomycine, polymyxines).",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "chlamydia_trachomatis.glb",
+      "name": "Chlamydia trachomatis",
+      "desc": "Bactérie intracellulaire obligatoire, IST fréquente",
+      "gram": "Gram négatif (intracellulaire — Gram non applicable)",
+      "morphologie": "Parasite intracellulaire obligatoire, cycle biphasique : corps élémentaire (CE — infectieux, extracellulaire, 0,3 µm) ↔ corps réticulé (CR — réplicatif, intracellulaire, 1 µm). Non cultivable sur milieux standards.",
+      "habitat": "Strictement humain. Transmission sexuelle (IST la plus fréquente au monde) ou vertinale (neonatal).",
+      "pathologies": "Sérotypes D-K : urétrite (hommes), cervicite/salpingite (femmes — stérilité tubaire), conjonctivite à inclusions, pneumopathie néonatale. Sérotypes L1-L3 : lymphogranulome vénérien (LGV — ulcérations génitales, adénopathies inguinales). Sérotypes A-C : trachome (principale cause de cécité infectieuse — 200 millions de cas).",
+      "virulence": "Corps élémentaires résistants (survie extracellulaire), inclusion intracellulaire (protection contre l'immunité), CPAF (protéase — dégradation des molécules de signalisation immunitaire), inhibition de l'apoptose cellulaire.",
+      "antibiotiques": "Azithromycine 1 g dose unique (D-K). Doxycycline 7–21 jours (LGV). Érythromycine (nourrissons). RÉSISTANTS AUX β-LACTAMINES (intracellulaires).",
+      "resistance": "Résistances acquises rares mais émergentes aux macrolides et tétracyclines.",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "streptomyces_griseus.glb",
+      "name": "Streptomyces griseus",
+      "desc": "Actinobactérie productrice de la streptomycine",
+      "gram": "Gram positif",
+      "morphologie": "Mycélium filamenteux ramifié (hyphes de 0,5–2 µm de diamètre). Sporulation aérienne (chaînes de conidiospores). Colonies poudreuses grises-blanches caractéristiques. Croissance lente (5–7 jours).",
+      "habitat": "Sol (actinobactéries = bactéries dominantes du sol). Odeur de terre humide due à la géosmine produite.",
+      "pathologies": "Non pathogène. Modèle de producteur d'antibiotiques (actinobactéries = source de 2/3 des antibiotiques naturels).",
+      "virulence": "Aucune (saprophyte). Production d'antibiotiques : mécanisme de compétition dans le sol.",
+      "antibiotiques": "PRODUCTEUR : Streptomycine (1ère aminoglycoside — Waksman, Nobel 1952), streptothricine, actidione. Source biotechnologique majeure : Streptomyces sp. (érythromycine, tétracycline, vancomycine, daptomycine, rapamycine).",
+      "resistance": "Non applicable (producteur, non pathogène).",
+      "who_priority": "non classée",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "lactobacillus_acidophilus.glb",
+      "name": "Lactobacillus acidophilus",
+      "desc": "Bactérie lactique, probiotique majeur",
+      "gram": "Gram positif",
+      "morphologie": "Bacilles de 0,6–0,9 × 1,5–6 µm, non sporulés, immobiles, microaérophiles. Colonies blanches crémeuses sur gélose MRS. Producteur d'acide lactique (pH final 3,5–4,0).",
+      "habitat": "Intestin grêle humain, vagin (flore de Döderlein), lait fermenté, fromages.",
+      "pathologies": "Non pathogène. Rôle protecteur : prévention des vaginoses bactériennes, compétition avec les pathogènes intestinaux.",
+      "virulence": "Aucune virulence connue. Probiotique : effets bénéfiques documentés pour la santé intestinale et vaginale.",
+      "antibiotiques": "Probiotiques : restauration de la flore intestinale après antibiothérapie, prévention des diarrhées à C. difficile, vaginites à Candida et bactériennes. Fermentation lactique (yaourt, kéfir, fromages). Compléments alimentaires (Bacilor®, Lactibiane®).",
+      "resistance": "Résistances intrinsèques aux antibiotiques (non transmissibles). Résistance à la vancomycine (naturelle).",
+      "who_priority": "non classée",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "bacteroides_fragilis.glb",
+      "name": "Bacteroides fragilis",
+      "desc": "Bacille anaérobie strict, flore intestinale dominante",
+      "gram": "Gram négatif",
+      "morphologie": "Bacilles de 0,8–1,3 × 1,6–8 µm, pléomorphes, non sporulés, strictement anaérobies. Capsule polysaccharidique. Croissance en 2–5 jours en anaérobiose stricte.",
+      "habitat": "Côlon humain (bactérie anaérobie stricte la plus abondante — 10¹¹ UFC/g fèces). Microbiote intestinal essentiel.",
+      "pathologies": "Infections intra-abdominales post-opératoires (péritonites, abcès — contamination lors de perforation digestive), abcès pelviens, bactériémies anaérobies. Souche entérotoxigène (ETBF) : diarrhées et cancer colorectal.",
+      "virulence": "Capsule polysaccharidique (A et B — rôles immunomodulateurs), métalloprotéase fragilysine (BFT — entérotoxine clivant la cadhérine E), enzymes d'invasion (héparine-nase, fibrinolysin).",
+      "antibiotiques": "Métronidazole ou tinidazole (très actifs sur anaérobies). Amoxicilline-clavulanate, imipénème. Toujours traiter les infections mixtes aérobie/anaérobie.",
+      "resistance": "Résistance naturelle aux aminoglycosides. β-lactamases céfoxitine-résistantes. Résistance au métronidazole rare mais émergente.",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — Anaérobies",
+        "molecules": [
+          {
+            "molecule": "Métronidazole",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": "Résistance rare France (<1%)"
+          },
+          {
+            "molecule": "Amoxicilline-Clavulanate",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "cfiA (métallo-β-lactamase) émergent"
+          },
+          {
+            "molecule": "Imipénème",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "cfiA peut hydrolyser carbapénèmes"
+          },
+          {
+            "molecule": "Clindamycine",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": "Résistance ~30% — gène ermF"
+          },
+          {
+            "molecule": "Pipéracilline-Tazobactam",
+            "CIM_S": "≤16 mg/L",
+            "CIM_R": ">16 mg/L",
+            "note": ""
+          }
+        ],
+        "resistance_emergente": "cfiA (métallo-β-lactamase) : résistance carbapénèmes + amoxicilline-clav (portage chromosomique, insertion IS). Résistance clindamycine (ermF) croissante. Antibiogramme obligatoire pour B. fragilis en infections sévères."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "acinetobacter_baumannii.glb",
+      "name": "Acinetobacter baumannii",
+      "desc": "Priorité CRITIQUE OMS — carbapénèmes, pandémie de résistances nosocomiales",
+      "gram": "Gram négatif",
+      "morphologie": "Coccobacilles ou bacilles courts 1–1,5 × 1,5–2,5 µm, immobiles (non flagellés), aérobies stricts. Diplococcobacilles en paires. Encapsulé. Oxydase négatif (≠ Pseudomonas). Catalase positive. Culture facile : colonies gris-blanc, opaques, mucoïdes ou sèches selon capsule sur gélose ordinaire à 35-37°C en 24-48h. Croît sur milieu MacConkey (non fermentant). Survie environnementale exceptionnelle : surfaces sèches jusqu'à 5 mois, résistance à de nombreux désinfectants. Complexe ACB (Acinetobacter calcoaceticus-baumannii complex) — A. baumannii = genomospecies 2 (la plus virulente et cliniquement pertinente).",
+      "habitat": "Environnement hospitalier (sol, eau, matériel médical, surfaces). Survie prolongée sur surfaces inertes sèches (jusqu'à 5 mois — unique parmi Gram négatifs). Colonisation cutanée transitoire chez sujets sains (aisselles, aines, pieds). Sol et eaux naturelles (réservoir environnemental). Hôpital : respirateurs, nébuliseurs, matelas, rails de lit, claviers d'ordinateur, blouses. Transmission manuportée principalement. Véhicule de transmissions croisées en réanimation. Surnommé 'Iraqibacter' (USA) après épidémies chez militaires blessés en Irak/Afghanistan (infections de plaies de guerre multi-résistantes).",
+      "pathologies": "INFECTIONS NOSOCOMIALES CRITIQUES (priorité CRITIQUE WHO ESKAPE — A. baumannii résistant aux carbapénèmes = CRAB) : ① Pneumonie sous ventilation mécanique (VAP) : forme la plus fréquente en réanimation (2e ou 3e rang des VAP selon les pays). Mortalité attribuable 30-75% pour les CRAB. ② Bactériémie/sepsis : souvent cathéter central. Mortalité 40-60%. ③ Méningite post-neurochirurgicale (tréphination, dérivation ventriculaire externe). ④ Infections de plaies chirurgicales et brûlures (colonisation-infection rapide). ⑤ Infection urinaire sur sonde. ⑥ Péricardite, endophtalmie (rares). Contextes à risque : réanimation prolongée, ventilation mécanique, cathéter central, antibiothérapie large spectre préalable, chirurgie abdominale/neurochirurgie, immunodépression, brûlures étendues. Épidémies nosocomiales bien documentées (UCI — clones épidémiques internationaux CC2 et CC1 pandémiques).",
+      "virulence": "FACTEURS DE VIRULENCE CLÉS : ① Capsule polysaccharidique (K-type et O-type) : 124 locus K-type → antigènes variables → résistance phagocytose + opsonisation + activité du complément. ② Biofilm : formation sur surfaces abiotiques (cathéters, respirateurs) et biotiques (cellules). Gènes bap, csuA-E (pili Csu — adhésion initiale), ompA (OMP35). Matrice exopolysaccharidique → résistance 100-1000× aux antibiotiques vs planctonique. ③ OmpA (Outer Membrane Protein A, 35 kDa) : porine multitâche → adhésion cellulaire épithéliale, invasion intracellulaire (mitochondries), apoptose. ④ Système de sécrétion de type VI (T6SS) : injection de toxines bactéricides dans bactéries concurrentes → compétition bactérienne dans niches écologiques. ⑤ Sidérophores (acinetobactine, fimsbactine) : captation du fer → croissance en conditions de carence (sérum, poumon). ⑥ LPS/lipooligosaccharide (LOS) : endotoxine → choc septique. ⑦ Protéases (Zmp, CpaA) → dommages tissulaires et inactivation compléments. ⑧ Phospholipase C et D → lyse membranaires cellulaires. ⑨ Tolérance à la dessiccation (Dps, biosynthèse tréhalose) → survie longue sur surfaces sèches.",
+      "antibiotiques": "TRAITEMENT ACINETOBACTER BAUMANNII RÉSISTANT AUX CARBAPÉNÈMES (CRAB) — SITUATION DE CRISE THÉRAPEUTIQUE (recommandations ESCMID/IDSA 2023) : MOLÉCULES ACTIVES SUR CRAB : ★ Sulbactam-durlobactam (XACDURO®, Innoviva/Entasis — FDA 2023, AMM EU en cours) : association sulbactam (inhibe PBP1/2 d'A. baumannii — agoniste β-lactamine unique pour CRAB) + durlobactam (inhibiteur de β-lactamases classe A+C+D — inhibe OXA-type ++) → AMM spécifique VAP/HAP à A. baumannii (don't essai ATTACK RCT 2023). ★ Colistine (polymyxine E) : ancienne, néphrotoxique et neurotoxique. Charge IV 9 MUI puis 4,5 MUI/12h (TDM recommandé — cible Css 2 mg/L). Combinaison colistine + rifampicine, colistine + fosfomycine, colistine + carbapénème (bactéricidie synergique même sur CRAB si CMI < 8 µg/mL). ★ Céfidérocol (Fetcroja®, Shionogi) : siderophore cephalosporin — actif sur CRAB (données CREDIBLE-Cr trial, Lancet Infect Dis 2019). ★ Ampicilline-sulbactam HAUTE DOSE : sulbactam ≥ 9 g/j en perfusion continue (exploitation de l'activité intrinsèque du sulbactam sur PBP2 d'A. baumannii — hors AMM mais recommandé IDSA 2023 si CMI sulbactam ≤ 4 µg/mL). ★ Rifampicine (toujours en association — jamais seule, résistance rapide). ★ Minocycline IV/PO (si sensible, données limitées). ★ Phagothérapie : essais compassionnels CRAB sévères (centres spécialisés). SOUCHES SENSIBLES AUX CARBAPÉNÈMES (CSAB) : Imipénème-cilastatine ± amikacine, méropénème, sulbactam-ampicilline. PROPHYLAXIE EN RÉANIMATION : hygiène des mains (SHA), précautions contact, chambre seule ou regroupement géographique des patients colonisés/infectés, désinfection renforcée des surfaces (hypochlorite 1000 ppm ou VHP). Décolonisation nasale (mupirocine) et cutanée (chlorhexidine 4%) discutée.",
+      "resistance": "MÉCANISMES DE MULTI-RÉSISTANCE (XDR/PDR) — PRIORITÉ CRITIQUE OMS 2024 : ① β-LACTAMASES DE CLASSE D (oxacillinases — OXA carbapénémases) : OXA-23 (la plus répandue mondialement, plasmidique), OXA-40/24 (Méditerranée), OXA-58, OXA-143, OXA-235 — OXA-51-like (INTRINSÈQUE à A. baumannii → marqueur espèce). Hydrolysent les carbapénèmes (activité carbapénèmase faible mais suffisante + pompes efflux). ② MBL (métallo-β-lactamases, classe B) : NDM-1/2, VIM-2, SIM-1 (hydrolysent TOUS les β-lactamines sauf aztréonam — non inhibées par acide clavulanique). ③ β-LACTAMASES DE CLASSE C : AmpC chromosomique inductible (naturelle) + plasmidique (ADC — Acinetobacter-Derived Cephalosporinase). ④ POMPES D'EFFLUX (résistance multiclasse) : AdeABC (RND family — carbapénèmes, tétracyclines, fluoroquinolones, aminoglycosides), AdeFGH, AdeIJK. Répresseur AdeRS (mutations → surexpression constitutive). ⑤ MODIF. ENZYMES D'AMINOGLYCOSIDES : AAC(6'), ANT(2'') → résistance tobramycine, amikacine. ⑥ IMPERMÉABILITÉ : perte OmpF/OmpC (modifications Omp33, Omp22) → ↓ entrée carbapénèmes. ⑦ Mutations cibles QUINOLONES : gyrA (Ser83), parC (Ser80). CLONES ÉPIDÉMIQUES MONDIAUX : CC2 (International Clone II — dominant mondial), CC1 (IC I). Dissémination plasmidique (conjugaison) et par îlots de résistance chromosomiques (AbaR — Acinetobacter baumannii Resistance islands). Définition XDR (Extensively Drug-Resistant) : résistant à ≥1 agent dans ≥3 catégories ATB. PDR (Pan-Drug-Resistant) : résistant à TOUTES les catégories — situation de crise.",
+      "who_priority": "critique",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — Acinetobacter — priorité critique OMS n°1",
+        "molecules": [
+          {
+            "molecule": "Imipénème",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "OXA-23/40/58 plasmidiques"
+          },
+          {
+            "molecule": "Méropénème",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": ""
+          },
+          {
+            "molecule": "Colistine",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "Option principale XDR"
+          },
+          {
+            "molecule": "Tigécycline",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "Pas d'AMM Acinetobacter (usage compassionnel)"
+          },
+          {
+            "molecule": "Sulbactam",
+            "CIM_S": "≤8 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "Ampicilline-sulbactam : activité propre du sulbactam sur Acinetobacter"
+          },
+          {
+            "molecule": "Cefiderocol",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": "Nouveau : siderophore céphalosporine (Fetcroja®)"
+          }
+        ],
+        "resistance_emergente": "OXA-carbapénémases ubiquitaires (OXA-23 le plus fréquent, OXA-48 en Méditerranée). Résistance colistine (perte LPS, gène iss/pmrAB). XDR/PDR (pan-résistant) : uniquement cefiderocol, sulbactam-durlobactam (US AMM), combinaisons. Phages thérapeutiques : essais compassionnels en cours."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "legionella_pneumophila.glb",
+      "name": "Legionella pneumophila",
+      "desc": "Pneumonie atypique sévère — diagnostic urinaire, azithromycine/lévofloxacine",
+      "gram": "Gram négatif (faiblement coloré)",
+      "morphologie": "Bacille fin 0,3–0,9 × 2–20 µm, pléomorphe (filamenteux en culture âgée), aérobie strict. COLORATION DIFFICILE (Gram souvent faussement négatif — coloration de Dieterle argent ou Giménez recommandées sur coupes histologiques). Flagelle unipolaire (mobilité, phase de croissance dépendante). Intracellulaire facultatif — survit et se multiplie dans les phagosomes des macrophages alvéolaires et amibes environnementaux. CULTURE FASTIDIEUSE : milieu BCYE (Buffered Charcoal Yeast Extract) supplémenté en L-cystéine + sels de fer — INDISPENSABLE (ne pousse pas sur gélose ordinaire). Colonies gris-blanc, aspect 'verre dépoli', odeur de terre. 3-10 jours à 35-37°C, atmosphère humide. 16 espèces, 70+ sérogroupes — L. pneumophila SG1 = 85% des cas humains.",
+      "habitat": "Environnements aquatiques naturels et artificiels : lacs, rivières, boues. RÉSERVOIRS ARTIFICIELS À RISQUE : • Réseaux d'eau chaude sanitaire (ballons ECS, canalisations > 25°C) — température optimale croissance 25-42°C, inactivation > 60°C. • Tours aéroréfrigérantes (TAR) — principale source d'épidémies communautaires (contamination des gouttelettes d'eau dispersées dans l'air). • Spas, jacuzzis, fontaines décoratives, humidificateurs médicaux, nébuliseurs. • Équipements dentaires (turbines, seringues air/eau). • Hôpitaux : réseau eau chaude — légionellose nosocomiale (immunodéprimés ++). Transmission : inhalation de microgouttelettes aérosolisées (< 5 µm). PAS de transmission interhumaine confirmée. Réservoir naturel : amibes (Acanthamoeba, Hartmannella) → symbiose intracellulaire → amplification.",
+      "pathologies": "DEUX ENTITÉS CLINIQUES : ① MALADIE DU LÉGIONNAIRE (légionellose sévère) : Pneumonie aiguë sévère à présentation atypique. Incubation 2-10 jours. Début : fièvre brutale élevée (39-40°C), myalgies intenses, céphalées, puis toux non productive (puis productive), dyspnée. Signes extra-respiratoires (ORIENTATION DIAGNOSTIQUE FORTE) : • Neurologique : confusion, somnolence, désorientation (30-50% des cas). • Digestif : diarrhées profuses (30-40%), nausées, douleurs abdominales. • Biologique : hyponatrémie (dilutionnelle — SIADH fréquent, sodium < 130 meq/L → élément d'orientation clinique important), élévation LDH, cytolyse hépatique, hématurie/protéinurie (atteinte rénale fréquente), CPK élevées. • Rhabdomyolyse possible. Pneumonie bilatérale, pas de réponse aux β-lactamines (intracellulaire). Score de Fine/PSI et CURB-65 → hospitalisation souvent en USI. Mortalité : 5-15% (communautaire), 20-50% (nosocomiale, immunodéprimés). ② FIÈVRE DE PONTIAC : forme bénigne pseudo-grippale (sans pneumonie). Incubation courte (5-66h). Fièvre, myalgies, céphalées → guérison spontanée 2-5j. Épidémies collectives (spas, piscines — groupe exposé). POPULATIONS À RISQUE : hommes > 50 ans, tabagisme, alcoolisme, diabète, immunodépression (greffe, corticoïdes), maladie pulmonaire chronique.",
+      "virulence": "MÉCANISMES DE SURVIE INTRACELLULAIRE (phagosome Legionella-containing vacuole — LCV) : ① SYSTÈME DE SÉCRÉTION DE TYPE IVB (Dot/Icm — Defect in Organelle Trafficking / Intracellular Multiplication) : injecte > 300 protéines effectrices dans la cellule hôte. Effecteurs clés : RalF (recrutement ARF1 → trafic vésiculaire), LegC2/LegC7 (mimétisme SNARE), SidM/DrrA (ancrage Rab1 → réticulum endoplasmique recruté autour du LCV). ② DÉTOURNEMENT DU TRAFIC PHAGOSOME : le LCV échappe à la fusion phagolysosomiale → se fusionne avec le RE (reticulum endoplasmique) → milieu riche en nutriments. ③ SURVIE DANS LES AMIBES : permet amplification environnementale et acquisition de facteurs de virulence (LCV identique dans amibes et macrophages). ④ FLAGELLE : mobilité + invasion cellulaire (régulé en phase II — avirulent in vivo). ⑤ LPS O-antigène (sérogroupe 1 = sérotype MAb 3/1 — facteur épidémique). ⑥ Msp (Macrophage infectivity potentiator) — protéase de surface + adhésine. ⑦ VIRULENCE PHASE-DÉPENDANTE : phase exponentielle (réplication) vs stationnaire (survie/virulence/transmission) — bascule régulée par LetA/LetS (two-component system).",
+      "antibiotiques": "TRAITEMENT LÉGIONELLOSE — RECOMMANDATIONS ERS/ATS 2019 et SPILF 2020 : ANTIBIOTIQUES ACTIFS (intracellulaire → β-lactamines INEFFICACES malgré sensibilité in vitro) : 1re LIGNE : MACROLIDES + FLUOROQUINOLONES ★ Azithromycine (Zithromax®, ATC J01FA10) : 500 mg/j IV ou PO × 5-10 jours. Concentration intracellulaire très élevée (concentration intramacroph. 100-1000× plasmatique), bactéricide intracellulaire sur L. pneumophila. ★ Lévofloxacine (Tavanic®, ATC J01MA12) : 500 mg × 2/j IV ou 750 mg/j IV (formes sévères) × 10-14j. Activité bactéricide supérieure in vitro. Méta-analyses : lévofloxacine associée à délai de déférvescence légèrement inférieur. ★ Érythromycine IV : historique (1re option depuis épidémie Philadelphie 1976) — remplacée par azithromycine/lévofloxacine (meilleure tolérance et concentration intracellulaire). FORMES SÉVÈRES (USI, immunodéprimés) : Lévofloxacine IV 500-750 mg/12h (ou moxifloxacine) ± rifampicine (600 mg × 1-2/j PO — synergie intracellulaire — non recommandé systématiquement). DURÉE : 5-10j (formes légères-modérées) → 14-21j (formes sévères, immunodéprimés). DIAGNOSTIC BIOLOGIQUE POUR ORIENTATION : ★ Antigénurie L. pneumophila SG1 (ELISA ou immunochromatographie) : sensibilité 80-95%, spécificité >99%, résultat en 15-30 min, reste positive semaines-mois (ne distingue pas infection active de guérison récente). PREMIER TEST À RÉALISER. Limites : ne détecte que SG1 (85% des cas — autres SG non détectés). ★ PCR Legionella (LBA, expectorations profondes) : SG1 + autres sérogroupes + espèces — recommandée si antigénurie négative + forte suspicion clinique. ★ Culture LBA/expectorations sur BCYE (confirmation + antifongigramme) → lente. ★ Sérologie (IFI) : diagnostic rétrospectif uniquement (séroconversion 3-4 semaines). SURVEILLANCE ET DÉCLARATION : légionellose = MALADIE À DÉCLARATION OBLIGATOIRE (MDO) en France. Recherche systématique de la source environnementale (TIAC/épidémie — ARS). Contrôle des TAR (nettoyage, biocides, enregistrement obligatoire depuis 2013 — décret Legionella).",
+      "resistance": "Résistances naturelles aux β-lactamines (inefficaces in vivo malgré CMI basses — localisation intracellulaire). β-lactamase chromosomique inductible (classe B). Résistances acquises aux fluoroquinolones : mutations gyrA (Thr83, Asp87) — rares mais décrites (souches cliniques exposées). Résistance macrolides : mutations 23S ARNr — extrêmement rares. Pas de résistances cliniquement significatives documentées à grande échelle. Sensibilité généralement préservée. Résistance naturelle aux céphalosporines (β-lactamase pénicillinase + localisation IC).",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — Legionella (intracellulaire)",
+        "molecules": [
+          {
+            "molecule": "Azithromycine",
+            "CIM_S": "≤0,5 mg/L",
+            "CIM_R": ">0,5 mg/L",
+            "note": "1ère ligne standard (concentrations intracellulaires élevées)"
+          },
+          {
+            "molecule": "Lévofloxacine",
+            "CIM_S": "≤1 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "1ère ligne grave / immunodéprimé"
+          },
+          {
+            "molecule": "Rifampicine",
+            "CIM_S": "≤1 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": "Adjuvant immunodéprimé grave — jamais seule"
+          },
+          {
+            "molecule": "Doxycycline",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "Alternative macrolides/FQ"
+          }
+        ],
+        "resistance_emergente": "Résistance acquise rare (intracellulaire obligatoire → pression sélection limitée). Légionelles naturellement résistantes aux β-lactames (β-lactamase constitutive + mauvaise pénétration intracellulaire). Macrolides et FQ maintiennent activité."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "burkholderia_cepacia.glb",
+      "name": "Burkholderia cepacia",
+      "desc": "Complexe Bcc — pathogène redouté en mucoviscidose, résistances multiples",
+      "gram": "Gram négatif",
+      "morphologie": "Bacilles fins 0,8 × 1,5–4 µm, mobiles (1-3 flagelles polaires ou péritriches selon espèce), aérobies stricts, oxydase positive. Non sporulés. Colonie jaune pigmentée (pyochéline) sur gélose ordinaire, odeur florale caractéristique ('maïs grillé'). COMPLEXE Burkholderia cepacia (Bcc) : 20+ espèces génomiques (genomovars I-XX) — B. cenocepacia (genomovar III, anciennement ET12 — plus virulent, PROBLÈME MAJEUR CF) et B. multivorans (II) = espèces cliniquement prédominantes. MALDI-TOF et séquençage recBC (ou MLST) indispensables pour identification au niveau espèce. Culture sur milieu sélectif BCSA (Burkholderia cepacia Selective Agar) ou OFPBL agar (permet de distinguer du Pseudomonas aeruginosa en co-colonisation).",
+      "habitat": "ENVIRONNEMENT : sol (agent phytopathogène de l'oignon — 'onion rot'), rhizosphère, eaux, surfaces végétales. Fréquent sur plantes en décomposition. MÉDICAL/NOSOCOMIAL : colonisation chronique bronchique (mucoviscidose), solutions désinfectantes (chlorhexidine, ammoniums quaternaires — survie dans antiseptiques!), nébuliseurs, cathéters, solutions d'hémodialyse. Contamination patient-à-patient documentée (mucoviscidose — transmission directe contact rapproché ou gouttelettes — justifiant ségrégation sociale stricte entre patients CF Bcc+ et Bcc-). TRANSMISSIBLE ENTRE HUMAINS (≠ P. aeruginosa — moins transmissible).",
+      "pathologies": "INFECTIONS ASSOCIÉES AU COMPLEXE Bcc : ① MUCOVISCIDOSE (Cystic Fibrosis — CF) — CONTEXTE PRINCIPAL ET LE PLUS GRAVE : Prévalence colonisation Bcc en CF : 3-5% (France) mais 10-20% dans certains centres. Impact pronostique MAJEUR : colonisation chronique à Bcc → • Déclin accéléré de la fonction respiratoire (VEMS -3 à -5%/an vs -1,5% P. aeruginosa). • 'Cepacia syndrome' (B. cenocepacia ET12 ++) : septicémie fulgurante et nécrosante, pneumonie bilatérale nécrosante, choc septique → mortalité > 75% en quelques jours à quelques semaines. Tableau similaire au choc toxique. Risque de décès péritransplantation. • Contre-indication RELATIVE voire ABSOLUE à la GREFFE PULMONAIRE selon espèce Bcc (B. cenocepacia = CI dans la plupart des centres — mortalité péri-greffe 50-100%). ② INFECTIONS OPPORTUNISTES AUTRES : • Bactériémies et sepsis chez immunodéprimés (hémopathies, VIH avancé, granulomatose chronique — CGD : déficit de la NADPH oxydase → Bcc = pathogène opportuniste majeur). • Pneumonies nosocomiales (non CF — rarissimes). • Infections liées aux cathéters et dispositifs (solutions antiseptiques contaminées). ③ GRANULOMATOSE SEPTIQUE CHRONIQUE (CGD) : infections récidivantes sévères à Bcc (2e pathogène après Aspergillus).",
+      "virulence": "FACTEURS DE VIRULENCE DU COMPLEXE Bcc : ① CÂBLE PILUS (Cable pilus, cblA) : adhésine spécifique aux mucines bronchiques CF → colonisation préférentielle des voies aériennes CF (surexpression mucine MUC5B). ② BIOFILM : formation robuste sur surfaces synthétiques et muqueuses — matrice composée d'exopolysaccharides (cepacian, PS-I, PS-II) → résistance antimicrobienne extrême. Cepacian (antigène immunodominant) → modulation réponse immune. ③ SYSTÈME DE SÉCRÉTION TYPE III (T3SS) et TYPE VI (T6SS) : injection toxines effectrices → survie intracellulaire dans macrophages (phénomène unique → attention thérapeutique). ④ Lipopolysaccharide (LPS) : endotoxine atypique → réponse inflammatoire intense. ⑤ Protéases (ZmpA, ZmpB — métalloprotéases) : dégradation IgA1, fibronectine, collagène. ⑥ Sidérophores (ornibactine, pyochéline, salicylate) : captation du fer essentielle in vivo. ⑦ Résistance aux peptides antimicrobiens (LL-37, défensines) : modifications LPS (ARNAB système — ajout aminoarabinose). ⑧ QUORUM SENSING (CepI/CepR — N-acyl-homosérine lactones) : coordination expression de virulence à haute densité bactérienne (biofilm, protéases). ⑨ Survie intramacrophagique : échappe à la destruction lysosomiale → dissémination systémique (cepacia syndrome).",
+      "antibiotiques": "TRAITEMENT BURKHOLDERIA cepacia COMPLEX — DÉFI THÉRAPEUTIQUE MAJEUR : RÉSISTANCE INTRINSÈQUE aux pénicillines, amoxicilline-clavulanate, céphalosporines 1-2G, aztréonam, colisitine/polymyxines (lipide A modifié), aminoglycosides (bas niveau). ANTIBIOTIQUES POTENTIELLEMENT ACTIFS (antifongigramme indispensable — résistances variables) : ★ Cotrimoxazole TMP/SMX (souvent l'agent PO le plus actif — CMI faibles pour beaucoup de Bcc). ★ Méropénème (carbapénème — sensibilité variable, CMI à vérifier). ★ Ceftazidime (CMI souvent élevées — peu fiable). ★ Minocycline/doxycycline (actifs sur certaines souches). ★ Chloramphénicol (activité parfois préservée — usage limité toxicité). ★ Ciprofloxacine (sensibilité variable). ★ Cefiderocol (Fetcroja®) : données émergentes prometteuses pour XDR Bcc. STRATÉGIE THÉRAPEUTIQUE EN CF : • Traitement d'exacerbation : BITHÉRAPIE ou TRITHÉRAPIE IV obligatoire (synergie — résistance rapide en monothérapie). Associations classiques : méropénème + cotrimoxazole ± minocycline (selon antifongigramme). • Durée : 14-21 jours en exacerbation sévère. • ANTIFONGIGRAMME systématique avant tout traitement. • Test de synergie entre antibiotiques (méthode en damier/checkerboard) recommandé en cas de XDR (centres spécialisés). • Phagothérapie en compassionnel (protocoles en cours). GREFFE PULMONAIRE : discussions multidisciplinaires — B. cenocepacia = CI relative/absolue selon le centre (résultats désastreux décrits — mortalité péri-greffe 50-100%). B. multivorans : résultats moins défavorables (certains centres acceptent). SÉGRÉGATION DES PATIENTS CF : patients CF Bcc+ séparés des Bcc− (consultations séparées, chambres seules, pas de camps communs — recommandations ECFS et Vaincre la Mucoviscidose).",
+      "resistance": "MÉCANISMES DE MULTI-RÉSISTANCE INTRINSÈQUE ET ACQUISE : ① β-LACTAMASES : PenA (pénicillinase chromosomique class A — β-lactamase inductible), AmpC (céphalosporinase), β-lactamases de classe B (MBL — IMP, VIM — sur certaines souches). ② POMPES D'EFFLUX (résistance multiclasse) : BcrA (RND), BpeAB-OprB (résistance aminoglycosides, chloramphénicol, triméthoprime), BpeEF-OprC (cotrimoxazole, ciprofloxacine — mutations régulatrices → surexpression). ③ IMPERMÉABILITÉ MEMBRANAIRE : porine OprD absente/modifiée → ↓ entrée carbapénèmes. ④ MODIFICATIONS LPS : ajout 4-amino-arabinose sur lipide A → résistance naturelle à la colistine et aux polymyxines (traitement IMPOSSIBLE avec colistine). ⑤ RÉSISTANCE AUX DÉSINFECTANTS : chlorhexidine, ammoniums quaternaires, triclosan — survie dans solutions antiseptiques diluées (biofilms et efflux). Définition XDR Bcc : résistant à toutes les β-lactamines testées + aminoglycosides + quinolones = situation thérapeutique quasi sans issue sans phagothérapie.",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — Burkholderia (mucoviscidose)",
+        "molecules": [
+          {
+            "molecule": "Triméthoprime-Sulfaméthoxazole",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "1ère ligne selon antibiogramme"
+          },
+          {
+            "molecule": "Méropénème",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "Résistance intrinsèque imipénème"
+          },
+          {
+            "molecule": "Ceftazidime",
+            "CIM_S": "≤8 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": ""
+          },
+          {
+            "molecule": "Minocycline",
+            "CIM_S": "≤4 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "Option orale"
+          },
+          {
+            "molecule": "Lévofloxacine",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": ""
+          }
+        ],
+        "resistance_emergente": "Résistance intrinsèque nombreux ATB (pénicillines, C1G/C2G, aminosides). Pompes efflux BpeAB-OprB/AmrAB-OprA. Contamination croisée en CF (épidémie ET12 — ségrégation patients). Complex Burkholderia cepacia (17 espèces — B. cenocepacia pire pronostic CF)."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "rickettsia_coxiella.glb",
+      "name": "Rickettsia rickettsii / Coxiella burnetii",
+      "desc": "Rickettsies et fièvre Q — bactéries intracellulaires obligatoires, doxycycline",
+      "gram": "Gram négatif (coloration de Giménez recommandée)",
+      "morphologie": "DEUX GENRES DISTINCTS — INTRACELLULAIRES OBLIGATOIRES : RICKETTSIA RICKETTSII : Cocobacille 0,3–0,5 × 1–2 µm, immobile (actin-based motility). Intracellulaire cytoplasmique et nucléaire (≠ Coxiella). Coloration Giménez (rouge sur fond vert) ou immunofluorescence sur biopsies cutanées. Classe BSL-3. COXIELLA BURNETII : Bacille 0,2–0,4 × 0,4–1 µm, pléomorphe. Sporulé de fait (spore-like forme — petite forme dense = SCV : Small Cell Variant, extrêmement résistante). Deux phases antigéniques : phase I (virulente, LPS complet — in vivo/terrain) = phase II (atténuée, LPS tronqué — culture cellulaire, vaccin). Intracellulaire dans phagolysosomes (ph acide 4,5-4,8) → unique parmi bactéries. Coloration difficile — PCR sur sang/tissu ou sérologie en pratique.",
+      "habitat": "RICKETTSIA RICKETTSII — Fièvre pourprée des Montagnes Rocheuses (RMSF) : Vecteur : tiques Dermacentor variabilis (Est USA), D. andersoni (Ouest), Amblyomma cajennense (Amériques). Réservoir : rongeurs, tiques. Zone endémique : Amériques (USA — tout le territoire sauf Alaska/Hawaii, Mexique, Brésil). Autres rickettsies importantes : R. conorii (fièvre boutonneuse méditerranéenne — FBM, tique Rhipicephalus sanguineus, pourtour méditerranéen incluant France, Afrique), R. akari (rickettsialpox — mite/acarien), R. prowazekii (typhus épidémique — pou Pediculus). COXIELLA BURNETII — Fièvre Q : Vecteur/Réservoir : ruminants domestiques (bovins, ovins, caprins — principal réservoir), chats, chiens, tiques (transmission accessoire). Transmission : inhalation d'aérosols de poussières contaminées (placenta, lait, urine, fèces d'animaux infectés) — HAUTEMENT INFECTIEUSE (dose infectieuse 1-10 bactéries = agent potentiel de bioterrorisme Classe B). Distribution mondiale (sauf Nouvelle-Zélande).",
+      "pathologies": "RICKETTSIA RICKETTSII — FIÈVRE POURPRÉE DES MONTAGNES ROCHEUSES (RMSF) : Incubation 2-14j (morsure de tique souvent non remarquée). Triade classique (50-75%) : Fièvre brutale + Céphalées sévères + Exanthème maculopapuleux (J3-J5) commençant sur poignets/chevilles → s'étendant au tronc → paumes/plantes (ORIENTATION DIAGNOSTIQUE). Évolution grave sans traitement : purpura thrombotique (vasculite des petits vaisseaux — endothéliite), gangrène distale, atteinte SNC (encéphalite, coma), insuffisance rénale aiguë, myocardite, pneumopathie. Mortalité sans traitement : 20-25%. Avec doxycycline précoce : < 3%. FBM (R. conorii, France-Méditerranée) : tâche noire d'inoculation (escarre, croutelle) + exanthème maculopapuleux + fièvre — moins sévère que RMSF mais décès possibles. COXIELLA BURNETII — FIÈVRE Q : Phase AIGUË (80% asymptomatique) : • Hépatite aiguë (forme prédominante en France/Europe — transaminases élevées). • Pneumopathie atypique (infiltrats multilobes, toux sèche — forme prédominante au Canada/UK). • Fièvre prolongée isolée d'origine indéterminée (FUO). • Myocardite, péricardite, encéphalite (rares). Phase CHRONIQUE (1-5% des aigus, terrains à risque) : • ENDOCARDITE (forme principale — valve native/prothétique lésée, valve aortique ++) → mortalité sans traitement : 25-65%. Tableau d'endocardite à hémocultures négatives. • Hépatite granulomateuse chronique. Ostéomyélite. • Grossesse : fausses couches répétées, RCIU, accouchement prématuré (Coxiella placentaire). Terrains à risque de chronicité : valvulopathie préexistante, immunodépression, grossesse, anévrisme aortique ou prothèse vasculaire.",
+      "virulence": "RICKETTSIA RICKETTSII : ① Actin-based motility : mobilité intracellulaire (protéine RickA → polymérisation actine → propulsion 'queue de comète') → dissémination cellule à cellule sans contact extracellulaire. ② Phospholipase A2 (Pat1/2) : lyse de la membrane phagosome → accès cytoplasme libre. ③ Invasion endothéliales : OmpA et OmpB (outer membrane proteins) → adhésines → Ku70 + α2β1 intégrines. ④ Vasculite endothéliale : multiplication → lyse → lésions vasculaires → thrombose/purpura. ⑤ Fuite vasculaire → CIVD + choc distributif (endotoxine + libération cytokines). COXIELLA BURNETII : ① Adaptation au phagolysosome acide : système de sécrétion T4SS (Dot/Icm — similaire à Legionella) → effectors → blocage de l'autophagie et maturation du phagosome. ② Phase I LPS (complet, virulente) : résistance à la phagocytose et à la réponse immune innée. ③ SCV (Small Cell Variant) : forme dormante sporulée-like, extrêmement résistante (chaleur 60°C/30min, dessiccation, UV, chlore) → survie sol/eau/air des mois. ④ LCV (Large Cell Variant) : forme réplicative dans phagolysosome, métaboliquement active.",
+      "antibiotiques": "TRAITEMENT RICKETTSIES et FIÈVRE Q — DOXYCYCLINE = PILIER UNIQUE : RICKETTSIES (RMSF, FBM, typhus) : ★ DOXYCYCLINE (ATC J01AA02) : 100 mg × 2/j PO ou IV (formes sévères) × 5-7 jours (RMSF) ou jusqu'à 48-72h après apyrexie. TRAITEMENT D'URGENCE — NE PAS ATTENDRE LA CONFIRMATION BIOLOGIQUE en cas de forte suspicion clinique (mortalité augmente avec chaque jour de retard). Passage BHE (formes neurologiques). Même règle chez l'enfant < 8 ans (doxycycline préférée malgré risque dentaire en cas de RMSF sévère — consensus CDC/AAP). Alternative (formes légères non sévères) : chloramphénicol (accès limité, toxicité). FBM (R. conorii, France) : doxycycline 100 mg × 2/j × 7 jours PO (ambulatoire si bénin). Azithromycine (alternative grossesse et enfant < 8 ans pour FBM légère). FIÈVRE Q AIGUË (Coxiella burnetii) : ★ Doxycycline 100 mg × 2/j × 14 jours (formes non compliquées, hépatite/pneumonie). ★ Hydroxychloroquine (Plaquenil®) + Doxycycline — FIÈVRE Q CHRONIQUE (endocardite) : Alcalinisation du phagolysosome par hydroxychloroquine → restaure activité doxycycline (sensible uniquement en milieu alcalin — mécanisme pharmacodynamique clé). Durée ≥ 18 mois (valve native) à ≥ 24-36 mois (valve prothétique, immunodéprimés). Monitorage : Ac anti-phase I (seuil de guérison IgG phase I < 1/200 et IgA < 1/50). Chirurgie valvulaire si endocardite à végétations ou insuffisance cardiaque. GROSSESSE (fièvre Q aiguë) : cotrimoxazole TMP/SMX jusqu'à l'accouchement (doxycycline CI grossesse > 1er trimestre — chélation calcium osseux fœtal). PROPHYLAXIE FIÈVRE Q (phase I) : Doxycycline 200 mg dose unique si exposition professionnelle (troupeaux). Vaccin Q-VAX (Coxevac®) : tués phase I — disponible en Australie + usage vétérinaire UE. SÉROLOGIE (DIAGNOSTIC) : Immunofluorescence indirecte (IFI) — Fièvre Q aiguë : IgG phase II ≥ 1/200, IgM phase II ≥ 1/50. Fièvre Q chronique : IgG phase I ≥ 1/800 (SPÉCIFIQUE de la chronicité — valeur prédictive). PCR sang/tissu : utile en phase aiguë précoce (avant séroconversion).",
+      "resistance": "RICKETTSIES : Résistance β-lactamines (intrinsèque — pas de peptidoglycane classique + intracellulaire). Résistance chloramphénicol documentée (rare). Résistance fluoroquinolones in vivo (inefficaces malgré activité in vitro). Résistance doxycycline : aucune cas clinique documenté à ce jour — mécanisme inconnu mais préservé. COXIELLA : Résistances naturelles aux β-lactamines (peu/pas de peptidoglycane). Résistance à la doxycycline seule en fièvre Q chronique (pH acide phagolysosome inactivation) → NÉCESSITÉ d'associer l'hydroxychloroquine (alcalinisation pharmacologique). Pas de résistances acquises à la doxycycline documentées cliniquement. Déclaration obligatoire fièvre Q (MDO France). Fièvre Q = ZOONOSE — surveillance vétérinaire.",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "clostridium_perfringens.glb",
+      "name": "Clostridium perfringens",
+      "desc": "Gangrène gazeuse, toxi-infections alimentaires — sporulant anaérobie",
+      "gram": "Gram positif",
+      "morphologie": "Grand bacille 3–8 × 1–1,5 µm, en 'boîte de cigare', extrémités carrées, sporulation sous-terminale (spore ovoïde ne déformant pas le bacille — rarement observée in vivo). Immobile (pas de flagelle — ≠ autres Clostridium). Encapsulé (capsule polysaccharidique — facteur de virulence). Anaérobie strict (mais tolère O₂ fugacement — 'aérotolérante'). Gram positif (peut devenir Gram variable en culture âgée). CULTURE : croissance rapide (doubling time ~ 8-10 min à 37-45°C — ≠ autres anaérobies lents!). Colonies sur gélose au sang : hémolyse double (α-hémolyse interne + β-hémolyse externe = aspect 'tempête de neige'). Odeur butyrique caractéristique. Gélose Egg-Yolk (EYA) + lécithinase (opacité) + lipase (nacré) + protéolyse caractéristiques. 5 biotypes (A-E) selon production de toxines.",
+      "habitat": "Ubiquitaire dans l'environnement : sol (108/g de sol riche), eaux, sédiments, végétaux. Flore commensale intestinale humaine et animale (bovins, ovins, porcs — réservoirs alimentaires). Plaies traumatiques (contamination tellurique — terre, poussière, corps étrangers). ALIMENTS : viandes (bœuf, poulet, dinde) insuffisamment cuites ou refroidies lentement après cuisson (sporulation thermotolérante) → TIAC alimentaires. Selles de patients hospitalisés (flore transitoire). Spores résistantes : chaleur (105°C × 30 min ou 100°C × 60 min), dessiccation, désinfectants. Germination favorisée par conditions anaérobies (tissus ischémiques, plaies profondes).",
+      "pathologies": "SPECTRE CLINIQUE LARGE — BIOTYPE A (le plus fréquent, humain) : ① GANGRÈNE GAZEUSE (myonécrose clostridiale) — URGENCE CHIRURGICALE VITALE : Incubation ultra-courte (6-72h après traumatisme/chirurgie). Signes locaux précoces : douleur intense disproportionnée, œdème local, peau tendue brillante (bulle hémorragique), crépitation sous-cutanée (gaz). Signes systémiques : bactériémie, toxémie, choc, état confusionnel → défaillance multiviscérale → décès en 24-48h sans chirurgie. Crepitus à la palpation + bulles hémorragiques = signes PATHOGNOMONIQUES. Radio/Scanner : gaz dans les plans musculaires (emphysème des parties molles) — NE PAS ATTENDRE CET EXAMEN si suspicion clinique forte. Mortalité : 20-50% (traitement précoce) à >70% (traitement tardif). ② TOXI-INFECTIONS ALIMENTAIRES (TIAC) — BIOTYPE A : 2e cause de TIAC bactérienne mondiale (après Salmonella). Incubation 8-24h (ingestion de viandes contaminées → germination intestinale → toxine). Syndrome diarrhéique aigu non fébrile : crampes abdominales violentes + diarrhée profuse (10-20 selles/j) — SANS FIÈVRE, SANS VOMISSEMENTS (≠ Salmonella). Guérison spontanée 12-24h. ③ ENTÉRITE NÉCROSANTE (Pig-bel — biotype C, toxine β) : Asie-Pacifique, festins rituels, malnutrition. Nécrose intestinale hémorragique. Mortalité 30-50%. ④ COLITE POST-ANTIBIOTIQUES (biotype A — rarement type C) : diarrhées modérées (≠ C. difficile — pseudomembranes rares). ⑤ FASCIITE NÉCROSANTE : C. perfringens + flore mixte → urgence chirurgicale similaire. ⑥ SEPSIS OBSTÉTRICAL : avortement septique (avortement non médicalisé ancien) → bactériémie à C. perfringens → hémolyse fulminante → insuffisance rénale → décès rapide.",
+      "virulence": "ARSENAL TOXINIQUE — LE PLUS VARIÉ DU GENRE CLOSTRIDIUM : ① TOXINE ALPHA (phospholipase C / lécithinase — PRINCIPALE, TOUS BIOTYPES) : Hydrolyse phosphatidylcholine des membranes cellulaires + lécithine → lyse cellulaire (érythrocytes, plaquettes, leucocytes, cellules endothéliales). Mécanisme gangrène : lyse tissu musculaire, hémolyse intravasculaire, activation plaquettaire (thrombose microvasculaire) → nécrose musculaire progressive. ② TOXINE BETA (β) : biotype C — lésions entériques nécrosantes (entérite nécrosante). Sensible à la trypsine (sujets sans trypsine = kwashiorkor/malnutrition protéique → à risque). ③ ENTÉROTOXINE CPE (C. perfringens Enterotoxin) : biotype A intestinal — se lie aux claudines 3-4-6-7 des jonctions serrées épithéliales intestinales → formation de pores → perte électrolytes → diarrhée. Produite lors de la sporulation (thermorésistante). ④ TOXINE IOTA (biotype E) : ADP-ribosyltransférase → désorganisation cytosquelette actine. ⑤ THETA (perfringolysine O — PFO) : toxine formant des pores (cholestérol-dépendant, de la famille des CDC — Cholesterol-Dependent Cytolysins) → lyse cellulaire. ⑥ NEURAMINIDASE, HYALURONIDASE, COLLAGÉNASE (kappa), DNase (nu) : enzymes de spread tissulaire → facilitation diffusion des toxines principales. ⑦ GAS PRODUCTION (fermentation glucides → CO₂ + H₂ → crépitation).",
+      "antibiotiques": "TRAITEMENT CLOSTRIDIUM PERFRINGENS — URGENCE MÉDICO-CHIRURGICALE : GANGRÈNE GAZEUSE — TRIPLE URGENCE : ① CHIRURGIE EN EXTRÊME URGENCE (priorité absolue — dans l'heure si possible) : Débridement radical et large → excision de TOUS les tissus nécrosés → amputations itératives si nécessaire (ne pas hésiter — sauver la vie > sauver le membre). ② ANTIBIOTHÉRAPIE IV HAUTE DOSE (en parallèle — ne jamais retarder la chirurgie pour ATB) : ★ Pénicilline G 3-4 MUI/4h IV (24 MUI/j) — bactéricide, pas de résistance. + Clindamycine 600-900 mg/8h IV (ESSENTIEL — inhibe la synthèse protéique ribosomale → blocage production de toxine alpha même si bactérie résistante = EFFET EAGLE inversé → 'anti-toxinique' rapide). Association P.G + Clindamycine = référence. Alternative : méropénème ou imipénème si polymicrobien (fasciite mixte). ③ OXYGÉNOTHÉRAPIE HYPERBARE (OHB) : 3 séances à 2,5-3 ATA (si disponible) → ↑ PO₂ → bactéricidie + inhibition germination → réduction toxine alpha. Ne jamais retarder chirurgie/ATB pour OHB (délai transport = mortalité). TIAC À C. PERFRINGENS : symptomatique uniquement (réhydratation PO, antispasmodiques). Antibiotiques INUTILES (TIAC = intoxication par toxine préformée + auto-limitée 24h). ENTÉRITE NÉCROSANTE : pénicilline G + métronidazole IV + chirurgie si nécrose étendue. SENSIBILITÉ AUX ANTIBIOTIQUES : C. perfringens reste sensible à : pénicillines (G, amox, ampi), céphalosporines (faible CMI), carbapénèmes, clindamycine, métronidazole (anaérobie), chloramphénicol. Résistances rares : tétracyclines (plasmidique — tetM), érythromycine. PAS de résistance à la pénicilline G historiquement (CONTRAIREMENT à C. difficile).",
+      "resistance": "RÉSISTANCES NATURELLES ET ACQUISES (globalement peu résistant) : Résistance naturelle aux quinolones (chromosomique, variable). Résistance aux aminoglycosides (anaérobie — transport actif O₂-dépendant). Résistances plasmidiques rares : tétracyclines (tetM, tetO), érythromycine (ermB/Q), chloramphénicol (cat). Sensibilité CONSTANTE à la pénicilline G et aux carbapénèmes (historiquement préservée). Clindamycine : résistances émergentes (ermB) — antibiogramme recommandé en contexte clinique. Métronidazole : résistances acquises exceptionnellement rares chez C. perfringens (contrairement à certains anaérobies — Bacteroides fragilis). SPORES : résistantes à la chaleur modérée (100°C × 60min), désinfectants courants, rayons gamma (stérilisation industrielle). Destruction par autoclave 121°C × 15min. Pas de mécanismes BLSE ou carbapénèmases documentés.",
+      "who_priority": "moyenne",
+      "antibiogramme": {
+        "note": "Données CMI non disponibles dans cette version",
+        "molecules": []
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "enterobacter_cloacae.glb",
+      "name": "Enterobacter cloacae",
+      "desc": "ESKAPE — céphalosporinase AmpC, carbapénèmases KPC, nosocomial redoutable",
+      "gram": "Gram négatif",
+      "morphologie": "Bacille court 0,6–1 × 1,2–3 µm, mobile (flagelles péritriches), aérobie-anaérobie facultatif. Encapsulé. Fermente le glucose (acide + gaz). Colonies beige-jaunâtres sur gélose ordinaire, grandes et mucoïdes si capsulé. Lactose positif (tardif — variabilité). Indole négatif (≠ E. coli), ONPG+, ornithine décarboxylase positive (ODC+, spécifique), citrate+, urée+/-. Galerie API 20E, VITEK 2, MALDI-TOF : identification rapide et fiable. COMPLEXE E. cloacae (ECC) : 9+ espèces cryptiques (E. asburiae, E. hormaechei, E. kobei, E. ludwigii, E. nimipressuralis) — E. hormaechei subsp. oharae = sous-espèce la plus fréquente en hémato-oncologie. Séquençage MLST ou WGS pour épidémiologie fine.",
+      "habitat": "Environnement : sol, eaux, végétaux, rhizosphère. Flore intestinale humaine commensale (< 1% de la flore, transitoire). MILIEU HOSPITALIER : réservoir digestif endogène (translocation bactérienne chez immunodéprimés), environnement (surfaces, robinets, matériel), solutions médicamenteuses contaminées (endémie épidémies nosocamiales à E. cloacae après contamination de multi-doses de médicaments parenteraux — cas historiques). Transmission croisée inter-patients via mains des soignants. Flores digestives (transit hospitalier, antibiothérapie préalable → sélection des résistants) → bactériémies de translocation chez immunodéprimés. Sélection rapide sous céphalosporines 3G (dérépression AmpC).",
+      "pathologies": "INFECTIONS NOSOCOMIALES ET OPPORTUNISTES — PRIORITÉ CRITIQUE ESKAPE : ① Infections urinaires (IU) : IU associées aux soins (IUAS), prostatites chez patients sondés ou instrumentés. Chez immunodéprimé → bactériémie secondaire. ② Pneumonies nosocomiales (HAP/VAP) : réanimation, ventilation mécanique. ③ Bactériémies et sepsis : cathéter central (2e ou 3e rang des BGN en hémato-oncologie). Portes d'entrée : tube digestif (translocation chez neutropéniques), voies urinaires, cathéter central, plaie chirurgicale. ④ Infections de plaies chirurgicales et péri-opératoires (chirurgie abdominale). ⑤ Méningites post-neurochirurgicales (dérivation, tréphination). ⑥ Infections néonatales (prématuré, USIN) : sepsis, méningite — épidémies en unités de soins intensifs néonataux (USIN) documentées. TERRAINS À RISQUE : neutropénie profonde (LAL, LAM en induction), allogreffe CSH, chirurgie abdominale lourde, réanimation prolongée, cathéter central, sonde urinaire, antibiothérapie large spectre préalable (sélection AmpC déréprimée).",
+      "virulence": "MÉCANISMES DE PATHOGÉNICITÉ : ① AmpC CHROMOSOMIQUE CONSTITUTIVE (céphalosporinase de classe C) : MÉCANISME CLÉ ET PIÈGE THÉRAPEUTIQUE. AmpC est inductible (réprimée à l'état basal mais inductible par β-lactamines). DÉRÉPRESSION MUTANTE (mutations ampD ou ampR) → surexpression constitutive AmpC → résistance à toutes les céphalosporines (1G, 2G, 3G, 4G) + combinaisons inhibitrices amoxicilline-clavulanate, pipéracilline-tazobactam. PIÈGE CLINIQUE : CMI basse initiale sur CGx 3G (sensible) → antibiothérapie par C3G → sélection des mutants déréprimés → échec clinique + bactériémie persistante. RÈGLE D'OR : NE JAMAIS TRAITER UNE INFECTION GRAVE À E. cloacae par C3G même si l'antibiogramme initial indique 'sensible'. ② FIMBRIAE (type I, III) : adhésion uro-épithéliale (type 1) + adhésion biofilm (type III). ③ CAPSULE (sérotypes K) : résistance phagocytose + facteur de survie en bactériémie. ④ SYSTÈME DE SÉCRÉTION T6SS : compétition bactérienne (tuer bactéries concurrentes). ⑤ Siderophores (aerobactine, enterobactine) : captation fer → croissance in vivo. ⑥ LPS endotoxine : choc septique. ⑦ Porines (OmpF, OmpC) : régulation entrée antibiotiques — perte OmpF → résistance imipénème.",
+      "antibiotiques": "TRAITEMENT ENTEROBACTER CLOACAE — STRATÉGIE ANTI-AmpC ET ANTI-CARBAPÉNÈMASE : RÈGLE ABSOLUE — ÉVITER LES C3G (même si sensible à l'antibiogramme initial) : Risque de dérépression AmpC sous traitement → échec → sélection de résistants. INFECTIONS DOCUMENTÉES SENSIBLES (AmpC non déréprimée, pas de BLSE/KPC) : ★ Céfépime (C4G, pipéracilline/tazobactam en cas de CMI basse (≤2 µg/mL)) : résiste mieux à l'hydrolyse par AmpC que les C3G (pénétration meilleure). ★ Carbapénèmes (imipénème, méropénème, ertapénème) : 1re intention si AmpC déréprimée ou BLSE associée, ou infection grave. ★ Quinolones (ciprofloxacine, lévofloxacine) : si sensibles — souvent résistantes si BLSE. ★ Cotrimoxazole (TMP/SMX) : IU basses si sensible. ★ Aztréonam : résiste à AmpC (mais pas aux MBL) — option si BLSE sans MBL. ENTEROBACTER PRODUCTEUR DE CARBAPÉNÈMASE : MÉCANISMES : KPC (K. pneumoniae Carbapenemase — classe A, ATC: imipénème/méropénème hydrolysés), NDM (New Delhi MBL — classe B), OXA-48/OXA-181 (classe D). ★ Ceftazidime-avibactam (Zavicefta® — actif KPC et OXA-48 non sur NDM) : 2,5 g/8h IV. ★ Méropénème-vaborbactam (Vaborem® — actif KPC uniquement). ★ Imipénème-cilastatine-relebactam (Recarbrio® — KPC). ★ Céfidérocol (actif sur KPC, OXA-48, NDM — données limitées). ★ Aztréonam + ceftazidime-avibactam (si NDM — avibactam protège aztréonam contre NDM). ★ Colistine (dernier recours — néphrotoxicité, résistances croissantes). PROPHYLAXIE ET CONTRÔLE : dépistage portage digestif PCR CPE à l'admission (patients à risque : hospitalisation pays endémique, transfert inter-hospit.). Isolement contact strict + cohorting.",
+      "resistance": "MÉCANISMES DE RÉSISTANCE — COMPLEXE ET CUMULATIF : ① AmpC DÉRÉPRIMÉE (mécanisme CARDINAL) : AmpC naturelle chromosomique → sous pression antibiotique (C3G, imipénème) → mutations ampD (répresseur) ou ampR (activateur) → surexpression constitutive → résistance toutes céphalosporines + pénicillines/inhibiteurs (amox-clav, pipé-tazo). Prévalence mutations dérépression : 10-30% des E. cloacae isolés cliniques (sélection rapide sous C3G même en traitement court). ② BLSE (β-lactamases à spectre étendu) : CTX-M-1/15 (classe A) sur plasmide — hydrolyse C3G + aztréonam + pénicillines. Co-transmission avec résistances quinolones (qnr, aac(6')Ib-cr). ③ CARBAPÉNÈMASES : KPC-2/3 (classe A, plasmidique — USA, Europe) → hydrolyse carbapénèmes + C3G + pénicillines. NDM-1/5 (classe B MBL — sous-continent indien, Afrique) → hydrolyse TOUS β-lactamines sauf aztréonam. OXA-48/181 (classe D). ④ POMPES D'EFFLUX : AcrAB-TolC (quinolones, tétracyclines, chloramphénicol, β-lactamines). ⑤ PORINES : perte/modification OmpF → ↓ entrée imipénème (résistance modérée, combinaison avec carbapénèmases → CMI élevées). ⑥ AMINOGLYCOSIDES : aminoglycosides modifying enzymes (AME) : aac, aph, ant → résistance gentamicine, tobramycine, amikacine. ⑦ RÉSISTANCE PLASMIDIQUE AUX QUINOLONES (PMQR) : qnrA/B/S, aac(6')Ib-cr → résistance bas niveau (bruit de fond sélection). Définition EBLSE (Entérobactérie productrices de BLSE), EPC (productrice carbapénèmase) → signalement IAS, alerte obligatoire ANSM/CPIAS (France).",
+      "who_priority": "critique",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — complexe Enterobacter cloacae",
+        "molecules": [
+          {
+            "molecule": "Amoxicilline",
+            "CIM_S": "—",
+            "CIM_R": "Résistance intrinsèque",
+            "note": "AmpC chromosomique inductible"
+          },
+          {
+            "molecule": "Amoxicilline-Clavulanate",
+            "CIM_S": "—",
+            "CIM_R": "Résistance intrinsèque",
+            "note": "AmpC non-inhibée par clavulanate"
+          },
+          {
+            "molecule": "Céfoxitine",
+            "CIM_S": "—",
+            "CIM_R": "Résistance intrinsèque",
+            "note": "Céphamycines résistantes AmpC"
+          },
+          {
+            "molecule": "Céfotaxime",
+            "CIM_S": "≤1 mg/L",
+            "CIM_R": ">2 mg/L",
+            "note": "Risque dérepression AmpC sous C3G"
+          },
+          {
+            "molecule": "Céfépime",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">4 mg/L",
+            "note": "Stable à AmpC constitutive"
+          },
+          {
+            "molecule": "Imipénème",
+            "CIM_S": "≤2 mg/L",
+            "CIM_R": ">8 mg/L",
+            "note": "KPC/NDM/OXA-48 émergents"
+          },
+          {
+            "molecule": "Ciprofloxacine",
+            "CIM_S": "≤0,25 mg/L",
+            "CIM_R": ">0,5 mg/L",
+            "note": ""
+          }
+        ],
+        "resistance_emergente": "AmpC chromosomique (ampC) : dérepression sous C3G (echec thérapeutique). Acquisition BLSE + AmpC → multi-résistance. KPC/NDM/OXA-48 acquis plasmidiques. Pompes efflux AcrAB-TolC + ↓ OmpC → résistance fluoroquinolones."
+      },
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": null,
+      "name": "Clostridium tetani",
+      "desc": "Agent du tétanos. BGP sporulé anaérobie strict, produisant la tétanospasmine — neurotoxine bloquant les synapses inhibitrices → contractures douloureuses généralisées. Prévenu efficacement par la vaccination. MDO.",
+      "gram": "Gram positif",
+      "morphologie": "Bacille Gram positif mobile (flagelles péritriches), anaérobie strict. Spore TERMINALE en raquette de tennis (caractéristique) — très résistante dans l'environnement (sol, poussière). Tellurique ubiquitaire. Exigeant en culture (enceinte anaérobie stricte, gélose au sang). Colonies irrégulières avec extension en voile ('essaimage'). Catalase −.",
+      "habitat": "Tellurique ubiquitaire (sol, poussière, déjections animales). Spores résistantes années dans l'environnement. Commensal transitoire intestin des mammifères. Réservoir : environnement (≠ réservoir humain). En France : 0,5 cas/million d'habitants. PVD : 15–35 cas/100 000 habitants — tétanos néonatal +++.",
+      "virulence": "TÉTANOSPASMINE (TeNT) = neurotoxine protéique de type A-B, codée par plasmide pE88 :\n① Produite au site de colonisation (plaie) lors de la sporulation.\n② Absorption par les terminaisons présynaptiques motrices → transport axonal rétrograde (long — d'où délai d'action).\n③ Migration vers la moelle épinière et le tronc cérébral.\n④ MÉCANISME : protéase zinc-dépendante — clive VAMP/synaptobrévine (protéine SNARE) des vésicules synaptiques des NEURONES INHIBITEURS (interneurones de Renshaw) → BLOCAGE de la libération de GABA et GLYCINE.\n⑤ Conséquence : levée de l'inhibition sur les motoneurones → hyperexcitabilité permanente → CONTRACTURES SPASTIQUES DOULOUREUSES (≠ botulisme = paralysie flasque).\n\nToxine tétanique ANTIGÉNIQUE → transformable en anatoxine (vaccin).",
+      "pathologies": "TÉTANOS — MDO — DÉCLARATION ARS :\nTransmission par contact cutané (effraction cutanée) : plaie souillée de terre (écharde, gelure), ulcère de jambe, plaie négligée. Tétanos néonatal (PVD : cordon ombilical non stérile). Pas de contagiosité interhumaine.\nClinique (incubation 4–21 j) :\n① TRISMUS : contracture constante et involontaire des masséters (ouverture buccale impossible) — 1er signe.\n② Faciès sardonique (contracture muscles faciaux).\n③ Opisthotonos : contractures généralisées douloureuses spontanées et provoquées.\n④ MORT PAR ASPHYXIE : spasme laryngé, blocage muscles respiratoires.\nÉpidémio France (2012–2017) : 35 cas / 8 DC — patients âgés > 80 ans, femmes > hommes (vaccinaux plus anciens). Vaccination n'induit PAS d'Ac protecteurs → seule la vaccination préalable protège.",
+      "antibiotiques": "TRAITEMENT CURATIF (soins intensifs OBLIGATOIRES) :\n① TRAITEMENT SYMPTOMATIQUE : myorelaxants (BZD, curare) + sédatifs + ventilation assistée (spasme laryngé).\n② TRAITEMENT SPÉCIFIQUE : gammaglobulines antitétaniques (sérum antitétanique) — neutralise la toxine CIRCULANTE uniquement (pas la toxine déjà fixée). Protection 1 mois.\n③ PARAGE ET NETTOYAGE DE LA PLAIE (excision du foyer).\n④ ANTIBIOTHÉRAPIE : amoxicilline 5–10 j (éradication bactérienne) ou métronidazole.\n⑤ VACCINATION DU MALADE (maladie n'induit pas d'Ac protecteurs !)\n\nTRAITEMENT PRÉVENTIF (vaccin = SEULE PROTECTION) : Anatoxine tétanique (toxine inactivée par le formol, thermostable). Calendrier vaccinal : obligatoire. Conduite à tenir face à une plaie : évaluer risque modéré/important × statut vaccinal + TétanosQuickStick (détection Ac anti-tétanospasmine — résultat 10 min).",
+      "resistance": "Résistance naturelle : aminoglycosides, quinolones. Spores résistantes à la chaleur ordinaire, désinfectants usuels, dessiccation (persistance des années dans le sol). Détruites par autoclave (121°C/20 min). La toxine est neutralisable par l'anatoxine (vaccin) et par les gammaglobulines spécifiques. AUCUNE résistance aux pénicillines.",
+      "who_priority": null,
+      "antibiogramme": null,
+      "pdb_id": "5N0B",
+      "pdb_desc": "Tétanospasmine (TeNT) + récepteur ganglioside GD1a",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": null,
+      "name": "Campylobacter jejuni",
+      "desc": "1ère cause de diarrhées bactériennes dans les pays industrialisés. BGN spiralé, microaérophile, zoonose (volaille +++). Complication redoutée : syndrome de Guillain-Barré (neuropathie auto-immune post-infectieuse).",
+      "gram": "Gram négatif",
+      "morphologie": "Bacille Gram négatif spiralé, hélicoïdal et incurvé 'en virgule' ou 'en aile de mouette' (0,2–0,5 × 1,5–5 µm). Très mobile (flagelle unipolaire ou bipolaire) — motilité en 'vol de moucheron' (en tire-bouchon). Microaérophile STRICT (5 % O₂, 10 % CO₂ — enceinte spéciale). Thermotolérant (croissance à 42°C mais pas à 25°C → sélectif). Culture exigeante : milieu sélectif Campylosel ou Karmali (gélose riche + ATB : céfalotine, vancomycine, triméthoprime). Incubation 48 h à 42°C. Colonies lisses, mucoïdes, 'étalées'. Oxydase +, catalase +. Pas d'utilisation des sucres. Hydrolyse de l'hippurate + (C. jejuni — différencie de C. coli). Identification : Maldi-TOF, PCR multiplex (approche syndromique).",
+      "habitat": "ZOONOSE. Réservoir principal : VOLAILLE (poulet +++, dinde, canard — portage intestinal asymptomatique jusqu'à 80 %). Porc, bovins, animaux domestiques. Contamination au moment de l'abattage (contamination fécale des carcasses). Transmission à l'homme : indirecte +++ (viande volaille mal cuite, eau contaminée, lait non pasteurisé) ; parfois directe (contact animaux). France : incidence 30–40/100 000 habitants (réseau surveillance depuis 2002). C. jejuni = 85 % des isolements. 2 pics : nourrissons/enfants < 10 ans + adultes 20–40 ans. Prédominance estivale. Dose infectante faible.",
+      "virulence": "① FLAGELLE et ADHÉSINES : mobilité hélicoïdale → colonisation muqueuse intestinale (iléon terminal, côlon).\n② PROTÉINE DE LIAISON À LA FIBRONECTINE (CadF) : internalisation dans les cellules épithéliales par vésicule d'endocytose.\n③ INVASION DE LA MUQUEUSE : traversée épithélium → plaques de Peyer → ganglions mésentériques → macrophages → diarrhée inflammatoire (cytokines pro-inflammatoires, IL-8).\n④ CDT (Cytolethal Distending Toxin) : toxine tripartite A-B-C → blocage du cycle cellulaire (G2/M) → apoptose.\n⑤ LOS (lipooligosaccharides) : mimétisme moléculaire avec gangliosides humains (GM1, GD1a) → INDUCTION D'AUTO-ANTICORPS ANTI-GANGLIOSIDES → SYNDROME DE GUILLAIN-BARRÉ (séquence O:19 = risque maximal).",
+      "pathologies": "CAMPYLOBACTÉRIOSE — 1ÈRE CAUSE DE DIARRHÉE BACTÉRIENNE PAYS INDUSTRIALISÉS :\nIncubation 1–3 j. Syndrome dysentérique : diarrhée aqueuse puis inflammatoire parfois sanglante + fièvre 38–39°C + douleurs abdominales + vomissements. Durée 5–7 j. Évolution spontanément favorable.\nCOMPLICATIONS EXTRA-DIGESTIVES POST-INFECTIEUSES (auto-immunes) :\n① SYNDROME DE GUILLAIN-BARRÉ (SGB) +++ : polyradiculonévrite auto-immune inflammatoire. Déficit moteur ascendant (risque d'atteinte respiratoire). C. jejuni = facteur déclenchant le plus fréquent du SGB (20–40 % des SGB). LOS mimant gangliosides → Ac anti-GQ1b, GM1.\n② Arthrites réactionnelles (HLA-B27).\n③ Érythème noueux, infections métastatiques.\n④ Localisations systémiques (bactériémie) chez immunodéprimés (C. fetus).",
+      "antibiotiques": "FORMES LÉGÈRES : réhydratation seule (évolution spontanément favorable). FORMES MODÉRÉES/SÉVÈRES ou immunodéprimés : azithromycine PO (3 j) — 1er choix. Fluoroquinolones (ciprofloxacine) — si sensible, mais résistances élevées. BACTÉRIÉMIE : amoxicilline-clavulanate ou FQ + gentamicine. PAS d'antibiotiques en cas de SGB (phase post-infectieuse — traitement du SGB = immunoglobulines IV ou plasmaphérèse).",
+      "resistance": "RÉSISTANCE NATURELLE : carboxypénicillines, ureïdopénicillines, céphalosporines, monobactames (faible affinité PLP). Résistance ACQUISE EN FORTE HAUSSE :\n— Macrolides (azithromycine) : 1–4 % France (mutation ARN 23S) — stable.\n— Ampicilline : 30 % (2018, bêta-lactamase).\n— Tétracyclines : 50 % (plasmide tetO).\n— FLUOROQUINOLONES (FQ) : 60 % France (2018), mutation gyrA — PROBLÈME MAJEUR DE SANTÉ PUBLIQUE. Transmission de R entre élevage et homme. Surveillance CNR des campylobacters (Pasteur, depuis 2002). PRÉVENTION : bonnes pratiques abattoir, cuisson suffisante des volailles (> 70°C à cœur), pas de lait cru.",
+      "who_priority": "Priorité moyenne (Campylobacter spp. — résistance aux FQ)",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — Campylobacter jejuni / C. coli",
+        "molecules": [
+          {
+            "molecule": "Azithromycine",
+            "cim_s": "≤ 4 mg/L",
+            "cim_r": "> 8 mg/L",
+            "note": "1er choix — résistance stable < 4 % France"
+          },
+          {
+            "molecule": "Ciprofloxacine",
+            "cim_s": "≤ 0,5 mg/L",
+            "cim_r": "> 0,5 mg/L",
+            "note": "60 % résistance France (2018) — ATBg obligatoire avant usage"
+          },
+          {
+            "molecule": "Tétracycline",
+            "cim_s": "≤ 2 mg/L",
+            "cim_r": "> 2 mg/L",
+            "note": "50 % résistance — non recommandée en 1er ligne"
+          },
+          {
+            "molecule": "Ampicilline",
+            "cim_s": "≤ 4 mg/L",
+            "cim_r": "> 4 mg/L",
+            "note": "30 % résistance (bêta-lactamase)"
+          },
+          {
+            "molecule": "Gentamicine",
+            "cim_s": "≤ 2 mg/L",
+            "cim_r": "> 4 mg/L",
+            "note": "Bactériémies à C. fetus en association"
+          }
+        ],
+        "resistance_emergente": "Résistance aux FQ 60 % (2018) — en constante augmentation depuis les années 90 (pression sélective vétérinaire). Transmission directe de souches R de l'élevage à l'homme. Surveillance CNR Campylobacter obligatoire pour les formes sévères."
+      },
+      "pdb_id": "9HMF",
+      "pdb_desc": "Moteur flagellaire in situ (cryo-ET, C17, 2024)",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": null,
+      "name": "Shigella dysenteriae",
+      "desc": "Agent de la dysenterie bacillaire (shigellose). Entérobactérie strictement humaine, invasive, à dose infectante très faible (10–100 bactéries). MDO. Pathogène intracellulaire utilisant l'actine cellulaire pour sa propulsion.",
+      "gram": "Gram négatif",
+      "morphologie": "Bacille Gram négatif (1–3 × 0,4–0,6 µm). IMMOBILE (pas de flagelles — ≠ autres entérobactéries). Non sporulé. Anaérobie facultatif. Lactose − (incolore sur Drigalski/MacConkey). Acétoïne (VP) −, H₂S −, LDC −, Citrate − (Simmons). Oxydase −, indole −/+ selon espèce. Identification difficile vs E. coli par MALDI-TOF (même espèce génomique). SÉROTYPAGE AG O obligatoire. 4 espèces : S. dysenteriae (type 1 = le plus grave, toxine Shiga), S. flexneri (80 % France), S. sonnei, S. boydii. Strictement humain (≠ Salmonella = zoonose).",
+      "habitat": "STRICTEMENT HUMAIN. Pas de réservoir animal. Présence chez l'homme = TOUJOURS PATHOLOGIQUE (≠ E. coli). Transmission interhumaine (oro-fécale) : directe (mains sales) ou indirecte (eau/aliments contaminés, coquillages). Dose infectante TRÈS FAIBLE : 10–100 bactéries. MDO. Europe : mode sporadique ou petites épidémies (cas importés de S. dysenteriae). PVD : mode endémo-épidémique (160 millions cas/an, 1 million de décès/an). Favorisée par mauvaise hygiène, manque d'eau potable.",
+      "virulence": "INVASION INTRACELLULAIRE — PATHOGÈNE STRICTEMENT INTRACELLULAIRE :\n① Résistance aux sels biliaires (transit gastro-intestinal intact).\n② Traversée de la muqueuse intestinale par le PÔLE BASOLATÉRAL via les cellules M (plaques de Peyer) → phagocytose par macrophages → PYROPTOSE (apoptose des macrophages) → libération dans la lamina propria.\n③ INVASION DES ENTÉROCYTES (polo basolatéral) : système de sécrétion de type III (T3SS — 'seringue moléculaire') codé par plasmide de virulence Inv (220 kb) → injection de protéines effectrices IpaB,C,D → réarrangement du cytosquelette, polymérisation d'actine → endocytose bactérienne.\n④ MULTIPLICATION INTRACYTOPLASMIQUE → formation d'une 'comète' d'actine polymérisée → propulsion de la bactérie de cellule en cellule (cell-to-cell spreading) → nécrose muqueuse, ulcérations, abcès. Gène ipaH (invasion plasmid antigen) = marqueur PCR de virulence.\n⑤ TOXINE SHIGA (Shiga toxin 1 — S. dysenteriae type 1 uniquement, origine phagique) : exotoxine A-B → fixation sur récepteur Gb3 des cellules endothéliales (côlon, rein, cerveau) → inhibition de la synthèse protéique (inactivation sous-unité 28S du ribosome) → lésions endothéliales → SHU (syndrome hémolytique et urémique). PROCHE DES VÉROTOXINES STEC/EHEC.\n⑥ ShET1 (Shigella enterotoxin 1) : sécrétion liquidienne.",
+      "pathologies": "DYSENTERIE BACILLAIRE (shigellose) — MDO :\nIncubation 2–3 j.\n① S. DYSENTERIAE (type 1 — forme la plus grave) : dysenterie bacillaire aiguë — diarrhée muco-purulo-sanglante + fièvre élevée + spasmes abdominaux violents (épreintes) + ténesme (fausse envie de déféquer). Complications : SHU (toxine Shiga), convulsions (enfant), bactériémie, mégacôlon toxique.\n② S. FLEXNERI / S. SONNEI / S. BOYDII : entérites moins sévères (diarrhée ± muqueuse, fièvre modérée). S. sonnei = espèce dominante PVD émergents.\nFACTEURS AGGRAVANTS : immunodépression, malnutrition, enfants < 5 ans PVD.",
+      "antibiotiques": "PATHOGÈNE INTRACELLULAIRE → ATB à BONNE PÉNÉTRATION INTRACELLULAIRE :\n① Réhydratation (orale ou IV si déshydratation sévère).\n② ENFANT : Azithromycine PO 1×/j × 3–5 j (1er choix) ou Ceftriaxone IM 1×/j × 3–5 j (formes sévères).\n③ ADULTE : Ciprofloxacine 500 mg × 2/j × 3–5 j (si sensible — vérifier ATBg) ou Ofloxacine 200 mg × 2/j. Si intolérance/échec : Ceftriaxone IM × 3–5 j.\nPROPHYLAXIE : Hygiène des mains +++ (principal vecteur), traitement des eaux usées. PAS DE VACCIN disponible. Éviction des collectivités si portage confirmé.",
+      "resistance": "RÉSISTANCES ACQUISES MULTIPLES EN HAUSSE :\n— Ampicilline R : > 60 % (β-lactamases plasmidiques).\n— Cotrimoxazole R : > 50 % (gènes sul, dhfr).\n— Tétracyclines R : > 60 %.\n— Chloramphénicol R : fréquent.\n— FQ (fluoroquinolones) R : croissante (mutation gyrA/parC) — alerte OMS.\n— C3G : résistances signalées (BLSE).\nRÉSISTANCE NATURELLE : non, mais acquisition aisée (plasmides de multirésistance). PATHOGÈNE CIBLE OMS résistances prioritaires. Résistance naturelle aux glycopeptides (BGN). ANTIBIOGRAMME INDISPENSABLE avant traitement.",
+      "who_priority": "Priorité haute (Shigella spp. — résistances aux FQ et BLSE émergentes)",
+      "antibiogramme": {
+        "note": "EUCAST 2024 — Shigella spp.",
+        "molecules": [
+          {
+            "molecule": "Ciprofloxacine",
+            "cim_s": "≤ 0,001 mg/L",
+            "cim_r": "> 0,001 mg/L",
+            "note": "Résistances en forte hausse — toujours tester avant prescription"
+          },
+          {
+            "molecule": "Azithromycine",
+            "cim_s": "≤ 16 mg/L",
+            "cim_r": "> 16 mg/L",
+            "note": "1er choix enfant — bonne pénétration intracellulaire"
+          },
+          {
+            "molecule": "Ceftriaxone",
+            "cim_s": "≤ 1 mg/L",
+            "cim_r": "> 2 mg/L",
+            "note": "Formes sévères et résistances aux FQ"
+          },
+          {
+            "molecule": "Ampicilline",
+            "cim_s": "≤ 8 mg/L",
+            "cim_r": "> 8 mg/L",
+            "note": "> 60 % résistance — ne plus utiliser empiriquement"
+          },
+          {
+            "molecule": "Cotrimoxazole",
+            "cim_s": "≤ 0,5 mg/L",
+            "cim_r": "> 1 mg/L",
+            "note": "R fréquente (> 50 %) — antibiogramme obligatoire"
+          }
+        ],
+        "resistance_emergente": "Multirésistance croissante (MDR/XDR Shigella) — alerte OMS. Résistances aux FQ par mutation gyrA + résistances plasmidiques aux β-lactamines + cotrimoxazole. Émergence BLSE. Shigella sonnei XDR signalée en Europe (cas importés Asie). OMS en liste d'agents pathogènes prioritaires."
+      },
+      "pdb_id": "1DM0",
+      "pdb_desc": "Toxine Shiga holotoxine AB₅",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Méningites bactériennes — Diagnostic et analyse du LCS",
+      "desc": "Démarche diagnostique des méningites : examen cytobactériologique du liquide cérébrospinal (LCS), orientation selon l'aspect (purulent vs clair) et les paramètres biochimiques.",
+      "gram": "Variable selon l'étiologie",
+      "morphologie": "Examen direct (coloration de Gram, sensibilité ~80% si pas d'ATB) : cocci Gram+ (pneumocoque), cocci Gram− en diplocoque (méningocoque), bacille Gram− (H. influenzae, E. coli K1), bacille Gram+ (Listeria). Encre de Chine (cryptocoque), Ziehl si suspicion de BK.",
+      "habitat": "Infection des méninges, le plus souvent d'origine infectieuse. Voies d'invasion : hématogène (bactériémie), inoculation directe (traumatisme, neurochirurgie), contiguïté (OMA, sinusite), neuronale (virus). Triade du syndrome méningé : fièvre, raideur nucale, vomissements (sensibilité <50% ; éruption pétéchiale/purpurique évocatrice du méningocoque). Chez le nourrisson : peu spécifique (fièvre, signes digestifs, fontanelle bombée, hypotonie, convulsions).",
+      "pathologies": "Méningites PURULENTES (LCS trouble, ≥300 éléments/mm³, syndrome méningé + infectieux) : méningocoque, pneumocoque, H. influenzae. Méningites à LIQUIDE CLAIR (syndrome méningé isolé) : tuberculeuse, virale (lymphocytaire). Signes de gravité : encéphalite, purpura extensif, HTIC, choc septique.",
+      "virulence": "Analyse du LCS (ponction lombaire entre L4-L5, asepsie rigoureuse ; CI si signes d'engagement). LCS NORMAL : <20 éléments/mm³, glycorachie ~60% de la glycémie, protéinorachie <0,4 g/L. MÉNINGITE BACTÉRIENNE PURULENTE : >1000 leucocytes (PNN), glycorachie effondrée (<40% glycémie), protéinorachie >1 g/L. MÉNINGITE TUBERCULEUSE/VIRALE : LCS clair, lymphocytaire, glycorachie normale (virale) ou basse (BK). Procalcitonine sérique >0,5 ng/mL → origine bactérienne.",
+      "antibiotiques": "Étapes : examen macroscopique et microscopique J0, biochimie J0, recherche d'Ag solubles pneumocoque, PCR (16S ou gène spécifique : ply/lytA pour le pneumocoque ; PCR multiplex syndromique type FilmArray®), culture J0, identification + antibiogramme + CMI à J1-J2. Hémocultures systématiques (positives dans >70% des méningites à pneumocoque, >40% à méningocoque).",
+      "resistance": "Le traitement est une URGENCE ABSOLUE (dans l'heure, au plus tard 3 h ; avant la PL si purpura fulminans). ATB bactéricide, voie parentérale, forte posologie, bonne pénétration dans l'espace sous-arachnoïdien (favorisée par l'inflammation des méninges, la liposolubilité, le faible degré d'ionisation), concentration LCR ≥10× la CMI.",
+      "who_priority": "non classée",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Méningite à Streptococcus pneumoniae (pneumocoque)",
+      "desc": "1ʳᵉ cause de méningite purulente du jeune enfant et de l'adulte. Diplocoque Gram+ capsulé, pronostic sévère, problème du PSDP.",
+      "gram": "Gram positif",
+      "morphologie": "Diplocoque à Gram positif capsulé, extracellulaire au LCR. Culture sur gélose au sang (exigeant), hémolyse partielle α. Sensible à l'optochine, lyse par les sels biliaires (autolytique). Espèce naturellement transformable.",
+      "habitat": "Rhinopharynx de l'homme (portage sain : adulte 5-10%, enfant 20-40%, enfant de crèche 60%). Bactérie essentiellement humaine, contamination aérienne. En France : <600 cas/an. Évolution sporadique.",
+      "pathologies": "1ʳᵉ cause de méningite du jeune enfant et de l'adulte. Pronostic SÉVÈRE : mortalité 10-30% (16-37% adulte, ~10% enfant), séquelles fréquentes (30 à >50% : aphasie, atteinte des paires crâniennes, surdité, troubles cognitifs). Complications neurologiques (œdème, hydrocéphalie, coma), troubles hémodynamiques, choc, défaillance multiviscérale. Facteurs prédisposants : âges extrêmes (<2 ans, >65 ans), VIH, déficits immunitaires, asplénie/drépanocytose, alcoolisme, tabagisme, co-infection grippale.",
+      "virulence": "Diffusion par contiguïté d'un foyer ORL ou voie hématogène (survie dans le sang grâce à la CAPSULE). Traversée de la BHE : rôle du résidu choline des acides téichoïques/lipotéichoïques. Forte réaction inflammatoire méningée délétère (acides téichoïques, peptidoglycane, ADN, PNEUMOLYSINE) participant à la destruction tissulaire.",
+      "antibiotiques": "1ʳᵉ intention : C3G — céfotaxime 300 mg/kg/j (4 perfusions ou continue) ou ceftriaxone 100 mg/kg/j. Après antibiogramme : si sensible aux β-lactamines (CMI AMX <0,5 mg/L) → amoxicilline ; si PSDP → C3G. Si allergie : vancomycine + rifampicine ou méropénème. DEXAMÉTHASONE recommandée (avec l'ATB ou dans les 12 h) pour limiter les séquelles. Durée 10-14 jours.",
+      "resistance": "26% de sensibilité diminuée aux β-lactamines = PSDP (2019). Dépistage par oxacilline 1 µg (<20 mm) puis CMI : S si CMI Péni G ≤0,064 mg/L ; PSDP si 0,064 < CMI ≤2 ; R si >2 mg/L. Le PSDP touche les céphalosporines à divers degrés (amoxicilline 13%, C3G 8%). R aux macrolides (50%), au cotrimoxazole. FQ anti-pneumococciques actives (lévofloxacine, moxifloxacine). Prévention : vaccins conjugués (Prevenar 13/20, Vaxneuvance 15-valent) et 23-valent (Pneumovax), obligatoire chez le nourrisson (M2, M4, M11).",
+      "who_priority": "moyenne",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Méningite à Neisseria meningitidis (méningocoque)",
+      "desc": "Méningite purulente à diplocoque Gram− capsulé, urgence absolue, complication redoutée = purpura fulminans. Prise en charge des sujets contact.",
+      "gram": "Gram négatif",
+      "morphologie": "Diplocoque à Gram négatif capsulé (faces adjacentes aplaties « en grain de café »), intracellulaire. Bactérie fragile, exigeante (milieux enrichis), aérobie, oxydase +. Sérogroupage des Ag capsulaires : 12 sérogroupes, 6 épidémiques (A, B, C, Y, W135, X).",
+      "habitat": "Bactérie strictement humaine, rhinopharynx (portage sain 10-30%). Transmission interhumaine par contacts proches (<1 m) répétés, pic hivernal, cas groupés en collectivités. Distribution mondiale (ceinture méningitique africaine). En France : ~400 cas/an (sérogroupes B 40%, C 40%), DO (déclaration obligatoire).",
+      "pathologies": "Manifestations : rhinopharyngite/portage sain (++), bactériémie, méningite, arthrite, péricardite, plus rarement urétrite, conjonctivite. COMPLICATION MAJEURE = PURPURA FULMINANS : lésions ecchymotiques extensives en quelques heures, sepsis/choc septique, CIVD, peut exister sans méningite — URGENCE ABSOLUE. Mortalité : méningite 5-10%, purpura fulminans 20-30%. Réceptivité liée à l'immunité humorale (jeune âge, hypogammaglobulinémie, déficit en complément).",
+      "virulence": "Colonisation du rhinopharynx (pili, protéines Opa/Opc), passage vasculaire (capsule anti-phagocytaire), bactériémie, franchissement de la BHE par voie paracellulaire après altération des jonctions serrées. LPS : action pro-inflammatoire majeure. Fimbriae : adhésion aux cellules endothéliales des capillaires cérébraux.",
+      "antibiotiques": "URGENCE +++. Si suspicion d'infection invasive (purpura fébrile) : injection immédiate (domicile) de céfotaxime ou ceftriaxone IV/IM. Purpura fulminans : C3G IV immédiate AVANT la PL. Céfotaxime 200 mg/kg/j ou ceftriaxone 75 mg/kg/j, durée 4-7 jours. Corticothérapie (adulte). Relais amoxicilline IV si souche sensible. Précautions « gouttelettes » (levées 24 h après ATB).",
+      "resistance": "Sensible aux β-lactamines. Apparition de souches de sensibilité diminuée par gènes mosaïques (↓ affinité pour les PLP, 57% en 2020 ; CMI Péni G ≥0,125 mg/L, R si >1 ; dépistage oxacilline/E-test). Pas de souche de sensibilité diminuée aux C3G ni de pénicillinase. Résistance acquise (rifampicine, ciprofloxacine) exceptionnelle. PROPHYLAXIE DES SUJETS CONTACT (<10 j, exposition <1 m, face-à-face, >1 h) : rifampicine PO 600 mg ×2/j 2 j (alternatives ceftriaxone IM ou ciprofloxacine PO) + vaccination ACYW135 (<10 j). Vaccins conjugués (Nimenrix®, MenQuadfi®, Menveo®) et recombinants B (Bexsero®, Trumenba®).",
+      "who_priority": "moyenne",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Méningite à Listeria monocytogenes — Listériose neuroméningée",
+      "desc": "Bacille Gram+ responsable de méningo-encéphalite (rhombencéphalite) chez l'immunodéprimé, la personne âgée et la femme enceinte. Résistance naturelle aux céphalosporines.",
+      "gram": "Gram positif",
+      "morphologie": "Bacille à Gram positif en palissade. Culture sur gélose au sang : colonies 1-2 mm, lisses, transparentes, β-hémolyse sur sang de cheval. Catalase +, lécithinase +, aéro-anaérobie, fermente le glucose. MOBILE à 22 °C, IMMOBILE à 37 °C. Hydrolyse rapide de l'esculine. PSYCHROPHILE : se développe à +4 °C (réfrigérateur). LCR : 100-500 cellules/mm³ à prédominance monocytaire (>75%) ou panachée, glycorachie effondrée.",
+      "habitat": "Bactérie ubiquitaire (aliments). Porte d'entrée DIGESTIVE → ganglions lymphatiques → sang (véhiculée par les monocytes) → multiplication dans le foie/rate → dissémination. Tropisme pour le SNC et le placenta. Femme enceinte, personne âgée, immunodéprimé. MDO (maladie à déclaration obligatoire).",
+      "pathologies": "Chez l'adulte : bactériémie, MÉNINGO-ENCÉPHALITE touchant le tronc cérébral (RHOMBENCÉPHALITE → paralysies). Nouveau-né (infection materno-fœtale par voie hématogène, granulomes placentaires) : avortement/accouchement prématuré, mortalité élevée ; forme précoce (état infectieux grave) ou tardive (10 j à ~2 mois : méningite).",
+      "virulence": "Bactérie à multiplication intracellulaire (monocytes/macrophages). Translocation intestinale, dissémination hématogène, franchissement des barrières hémato-encéphalique et placentaire.",
+      "antibiotiques": "RÉSISTANCE NATURELLE aux céphalosporines +++ (C3G inactives) ; sensible aux autres β-lactamines. AMPICILLINE/amoxicilline 200 mg/kg/j (21 j) + gentamicine IV/IM 3-6 mg/kg/j (5 j), durée totale 3 semaines. Si allergie : cotrimoxazole + gentamicine. Femme enceinte : ampicilline 6 g/j IV 3 semaines.",
+      "resistance": "Prévention par règles d'hygiène alimentaire chez la femme enceinte et l'immunodéprimé : éviter lait cru, fromages à croûte, poissons fumés, charcuterie en gelée, rillettes ; cuire à cœur, laver les légumes, réchauffer les restes, nettoyer le réfrigérateur (la bactérie se développe à +4 °C).",
+      "who_priority": "non classée",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Méningites néonatales — Streptococcus agalactiae (SGB) et E. coli K1",
+      "desc": "Méningites de l'enfant <3 mois : streptocoque B (SGB), E. coli K1 et Listeria. Contamination materno-fœtale et antibioprophylaxie per partum.",
+      "gram": "Gram positif (SGB) / Gram négatif (E. coli)",
+      "morphologie": "S. agalactiae : coque à Gram positif en chaînettes, β-hémolyse limitée à la colonie sur gélose au sang, groupe B de Lancefield. E. coli K1 : bacille à Gram négatif, antigène capsulaire K1 (homopolymère d'acide sialique, anti-phagocytaire, communauté antigénique avec le polysaccharide B du méningocoque).",
+      "habitat": "Infections materno-fœtales (1-4/1000 naissances, plus fréquentes chez le grand prématuré). Voie ASCENDANTE (SGB, E. coli) après colonisation génitale, majorée par la rupture prématurée des membranes → méningites purulentes. Voie HÉMATOGÈNE (Listeria) → méningite à liquide clair. SGB : 30% des femmes enceintes colonisées au niveau vaginal ; clone hypervirulent ST-17 (80% des méningites).",
+      "pathologies": "SGB : syndrome PRÉCOCE (1ʳᵉ semaine, 80% <24 h) — détresse respiratoire, pneumonie, bactériémie, méningite (4-28%) ; syndrome TARDIF (>1 semaine à plusieurs mois) — méningite (25-65%). E. coli K1 : 80% des méningites néonatales, prématurés ++. Listeria : forme précoce (état infectieux grave) ou tardive (méningite).",
+      "virulence": "SGB clone ST-17 : capacité accrue de colonisation du tube digestif et de franchissement des barrières intestinale et hémato-encéphalique. E. coli K1 : capsule anti-phagocytaire.",
+      "antibiotiques": "SGB : amoxicilline + C3G parentérale + aminoside. Méningites néonatales : C3G + gentamicine (+ amoxicilline si Listeria suspectée, + ciprofloxacine si E. coli), durée 3 semaines. E. coli K1 : C3G (attention β-lactamase ~40% → résistance à l'amoxicilline).",
+      "resistance": "PRÉVENTION SGB : dépistage du portage vaginal de la femme enceinte à 34-38 SA (culture) ou au début du travail (PCR), puis ANTIBIOPROPHYLAXIE PER PARTUM — pénicilline (5 M UI IV/4 h) ou ampicilline (2 g IV/4 h) ; si allergie : céfotaxime (érythromycine R).",
+      "who_priority": "non classée",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Bactériémies et Sepsis — Hémocultures et portes d'entrée",
+      "desc": "Présence de bactéries viables dans le sang : du passage transitoire au choc septique. Portes d'entrée, hémocultures et interprétation des résultats.",
+      "gram": "Variable selon le germe",
+      "morphologie": "Diagnostic par HÉMOCULTURE : 2 flacons (aérobie + anaérobie) ensemencés après antisepsie cutanée alcoolique ; 10 mL chez l'adulte, 1-2 mL chez l'enfant (inoculum faible ~1 UFC/mL, dilution 1/10 optimale) ; 2-3 hémocultures/24 h lors d'un pic fébrile/frissons, avant ATB ; incubation 37 °C, détection automatisée du CO₂ (BacT/Alert®), positivité en 48 h (5-7 j, ≥21 j pour les germes lents).",
+      "habitat": "Bactériémie = présence de bactéries viables dans le sang (sang normalement stérile). ASYMPTOMATIQUE : passage transitoire (post-prandial, brossage des dents). SYMPTOMATIQUE = SEPSIS : dysfonction d'organe par réponse inappropriée à l'infection (score SOFA ≥2). CHOC SEPTIQUE : sepsis + besoin de vasopresseurs (PAM ≥65 mmHg) + lactate >2 mmol/L malgré remplissage. Origine communautaire ou nosocomiale (~50/50 ; nosocomiales >1/3 sur cathéter).",
+      "pathologies": "3 schémas physiopathologiques selon la PORTE D'ENTRÉE : ① LYMPHATIQUE (digestive : fièvre typhoïde à Salmonella, brucellose) — fièvre en plateau ; ② THROMBOPHLÉBITE (tégumentaire : plaie, cathéter) — thrombus infecté, microembols septiques, métastases, courbe thermique irrégulière ; ③ ENDOCARDITIQUE (lésion préexistante, porte d'entrée dentaire) — végétation, fièvre permanente peu élevée.",
+      "virulence": "Libération de métabolites (exotoxines, endotoxine LPS, peptidoglycane) → réponse humorale/cellulaire, activation de la coagulation (CIVD), des neutrophiles et des prostaglandines (fuite capillaire, vasodilatation), foyers métastatiques secondaires.",
+      "antibiotiques": "Antibiothérapie probabiliste adaptée au terrain et à l'examen direct, puis réadaptée à l'antibiogramme. Staphylocoque communautaire : péni M (+ aminoside si grave) ; nosocomial : vancomycine. Pneumocoque/méningocoque : amoxicilline ou C3G. Streptocoque/entérocoque : amoxicilline ± aminoside. BGN communautaire : C3G ou FQ ; nosocomial : céfépime, pipéracilline-tazobactam, imipénème + aminoside. P. aeruginosa, Acinetobacter, anaérobies selon contexte.",
+      "resistance": "INTERPRÉTATION : distinguer contamination (cutanée) vs vraie bactériémie selon le contexte, le nombre de flacons positifs et l'espèce. Pathogènes même sur 1 seul flacon : S. aureus, E. coli, streptocoque A, méningocoque, Listeria, P. aeruginosa, pneumocoque, Candida. Au moins 2 flacons pour SCN, corynébactéries, Bacillus. Hémocultures différentielles (périphérie vs cathéter, délai >2 h → porte d'entrée = cathéter). Biologie moléculaire (Verigene®) : gènes de résistance (mecA, vanA, CTX-M, carbapénémases) en <2 h.",
+      "who_priority": "non classée",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Endocardite infectieuse — Critères de Duke et antibiothérapie prolongée",
+      "desc": "Greffe bactérienne sur l'endocarde (végétation) : rare mais grave (mortalité ~20%). Diagnostic par critères de Duke, antibiothérapie bactéricide prolongée 4-6 semaines.",
+      "gram": "Variable (streptocoques, staphylocoques, entérocoques)",
+      "morphologie": "Lésion élémentaire = VÉGÉTATION (dépôt de fibrine + plaquettes, non vascularisé) colonisée par les bactéries lors d'une bactériémie. Diagnostic : hémocultures (>90% des EI) ; si négatives, sérologie/PCR pour bactéries intracellulaires ; culture/PCR 16S des prélèvements per-opératoires (végétation, valve).",
+      "habitat": "EI rares (~2200 cas/an en France, 3-10/100 000/an), graves (mortalité ~20%, 10-50%), adulte/sujet âgé (~60 ans), cœur gauche (90%). Terrains à risque : cardiopathies (valves saines 47%, lésées 26%, prothèses 21%, pacemaker 13%) et toxicomanie. Gestes à risque de bactériémie : endoscopies, avulsions dentaires, détartrage, piercing.",
+      "pathologies": "Présentation polymorphe. SIGNES CARDIAQUES : souffle nouveau/modifié, insuffisance cardiaque (1ʳᵉ cause de mortalité), végétation à l'échocardiographie. SIGNES INFECTIEUX : fièvre, AEG, splénomégalie. SIGNES EXTRA-CARDIAQUES : nodosités d'Osler (« faux panaris »), lésions de Janeway, taches de Roth (hémorragies rétiniennes), atteintes neurologiques (15% : AVC emboliques, anévrismes mycotiques), rénales (hématurie, protéinurie). Complications : insuffisance cardiaque, embolies, hémorragie cérébrale.",
+      "virulence": "Adhésion bactérienne à l'endocarde lésé et multiplication dans la végétation → destruction valvulaire (ulcérations, perforations), extension locale et manifestations à distance (essaimage septique, complexes immuns).",
+      "antibiotiques": "ATB BACTÉRICIDE, adaptée à l'antibiogramme, en ASSOCIATION, IV, à forte concentration, durée 4-6 SEMAINES (cible difficile : inoculum élevé, métabolisme ralenti, végétation non vascularisée). Streptocoques (S)/entérocoques (E)/HACCEK (H) : péni G ou amoxicilline ou ceftriaxone + gentamicine 2 sem (glycopeptides si allergie). Staphylocoques : oxacilline (vancomycine si méti-R) + gentamicine 2 sem (+ rifampicine si prothèse). C. burnetii : doxycycline + hydroxychloroquine 18 mois. Bartonella : doxycycline + gentamicine 6 sem. Brucella : doxycycline + cotrimoxazole + rifampicine 3 mois. CHIRURGIE dans 40-50% (réparation/remplacement valvulaire, retrait de matériel).",
+      "resistance": "DIAGNOSTIC — critères de la Duke University. Majeurs : hémocultures positives à un germe d'EI, échographie cardiaque (végétation, désinsertion de prothèse). Mineurs : terrain prédisposant, fièvre ≥38 °C, phénomènes vasculaires/immunologiques. EI certaine : 2 majeurs, ou 1 majeur + 3 mineurs, ou 5 mineurs. PROPHYLAXIE : hygiène bucco-dentaire, désinfection cutanée ; antibioprophylaxie (amoxicilline, clindamycine si allergie) en dose unique 30-60 min avant un geste à risque chez les patients à HAUT RISQUE (prothèse, ATCD d'EI, cardiopathie congénitale cyanogène).",
+      "who_priority": "non classée",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Endocardites à hémocultures négatives — Coxiella, Bartonella, Brucella",
+      "desc": "Endocardites à bactéries intracellulaires ou à croissance lente : fièvre Q (Coxiella burnetii), Bartonella, Brucella, diagnostic sérologique ou moléculaire.",
+      "gram": "Bactéries intracellulaires (mal colorées au Gram)",
+      "morphologie": "Bactéries intracellulaires ou de croissance lente non isolées par hémoculture standard. Diagnostic : sérologie (sang sans anticoagulant), culture spécialisée (sang hépariné), ou PCR/séquençage sur pièce opératoire. Hémocultures prolongées ≥21 j (jusqu'à 42 j) pour Brucella, Bartonella ; groupe HACCEK et streptocoques déficients aussi en cause.",
+      "habitat": "COXIELLA BURNETII (fièvre Q) : anthropozoonose, libération massive lors de la mise bas (lait, urines, selles), contamination digestive (produits laitiers) ou respiratoire (inhalation de poussières/litières). BARTONELLA : B. quintana (80%, fièvre des tranchées, SDF, pou de corps), B. henselae (20%, maladie des griffes du chat, puces). BRUCELLA : anthropozoonose mondiale (MDO), contamination alimentaire (30%) ou professionnelle (70%), survie/multiplication dans les macrophages.",
+      "pathologies": "C. burnetii : formes aiguës (asymptomatique 50%, hépatite, pneumonie atypique, fièvre nue, bon pronostic) ou chroniques (ENDOCARDITE, pronostic médiocre). Bartonella : EI à hémocultures négatives (mortalité >10% pour B. quintana). Brucella : phase aiguë (bactériémie), atteinte focale subaiguë (foyers ostéo-articulaires 75%, neuroméningés, endocardites), phase chronique.",
+      "virulence": "Survie et multiplication intracellulaires (macrophages pour Coxiella et Brucella).",
+      "antibiotiques": "C. burnetii : doxycycline + hydroxychloroquine (ou ofloxacine), 18 mois. Bartonella : doxycycline (ou amoxicilline/ceftriaxone) + gentamicine, 6 semaines. Brucella : doxycycline + cotrimoxazole + rifampicine, 3 mois.",
+      "resistance": "Devant une endocardite à hémocultures négatives, évoquer en priorité Coxiella burnetii (1er), Bartonella (2ᵉ), Brucella, et le groupe HACCEK. Diagnostic sérologique et moléculaire privilégié.",
+      "who_priority": "non classée",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Coqueluche — Bordetella pertussis",
+      "desc": "Infection respiratoire très contagieuse à Bordetella pertussis : quintes de toux émétisantes (« chant du coq »), résurgence par défaut de rappel vaccinal.",
+      "gram": "Gram négatif",
+      "morphologie": "Petit coccobacille à Gram négatif, à coloration bipolaire, souvent en diplocoques. Exigeant : culture sur milieu de Bordet-Gengou (gélose à base de pomme de terre au sang fibriné de mouton, extemporané), incubation ≥7 j à 37 °C, peu sensible ; colonies « en gouttelette de mercure », hémolytiques (phase I). Catalase +, oxydase +, sans activité glucidolytique. Bordetella parapertussis : formes atténuées.",
+      "habitat": "Transmission interhumaine par sécrétions respiratoires (très contagieuse, jusqu'à 21 j après le début des signes), répartition mondiale. Bonne couverture vaccinale en France mais RÉSURGENCE par absence de rappel (alerte 2024).",
+      "pathologies": "Incubation silencieuse (7 j). Phase CATARRHALE (invasion, 7-15 j) : rhinite, toux, éternuements. Phase PAROXYSTIQUE : quintes de toux émétisantes (« chant du coq »), apnée/cyanose/accès hypoxique chez le nourrisson, peu de fièvre. Convalescence (4-5 mois). Signe biologique : hyperlymphocytose.",
+      "virulence": "ADHÉSION : hémagglutinine filamenteuse (FHA), fimbriae, facteur de colonisation trachéale, pertactine. TOXINES : toxine pertussique (TP), adénylate cyclase-hémolysine (AC-Hly).",
+      "antibiotiques": "Hospitalisation des nourrissons, précautions « gouttelettes ». ATB (diminue la contagion, peu d'effet clinique) : AZITHROMYCINE (3 j) ou clarithromycine (7 j) ; cotrimoxazole si CI. Pas de sédatifs chez l'enfant. Antibioprophylaxie des sujets contact non vaccinés ou à risque.",
+      "resistance": "Diagnostic selon la durée de la toux : <15 j → culture + PCR-TR ; 15-21 j → PCR-TR ; ≥21 j → diagnostic clinique + PCR chez les cas secondaires ; sérologie (séroconversion). PRÉVENTION par VACCIN ACELLULAIRE (Ag immunisants dont toxine pertussique, efficacité ~85%) : nourrissons 2 et 4 mois + rappel 11 mois, rappels 6 ans, 11-13 ans, 25 ans ; vaccination de la femme enceinte (24-36 SA) et stratégie de « cocooning ».",
+      "who_priority": "non classée",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Pneumonie franche lobaire aiguë (PFLA) à pneumocoque",
+      "desc": "Pneumopathie « typique » à Streptococcus pneumoniae : début brutal, fièvre à 40 °C, opacité lobaire radiologique, 1500 décès/an en France.",
+      "gram": "Gram positif",
+      "morphologie": "Diplocoque à Gram positif capsulé. Diagnostic direct : ECBC (examen cytobactériologique des crachats) ou prélèvement protégé profond, hémocultures (+ dans 30%), antigénurie pneumocoque (polysaccharide C). Recherche de PSDP.",
+      "habitat": "S. pneumoniae +++ première cause de pneumopathie ; les pneumopathies sont la 5ᵉ cause de décès dans les pays industrialisés. PFLA : ~1500 décès/an en France. Patients à risque : âges extrêmes, décours de grippe, éthylisme, tabagisme, VIH, asplénie, hypogammaglobulinémie.",
+      "pathologies": "PNEUMOPATHIE LOBAIRE « typique ». Début BRUTAL +++, fièvre à 40 °C, malaise général, toux sèche, douleurs thoraciques, opacités lobaires à la radiographie, auscultation anormale. Forme communautaire grave possible (post-grippale).",
+      "virulence": "Capsule (survie dans le sang, anti-phagocytaire), pneumolysine, acides téichoïques (pro-inflammatoires).",
+      "antibiotiques": "Amoxicilline 1 g ×3/j, 7 jours.",
+      "resistance": "Recherche de pneumocoque de sensibilité diminuée à la pénicilline (PSDP). PRÉVENTION : vaccination antipneumococcique — 13/15/20-valent conjugués (Prevenar 13/20, Vaxneuvance), obligatoire chez les enfants nés après le 1er janvier 2018 ; 23-valent (Pneumovax) chez >65 ans et terrains à risque (peu immunogène car non conjugué). Recommandée chez l'immunodéprimé (asplénie, VIH, chimiothérapie, transplantation) et en cas de cardiopathie, BPCO, insuffisance rénale, diabète, brèche ostéoméningée, implant cochléaire.",
+      "who_priority": "moyenne",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Légionellose — Legionella pneumophila",
+      "desc": "Pneumopathie grave à bacille Gram− intracellulaire des réseaux d'eau (douches, tours aéroréfrigérantes), diagnostic par antigénurie, pas de transmission interhumaine.",
+      "gram": "Gram négatif",
+      "morphologie": "Bacille à Gram négatif intracellulaire (se multiplie dans les macrophages par inhibition de la fusion phagolysosomiale), peut persister dans des amibes (Acanthamoeba). Culture exigeante (L-cystéine et fer) sur milieu BCYE, incubation 10 j sous CO₂, aspect « en verre fritté ». Cat +, oxydase +, hippurate +, gélatinase +. Sérogroupe 1 = 90% des cas.",
+      "habitat": "Présent dans l'eau (T° optimale 20-45 °C). Contamination par inhalation de microgouttelettes (douches, balnéothérapie, tours aéroréfrigérantes, jacuzzi). PAS de transmission interhumaine. Pneumopathie nosocomiale/épidémique (maladie du « légionnaire », 1976). MDO. Facteurs de risque : sujet âgé, immunodéprimé, éthylisme, tabagisme, maladies respiratoires chroniques.",
+      "pathologies": "Incubation 2-10 j. Fièvre, syndrome pseudo-grippal, détresse respiratoire, signes neurologiques (obnubilation) et digestifs (diarrhée).",
+      "virulence": "Bactérie intracellulaire facultative : multiplication dans les macrophages alvéolaires par inhibition de la fusion phagolysosomiale.",
+      "antibiotiques": "14-21 jours. MACROLIDES (érythromycine ou azithromycine) ou FLUOROQUINOLONES ; association à la rifampicine si forme sévère ou immunodéprimé.",
+      "resistance": "Diagnostic : ANTIGÉNURIE +++ (spécifique de Lp1, sensibilité 80%, résultat en 15 min), culture (BCYE), PCR multiplex, IFD, sérologie (séroconversion ou titre >1/256). PRÉVENTION (pas de vaccin) : entretien des canalisations, T° de production d'eau chaude sanitaire 55 °C, éviter les bras morts, chocs thermique/chimique ; autosurveillance réglementaire des bâtiments publics.",
+      "who_priority": "non classée",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Pneumopathies atypiques — Mycoplasma pneumoniae et Chlamydia",
+      "desc": "Pneumopathies interstitielles à bactéries atypiques : Mycoplasma pneumoniae (sans paroi) et Chlamydia (intracellulaires obligatoires), traitées par macrolides ou cyclines.",
+      "gram": "Non colorables au Gram",
+      "morphologie": "MYCOPLASMA PNEUMONIAE : bactérie SANS PAROI (pas de coloration de Gram), difficile à identifier, culture difficile sur milieu spécifique au cholestérol (6-20 j). CHLAMYDIA : bactérie INTRACELLULAIRE OBLIGATOIRE (C. pneumoniae et C. psittaci impossibles à cultiver en routine), recherche d'inclusions intracytoplasmiques. Diagnostic privilégié : PCR (kits multiplex) ; sérologie (ELISA IgM chez l'enfant/adolescent).",
+      "habitat": "M. pneumoniae : pic en début d'hiver, adultes jeunes et adolescents. CHLAMYDIA : C. pneumoniae (strictement humain, transmission interhumaine, infections respiratoires aiguës), C. psittaci (réservoir aviaire — perroquets, pigeons : psittacose/ornithose), C. trachomatis (strictement humain, 15 sérotypes : A-C trachome, D-K IST/conjonctivites et pneumonies du nouveau-né, L1-L3 LGV).",
+      "pathologies": "Pneumopathies INTERSTITIELLES (opacité floconneuse diffuse à la radio, signes peu spécifiques). M. pneumoniae : fièvre 39 °C, toux sèche persistante, myalgies, éruptions cutanées. Chlamydia : clinique peu spécifique.",
+      "virulence": "M. pneumoniae : adhésion à l'épithélium respiratoire (absence de paroi). Chlamydia : cycle de développement intracellulaire obligatoire (corps élémentaires/réticulés).",
+      "antibiotiques": "MACROLIDES ou CYCLINES pendant 15-21 jours (les β-lactamines sont inactives : Mycoplasma sans paroi, Chlamydia intracellulaire).",
+      "resistance": "Prélèvements riches en cellules (gorge/aspiration nasopharyngée chez l'enfant, brossage bronchique/LBA — pas d'ECBC trop contaminé) ; milieux de transport 2SP. Diagnostic indirect par recherche d'anticorps spécifiques (réactions croisées, interprétation sur 2 sérums). Détection rapide multiplex (FilmArray®).",
+      "who_priority": "non classée",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    },
+    {
+      "file": "",
+      "name": "Tuberculose — Mycobacterium tuberculosis (BK)",
+      "desc": "Infection du complexe tuberculosis : granulome, nécrose caséeuse, formes pulmonaires et extra-pulmonaires. Quadrithérapie 2 mois puis bithérapie, problème des souches MDR/XDR.",
+      "gram": "Bacille acido-alcoolo-résistant (BAAR, Ziehl)",
+      "morphologie": "Mycobactéries du complexe tuberculosis (M. tuberculosis, M. bovis, M. africanum). Bacille acido-alcoolo-résistant (coloration de Ziehl-Neelsen). Diagnostic direct (expectoration/tubage), diagnostic indirect (réponse immunitaire cellulaire) : IDR à la tuberculine (lecture 72 h, induration ≥15 mm = tuberculose infection) ou tests IGRA (QuantiFERON®, T-SPOT.TB® — pas de réactivité croisée avec le BCG).",
+      "habitat": "Transmission aérienne interhumaine (1 patient non traité infecte 10-15 personnes/an). MDO. Réservoir humain. Facteurs de risque : immunodépression, malnutrition, sujet âgé, migration.",
+      "pathologies": "Physiopathologie : pas d'infection (70%) ; primo-infection (30%) → 95% guérison apparente (infection tuberculeuse latente, ITL) ; tuberculose maladie (réactivation 5%). T. PULMONAIRE : toux productive ± hémoptoïque, fièvre discrète prolongée, sueurs nocturnes, amaigrissement, asthénie ; infiltrats du hile vers l'apex, cavernes. T. MILIAIRE : forme disséminée hématogène (granulomes en grain de mil). T. EXTRA-PULMONAIRE : ganglionnaire (la + fréquente), osseuse (mal de Pott), pleurale, péricardique, neuroméningée, urogénitale.",
+      "virulence": "Pénétration → phagocytose par les macrophages alvéolaires → GRANULOME (cellules épithélioïdes) → NÉCROSE CASÉEUSE centrale ; contrôle par la réponse immunitaire cellulaire, ou ramollissement et ouverture → cavernes (dissémination).",
+      "antibiotiques": "POLYCHIMIOTHÉRAPIE 6 mois. Phase initiale (2 mois) QUADRITHÉRAPIE : isoniazide (INH) + rifampicine (RIF) + pyrazinamide (PZA) + éthambutol. Phase de continuation (4 mois) BITHÉRAPIE : INH + RIF. Toxicité : cytolyse hépatique (RIF, INH, PZA), neuropathie périphérique (INH), hyperuricémie (PZA), névrite optique (éthambutol). RIF = inducteur enzymatique, colore les liquides biologiques. Méningite tuberculeuse : 4 anti-TB 2 mois puis RIF + INH 10 mois (12 mois au total).",
+      "resistance": "MDR-TB : résistance au moins à la rifampicine ET à l'INH (1,7% des nouveaux cas, 27% des déjà traités). XDR-TB (ultrarésistante) : R à une FQ + à un injectable de 2ᵉ ligne (capréomycine, kanamycine, amikacine). PRÉVENTION : MDO, vaccin BCG (vivant atténué, non obligatoire, recommandé personnels de santé et enfants à risque), antibioprophylaxie des sujets contact.",
+      "who_priority": "élevée",
+      "ext_apis": [
+        "gbif",
+        "europepmc"
+      ]
+    }
+  ]
+}

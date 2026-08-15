@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🫀 Scores Cliniques FA</title>
+<style>
+
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1e2530;--border:#30363d;
+--accent:#7ee787;--accent2:#58a6ff;--accent3:#f78166;--accent4:#d2a8ff;--accent5:#ffa657;
+--text:#e6edf3;--muted:#8b949e;--radius:10px;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:12px}
+h1{text-align:center;padding:18px 16px 6px;font-size:1.5rem;font-weight:700;
+background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{text-align:center;color:var(--muted);font-size:.82rem;margin-bottom:16px}
+.nav-wrap{overflow-x:auto;padding:0 8px;border-bottom:1px solid var(--border)}
+.nav{display:flex;gap:4px;min-width:max-content}
+.nav-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:10px 14px;
+font-size:.8rem;font-weight:600;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap}
+.nav-btn:hover{color:var(--text)}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.panels{padding:18px 8px;max-width:1100px;margin:0 auto}
+.panel{display:none}.panel.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.card-title{font-size:1rem;font-weight:700;margin-bottom:12px;color:var(--accent2)}
+label{display:block;font-size:.78rem;color:var(--muted);margin:8px 0 3px;font-weight:600}
+input[type=number],select{width:100%;background:var(--surface2);border:1px solid var(--border);
+border-radius:7px;color:var(--text);padding:8px 10px;font-size:.85rem}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.chk{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);
+border-radius:7px;padding:8px 10px;margin:5px 0;cursor:pointer;font-size:.82rem}
+.chk input{width:16px;height:16px;accent-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.result{background:var(--surface2);border-radius:8px;padding:14px 16px;margin-top:12px;font-size:.85rem;line-height:1.7}
+.result .key{color:var(--accent4);font-weight:700}
+.bigscore{font-size:2.2rem;font-weight:800;text-align:center;margin:6px 0}
+.badge{display:inline-block;border-radius:20px;padding:4px 14px;font-size:.8rem;font-weight:700;margin-top:6px}
+.range-val{display:inline-block;background:var(--surface2);border-radius:4px;padding:1px 8px;
+font-size:.8rem;color:var(--accent5);font-weight:700;margin-left:8px}
+canvas{background:#111;border-radius:8px;width:100%;display:block;margin-top:8px}
+.note{font-size:.72rem;color:var(--muted);margin-top:10px;line-height:1.5}
+.srz{display:flex;gap:6px;margin-top:10px}
+.srz>div{flex:1;text-align:center;padding:8px;border-radius:7px;font-weight:700;font-size:.85rem}
+
+</style>
+</head>
+<body>
+<h1>🫀 Scores Cliniques FA</h1>
+<div class="grid2">
+  <div class="card">
+   <div class="card-title">🫀 CHA₂DS₂-VASc (risque thrombotique FA)</div>
+   <label class="chk"><input type="checkbox" id="c-chf" onchange="cha()"> Insuffisance cardiaque / dysfonction VG (+1)</label>
+   <label class="chk"><input type="checkbox" id="c-htn" onchange="cha()"> Hypertension (+1)</label>
+   <label class="chk"><input type="checkbox" id="c-age75" onchange="cha()"> Âge ≥ 75 ans (+2)</label>
+   <label class="chk"><input type="checkbox" id="c-dm" onchange="cha()"> Diabète (+1)</label>
+   <label class="chk"><input type="checkbox" id="c-stroke" onchange="cha()"> AVC/AIT/embolie antérieurs (+2)</label>
+   <label class="chk"><input type="checkbox" id="c-vasc" onchange="cha()"> Maladie vasculaire (+1)</label>
+   <label class="chk"><input type="checkbox" id="c-age65" onchange="cha()"> Âge 65–74 ans (+1)</label>
+   <label class="chk"><input type="checkbox" id="c-female" onchange="cha()"> Sexe féminin (+1)</label>
+   <div class="bigscore" id="cha-score">0</div>
+   <div style="text-align:center"><span class="badge" id="cha-badge"></span></div>
+   <div class="result" id="cha-res"></div>
+  </div>
+  <div class="card">
+   <div class="card-title">🩸 HAS-BLED (risque hémorragique)</div>
+   <label class="chk"><input type="checkbox" id="b-htn" onchange="bled()"> HTA non contrôlée (PAS >160) (+1)</label>
+   <label class="chk"><input type="checkbox" id="b-renal" onchange="bled()"> Insuffisance rénale (+1)</label>
+   <label class="chk"><input type="checkbox" id="b-liver" onchange="bled()"> Insuffisance hépatique (+1)</label>
+   <label class="chk"><input type="checkbox" id="b-stroke" onchange="bled()"> ATCD d'AVC (+1)</label>
+   <label class="chk"><input type="checkbox" id="b-bleed" onchange="bled()"> ATCD/prédisposition hémorragique (+1)</label>
+   <label class="chk"><input type="checkbox" id="b-inr" onchange="bled()"> INR labile (si AVK) (+1)</label>
+   <label class="chk"><input type="checkbox" id="b-age" onchange="bled()"> Âge > 65 ans (+1)</label>
+   <label class="chk"><input type="checkbox" id="b-drug" onchange="bled()"> Médicaments (AINS/antiagrégants) (+1)</label>
+   <label class="chk"><input type="checkbox" id="b-alcohol" onchange="bled()"> Alcool (≥8 verres/sem) (+1)</label>
+   <div class="bigscore" id="bled-score">0</div>
+   <div style="text-align:center"><span class="badge" id="bled-badge"></span></div>
+   <div class="result" id="bled-res"></div>
+  </div>
+ </div>
+ <div class="card">
+  <div class="card-title">💊 Calculateur de doses</div>
+  <div class="grid2">
+   <div>
+    <label>Poids (kg)</label><input type="number" id="d-poids" value="70" oninput="dose()">
+    <label>Taille (cm)</label><input type="number" id="d-taille" value="170" oninput="dose()">
+    <label>Dose prescrite (mg/kg)</label><input type="number" id="d-mgkg" value="10" step="0.5" oninput="dose()">
+   </div>
+   <div>
+    <label>Créatininémie (µmol/L) — pour Cockcroft</label><input type="number" id="d-creat" value="80" oninput="dose()">
+    <label>Âge (ans)</label><input type="number" id="d-age" value="50" oninput="dose()">
+    <label>Sexe</label><select id="d-sexe" onchange="dose()"><option value="M">Homme</option><option value="F">Femme</option></select>
+   </div>
+  </div>
+  <div class="result" id="dose-res"></div>
+  <div class="note">BSA = formule de Mosteller : √(taille×poids/3600). Cockcroft-Gault : ClCr = (140−âge)×poids×k/créat (k=1,23 H / 1,04 F, créat en µmol/L).</div>
+ </div>
+<script>
+function rv(id,dv,dec){var r=document.getElementById(id),e=document.getElementById(dv);if(r&&e)e.textContent=parseFloat(r.value).toFixed(dec);}
+function cha(){
+ var pts={'c-chf':1,'c-htn':1,'c-age75':2,'c-dm':1,'c-stroke':2,'c-vasc':1,'c-age65':1,'c-female':1};
+ var s=0;for(var k in pts){if(document.getElementById(k).checked)s+=pts[k];}
+ document.getElementById('cha-score').textContent=s;
+ var risk=['0','1.3','2.2','3.2','4.0','6.7','9.8','9.6','6.7','15.2'][Math.min(s,9)];
+ var b=document.getElementById('cha-badge'),r=document.getElementById('cha-res');
+ var col,txt;
+ if(s===0){col='#13351b';txt='Risque faible';}
+ else if(s===1){col='#3a3414';txt='Risque intermédiaire';}
+ else{col='#3a1414';txt='Risque élevé';}
+ b.style.background=col;b.textContent=txt+' — risque AVC ~'+risk+'%/an';
+ if(s===0)r.innerHTML='<span class="key">Anticoagulation :</span> non recommandée (homme) / à discuter.';
+ else if(s===1)r.innerHTML='<span class="key">Anticoagulation :</span> à considérer (homme score 1).';
+ else r.innerHTML='<span class="key">Anticoagulation orale recommandée</span> (sauf contre-indication).';
+}
+// ---- HAS-BLED ----
+function bled(){
+ var ids=['b-htn','b-renal','b-liver','b-stroke','b-bleed','b-inr','b-age','b-drug','b-alcohol'];
+ var s=0;ids.forEach(function(k){if(document.getElementById(k).checked)s++;});
+ document.getElementById('bled-score').textContent=s;
+ var b=document.getElementById('bled-badge'),r=document.getElementById('bled-res');
+ var col,txt;
+ if(s<=2){col='#13351b';txt='Risque faible';}
+ else{col='#3a1414';txt='Risque élevé (≥3)';}
+ b.style.background=col;b.textContent=txt;
+ if(s>=3)r.innerHTML='<span class="key">Score ≥ 3 :</span> prudence, corriger les facteurs réversibles (HTA, INR, médicaments). N\'EST PAS une contre-indication à l\'anticoagulation.';
+ else r.innerHTML='<span class="key">Risque hémorragique acceptable.</span> Réévaluer régulièrement les facteurs.';
+}
+// ---- DOSES ----
+function dose(){
+ var p=+document.getElementById('d-poids').value,t=+document.getElementById('d-taille').value,
+ mgkg=+document.getElementById('d-mgkg').value,cr=+document.getElementById('d-creat').value,
+ age=+document.getElementById('d-age').value,sex=document.getElementById('d-sexe').value;
+ var bsa=Math.sqrt(t*p/3600);
+ var k=(sex==='M')?1.23:1.04;
+ var clcr=cr>0?((140-age)*p*k/cr):0;
+ var d=p*mgkg;
+ document.getElementById('dose-res').innerHTML=
+  '<span class="key">Dose totale :</span> '+d.toFixed(0)+' mg ('+mgkg+' mg/kg × '+p+' kg)<br>'+
+  '<span class="key">Surface corporelle (Mosteller) :</span> '+bsa.toFixed(2)+' m²<br>'+
+  '<span class="key">Clairance créatinine (Cockcroft) :</span> '+clcr.toFixed(0)+' mL/min'+
+  (clcr<30?' — <span style="color:var(--accent3)">IR sévère : adapter la posologie</span>':clcr<60?' — <span style="color:var(--accent5)">IR modérée</span>':'');
+}
+// ---- TITRAGE ----
+cha();
+</script>
+</body>
+</html>

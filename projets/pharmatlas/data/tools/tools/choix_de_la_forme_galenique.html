@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Choix de la forme galénique</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --teal:#3ab09e;--teal-d:#2a8a7a;--teal-l:rgba(58,176,158,.12);
+  --bg:#f4f5f2;--white:#fff;--text:#1a1a18;--muted:#888;--border:#e0e0dc;
+  --red:#e53935;--orange:#f57c00;--green:#2e7d32;--blue:#1565c0;--purple:#6a1b9a;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Header ── */
+header{background:var(--white);border-bottom:2px solid var(--teal);padding:14px 24px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--teal)}
+.logo-sub{font-size:11px;color:var(--muted);font-weight:500;letter-spacing:.5px}
+.restart-btn{margin-left:auto;background:var(--teal-l);color:var(--teal);border:1px solid rgba(58,176,158,.3);border-radius:8px;padding:7px 16px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
+.restart-btn:hover{background:rgba(58,176,158,.22)}
+
+/* ── Progress ── */
+.progress-bar{height:3px;background:var(--border);flex-shrink:0}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--teal),#27ae60);transition:width .4s cubic-bezier(.4,0,.2,1)}
+
+/* ── Main layout ── */
+main{flex:1;display:flex;gap:0;overflow:hidden}
+
+/* ── Breadcrumb / chemin gauche ── */
+.path-panel{width:220px;background:var(--white);border-right:1px solid var(--border);padding:16px 12px;overflow-y:auto;flex-shrink:0}
+.path-title{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
+.path-step{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;opacity:.45;transition:opacity .2s}
+.path-step.done{opacity:1}
+.path-step.done .step-dot{background:var(--teal)}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0;margin-top:4px}
+.step-text{font-size:11px;line-height:1.4;color:var(--text)}
+.step-answer{font-size:10px;color:var(--teal);font-weight:600;margin-top:1px}
+
+/* ── Question zone ── */
+.question-zone{flex:1;padding:32px 40px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+
+.q-context{font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:1.5px;display:flex;align-items:center;gap:8px}
+.q-context::before{content:'';width:18px;height:2px;background:var(--teal)}
+
+.q-text{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;line-height:1.2;color:var(--text);max-width:560px}
+
+.q-hint{font-size:12px;color:var(--muted);line-height:1.6;max-width:500px;background:var(--bg);border-radius:8px;padding:10px 14px;border-left:3px solid var(--border)}
+
+/* Options grid */
+.options-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;max-width:700px}
+
+.option-btn{background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:16px 18px;cursor:pointer;text-align:left;transition:all .18s;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden}
+.option-btn::before{content:'';position:absolute;left:0;top:0;bottom:0;width:0;background:var(--teal);transition:width .2s;border-radius:12px 0 0 12px}
+.option-btn:hover{border-color:var(--teal);transform:translateY(-2px);box-shadow:0 6px 20px rgba(58,176,158,.15)}
+.option-btn:hover::before{width:4px}
+.option-btn.selected{border-color:var(--teal);background:var(--teal-l)}
+.option-btn.selected::before{width:4px;background:var(--teal)}
+.opt-icon{font-size:22px;line-height:1}
+.opt-label{font-size:13px;font-weight:700;color:var(--text)}
+.opt-desc{font-size:10.5px;color:var(--muted);line-height:1.4}
+
+/* ── Résultat ── */
+.result-zone{flex:1;padding:32px 40px;overflow-y:auto}
+.result-header{margin-bottom:24px}
+.result-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.5px;margin-bottom:12px}
+.result-title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:1.5px;color:var(--text);margin-bottom:6px}
+.result-subtitle{font-size:13px;color:var(--muted);line-height:1.6;max-width:560px}
+
+.forms-list{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.form-card{background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:16px 20px;display:flex;align-items:flex-start;gap:14px;transition:border-color .2s}
+.form-card.primary{border-color:var(--teal);background:linear-gradient(135deg,rgba(58,176,158,.06) 0%,var(--white) 100%)}
+.form-card.secondary{opacity:.85}
+.form-card.avoid{border-color:var(--red);background:rgba(229,57,53,.04)}
+.form-rank{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;margin-top:2px}
+.rank-1{background:var(--teal);color:#fff}
+.rank-2{background:#e0f2ef;color:var(--teal-d)}
+.rank-3{background:var(--bg);color:var(--muted)}
+.rank-avoid{background:rgba(229,57,53,.1);color:var(--red)}
+.form-body{flex:1}
+.form-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px}
+.form-voie{font-size:10px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px}
+.form-why{font-size:12px;color:var(--muted);line-height:1.5}
+.form-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.form-tag{font-size:9.5px;font-weight:600;padding:2px 8px;border-radius:10px;background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+.form-tag.warn{background:rgba(245,124,0,.1);color:var(--orange);border-color:rgba(245,124,0,.3)}
+.form-tag.ok{background:rgba(46,125,50,.1);color:var(--green);border-color:rgba(46,125,50,.3)}
+.form-tag.info{background:rgba(21,101,192,.1);color:var(--blue);border-color:rgba(21,101,192,.3)}
+
+/* Alertes cliniques */
+.alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.alert{border-radius:8px;padding:10px 14px;font-size:12px;line-height:1.6;display:flex;gap:10px;align-items:flex-start}
+.alert.danger{background:#fff5f5;border:1px solid rgba(229,57,53,.3);color:#b71c1c}
+.alert.warning{background:#fffbf0;border:1px solid rgba(245,124,0,.3);color:#bf360c}
+.alert.info{background:#f0f8ff;border:1px solid rgba(21,101,192,.25);color:#0d47a1}
+.alert-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+
+/* Nouvelle question */
+.new-q-btn{background:var(--teal);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:background .2s;display:inline-flex;align-items:center;gap:8px}
+.new-q-btn:hover{background:var(--teal-d)}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.q-anim{animation:fadeUp .3s ease forwards}
+.option-btn{animation:fadeUp .25s ease forwards}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:rgba(58,176,158,.3);border-radius:4px}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">💊 PharmAtlas — Galénique</div>
+    <div class="logo-sub">Aide au choix de la forme galénique</div>
+  </div>
+  <button class="restart-btn" onclick="restart()">↺ Recommencer</button>
+</header>
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+<main id="mainArea">
+  <div class="path-panel" id="pathPanel">
+    <div class="path-title">Chemin de décision</div>
+    <div id="pathSteps"></div>
+  </div>
+  <div class="question-zone" id="questionZone"></div>
+</main>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  ARBRE DE DÉCISION — DONNÉES
+// ═══════════════════════════════════════════════════════
+
+const TREE = {
+
+  // ── Q1 : Situation clinique principale ──────────────
+  q1: {
+    id:'q1',
+    context:'Étape 1 / Situation clinique',
+    question:'Quelle est la situation clinique principale ?',
+    hint:'Le contexte conditionne les contraintes prioritaires de la forme galénique.',
+    options:[
+      {icon:'🚨',label:'Urgence / Réanimation',    desc:'Effet rapide impératif, délai minimal',      next:'q_urgence'},
+      {icon:'👶',label:'Pédiatrie',                desc:'Nourrisson, enfant, adaptation posologique',  next:'q_pediatrie'},
+      {icon:'👴',label:'Personne âgée',            desc:'Polypharmacie, fragilité, observance',        next:'q_personne_agee'},
+      {icon:'🤢',label:'Vomissements / Dysphagie', desc:'Voie orale impossible ou limitée',            next:'q_dysphagie'},
+      {icon:'🏥',label:'Hospitalisation',          desc:'Patient hospitalisé, voies spéciales',        next:'q_hospit'},
+      {icon:'🏠',label:'Ambulatoire chronique',    desc:'Traitement longue durée, autonomie patient',  next:'q_ambulatoire'},
+      {icon:'🔬',label:'Effet local ciblé',        desc:'Peau, œil, poumon, vagin, rectum…',           next:'q_local'},
+    ]
+  },
+
+  // ── Urgence ─────────────────────────────────────────
+  q_urgence:{
+    context:'Urgence — Voie d\'administration',
+    question:'Quel accès est disponible ?',
+    hint:'En urgence, la vitesse d\'action prime. La voie IV est le gold standard.',
+    options:[
+      {icon:'💉',label:'Voie IV disponible',        desc:'Cathéter en place ou posable rapidement', next:'res_urgence_iv'},
+      {icon:'💊',label:'Voie orale encore possible',desc:'Patient conscient et coopérant',           next:'res_urgence_sl'},
+      {icon:'🩹',label:'Voie IM / SC',              desc:'Injection sans accès veineux',             next:'res_urgence_im'},
+      {icon:'💨',label:'Inhalation',                desc:'Crise d\'asthme, bronchospasme',            next:'res_urgence_inhale'},
+    ]
+  },
+
+  // ── Pédiatrie ────────────────────────────────────────
+  q_pediatrie:{
+    context:'Pédiatrie — Âge',
+    question:'Quel est l\'âge de l\'enfant ?',
+    options:[
+      {icon:'🍼',label:'Nourrisson < 2 ans',   desc:'Très faible volume, liquides seulement', next:'q_ped_nourrisson'},
+      {icon:'🧒',label:'Enfant 2 – 5 ans',     desc:'Formes liquides ou dispersibles',        next:'q_ped_25'},
+      {icon:'👦',label:'Enfant 6 – 11 ans',    desc:'Peut avaler certaines formes solides',   next:'q_ped_611'},
+      {icon:'👧',label:'Adolescent ≥ 12 ans',  desc:'Équivalent adulte avec adaptation de dose', next:'q_ped_ado'},
+    ]
+  },
+  q_ped_nourrisson:{
+    context:'Pédiatrie — Nourrisson',
+    question:'Quelle est la voie cible ?',
+    options:[
+      {icon:'👄',label:'Voie orale',      desc:'Sirop, gouttes, poudre pour suspension', next:'res_ped_nourrisson_oral'},
+      {icon:'🔥',label:'Voie rectale',    desc:'Suppositoire si vomissements',            next:'res_ped_nourrisson_rectal'},
+      {icon:'💉',label:'Voie injectable', desc:'Hospitalisation uniquement',               next:'res_injectable_nourrisson'},
+    ]
+  },
+  q_ped_25:{
+    context:'Pédiatrie — 2 à 5 ans',
+    question:'L\'enfant accepte-t-il les formes liquides ?',
+    options:[
+      {icon:'✅',label:'Oui',   desc:'Sirop, suspension, solution',              next:'res_ped_25_oui'},
+      {icon:'❌',label:'Non',   desc:'Refus, difficultés, traitement spécifique', next:'res_ped_25_non'},
+    ]
+  },
+  q_ped_611:{
+    context:'Pédiatrie — 6 à 11 ans',
+    question:'L\'enfant peut-il avaler des comprimés ?',
+    options:[
+      {icon:'✅',label:'Oui',                desc:'Capacité de déglutition confirmée',           next:'res_ped_611_oui'},
+      {icon:'❌',label:'Non / Incertain',    desc:'Privilégier formes sans déglutition complète', next:'res_ped_611_non'},
+    ]
+  },
+  q_ped_ado:{
+    context:'Pédiatrie — Adolescent',
+    question:'Y a-t-il une contrainte particulière ?',
+    options:[
+      {icon:'💊',label:'Aucune',          desc:'Traitement comme adulte, adaptation dose',   next:'res_ped_ado_standard'},
+      {icon:'😷',label:'Observance',      desc:'Refus de traitement, goût, fréquence',       next:'res_ped_ado_observance'},
+      {icon:'🤢',label:'Vomissements',    desc:'Voie orale temporairement impossible',        next:'res_ped_ado_vomit'},
+    ]
+  },
+
+  // ── Personne âgée ────────────────────────────────────
+  q_personne_agee:{
+    context:'Personne âgée — Difficulté principale',
+    question:'Quelle est la principale contrainte ?',
+    options:[
+      {icon:'😮',label:'Dysphagie',          desc:'Difficultés à avaler les comprimés/gélules',   next:'q_dysphagie'},
+      {icon:'🧠',label:'Troubles cognitifs', desc:'Observance, simplification du traitement',     next:'res_pa_cognitif'},
+      {icon:'✋',label:'Dextérité réduite',  desc:'Difficultés à manipuler les formes complexes', next:'res_pa_dexterite'},
+      {icon:'💊',label:'Polypharmacie',      desc:'Réduction du nombre de prises',                next:'res_pa_poly'},
+    ]
+  },
+
+  // ── Dysphagie ────────────────────────────────────────
+  q_dysphagie:{
+    context:'Dysphagie / Voie orale impossible',
+    question:'Quel est le niveau de dysphagie ?',
+    hint:'Le degré de dysphagie conditionne les alternatives acceptables.',
+    options:[
+      {icon:'⚠️',label:'Légère',      desc:'Difficulté avec les formes volumineuses, comprimés normaux',  next:'q_dysph_degre_leger'},
+      {icon:'🚫',label:'Sévère',      desc:'Impossible d\'avaler une gélule ou comprimé',                next:'q_dysph_degre_severe'},
+      {icon:'💧',label:'Vomissements',desc:'Régurgitation systématique, voie orale inutilisable',         next:'q_dysph_vomit'},
+    ]
+  },
+  q_dysph_degre_leger:{
+    context:'Dysphagie légère',
+    question:'Quelle alternative orale est acceptable ?',
+    options:[
+      {icon:'💧',label:'Formes liquides',          desc:'Sirop, solution buvable, suspension',           next:'res_dysph_liquide'},
+      {icon:'✨',label:'Orodispersible (ODT)',      desc:'Se dissout sur la langue sans eau',             next:'res_dysph_odt'},
+      {icon:'❄️',label:'Lyophilisat oral',         desc:'Fond instantanément dans la bouche',            next:'res_dysph_lyoph'},
+    ]
+  },
+  q_dysph_degre_severe:{
+    context:'Dysphagie sévère',
+    question:'Quelle voie alternative est envisageable ?',
+    options:[
+      {icon:'🔥',label:'Voie rectale',              desc:'Suppositoire, lavement',                    next:'res_dysph_rectal'},
+      {icon:'💉',label:'Voie injectable',           desc:'SC, IM ou IV selon disponibilité',           next:'res_dysph_inject'},
+      {icon:'🩹',label:'Voie transdermique',        desc:'Patch si molécule disponible',               next:'res_dysph_patch'},
+      {icon:'👄',label:'Voie sublinguale',          desc:'Comprimé ou spray sous la langue',           next:'res_dysph_sl'},
+    ]
+  },
+  q_dysph_vomit:{
+    context:'Vomissements / Voie orale impossible',
+    question:'Durée prévisible des vomissements ?',
+    options:[
+      {icon:'⏱',label:'Court terme (< 24h)',       desc:'Anti-émétiques, attendre',         next:'res_vomit_court'},
+      {icon:'📅',label:'Prolongée (> 24h)',         desc:'Substitution de voie nécessaire',   next:'res_vomit_long'},
+    ]
+  },
+
+  // ── Hospitalisation ──────────────────────────────────
+  q_hospit:{
+    context:'Hospitalisation',
+    question:'Quel est l\'objectif thérapeutique ?',
+    options:[
+      {icon:'⚡',label:'Action immédiate',    desc:'Perfusion IV, bolus',                    next:'res_hospit_iv'},
+      {icon:'📅',label:'Traitement prolongé', desc:'Relais PO dès possible',                 next:'res_hospit_relay'},
+      {icon:'🎯',label:'Action locale',       desc:'Aérosol, topique, instillation',         next:'q_local'},
+      {icon:'😴',label:'Anesthésie / Sédation',desc:'Formes IV, inhalées, IR',              next:'res_hospit_anesthesie'},
+    ]
+  },
+
+  // ── Ambulatoire ──────────────────────────────────────
+  q_ambulatoire:{
+    context:'Ambulatoire — Priorité',
+    question:'Quelle est la priorité pour ce patient ?',
+    options:[
+      {icon:'📅',label:'Observance / Simplicité',   desc:'Réduction du nombre de prises',           next:'res_ambul_observance'},
+      {icon:'🎯',label:'Efficacité maximale',        desc:'Biodisponibilité et rapidité d\'action',  next:'res_ambul_efficacite'},
+      {icon:'💰',label:'Tolérance digestive',        desc:'Problèmes gastro-intestinaux avec la PO', next:'res_ambul_digestif'},
+      {icon:'💊',label:'Standard sans contrainte',   desc:'Pas de particularité spécifique',         next:'res_ambul_standard'},
+    ]
+  },
+
+  // ── Local ────────────────────────────────────────────
+  q_local:{
+    context:'Effet local — Zone cible',
+    question:'Quelle zone doit être traitée ?',
+    options:[
+      {icon:'👁',label:'Œil',                    desc:'Collyre, pommade, insert ophtalmique',    next:'res_local_oeil'},
+      {icon:'👂',label:'Oreille / Nez / Gorge',  desc:'Gouttes, spray, solution nasale/auriculaire', next:'res_local_orl'},
+      {icon:'✋',label:'Peau',                    desc:'Crème, gel, pommade, lotion, mousse',     next:'res_local_peau'},
+      {icon:'💨',label:'Poumons / Bronches',      desc:'Inhalateur, nébuliseur, aérosol',         next:'res_local_pulmonaire'},
+      {icon:'🔥',label:'Rectum',                 desc:'Suppositoire, lavement, pommade rectale', next:'res_local_rectum'},
+      {icon:'🌿',label:'Vagin',                  desc:'Ovule, crème, comprimé vaginal',          next:'res_local_vagin'},
+    ]
+  },
+
+  // ═══════════════════════════════════════════════════════
+  //  RÉSULTATS
+  // ═══════════════════════════════════════════════════════
+
+  res_urgence_iv:{
+    type:'result',
+    badge:{icon:'🚨',label:'URGENCE',color:'#b71c1c',bg:'#fff5f5'},
+    title:'Solution injectable IV',
+    subtitle:'La voie intraveineuse est le gold standard en urgence : biodisponibilité 100%, action en secondes à minutes.',
+    forms:[
+      {rank:1,name:'Solution injectable IV (bolus/perfusion)',voie:'Voie Injectable',why:'Biodisponibilité 100%, action immédiate, contrôle précis de la dose et du débit',tags:['Effet immédiat','Biodispo 100%','Gold standard']},
+      {rank:2,name:'Solution pour perfusion IV continue',voie:'Voie Injectable',why:'Pour maintenir un taux plasmatique stable (sédation, antibiotiques, amines)',tags:['Taux stable','Hôpital','Réa']},
+    ],
+    alerts:[
+      {type:'danger',text:'Ne jamais injecter une suspension par voie IV (risque d\'embolie).'},
+      {type:'warning',text:'Vérifier compatibilité des médicaments avant mélange en Y.'},
+      {type:'info',text:'Préparer sous hotte stérile selon protocole institutionnel.'},
+    ]
+  },
+
+  res_urgence_sl:{
+    type:'result',
+    badge:{icon:'⚡',label:'ACTION RAPIDE',color:'#1565c0',bg:'#e3f2fd'},
+    title:'Voie sublinguale ou buccale',
+    subtitle:'Absorption directe par la muqueuse sublinguale très vascularisée. Contournement du premier passage hépatique.',
+    forms:[
+      {rank:1,name:'Comprimé sublingual',voie:'Voie Buccale',why:'Effet en 1–3 min (trinitrine, apomorphine). Pas besoin d\'eau.',tags:['Très rapide','Sans eau','Réversible si recraché']},
+      {rank:2,name:'Spray sublingual',voie:'Voie Buccale',why:'Encore plus rapide que le comprimé. Trinitrine, buprénorphine.',tags:['Rapide','Praticité']},
+      {rank:3,name:'Lyophilisat oral (ODT)',voie:'Voie Buccale',why:'Dissolution en < 30s sur la langue. Utilisable si dysphagie associée.',tags:['Dissolution rapide','Confort']},
+    ],
+    alerts:[
+      {type:'info',text:'Ne pas avaler le comprimé — maintenir sous la langue jusqu\'à dissolution complète.'},
+      {type:'warning',text:'Surveillance tension artérielle après trinitrine sublinguale.'},
+    ]
+  },
+
+  res_urgence_im:{
+    type:'result',
+    badge:{icon:'💉',label:'INJECTION IM/SC',color:'#6a1b9a',bg:'#f3e5f5'},
+    title:'Injection intramusculaire ou sous-cutanée',
+    subtitle:'Alternative à l\'IV quand l\'accès veineux est impossible. Absorption en 15–30 min pour l\'IM.',
+    forms:[
+      {rank:1,name:'Solution injectable IM',voie:'Voie Injectable',why:'Absorption rapide (15–30 min). Adrénaline IM dans l\'anaphylaxie.',tags:['Rapide','Sans VVP']},
+      {rank:2,name:'Solution injectable SC',voie:'Voie Injectable',why:'Insuline, héparine, morphine. Absorption plus lente que IM.',tags:['Moins douloureux','Autoinjection possible']},
+    ],
+    alerts:[
+      {type:'danger',text:'Ne jamais injecter une suspension IM dans une veine.'},
+      {type:'warning',text:'Vérifier la zone d\'injection et alterner les sites.'},
+    ]
+  },
+
+  res_urgence_inhale:{
+    type:'result',
+    badge:{icon:'💨',label:'INHALATION',color:'#0d47a1',bg:'#e3f2fd'},
+    title:'Aérosol-doseur ou nébulisation',
+    subtitle:'Traitement de choix des crises bronchiques. Action locale rapide avec effets systémiques limités.',
+    forms:[
+      {rank:1,name:'pMDI + chambre d\'inhalation',voie:'Voie Pulmonaire',why:'Aussi efficace qu\'un nébuliseur en crise légère à modérée. Plus rapide à mettre en place.',tags:['Rapide','Portable','Chambre obligatoire en crise']},
+      {rank:2,name:'Solution pour nébulisation',voie:'Voie Pulmonaire',why:'Préférable en crise sévère (pas d\'effort inspiratoire requis). Salbutamol, ipratropium.',tags:['Crise sévère','Masque possible','Sans effort']},
+    ],
+    alerts:[
+      {type:'info',text:'Préférer la chambre d\'inhalation au pMDI seul en crise : dépôt bronchique supérieur.'},
+    ]
+  },
+
+  res_ped_nourrisson_oral:{
+    type:'result',
+    badge:{icon:'🍼',label:'NOURRISSON — ORAL',color:'#2e7d32',bg:'#e8f5e9'},
+    title:'Gouttes ou suspension buvable',
+    subtitle:'Le nourrisson ne peut avaler aucune forme solide. Les formes liquides concentrées (gouttes) ou les suspensions sont la référence.',
+    forms:[
+      {rank:1,name:'Gouttes buvables',voie:'Voie Orale',why:'Volume minimal, concentration élevée, dosage précis au compte-gouttes.',tags:['Volume minimal','Dosage précis','Vitamine D, Fer']},
+      {rank:2,name:'Suspension buvable pédiatrique',voie:'Voie Orale',why:'Antibiotiques, antipyrétiques. Agiter avant usage. Réfrigérer après reconstitution.',tags:['Antibiotiques','À agiter','Saveur adaptée']},
+      {rank:3,name:'Solution buvable en pipette doseuse',voie:'Voie Orale',why:'Paracétamol, ibuprofène. Dose en mg/kg mesurée avec précision.',tags:['Sécurité dosage','Facilité']},
+    ],
+    alerts:[
+      {type:'danger',text:'Ne jamais donner de formes solides (comprimés, gélules) avant 6 ans.'},
+      {type:'warning',text:'Vérifier l\'absence de conservateurs toxiques (alcool, parabènes) pour les nourrissons.'},
+      {type:'info',text:'Adapter la dose en mg/kg. Utiliser toujours le dispositif de mesure fourni.'},
+    ]
+  },
+
+  res_ped_nourrisson_rectal:{
+    type:'result',
+    badge:{icon:'🔥',label:'NOURRISSON — RECTAL',color:'#6a1b9a',bg:'#ede7f6'},
+    title:'Suppositoire pédiatrique',
+    subtitle:'Alternative si vomissements ou refus de la voie orale. Absorption variable mais utile en urgence.',
+    forms:[
+      {rank:1,name:'Suppositoire pédiatrique',voie:'Voie Rectale',why:'Paracétamol, diazépam. Dosages nourrisson disponibles (80mg, 150mg).',tags:['Si vomissements','Fièvre','Convulsions fébriles']},
+    ],
+    alerts:[
+      {type:'warning',text:'Absorption érratique. Ne pas utiliser en relais systématique de la voie orale.'},
+      {type:'info',text:'Conserver au réfrigérateur. Introduire côté pointu en premier.'},
+    ]
+  },
+
+  res_injectable_nourrisson:{
+    type:'result',
+    badge:{icon:'💉',label:'INJECTABLE PÉDIATRIQUE',color:'#b71c1c',bg:'#fff5f5'},
+    title:'Solution injectable pédiatrique',
+    subtitle:'Réservé à l\'hospitalisation. Dilutions et débits adaptés au poids et à l\'âge.',
+    forms:[
+      {rank:1,name:'Solution injectable IV (pédiatrique)',voie:'Voie Injectable',why:'Volumes adaptés, concentrations diluées. Pompe à seringue systématique.',tags:['Hôpital','Pompe seringue','Surveillance continue']},
+    ],
+    alerts:[
+      {type:'danger',text:'Calcul de dose en mg/kg impératif. Toujours double-vérification infirmier/médecin.'},
+      {type:'info',text:'Voie intra-osseuse en urgence si abord veineux impossible.'},
+    ]
+  },
+
+  res_ped_25_oui:{
+    type:'result',
+    badge:{icon:'🧒',label:'ENFANT 2–5 ANS',color:'#2e7d32',bg:'#e8f5e9'},
+    title:'Suspension ou sirop buvable',
+    subtitle:'Les formes liquides restent préférables. Posologie en mg/kg avec pipette ou cuillère-mesure graduée.',
+    forms:[
+      {rank:1,name:'Suspension buvable',voie:'Voie Orale',why:'Référence : antibiotiques, antipyrétiques. Aromatisation améliorant l\'acceptabilité.',tags:['À agiter','Saveur','Dosage précis']},
+      {rank:2,name:'Sirop',voie:'Voie Orale',why:'Palatabilité excellente. Vérifier absence d\'alcool et teneur en sucre.',tags:['Goût sucré','Acceptabilité','Vérifier alcool']},
+      {rank:3,name:'Granulés pour suspension',voie:'Voie Orale',why:'Reconstitution facile. Transport avant ouverture simplifié.',tags:['Stabilité','Reconstitution']},
+    ],
+    alerts:[
+      {type:'warning',text:'Sirop : vérifier absence d\'alcool et teneur en sucres pour les enfants.'},
+      {type:'info',text:'Toujours utiliser le dispositif de mesure fourni avec le médicament.'},
+    ]
+  },
+
+  res_ped_25_non:{
+    type:'result',
+    badge:{icon:'🧒',label:'ENFANT 2–5 ANS',color:'#f57c00',bg:'#fff3e0'},
+    title:'Formes dispersibles ou rectales',
+    subtitle:'Alternatives si refus des formes liquides.',
+    forms:[
+      {rank:1,name:'Comprimé orodispersible (ODT)',voie:'Voie Orale',why:'Se dissout sur la langue sans eau. Acceptabilité souvent meilleure que le sirop.',tags:['Sans eau','Texture fondante']},
+      {rank:2,name:'Suppositoire',voie:'Voie Rectale',why:'Si refus total de la voie orale. Paracétamol, diazépam.',tags:['Dernier recours','Absorption variable']},
+    ],
+    alerts:[
+      {type:'info',text:'L\'ODT peut être mélangé à une cuillère d\'eau ou d\'aliment mou si nécessaire.'},
+    ]
+  },
+
+  res_ped_611_oui:{
+    type:'result',
+    badge:{icon:'👦',label:'ENFANT 6–11 ANS',color:'#1565c0',bg:'#e3f2fd'},
+    title:'Comprimés pelliculés ou gélules',
+    subtitle:'L\'enfant peut avaler les formes solides standard. Vérifier la taille de la forme.',
+    forms:[
+      {rank:1,name:'Comprimé pelliculé sécable',voie:'Voie Orale',why:'Dosage adaptable par sécage si demi-dose nécessaire. Surface lisse facilitant la déglutition.',tags:['Sécable','Dosage flexible']},
+      {rank:2,name:'Gélule',voie:'Voie Orale',why:'Masque le goût. Certaines peuvent être ouvertes et mélangées à un aliment (vérifier RCP).',tags:['Goût masqué','Ouverture possible']},
+      {rank:3,name:'Suspension buvable',voie:'Voie Orale',why:'Si forme solide refusée ou dose trop petite.',tags:['Alternative liquide']},
+    ],
+    alerts:[
+      {type:'warning',text:'Ne pas ouvrir les gélules LP ou écraser les comprimés à enrobage entérique.'},
+    ]
+  },
+
+  res_ped_611_non:{
+    type:'result',
+    badge:{icon:'👦',label:'ENFANT 6–11 ANS',color:'#f57c00',bg:'#fff3e0'},
+    title:'Formes orodispersibles ou liquides',
+    subtitle:'Si l\'enfant ne peut avaler les formes solides classiques.',
+    forms:[
+      {rank:1,name:'Comprimé orodispersible (ODT)',voie:'Voie Orale',why:'Dissolution rapide sur la langue, sans eau. Très bonne acceptabilité.',tags:['Sans eau','Rapide','Confort']},
+      {rank:2,name:'Lyophilisat oral',voie:'Voie Buccale',why:'Dissolution quasi instantanée. Formes Zophren, Maxalt Lingua.',tags:['Instantané','Fragile']},
+      {rank:3,name:'Suspension buvable',voie:'Voie Orale',why:'Si ODT non disponible pour la molécule souhaitée.',tags:['Alternative']},
+    ],
+    alerts:[],
+  },
+
+  res_ped_ado_standard:{
+    type:'result',
+    badge:{icon:'👧',label:'ADOLESCENT',color:'#2e7d32',bg:'#e8f5e9'},
+    title:'Formes adultes standard',
+    subtitle:'L\'adolescent peut recevoir les formes adultes avec adaptation posologique selon le poids.',
+    forms:[
+      {rank:1,name:'Comprimé pelliculé',voie:'Voie Orale',why:'Référence. Dosage adulte ou adapté au poids.',tags:['Standard','Longue durée']},
+      {rank:2,name:'Gélule',voie:'Voie Orale',why:'Bonne tolérance. Moins bon goût masqué si ouverte.',tags:['Confort']},
+    ],
+    alerts:[{type:'info',text:'Vérifier les AMM pédiatriques : certaines molécules sont contre-indiquées avant 18 ans.'}]
+  },
+
+  res_ped_ado_observance:{
+    type:'result',
+    badge:{icon:'👧',label:'OBSERVANCE ADOLESCENT',color:'#f57c00',bg:'#fff3e0'},
+    title:'Formes à longue durée d\'action',
+    subtitle:'Réduction de la fréquence des prises pour améliorer l\'adhésion thérapeutique.',
+    forms:[
+      {rank:1,name:'Comprimé LP (libération prolongée)',voie:'Voie Orale',why:'1 prise/jour au lieu de 3. Taux plasmatique stable.',tags:['1×/j','Ne pas écraser','Compliance']},
+      {rank:2,name:'Patch transdermique',voie:'Voie Transdermique',why:'Méthylphénidate patch, nicotine. Discret, 1 application/jour.',tags:['Discret','Continu','ADHD']},
+      {rank:3,name:'Implant sous-cutané',voie:'Voie Injectable',why:'Contraception (Nexplanon 3 ans). Observance totale.',tags:['Longue durée','Contraception']},
+    ],
+    alerts:[{type:'warning',text:'Les comprimés LP ne doivent jamais être écrasés ou coupés.'}]
+  },
+
+  res_ped_ado_vomit:{
+    type:'result',
+    badge:{icon:'🤢',label:'VOMISSEMENTS',color:'#b71c1c',bg:'#fff5f5'},
+    title:'Voie non orale transitoire',
+    subtitle:'Substitution temporaire de la voie orale.',
+    forms:[
+      {rank:1,name:'Suppositoire',voie:'Voie Rectale',why:'Anti-émétiques, paracétamol. Simple, sans matériel.',tags:['Sans hôpital','Immédiat']},
+      {rank:2,name:'Solution injectable IM/IV',voie:'Voie Injectable',why:'Si hospitalisation nécessaire.',tags:['Hôpital']},
+    ],
+    alerts:[]
+  },
+
+  res_pa_cognitif:{
+    type:'result',
+    badge:{icon:'🧠',label:'TROUBLES COGNITIFS',color:'#6a1b9a',bg:'#f3e5f5'},
+    title:'Formes à prise unique ou patch',
+    subtitle:'Simplifier au maximum le schéma thérapeutique pour réduire les oublis et erreurs.',
+    forms:[
+      {rank:1,name:'Patch transdermique LP',voie:'Voie Transdermique',why:'Rivastigmine (Exelon), Rotigotine. 1 application/jour. Administration par le soignant ou l\'aidant.',tags:['1×/j','Soignant','Sécurisé']},
+      {rank:2,name:'Solution injectable LP (mensuelle)',voie:'Voie Injectable',why:'Antipsychotiques LP : palipéridone (Xeplion), aripiprazole. Observance garantie.',tags:['Mensuel','Garantie','Psychiatrie']},
+      {rank:3,name:'Comprimé LP (1×/j)',voie:'Voie Orale',why:'Si déglutition préservée. Réduction du nombre de prises.',tags:['1×/j','Pilulier']},
+    ],
+    alerts:[
+      {type:'info',text:'Toujours évaluer la capacité de déglutition avant de prescrire des formes solides.'},
+    ]
+  },
+
+  res_pa_dexterite:{
+    type:'result',
+    badge:{icon:'✋',label:'DEXTÉRITÉ RÉDUITE',color:'#f57c00',bg:'#fff3e0'},
+    title:'Formes faciles à manipuler',
+    subtitle:'Éviter les petits conditionnements, blisters rigides, flacons compte-gouttes.',
+    forms:[
+      {rank:1,name:'Comprimé orodispersible',voie:'Voie Orale',why:'Pas d\'eau nécessaire. Manipulation simple : déposer sur la langue.',tags:['Sans eau','Simple']},
+      {rank:2,name:'Patch transdermique',voie:'Voie Transdermique',why:'Application cutanée large, pas de geste précis.',tags:['Simple','Soignant possible']},
+      {rank:3,name:'Sirop ou solution buvable',voie:'Voie Orale',why:'Flacon avec bouchon dévissable et cuillère. Éviter les pipettes fines.',tags:['Cuillère mesure','Accessible']},
+    ],
+    alerts:[
+      {type:'info',text:'Préférer les blisters peel-off (à décoller) plutôt que press-through (à pousser).'},
+      {type:'warning',text:'Éviter les collyre et gouttes auriculaires si dextérité très réduite.'},
+    ]
+  },
+
+  res_pa_poly:{
+    type:'result',
+    badge:{icon:'💊',label:'POLYPHARMACIE',color:'#1565c0',bg:'#e3f2fd'},
+    title:'Réduction du nombre de prises',
+    subtitle:'Optimiser le schéma avec des formes à longue durée d\'action et des associations fixes.',
+    forms:[
+      {rank:1,name:'Comprimé LP (libération prolongée)',voie:'Voie Orale',why:'1 prise/j au lieu de 3. Taux plasmatique stable. Meilleure tolérance digestive.',tags:['1×/j','Stabilité']},
+      {rank:2,name:'Association fixe (bi/tri-thérapie)',voie:'Voie Orale',why:'1 comprimé = 2 à 3 principes actifs. HTA, BPCO, VIH.',tags:['Pilule unique','Compliance']},
+      {rank:3,name:'Patch transdermique',voie:'Voie Transdermique',why:'Si molécule disponible. 1 application/j ou /semaine.',tags:['Hebdomadaire','Discret']},
+    ],
+    alerts:[
+      {type:'info',text:'Les associations fixes ne doivent pas être coupées (risque de déséquilibre des doses relatives).'},
+    ]
+  },
+
+  res_dysph_liquide:{
+    type:'result',
+    badge:{icon:'💧',label:'DYSPHAGIE — LIQUIDE',color:'#2e7d32',bg:'#e8f5e9'},
+    title:'Solutions ou suspensions buvables',
+    subtitle:'Première alternative à la forme solide. Disponibles pour la plupart des médicaments courants.',
+    forms:[
+      {rank:1,name:'Solution buvable',voie:'Voie Orale',why:'Absorption directe, sans dissolution. Dosage précis avec pipette ou verre gradué.',tags:['Absorption rapide','Dosage précis']},
+      {rank:2,name:'Suspension buvable',voie:'Voie Orale',why:'Pour les principes actifs insolubles. Agiter avant chaque prise.',tags:['À agiter','Antibiotiques']},
+      {rank:3,name:'Sirop',voie:'Voie Orale',why:'Très bonne palatabilité. Vérifier compatibilité diabète.',tags:['Palatabilité','Sucré']},
+    ],
+    alerts:[
+      {type:'info',text:'Certaines gélules LP peuvent être ouvertes et leurs microbilles mélangées à un aliment mou — vérifier le RCP.'},
+    ]
+  },
+
+  res_dysph_odt:{
+    type:'result',
+    badge:{icon:'✨',label:'ORODISPERSIBLE',color:'#1565c0',bg:'#e3f2fd'},
+    title:'Comprimé orodispersible (ODT)',
+    subtitle:'Se désintègre en quelques secondes dans la bouche avec la salive, sans eau.',
+    forms:[
+      {rank:1,name:'Comprimé orodispersible (ODT)',voie:'Voie Orale',why:'Dissolution en 10–30s. Pas besoin d\'eau. Texture fondante agréable.',tags:['Sans eau','Rapide','Confort dysphagie']},
+      {rank:2,name:'Lyophilisat oral',voie:'Voie Buccale',why:'Dissolution quasi instantanée (< 5s). Ondansétron, olanzapine, rizatriptan.',tags:['Instantané','Fragile au toucher']},
+    ],
+    alerts:[
+      {type:'warning',text:'Ne pas pousser le lyophilisat à travers le blister — le soulever délicatement.'},
+      {type:'info',text:'L\'ODT peut être placé sur la langue sèche, la salive suffit à la dissolution.'},
+    ]
+  },
+
+  res_dysph_lyoph:{
+    type:'result',
+    badge:{icon:'❄️',label:'LYOPHILISAT',color:'#6a1b9a',bg:'#f3e5f5'},
+    title:'Lyophilisat oral',
+    subtitle:'Forme la plus rapide à se dissoudre. Aucun risque de fausse route.',
+    forms:[
+      {rank:1,name:'Lyophilisat oral (Zydis®, Velotab®)',voie:'Voie Buccale',why:'Dissolution < 5 secondes. Idéal dysphagie sévère, vomissements, refus traitement.',tags:['< 5 secondes','Zéro fausse route','Aucune eau']},
+    ],
+    alerts:[
+      {type:'danger',text:'Extrêmement fragile : ne jamais retirer du blister avec les doigts mouillés.'},
+      {type:'info',text:'Placer sur la langue sèche — ne pas mâcher ni avaler immédiatement.'},
+    ]
+  },
+
+  res_dysph_rectal:{
+    type:'result',
+    badge:{icon:'🔥',label:'VOIE RECTALE',color:'#6a1b9a',bg:'#ede7f6'},
+    title:'Suppositoire ou lavement rectal',
+    subtitle:'Alternative fiable si voie orale impossible. Absorption variable mais suffisante pour de nombreuses molécules.',
+    forms:[
+      {rank:1,name:'Suppositoire',voie:'Voie Rectale',why:'Paracétamol, diazépam, dompéridone. Simple, pas de matériel. Absorption en 20–30 min.',tags:['Simple','Pas d\'aiguille','20–30 min']},
+      {rank:2,name:'Lavement rectal',voie:'Voie Rectale',why:'Méthotrexate, corticoïdes (MICI). Action locale ou systémique selon l\'indication.',tags:['Local ou systémique','MICI']},
+    ],
+    alerts:[
+      {type:'warning',text:'Absorption rectale variable et érratique : ne pas utiliser en cas de rectite ou diarrhée.'},
+    ]
+  },
+
+  res_dysph_inject:{
+    type:'result',
+    badge:{icon:'💉',label:'INJECTABLE',color:'#b71c1c',bg:'#fff5f5'},
+    title:'Voie injectable (SC, IM ou IV)',
+    subtitle:'Solution de substitution complète si toutes les voies non invasives sont impossibles.',
+    forms:[
+      {rank:1,name:'Solution injectable SC',voie:'Voie Injectable',why:'Morphine, héparine, insuline. Possible à domicile avec formation. Moins douloureux que IM.',tags:['Domicile possible','Autoinjection']},
+      {rank:2,name:'Solution injectable IM',voie:'Voie Injectable',why:'Antibiotiques, antipsychotiques. Absorption rapide. Nécessite personnel soignant.',tags:['Professionnel','Rapide']},
+      {rank:3,name:'Perfusion IV',voie:'Voie Injectable',why:'Hôpital. Biodisponibilité 100%.',tags:['Hôpital','100% biodispo']},
+    ],
+    alerts:[
+      {type:'info',text:'Évaluer la possibilité d\'une HAD (Hospitalisation À Domicile) pour les injectables prolongés.'},
+    ]
+  },
+
+  res_dysph_patch:{
+    type:'result',
+    badge:{icon:'🩹',label:'TRANSDERMIQUE',color:'#6a1b9a',bg:'#f3e5f5'},
+    title:'Patch transdermique',
+    subtitle:'Excellent pour la dysphagie sévère si la molécule est disponible sous forme patch.',
+    forms:[
+      {rank:1,name:'Patch transdermique LP',voie:'Voie Transdermique',why:'Rivastigmine, fentanyl, nicotine, estradiol. 1 patch/j ou /semaine. Aucun geste de déglutition.',tags:['Sans déglutition','Continu','HAD/EHPAD']},
+    ],
+    alerts:[
+      {type:'warning',text:'Vérifier que la molécule est disponible sous forme patch (liste limitée).'},
+      {type:'info',text:'Alterner les sites d\'application (thorax, bras, dos) pour éviter l\'irritation locale.'},
+    ]
+  },
+
+  res_dysph_sl:{
+    type:'result',
+    badge:{icon:'👄',label:'SUBLINGUAL',color:'#880e4f',bg:'#fce4ec'},
+    title:'Voie sublinguale',
+    subtitle:'Absorption directe par la muqueuse sublinguale. Pas de déglutition requise.',
+    forms:[
+      {rank:1,name:'Comprimé sublingual',voie:'Voie Buccale',why:'Trinitrine, buprénorphine. Se place sous la langue et fond sans déglutition.',tags:['Pas de déglutition','Rapide']},
+      {rank:2,name:'Spray sublingual',voie:'Voie Buccale',why:'Trinitrine spray. Pulvérisation sous la langue. Très rapide.',tags:['Spray','Urgence angor']},
+    ],
+    alerts:[
+      {type:'warning',text:'Ne pas avaler la salive pendant la dissolution — rester la bouche fermée.'},
+    ]
+  },
+
+  res_vomit_court:{
+    type:'result',
+    badge:{icon:'⏱',label:'VOMISSEMENTS COURTS',color:'#1565c0',bg:'#e3f2fd'},
+    title:'Voie rectale + anti-émétique',
+    subtitle:'Traitement symptomatique en attendant la reprise de la voie orale.',
+    forms:[
+      {rank:1,name:'Suppositoire',voie:'Voie Rectale',why:'Anti-émétique (dompéridone), antipyrétique. Résout souvent le problème en 2–4h.',tags:['Immédiat','Simple']},
+      {rank:2,name:'Comprimé ODT anti-émétique',voie:'Voie Orale',why:'Ondansétron lyophilisat. Si vomissements peu fréquents, peut être maintenu.',tags:['Fondant','Rapide']},
+    ],
+    alerts:[{type:'info',text:'Reprendre la voie orale dès que les vomissements cèdent.'}]
+  },
+
+  res_vomit_long:{
+    type:'result',
+    badge:{icon:'📅',label:'VOMISSEMENTS PROLONGÉS',color:'#b71c1c',bg:'#fff5f5'},
+    title:'Substitution durable de la voie orale',
+    subtitle:'Nécessite une voie alternative pour l\'ensemble du traitement.',
+    forms:[
+      {rank:1,name:'Solution injectable SC ou IV',voie:'Voie Injectable',why:'Morphine, anti-émétiques, antibiotiques. HAD ou hospitalisation selon le contexte.',tags:['Prolongé','HAD','Hôpital']},
+      {rank:2,name:'Patch transdermique',voie:'Voie Transdermique',why:'Si molécule disponible (fentanyl, scopolamine). Durée 3–7 jours.',tags:['Sans aiguille','Longue durée']},
+      {rank:3,name:'Suppositoire',voie:'Voie Rectale',why:'Si vomissements mais transit conservé. Solution de dépannage.',tags:['Court terme']},
+    ],
+    alerts:[{type:'danger',text:'En cas de vomissements prolongés : évaluer déshydratation et équilibre électrolytique.'}]
+  },
+
+  res_hospit_iv:{
+    type:'result',
+    badge:{icon:'🏥',label:'HOSPITALISATION',color:'#b71c1c',bg:'#fff5f5'},
+    title:'Perfusion IV ou bolus IV',
+    subtitle:'Voie de référence en hospitalisation pour un effet immédiat et contrôlé.',
+    forms:[
+      {rank:1,name:'Solution pour perfusion IV',voie:'Voie Injectable',why:'Antibiotiques, sédatifs, amines. Taux plasmatique constant par débit continu.',tags:['Débit contrôlé','Pompe','Monitoring']},
+      {rank:2,name:'Bolus IV direct lent',voie:'Voie Injectable',why:'Bolus d\'antalgie, antiémétique. En 2–5 min selon le produit.',tags:['Rapide','Douleur','Urgence']},
+    ],
+    alerts:[
+      {type:'danger',text:'Vérifier systématiquement les incompatibilités et la vitesse d\'injection.'},
+    ]
+  },
+
+  res_hospit_relay:{
+    type:'result',
+    badge:{icon:'🔄',label:'RELAIS PO',color:'#2e7d32',bg:'#e8f5e9'},
+    title:'Relais voie orale dès que possible',
+    subtitle:'Le relais IV → PO doit être envisagé dès stabilisation pour réduire les risques infectieux liés à la VVP.',
+    forms:[
+      {rank:1,name:'Comprimé ou gélule équivalent',voie:'Voie Orale',why:'Relais précoce (J2–J3) : coût réduit, mobilisation facilitée, moins de complications.',tags:['Relais précoce','Économique']},
+      {rank:2,name:'Suspension buvable',voie:'Voie Orale',why:'Si sonde nasogastrique en place ou déglutition imparfaite.',tags:['Sonde NG','Dysphagie légère']},
+    ],
+    alerts:[
+      {type:'info',text:'Critères de relais PO : patient apyrétique depuis 24h, tolérance orale confirmée, principe actif biodisponible par voie orale.'},
+    ]
+  },
+
+  res_hospit_anesthesie:{
+    type:'result',
+    badge:{icon:'😴',label:'ANESTHÉSIE',color:'#1565c0',bg:'#e3f2fd'},
+    title:'Formes anesthésiques et sédatives',
+    subtitle:'Administration en salle d\'opération ou en réanimation sous monitoring.',
+    forms:[
+      {rank:1,name:'Émulsion injectable IV (Propofol)',voie:'Voie Injectable',why:'Anesthésie générale, sédation. Émulsion lipidique blanche. Ne pas mélanger.',tags:['Réa','Bloc','Émulsion']},
+      {rank:2,name:'Solution injectable IV (kétamine, midazolam)',voie:'Voie Injectable',why:'Sédation procédurale, induction.',tags:['Sédation','Titration']},
+      {rank:3,name:'Gaz anesthésique inhalé',voie:'Voie Pulmonaire',why:'Sévoflurane, desflurane. Inhalation via circuit fermé.',tags:['Inhalé','Bloc','MAC']},
+    ],
+    alerts:[
+      {type:'danger',text:'Administration strictement réservée aux médecins anesthésistes-réanimateurs.'},
+    ]
+  },
+
+  res_ambul_observance:{
+    type:'result',
+    badge:{icon:'📅',label:'OBSERVANCE',color:'#1565c0',bg:'#e3f2fd'},
+    title:'Formes à libération prolongée',
+    subtitle:'Réduire la fréquence des prises améliore significativement l\'adhésion thérapeutique.',
+    forms:[
+      {rank:1,name:'Comprimé LP / LA / SR (1×/j)',voie:'Voie Orale',why:'Métoprolol, metformine, venlafaxine LP. Un seul comprimé par jour.',tags:['1×/j','Taux stable','Ne pas écraser']},
+      {rank:2,name:'Patch transdermique (1×/j ou 1×/semaine)',voie:'Voie Transdermique',why:'Nicotine, estradiol, rivastigmine. Visible, rappel quotidien facile.',tags:['Visible','Simple','1×/semaine']},
+      {rank:3,name:'Injection LP mensuelle ou trimestrielle',voie:'Voie Injectable',why:'Antipsychotiques, hormones. Observance garantie. Indépendant du patient.',tags:['Garantie','Mensuel']},
+    ],
+    alerts:[
+      {type:'warning',text:'Les formes LP ne doivent jamais être écrasées ou coupées (libération massive ingérable).'},
+    ]
+  },
+
+  res_ambul_efficacite:{
+    type:'result',
+    badge:{icon:'🎯',label:'EFFICACITÉ MAXIMALE',color:'#2e7d32',bg:'#e8f5e9'},
+    title:'Formes à haute biodisponibilité',
+    subtitle:'Maximiser l\'exposition au principe actif avec une absorption optimale.',
+    forms:[
+      {rank:1,name:'Solution buvable',voie:'Voie Orale',why:'Pas d\'étape de dissolution. Absorption directe. Biodisponibilité souvent supérieure au comprimé.',tags:['Absorb. directe','Biodispo élevée']},
+      {rank:2,name:'Comprimé sublingual',voie:'Voie Buccale',why:'Contourne le premier passage hépatique. Trinitrine, buprénorphine.',tags:['Sans 1er passage','Rapide']},
+      {rank:3,name:'Gélule à jeun (principe actif lipophile)',voie:'Voie Orale',why:'Capsule molle : absorption améliorée pour les principes lipophiles (ciclosporine, vitamine E).',tags:['Lipophile','Capsule molle']},
+    ],
+    alerts:[
+      {type:'info',text:'Toujours conseiller les mêmes conditions de prise (à jeun, avec repas) pour garantir la reproductibilité de l\'absorption.'},
+    ]
+  },
+
+  res_ambul_digestif:{
+    type:'result',
+    badge:{icon:'🤒',label:'TOLÉRANCE DIGESTIVE',color:'#f57c00',bg:'#fff3e0'},
+    title:'Formes protégeant la muqueuse digestive',
+    subtitle:'Réduire l\'irritation gastro-intestinale sans compromettre l\'efficacité.',
+    forms:[
+      {rank:1,name:'Comprimé gastro-résistant (entérique)',voie:'Voie Orale',why:'Protège la muqueuse gastrique. AINS, aspirine, oméprazole. Ne pas écraser.',tags:['Gastroprotection','Entérique','Ne pas écraser']},
+      {rank:2,name:'Comprimé LP (libération prolongée)',voie:'Voie Orale',why:'Pic plasmatique réduit = moins d\'irritation. Métoprolol LP, tramadol LP.',tags:['Pic réduit','Tolérance améliorée']},
+      {rank:3,name:'Patch transdermique',voie:'Voie Transdermique',why:'Contourne totalement le tractus digestif.',tags:['Zéro irritation GI']},
+    ],
+    alerts:[
+      {type:'warning',text:'Ne jamais écraser un comprimé gastro-résistant : l\'enrobage protège à la fois la muqueuse et le principe actif.'},
+    ]
+  },
+
+  res_ambul_standard:{
+    type:'result',
+    badge:{icon:'💊',label:'STANDARD',color:'#555',bg:'#f5f5f3'},
+    title:'Formes orales conventionnelles',
+    subtitle:'En l\'absence de contrainte particulière, les formes solides orales standard sont préférées.',
+    forms:[
+      {rank:1,name:'Comprimé pelliculé',voie:'Voie Orale',why:'Forme la plus répandue. Dosage précis, longue durée de conservation, faible coût.',tags:['Référence','Économique','Stable']},
+      {rank:2,name:'Gélule',voie:'Voie Orale',why:'Goût masqué, facile à avaler. Certaines peuvent être ouvertes.',tags:['Goût masqué','Modulable']},
+    ],
+    alerts:[]
+  },
+
+  res_local_oeil:{
+    type:'result',
+    badge:{icon:'👁',label:'OPHTALMIQUE',color:'#006064',bg:'#e0f7fa'},
+    title:'Formes ophtalmiques',
+    subtitle:'Stérilité obligatoire. Durée de conservation limitée après ouverture (28 jours).',
+    forms:[
+      {rank:1,name:'Collyre (solution ophtalmique)',voie:'Voie Ophtalmique',why:'Forme de référence. 1 goutte par instillation. Compression canthus interne 1–2 min.',tags:['Référence','1 goutte','Compression canthus']},
+      {rank:2,name:'Collyre unidose sans conservateur',voie:'Voie Ophtalmique',why:'Traitement chronique (glaucome, sécheresse). Évite toxicité du BAK.',tags:['Chronique','Sans BAK','Préservé']},
+      {rank:3,name:'Pommade / gel ophtalmique',voie:'Voie Ophtalmique',why:'Temps de contact prolongé. Sécheresse sévère, kératite. De préférence le soir.',tags:['Nuit','Durée contact','Vision floue transitoire']},
+      {rank:'avoid',name:'Solution pour injection IV',voie:'Voie Injectable',why:'Ne jamais utiliser une solution injectable dans l\'œil.',tags:['CONTRE-INDIQUÉ']},
+    ],
+    alerts:[
+      {type:'danger',text:'Attendre 5 min minimum entre deux collyres différents.'},
+      {type:'warning',text:'Retirer les lentilles avant instillation. Les remettre 15 min après.'},
+      {type:'info',text:'Conservation : 28 jours après ouverture pour les multidoses, usage unique pour les unidoses.'},
+    ]
+  },
+
+  res_local_orl:{
+    type:'result',
+    badge:{icon:'👂',label:'ORL',color:'#bf360c',bg:'#fff3e0'},
+    title:'Formes ORL (auriculaire, nasale, pharyngée)',
+    subtitle:'Application locale ciblée. Vérifier l\'intégrité du tympan avant toute instillation auriculaire.',
+    forms:[
+      {rank:1,name:'Gouttes auriculaires',voie:'Voie ORL',why:'Infection, douleur, cérumen. Réchauffer avant instillation. Maintenir tête inclinée 2–3 min.',tags:['Tympan intact','Réchauffer','2–3 min']},
+      {rank:2,name:'Spray nasal',voie:'Voie ORL',why:'Corticoïdes (rhinite), vasoconstricteurs (max 5j), antihistaminiques. Technique précise.',tags:['Rhinite','5j max (vasoconstricteurs)']},
+      {rank:3,name:'Solution pour lavage nasal',voie:'Voie ORL',why:'Sérum physiologique / hypertonique. Encombrement, sinusite. Irriguez largement.',tags:['Lavage','Sérum hyper','Sinusite']},
+    ],
+    alerts:[
+      {type:'danger',text:'Contre-indication absolue des gouttes ototoxiques (aminosides) en cas de perforation tympanique.'},
+      {type:'warning',text:'Vasoconstricteurs nasaux : ne pas dépasser 5 jours (rhinite médicamenteuse).'},
+    ]
+  },
+
+  res_local_peau:{
+    type:'result',
+    badge:{icon:'✋',label:'CUTANÉ',color:'#e65100',bg:'#fff8e1'},
+    title:'Formes dermatologiques',
+    subtitle:'Choix selon l\'état de la peau : sèche → pommade ; normale → crème ; grasse/poilue → gel ou lotion.',
+    forms:[
+      {rank:1,name:'Crème',voie:'Voie Cutanée',why:'Peau normale à grasse. Bonne acceptabilité cosmétique. La plus prescrite.',tags:['Polyvalente','Bien tolérée']},
+      {rank:2,name:'Pommade',voie:'Voie Cutanée',why:'Peau sèche, épaisse, squameuse. Effet occlusif maximal. Pénétration optimale.',tags:['Peau sèche','Occlusive','Maximale pénétration']},
+      {rank:3,name:'Gel',voie:'Voie Cutanée',why:'Zones pileuses (cuir chevelu), peau grasse. Non gras, séchage rapide.',tags:['Zones pileuses','Non gras']},
+      {rank:'avoid',name:'Pommade sur lésion suintante',voie:'Voie Cutanée',why:'Risque de macération et surinfection.',tags:['ÉVITER']},
+    ],
+    alerts:[
+      {type:'warning',text:'Chez le nourrisson : surface/poids élevé → risque de passage systémique important. Doses minimes.'},
+      {type:'info',text:'Corticoïdes topiques : ne pas appliquer sur visage ou plis sans avis médical.'},
+    ]
+  },
+
+  res_local_pulmonaire:{
+    type:'result',
+    badge:{icon:'💨',label:'PULMONAIRE',color:'#0d47a1',bg:'#e3f2fd'},
+    title:'Inhalateurs et nébuliseurs',
+    subtitle:'Le choix dépend du débit inspiratoire, de l\'âge et de la capacité de coordination du patient.',
+    forms:[
+      {rank:1,name:'pMDI + chambre d\'inhalation',voie:'Voie Pulmonaire',why:'Référence chez l\'enfant < 6 ans et les adultes avec mauvaise coordination. Dépôt amélioré.',tags:['Enfant','Coordination','Chambre obligatoire']},
+      {rank:2,name:'Poudre pour inhalation (DPI)',voie:'Voie Pulmonaire',why:'Adulte autonome. Déclenché par inspiration. Pas de propulseur. Turbuhaler, Diskus, Ellipta.',tags:['Autonomie','Sans gaz','Débit requis']},
+      {rank:3,name:'Nébuliseur (mesh ou pneumatique)',voie:'Voie Pulmonaire',why:'Nourrisson, crise sévère, patient ventilé. Pas d\'effort requis.',tags:['Nourrisson','Crise sévère','Masque']},
+    ],
+    alerts:[
+      {type:'warning',text:'DPI inadapté en crise sévère (débit inspiratoire insuffisant) → passer au pMDI + chambre.'},
+      {type:'info',text:'Rincer la bouche après corticoïdes inhalés (prévention candidose oropharyngée).'},
+    ]
+  },
+
+  res_local_rectum:{
+    type:'result',
+    badge:{icon:'🔥',label:'RECTAL',color:'#4527a0',bg:'#ede7f6'},
+    title:'Formes rectales',
+    subtitle:'Effet local (MICI, hémorroïdes) ou systémique (vomissements, convulsions, douleur).',
+    forms:[
+      {rank:1,name:'Suppositoire',voie:'Voie Rectale',why:'Action systémique rapide (20–30 min). Paracétamol, antiémétique, diazépam.',tags:['Systémique','Simple','Domicile']},
+      {rank:2,name:'Lavement rectal',voie:'Voie Rectale',why:'Mésalazine, corticoïdes en lavement (rectocolite). Action locale prolongée.',tags:['MICI','Local','Recto-sigmoïde']},
+      {rank:3,name:'Pommade rectale',voie:'Voie Rectale',why:'Hémorroïdes, fissures anales. Application externe ou interne.',tags:['Hémorroïdes','Fissure']},
+    ],
+    alerts:[
+      {type:'warning',text:'Absorption rectale variable. Ne pas utiliser en cas de diarrhée active.'},
+      {type:'info',text:'Conserver les suppositoires au réfrigérateur. Introduction côté pointu en premier.'},
+    ]
+  },
+
+  res_local_vagin:{
+    type:'result',
+    badge:{icon:'🌿',label:'VAGINAL',color:'#558b2f',bg:'#f9fbe7'},
+    title:'Formes vaginales',
+    subtitle:'Traitement local des infections, atrophie vaginale ou contraception locale.',
+    forms:[
+      {rank:1,name:'Ovule vaginal',voie:'Voie Vaginale',why:'Antifongique (econazole, clotrimazole), progestérone. Fusion à 37°C. Administration le soir.',tags:['Antifongique','Soir','Réfrigérateur']},
+      {rank:2,name:'Crème ou gel vaginal',voie:'Voie Vaginale',why:'Clindamycine (vaginose), estradiol (atrophie). Applicateur doseur.',tags:['Applicateur','Ménopause','Infection']},
+      {rank:3,name:'Comprimé vaginal',voie:'Voie Vaginale',why:'Métronidazole, misoprostol. Dissolution par les sécrétions vaginales.',tags:['Dissolution locale','Précis']},
+    ],
+    alerts:[
+      {type:'warning',text:'Crèmes à base grasse : détériorent les préservatifs en latex.'},
+      {type:'info',text:'Éviter pendant les menstruations. Rester allongée 15–30 min après introduction.'},
+    ]
+  },
+};
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let history = []; // [{qId, question, optionLabel, next}]
+let current = 'q1';
+let _currentOptions = []; // référence aux options du nœud courant
+
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+function render(){
+  const node = TREE[current];
+  if(!node) return;
+
+  // Progress
+  const maxDepth = 5;
+  const pct = Math.min(100, Math.round((history.length / maxDepth) * 100));
+  document.getElementById('progressFill').style.width = pct + '%';
+
+  // Path panel
+  renderPath();
+
+  const main = document.getElementById('mainArea');
+
+  if(node.type === 'result'){
+    main.innerHTML = '<div class="path-panel" id="pathPanel"><div class="path-title">Chemin de décision</div><div id="pathSteps"></div></div>'
+                   + '<div class="result-zone q-anim" id="resultZone"></div>';
+    renderPath();
+    renderResult(node);
+  } else {
+    main.innerHTML = '<div class="path-panel" id="pathPanel"><div class="path-title">Chemin de décision</div><div id="pathSteps"></div></div>'
+                   + '<div class="question-zone q-anim" id="questionZone"></div>';
+    renderPath();
+    renderQuestion(node);
+  }
+}
+
+function renderPath(){
+  const panel = document.getElementById('pathSteps');
+  if(!panel) return;
+  panel.innerHTML = history.map(h => `
+    <div class="path-step done">
+      <div class="step-dot"></div>
+      <div>
+        <div class="step-text">${esc(h.question)}</div>
+        <div class="step-answer">→ ${esc(h.optionLabel)}</div>
+      </div>
+    </div>
+  `).join('') + (history.length ? '' : '<div style="font-size:11px;color:var(--muted);font-style:italic">Répondez aux questions<br>pour voir votre parcours.</div>');
+}
+
+function renderQuestion(node){
+  const zone = document.getElementById('questionZone');
+  if(!zone) return;
+  _currentOptions = node.options || [];
+  zone.innerHTML = `
+    <div class="q-context">${esc(node.context||'')}</div>
+    <div class="q-text">${esc(node.question)}</div>
+    ${node.hint ? `<div class="q-hint">💡 ${esc(node.hint)}</div>` : ''}
+    <div class="options-grid">
+      ${_currentOptions.map((o,i) => `
+        <button class="option-btn" style="animation-delay:${i*0.05}s" onclick="choose(${i})">
+          <div class="opt-icon">${o.icon||''}</div>
+          <div class="opt-label">${esc(o.label)}</div>
+          ${o.desc ? `<div class="opt-desc">${esc(o.desc)}</div>` : ''}
+        </button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderResult(node){
+  const zone = document.getElementById('resultZone');
+  if(!zone) return;
+
+  const b = node.badge||{};
+  const badgeHtml = `<div class="result-badge" style="background:${b.bg||'#f5f5f3'};color:${b.color||'#555'}">
+    ${b.icon||'💊'} ${esc(b.label||'')}
+  </div>`;
+
+  const formsHtml = (node.forms||[]).map(f => {
+    const rankClass = f.rank === 1 ? 'primary' : f.rank === 'avoid' ? 'avoid' : 'secondary';
+    const rankEl = f.rank === 1
+      ? `<div class="form-rank rank-1">1</div>`
+      : f.rank === 'avoid'
+        ? `<div class="form-rank rank-avoid">✗</div>`
+        : `<div class="form-rank rank-${f.rank}">${f.rank}</div>`;
+    const tags = (f.tags||[]).map(t => {
+      const cls = t==='CONTRE-INDIQUÉ'||t==='ÉVITER' ? 'warn' : t.includes('100%')||t.includes('Gold')||t.includes('Référence') ? 'ok' : 'info';
+      return `<span class="form-tag ${cls}">${esc(t)}</span>`;
+    }).join('');
+    return `<div class="form-card ${rankClass}">
+      ${rankEl}
+      <div class="form-body">
+        <div class="form-name">${esc(f.name)}</div>
+        <div class="form-voie">${esc(f.voie)}</div>
+        <div class="form-why">${esc(f.why)}</div>
+        ${tags ? `<div class="form-tags">${tags}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const alertsHtml = (node.alerts||[]).map(a => `
+    <div class="alert ${a.type}">
+      <span class="alert-icon">${a.type==='danger'?'🚨':a.type==='warning'?'⚠️':'ℹ️'}</span>
+      <span>${esc(a.text)}</span>
+    </div>
+  `).join('');
+
+  zone.innerHTML = `
+    <div class="result-header">
+      ${badgeHtml}
+      <div class="result-title">${esc(node.title||'')}</div>
+      <div class="result-subtitle">${esc(node.subtitle||'')}</div>
+    </div>
+    ${alertsHtml ? `<div class="alerts">${alertsHtml}</div>` : ''}
+    <div class="forms-list">${formsHtml}</div>
+    <button class="new-q-btn" onclick="restart()">↺ Nouvelle décision</button>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════
+//  ACTIONS
+// ═══════════════════════════════════════════════════════
+function choose(idx){
+  const o = _currentOptions[idx];
+  if(!o) return;
+  const node = TREE[current];
+  history.push({qId: current, question: node?.question||'', optionLabel: o.label, next: o.next});
+  current = o.next;
+  render();
+}
+
+function restart(){
+  history = [];
+  current = 'q1';
+  render();
+}
+
+function esc(s){
+  const d = document.createElement('div');
+  d.textContent = s||'';
+  return d.innerHTML;
+}
+
+// ── Init ──
+render();
+</script>
+</body>
+</html>

@@ -5589,6 +5589,9 @@ async function openSheet(m){
     sheetRenderer.dispose();sheetRenderer=null;
   }
   if(sheetModelGroup&&sheetScene){sheetScene.remove(sheetModelGroup);sheetModelGroup=null;}
+  // Nettoyer le viewer Gaussian Splat isolé s'il tournait
+  try{ if(window._activeSplatViewer&&window._activeSplatViewer.stop) window._activeSplatViewer.stop(); }catch(e){}
+  window._activeSplatViewer=null;
   // Nettoyer 3Dmol si actif
   if(_3dmolViewer){
     try{_3dmolViewer.removeAllModels();_3dmolViewer.removeAllSurfaces();}catch(e){}
@@ -12236,6 +12239,27 @@ function initSheetRenderer(m){
   if(m&&m._cat==='Microscopiques')return;
   // ── Microscopiques géré par renderMicroViewer ──
   if(m && m._cat==='Microscopiques') return;
+
+  // ── PRIORITÉ ABSOLUE : fichier Gaussian Splat (.splat/.ksplat/.ply) ───────────
+  //    Un modèle splat dédié prime sur 3Dmol/PubChem (ex. éléments chimiques).
+  if(m && m.file && window.PharmatlasSplat && PharmatlasSplat.isSplat(m.file)){
+    var _svS=document.getElementById('sheetViewer');
+    if(_svS){
+      _svS.removeAttribute('data-mode');
+      while(_svS.firstChild) _svS.removeChild(_svS.firstChild);
+      if(sheetAnimId){cancelAnimationFrame(sheetAnimId);sheetAnimId=null;}
+      if(sheetRenderer){try{sheetRenderer.dispose();}catch(e){} sheetRenderer=null;}
+      if(getComputedStyle(_svS).position==='static') _svS.style.position='relative';
+      _svS.style.display='';_svS.style.overflow='hidden';_svS.style.background='#06080e';
+      var _ldrS=document.createElement('div');_ldrS.className='loader';
+      _ldrS.innerHTML='<div class="spinner"></div><div class="loader-text">Chargement 3D…</div>';
+      _svS.appendChild(_ldrS);
+      try{ if(window._activeSplatViewer&&window._activeSplatViewer.stop) window._activeSplatViewer.stop(); }catch(e){}
+      window._activeSplatViewer=null;
+      PharmatlasSplat.loadSplatCell(m.file,_svS,m.camera).then(function(v){window._activeSplatViewer=v;}).catch(function(){});
+    }
+    return;
+  }
 
   // ── Structure 3D des fiches protéiques (PDB expérimental prioritaire) ──────────
   //    1) Si pdb_id / resolvePdbId → structure EXPÉRIMENTALE (la plus fiable) via NGL.

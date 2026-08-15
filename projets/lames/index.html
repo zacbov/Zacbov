@@ -3,183 +3,902 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
 <title>PharmAtlas · Lames numériques</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,*::before,*::after{
+  box-sizing:border-box;
+  margin:0;
+  padding:0
+}
+
 :root{
-  --bg:#0b0d11; --surface:#111418; --card:#161a21; --card-h:#1b2028;
-  --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.12);
-  --accent:#00e5b0; --accent2:#00a87f;
-  --stain-n:#8a4fd0; --stain-c:#e089ad;
-  --text:#dde1ea; --muted:rgba(221,225,234,.42);
-  --mono:'Space Mono',monospace; --sans:'DM Sans',sans-serif;
+  --bg:#080a0e;
+  --surface:#111418;
+
+  --border:rgba(255,255,255,.12);
+  --border-hover:rgba(255,255,255,.28);
+
+  --accent:#00e5b0;
+  --stain-n:#8a4fd0;
+  --stain-c:#e089ad;
+
+  --text:#f1f3f7;
+  --muted:rgba(241,243,247,.62);
+
+  --mono:'Space Mono',monospace;
+  --sans:'DM Sans',sans-serif;
 }
-html,body{height:100%}
-body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100%;
-  background-image:radial-gradient(circle at 15% 8%,rgba(0,229,176,.05),transparent 45%),
-                    radial-gradient(circle at 85% 88%,rgba(138,79,208,.06),transparent 45%);
+
+html,body{
+  min-height:100%;
 }
 
-header{display:flex;align-items:center;gap:10px;padding:20px 32px;border-bottom:1px solid var(--border)}
-.logo{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:3px;color:var(--accent);text-transform:uppercase}
-.logo-sep{width:1px;height:18px;background:var(--border2)}
-.logo-sub{font-size:12px;color:var(--muted)}
+body{
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--text);
 
-.hero{padding:64px 32px 40px;text-align:center;max-width:760px;margin:0 auto}
-.hero h1{font-family:var(--sans);font-weight:700;font-size:clamp(26px,4vw,38px);letter-spacing:-.5px;margin-bottom:14px}
-.hero h1 span{color:var(--accent)}
-.hero p{color:var(--muted);font-size:14.5px;line-height:1.7;max-width:520px;margin:0 auto}
+  background-image:
+    radial-gradient(
+      circle at 15% 8%,
+      rgba(0,229,176,.06),
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 85% 88%,
+      rgba(138,79,208,.07),
+      transparent 45%
+    );
+}
 
-.grid{max-width:1080px;margin:0 auto;padding:20px 32px 80px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px}
 
-.card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px 24px 22px;
-  display:flex;flex-direction:column;gap:16px;text-decoration:none;color:var(--text);
-  transition:border-color .2s,background .2s,transform .2s;overflow:hidden}
-.card::before{content:"";position:absolute;inset:0;opacity:0;transition:opacity .25s;
-  background:radial-gradient(circle at 30% 0%,rgba(0,229,176,.08),transparent 60%)}
-.card:hover{border-color:rgba(0,229,176,.4);background:var(--card-h);transform:translateY(-3px)}
-.card:hover::before{opacity:1}
-.card.empty{opacity:.55;cursor:default}
-.card.empty:hover{border-color:var(--border);background:var(--card);transform:none}
-.card.empty::before{display:none}
+/* =========================================================
+   HEADER
+   ========================================================= */
 
-.c-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:relative;z-index:1}
-.c-icon{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:21px;flex-shrink:0;
-  border:1px solid var(--border2);background:rgba(255,255,255,.02)}
-.c-count{font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--muted);border:1px solid var(--border2);
-  border-radius:20px;padding:4px 10px;white-space:nowrap}
-.c-count b{color:var(--accent);font-weight:700}
+header{
+  display:flex;
+  align-items:center;
+  gap:10px;
 
-.c-body{position:relative;z-index:1}
-.c-title{font-size:18px;font-weight:700;margin-bottom:6px}
-.c-desc{font-size:12.5px;color:var(--muted);line-height:1.6}
+  padding:20px 32px;
 
-.c-tags{display:flex;flex-wrap:wrap;gap:6px;position:relative;z-index:1}
-.tag{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.4px;padding:3px 8px;border-radius:5px;
-  border:1px solid var(--border2);color:var(--muted)}
+  border-bottom:1px solid rgba(255,255,255,.08);
 
-.c-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;padding-top:4px}
-.c-cta{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--accent);
-  display:flex;align-items:center;gap:6px}
-.c-cta .arrow{transition:transform .2s}
-.card:hover .c-cta .arrow{transform:translateX(3px)}
-.c-soon{font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--muted);
-  border:1px dashed var(--border2);border-radius:20px;padding:4px 10px}
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
 
-.stain-physio{color:var(--accent);border-color:rgba(0,229,176,.3);background:rgba(0,229,176,.06)}
-.stain-para{color:var(--stain-c);border-color:rgba(224,137,173,.3);background:rgba(224,137,173,.06)}
-.stain-hemato{color:#ff5f72;border-color:rgba(255,95,114,.3);background:rgba(255,95,114,.06)}
+  background:rgba(8,10,14,.55);
+
+  position:relative;
+  z-index:10;
+}
+
+.logo{
+  font-family:var(--mono);
+  font-size:15px;
+  font-weight:700;
+  letter-spacing:3px;
+  color:var(--accent);
+  text-transform:uppercase;
+}
+
+.logo-sep{
+  width:1px;
+  height:18px;
+  background:rgba(255,255,255,.18);
+}
+
+.logo-sub{
+  font-size:12px;
+  color:var(--muted);
+}
+
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.hero{
+  padding:64px 32px 42px;
+
+  text-align:center;
+
+  max-width:760px;
+  margin:0 auto;
+}
+
+.hero h1{
+  font-weight:700;
+  font-size:clamp(28px,4vw,40px);
+  letter-spacing:-.8px;
+
+  margin-bottom:14px;
+}
+
+.hero h1 span{
+  color:var(--accent);
+}
+
+.hero p{
+  color:var(--muted);
+  font-size:14.5px;
+  line-height:1.7;
+
+  max-width:560px;
+  margin:0 auto;
+}
+
+
+/* =========================================================
+   GRID
+   ========================================================= */
+
+.grid{
+  max-width:1120px;
+
+  margin:0 auto;
+
+  padding:20px 32px 80px;
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(auto-fit,minmax(300px,1fr));
+
+  gap:22px;
+}
+
+
+/* =========================================================
+   GLASS CARDS
+   ========================================================= */
+
+.card{
+  position:relative;
+
+  min-height:340px;
+
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+
+  padding:26px 24px 22px;
+
+  border-radius:22px;
+
+  overflow:hidden;
+
+  text-decoration:none;
+  color:var(--text);
+
+  border:1px solid var(--border);
+
+  /*
+    Fond semi-transparent :
+    laisse apparaître l'image derrière.
+  */
+  background:rgba(20,23,29,.38);
+
+  /*
+    Effet verre dépoli
+  */
+  backdrop-filter:blur(18px) saturate(125%);
+  -webkit-backdrop-filter:blur(18px) saturate(125%);
+
+  box-shadow:
+    0 12px 40px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.08);
+
+  transition:
+    transform .3s ease,
+    border-color .3s ease,
+    box-shadow .3s ease;
+}
+
+
+/* =========================================================
+   IMAGE DE FOND
+   ========================================================= */
+
+.card::before{
+  content:"";
+
+  position:absolute;
+  inset:-20px;
+
+  background-image:var(--card-image);
+
+  background-size:cover;
+  background-position:center;
+
+  /*
+    Le flou est appliqué directement à l'image.
+  */
+  filter:
+    blur(5px)
+    saturate(1.15);
+
+  transform:scale(1.08);
+
+  opacity:.68;
+
+  transition:
+    transform .5s ease,
+    opacity .4s ease,
+    filter .4s ease;
+
+  z-index:0;
+}
+
+
+/* =========================================================
+   VOILE SOMBRE PAR-DESSUS L'IMAGE
+   ========================================================= */
+
+.card::after{
+  content:"";
+
+  position:absolute;
+  inset:0;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(5,7,10,.32) 0%,
+      rgba(5,7,10,.55) 45%,
+      rgba(5,7,10,.88) 100%
+    );
+
+  z-index:0;
+
+  transition:background .3s ease;
+}
+
+
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+.card:hover{
+  transform:translateY(-5px);
+
+  border-color:var(--border-hover);
+
+  box-shadow:
+    0 20px 55px rgba(0,0,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.12);
+}
+
+.card:hover::before{
+  transform:scale(1.13);
+
+  opacity:.85;
+
+  filter:
+    blur(3px)
+    saturate(1.3);
+}
+
+.card:hover::after{
+  background:
+    linear-gradient(
+      180deg,
+      rgba(5,7,10,.22) 0%,
+      rgba(5,7,10,.48) 45%,
+      rgba(5,7,10,.82) 100%
+    );
+}
+
+
+/* =========================================================
+   CONTENU AU-DESSUS DE L'IMAGE
+   ========================================================= */
+
+.card > *{
+  position:relative;
+  z-index:1;
+}
+
+
+/* =========================================================
+   TOP
+   ========================================================= */
+
+.c-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+
+  gap:12px;
+}
+
+.c-icon{
+  width:48px;
+  height:48px;
+
+  border-radius:14px;
+
+  display:grid;
+  place-items:center;
+
+  font-size:22px;
+
+  flex-shrink:0;
+
+  border:1px solid rgba(255,255,255,.18);
+
+  background:rgba(0,0,0,.25);
+
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.c-count{
+  font-family:var(--mono);
+
+  font-size:10px;
+  letter-spacing:1px;
+
+  color:rgba(255,255,255,.75);
+
+  border:1px solid rgba(255,255,255,.18);
+
+  background:rgba(0,0,0,.25);
+
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+
+  border-radius:20px;
+
+  padding:5px 10px;
+
+  white-space:nowrap;
+}
+
+.c-count b{
+  color:var(--accent);
+  font-weight:700;
+}
+
+
+/* =========================================================
+   BODY
+   ========================================================= */
+
+.c-body{
+  margin-top:auto;
+}
+
+.c-title{
+  font-size:21px;
+  font-weight:700;
+
+  margin-bottom:7px;
+
+  text-shadow:
+    0 2px 12px rgba(0,0,0,.5);
+}
+
+.c-desc{
+  font-size:12.5px;
+
+  color:rgba(255,255,255,.72);
+
+  line-height:1.65;
+
+  text-shadow:
+    0 1px 8px rgba(0,0,0,.7);
+}
+
+
+/* =========================================================
+   TAGS
+   ========================================================= */
+
+.c-tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+
+.tag{
+  font-family:var(--mono);
+
+  font-size:9.5px;
+  font-weight:700;
+  letter-spacing:.4px;
+
+  padding:4px 9px;
+
+  border-radius:6px;
+
+  border:1px solid rgba(255,255,255,.16);
+
+  color:rgba(255,255,255,.72);
+
+  background:rgba(0,0,0,.22);
+
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+
+
+/* =========================================================
+   FOOT
+   ========================================================= */
+
+.c-foot{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
+  padding-top:4px;
+}
+
+.c-cta{
+  font-family:var(--mono);
+
+  font-size:11px;
+  font-weight:700;
+
+  letter-spacing:.5px;
+
+  color:var(--accent);
+
+  display:flex;
+  align-items:center;
+
+  gap:6px;
+
+  text-shadow:
+    0 2px 10px rgba(0,0,0,.5);
+}
+
+.c-cta .arrow{
+  transition:transform .2s;
+}
+
+.card:hover .c-cta .arrow{
+  transform:translateX(4px);
+}
+
+
+/* =========================================================
+   COULEURS DES TAGS
+   ========================================================= */
+
+.stain-physio{
+  color:#00e5b0;
+
+  border-color:rgba(0,229,176,.35);
+
+  background:rgba(0,229,176,.09);
+}
+
+.stain-para{
+  color:#e089ad;
+
+  border-color:rgba(224,137,173,.35);
+
+  background:rgba(224,137,173,.09);
+}
+
+.stain-hemato{
+  color:#ff6f7e;
+
+  border-color:rgba(255,95,114,.35);
+
+  background:rgba(255,95,114,.09);
+}
+
 .stain-plant{
   color:#7ddc68;
-  border-color:rgba(125,220,104,.3);
-  background:rgba(125,220,104,.06)
+
+  border-color:rgba(125,220,104,.35);
+
+  background:rgba(125,220,104,.09);
 }
-footer{text-align:center;padding:24px;color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.5px;border-top:1px solid var(--border)}
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+footer{
+  text-align:center;
+
+  padding:24px;
+
+  color:var(--muted);
+
+  font-family:var(--mono);
+
+  font-size:10px;
+
+  letter-spacing:.5px;
+
+  border-top:1px solid rgba(255,255,255,.08);
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media(max-width:600px){
+
+  header{
+    padding:18px 20px;
+  }
+
+  .hero{
+    padding:48px 22px 30px;
+  }
+
+  .grid{
+    padding:
+      15px 18px 60px;
+
+    grid-template-columns:1fr;
+
+    gap:18px;
+  }
+
+  .card{
+    min-height:330px;
+
+    padding:23px 21px 20px;
+  }
+
+}
 </style>
 </head>
+
+
 <body>
 
+
 <header>
-  <div class="logo">PharmAtlas</div>
+
+  <div class="logo">
+    PharmAtlas
+  </div>
+
   <div class="logo-sep"></div>
-  <div class="logo-sub">Lames numériques</div>
+
+  <div class="logo-sub">
+    Lames numériques
+  </div>
+
 </header>
 
+
+
 <div class="hero">
-  <h1>Bibliothèque de lames <span>histologiques</span></h1>
-  <p>Visualiseurs de lames numériques haute résolution, organisés par discipline. Sélectionnez une catégorie pour explorer les coupes en zoom profond.</p>
+
+  <h1>
+    Bibliothèque de lames
+    <span>histologiques</span>
+  </h1>
+
+  <p>
+    Visualiseurs de lames numériques haute résolution,
+    organisés par discipline. Sélectionnez une catégorie
+    pour explorer les coupes en zoom profond.
+  </p>
+
 </div>
+
+
 
 <div class="grid">
 
-  <a class="card" href="https://histoviewer-physio.tice-pharma.workers.dev/" target="_blank" rel="noopener">
-    <div class="c-top">
-      <div class="c-icon">🧫</div>
-      <div class="c-count"><b>9</b> lames</div>
-    </div>
-    <div class="c-body">
-      <div class="c-title">Physiologie</div>
-      <div class="c-desc">Hypophyse, ovaire, pancréas, surrénale, testicule, thyroïde — histologie normale et pathologique des glandes endocrines.</div>
-    </div>
-    <div class="c-tags">
-      <span class="tag stain-physio">HE</span>
-      <span class="tag stain-physio">Masson</span>
-      <span class="tag">Endocrinologie</span>
-    </div>
-    <div class="c-foot">
-      <span class="c-cta">Ouvrir le viewer <span class="arrow">→</span></span>
-    </div>
-  </a>
 
-  <a class="card" href="https://histoviewer-parasito-myco.tice-pharma.workers.dev/" target="_blank" rel="noopener">
-    <div class="c-top">
-      <div class="c-icon">🦟</div>
-      <div class="c-count"><b>7</b> lames</div>
-    </div>
-    <div class="c-body">
-      <div class="c-title">Parasitologie &amp; Mycologie</div>
-      <div class="c-desc">Lente, pou, puce, punaise, tique, sarcoptes, rhizopus — ectoparasites et champignons filamenteux.</div>
-    </div>
-    <div class="c-tags">
-      <span class="tag stain-para">Masson</span>
-      <span class="tag">Insectes</span>
-      <span class="tag">Acariens</span>
-      <span class="tag">Champignons</span>
-    </div>
-    <div class="c-foot">
-      <span class="c-cta">Ouvrir le viewer <span class="arrow">→</span></span>
-    </div>
-  </a>
+  <!-- =====================================================
+       PHYSIOLOGIE
+       ===================================================== -->
 
-      <a class="card" href="https://histoviewer-plantes.zacharybov.workers.dev/" target="_blank" rel="noopener">
-    <div class="c-top">
-      <div class="c-icon">🌿</div>
-      <div class="c-count"><b>1</b> lame</div>
-    </div>
+  <a
+    class="card"
+    href="https://histoviewer-physio.tice-pharma.workers.dev/"
+    target="_blank"
+    rel="noopener"
+    style="
+      --card-image:url('https://histoviewer-physio.tice-pharma.workers.dev/slides/THYROIDE_Masson_files/10/0_0.webp');
+    "
+  >
 
-    <div class="c-body">
-      <div class="c-title">Botanique</div>
-      <div class="c-desc">
-        Lames histologiques végétales haute résolution : coupes de tiges,
-        racines et autres organes végétaux.
+    <div class="c-top">
+
+      <div class="c-icon">
+        🧫
       </div>
+
+      <div class="c-count">
+        <b>9</b> lames
+      </div>
+
     </div>
+
+
+    <div class="c-body">
+
+      <div class="c-title">
+        Physiologie
+      </div>
+
+      <div class="c-desc">
+        Hypophyse, ovaire, pancréas, surrénale, testicule,
+        thyroïde — histologie normale et pathologique
+        des glandes endocrines.
+      </div>
+
+    </div>
+
 
     <div class="c-tags">
-      <span class="tag stain-plant">Botanique</span>
-      <span class="tag">Anatomie végétale</span>
-      <span class="tag">Histologie</span>
+
+      <span class="tag stain-physio">
+        HE
+      </span>
+
+      <span class="tag stain-physio">
+        Masson
+      </span>
+
+      <span class="tag">
+        Endocrinologie
+      </span>
+
     </div>
 
+
     <div class="c-foot">
+
       <span class="c-cta">
-        Ouvrir le viewer <span class="arrow">→</span>
+        Ouvrir le viewer
+        <span class="arrow">→</span>
       </span>
+
     </div>
+
   </a>
 
-  <a class="card" href="https://histoviewer-hemato.tice-pharma.workers.dev/" target="_blank" rel="noopener">
+
+
+  <!-- =====================================================
+       PARASITOLOGIE
+       ===================================================== -->
+
+  <a
+    class="card"
+    href="https://histoviewer-parasito-myco.tice-pharma.workers.dev/"
+    target="_blank"
+    rel="noopener"
+    style="
+      --card-image:url('https://histoviewer-parasito-myco.tice-pharma.workers.dev/slides/puce_2_files/9/0_0.webp');
+    "
+  >
+
     <div class="c-top">
-      <div class="c-icon">🩸</div>
-      <div class="c-count"><b>15</b> lame</div>
+
+      <div class="c-icon">
+        🦟
+      </div>
+
+      <div class="c-count">
+        <b>7</b> lames
+      </div>
+
     </div>
+
+
     <div class="c-body">
-      <div class="c-title">Hématologie</div>
-      <div class="c-desc">Frottis sanguins et médullaires. Le viewer est déployé mais aucune lame n'a encore été numérisée.</div>
+
+      <div class="c-title">
+        Parasitologie &amp; Mycologie
+      </div>
+
+      <div class="c-desc">
+        Lente, pou, puce, punaise, tique, sarcoptes,
+        rhizopus — ectoparasites et champignons filamenteux.
+      </div>
+
     </div>
+
+
     <div class="c-tags">
-      <span class="tag stain-hemato">MGG</span>
-      <span class="tag">Frottis</span>
+
+      <span class="tag stain-para">
+        Masson
+      </span>
+
+      <span class="tag">
+        Insectes
+      </span>
+
+      <span class="tag">
+        Acariens
+      </span>
+
+      <span class="tag">
+        Champignons
+      </span>
+
     </div>
+
+
     <div class="c-foot">
-      <span class="c-cta">Ouvrir le viewer <span class="arrow">→</span></span>
-    </div></a>
-  </div>
+
+      <span class="c-cta">
+        Ouvrir le viewer
+        <span class="arrow">→</span>
+      </span>
+
+    </div>
+
+  </a>
+
+
+
+  <!-- =====================================================
+       BOTANIQUE
+       ===================================================== -->
+
+  <a
+    class="card"
+    href="https://histoviewer-plantes.zacharybov.workers.dev/"
+    target="_blank"
+    rel="noopener"
+    style="
+      --card-image:url('https://histoviewer-plantes.zacharybov.workers.dev/slides/cyperus_longus_stengel_quer_20x_1_z30_files/11/0_0.webp');
+    "
+  >
+
+    <div class="c-top">
+
+      <div class="c-icon">
+        🌿
+      </div>
+
+      <div class="c-count">
+        <b>1</b> lame
+      </div>
+
+    </div>
+
+
+    <div class="c-body">
+
+      <div class="c-title">
+        Botanique
+      </div>
+
+      <div class="c-desc">
+        Lames histologiques végétales haute résolution :
+        coupes de tiges, racines et autres organes végétaux.
+      </div>
+
+    </div>
+
+
+    <div class="c-tags">
+
+      <span class="tag stain-plant">
+        Botanique
+      </span>
+
+      <span class="tag">
+        Anatomie végétale
+      </span>
+
+      <span class="tag">
+        Histologie
+      </span>
+
+    </div>
+
+
+    <div class="c-foot">
+
+      <span class="c-cta">
+        Ouvrir le viewer
+        <span class="arrow">→</span>
+      </span>
+
+    </div>
+
+  </a>
+
+
+
+  <!-- =====================================================
+       HÉMATOLOGIE
+       ===================================================== -->
+
+  <a
+    class="card"
+    href="https://histoviewer-hemato.tice-pharma.workers.dev/"
+    target="_blank"
+    rel="noopener"
+    style="
+      --card-image:url('https://histoviewer-hemato.tice-pharma.workers.dev/slides/00001163_files/9/0_0.webp');
+    "
+  >
+
+    <div class="c-top">
+
+      <div class="c-icon">
+        🩸
+      </div>
+
+      <div class="c-count">
+        <b>15</b> lames
+      </div>
+
+    </div>
+
+
+    <div class="c-body">
+
+      <div class="c-title">
+        Hématologie
+      </div>
+
+      <div class="c-desc">
+        Frottis sanguins et médullaires.
+        Explorez les cellules sanguines et les principales
+        préparations hématologiques.
+      </div>
+
+    </div>
+
+
+    <div class="c-tags">
+
+      <span class="tag stain-hemato">
+        MGG
+      </span>
+
+      <span class="tag">
+        Frottis
+      </span>
+
+      <span class="tag">
+        Hématologie
+      </span>
+
+    </div>
+
+
+    <div class="c-foot">
+
+      <span class="c-cta">
+        Ouvrir le viewer
+        <span class="arrow">→</span>
+      </span>
+
+    </div>
+
+  </a>
+
 
 </div>
 
-<footer>PHARMATLAS · HISTOVIEW ENGINE</footer>
+
+
+<footer>
+  PHARMATLAS · HISTOVIEW ENGINE
+</footer>
+
 
 </body>
 </html>

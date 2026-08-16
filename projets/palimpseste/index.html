@@ -64,7 +64,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function hexA(h,a){h=h.replace('#','');return`rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${a})`;}
 
 // ── tooltips ───────────────────────────────────────────────────────────────
-const TIPS=['Le parchemin brûle… mais la cendre garde sa mémoire.','Ce qui s\'efface laisse parfois une lumière.','L\'eau a soif d\'obscurité. La torche a soif d\'eau.','Un caillou bien jeté ne roule jamais deux fois.','Le Grand Œuvre réclame un ordre. Le désordre l\'annule.','L\'ombre dit ce que la lumière tait.','Les étoiles ne parlent qu\'aux patients.','La lumière plie autour des obstacles, si on la guide.','Pair ou impair — la géomancie tranche.','La vérité est dispersée. Il faut la rassembler.','Un mot traverse toutes les strates.','Avant les lettres, il y avait les runes.','Toutes les racines ne guérissent pas de la même main.','Pair ou impair, la terre répond toujours.','Le messager précède toujours les rois.','Rien ne pèse juste par hasard.','Trois cercles, un seul mot vrai.','Le silence a une mélodie, si on sait l\'écouter.','Ce que tu vois à gauche, cherche-le inversé à droite.','Le temps ne s\'arrête pas pour celui qui hésite.','Ni trop, ni trop peu — la juste mesure.','Ce qui dévore fer et pierre ne se voit jamais venir.','Trois voix, trois débuts, un seul mot au bout.'];
+const TIPS=['Le parchemin brûle… mais la cendre garde sa mémoire.','Ce qui s\'efface laisse parfois une lumière.','L\'eau a soif d\'obscurité. La torche a soif d\'eau.','Un caillou bien jeté ne roule jamais deux fois.','Le Grand Œuvre réclame un ordre. Le désordre l\'annule.','L\'ombre dit ce que la lumière tait.','Les étoiles ne parlent qu\'aux patients.','La lumière plie autour des obstacles, si on la guide.','Pair ou impair — la géomancie tranche.','La vérité est dispersée. Il faut la rassembler.','Un mot traverse toutes les strates.','Avant les lettres, il y avait les runes.','Toutes les racines ne guérissent pas de la même main.','Pair ou impair, la terre répond toujours.','Le messager précède toujours les rois.','Rien ne pèse juste par hasard.','Trois cercles, un seul mot vrai.','Le silence a une mélodie, si on sait l\'écouter.','Ce que tu vois à gauche, cherche-le inversé à droite.','Le temps ne s\'arrête pas pour celui qui hésite.','Ni trop, ni trop peu — la juste mesure.','Ce qui dévore fer et pierre ne se voit jamais venir.','Trois voix, trois débuts, un seul mot au bout.','La mémoire est un muscle qui se rouille vite.','Chaque case rêve d\'une place qui n\'est pas la sienne.','Ne repasse jamais deux fois par le même pont.'];
 let tipT=0;
 function showTip(t){const el=document.getElementById('tip');el.textContent=t;el.style.opacity='1';tipT=5;}
 function tickTip(dt){if(tipT<=0)return;tipT-=dt;if(tipT<1)document.getElementById('tip').style.opacity=Math.max(0,tipT).toFixed(2);}
@@ -84,11 +84,11 @@ const DECO_SETS=[
 ];
 
 // ── world ──────────────────────────────────────────────────────────────────
-const W0=900,NR=23;
+const W0=900,NR=26;
 const world={w:W0*NR,h:900};let camX=0,camY=0;
 function w2s(x,y){return[(x-camX)*DPR,(y-camY)*DPR];}
 const BD=34;
-const ROOMS=['Salle 🜂','Salle 🜍','Salle 🜄','Salle ☿','Salle du Sceau','Salle des Ombres','Salle des Étoiles','Salle du Prisme','Salle des Leviers','Salle des Pages','Salle de la Porte','Salle Runique','Apothicairerie','Salle Géomantique','Salle des Sphères','La Balance','Le Cryptex','Le Carillon','Le Bassin des Reflets','Le Cadran Solaire','Les Bidons','La Devinette de Gollum','La Bibliothèque'].map((n,i)=>({n,x0:W0*i,x1:W0*(i+1)}));
+const ROOMS=['Salle 🜂','Salle 🜍','Salle 🜄','Salle ☿','Salle du Sceau','Salle des Ombres','Salle des Étoiles','Salle du Prisme','Salle des Leviers','Salle des Pages','Salle de la Porte','Salle Runique','Apothicairerie','Salle Géomantique','Salle des Sphères','La Balance','Le Cryptex','Le Carillon','Le Bassin des Reflets','Le Cadran Solaire','Les Bidons','La Devinette de Gollum','La Bibliothèque','Le Jeu de Mémoire','Le Puzzle Coulissant','Le Chemin d\'Euler'].map((n,i)=>({n,x0:W0*i,x1:W0*(i+1)}));
 function roomOf(x){return ROOMS.find(r=>x>=r.x0&&x<r.x1)||ROOMS[0];}
 function inR(i,x){return x>=ROOMS[i].x0&&x<ROOMS[i].x1;}
 let lastRI=-1;
@@ -542,6 +542,54 @@ const LIBRARY_WORD='LIVRE';
 const R23_DOOR={x:ROOMS[22].x1-60,y:450};
 let r23ok=false;
 
+// ══════════════════ R24: Le Jeu de Mémoire (Simon) ════════════════════════
+// Approach the pedestal to trigger a light-show; then reproduce the exact
+// order by touching the 4 stations yourself. Pure memory, no written hint.
+const R24x=ROOMS[23].x0;
+const R24_START={x:R24x+450,y:650};
+const R24_STATIONS=[
+  {x:R24x+250,y:280,sym:'🜂',col:'#a4381e'},
+  {x:R24x+650,y:280,sym:'🜄',col:'#3a5a7a'},
+  {x:R24x+250,y:450,sym:'🜃',col:'#6b5a3a'},
+  {x:R24x+650,y:450,sym:'🜁',col:'#8a9a6a'},
+];
+const R24_SEQ=[0,2,1,3,0];
+let r24playing=false,r24playIdx=-1,r24playT=0,r24litIdx=-1;
+let r24prog=0,r24ok=false,r24fl=0,r24armed=false;
+
+// ══════════════════ R25: Le Puzzle Coulissant ═════════════════════════════
+// A 3×3 sliding tile puzzle (8-puzzle). Push a tile into the empty slot.
+const R25x=ROOMS[24].x0;
+const R25_SYMS=['🜁','🜂','🜃','🜄','🜍','🜚','☉','☽'];// 8 symbols + 1 empty
+const R25_TARGET=[0,1,2,3,4,5,6,7,-1];// solved order, -1 = empty, reading order
+// scrambled-but-solvable starting arrangement (reached via legal slides from solved)
+let r25grid=[0,1,2,-1,4,5,3,6,7];
+const R25_CELL=90,R25_ORIGIN={x:R25x+320,y:230};
+let r25ok=false;
+
+// ══════════════════ R26: Le Chemin d'Euler ════════════════════════════════
+// 6 nodes, 7 bridges (a hexagon plus one diagonal chord). Exactly two nodes
+// have odd degree (0 and 3) — the only two possible start/end points of a
+// path that crosses every bridge exactly once.
+const R26x=ROOMS[25].x0;
+const NODES26=[
+  {x:R26x+200,y:450},// 0 — left  (odd degree: 3)
+  {x:R26x+350,y:220},// 1 — top-left
+  {x:R26x+650,y:220},// 2 — top-right
+  {x:R26x+800,y:450},// 3 — right (odd degree: 3)
+  {x:R26x+650,y:680},// 4 — bottom-right
+  {x:R26x+350,y:680},// 5 — bottom-left
+];
+const EDGES26=[
+  [0,1],[1,2],[2,3],[3,4],[4,5],[5,0],// the hexagon ring
+  [0,3],// the diagonal chord — makes 0 and 3 the two odd-degree nodes
+];
+let edgeLit26=EDGES26.map(()=>false);
+let r26pos=0;// node the player is currently considered "at"
+let r26ok=false,r26fl=0;
+const R26_START=0;
+function findEdge26(a,b){return EDGES26.findIndex(e=>(e[0]===a&&e[1]===b)||(e[0]===b&&e[1]===a));}
+
 // ── player ─────────────────────────────────────────────────────────────────
 const player={x:ROOMS[0].x0+120,y:450,r:16,speed:240,faceDir:1,moving:false};
 const keys={};
@@ -704,6 +752,55 @@ function interact(){
       onSolve:()=>{r23ok=true;solvedRooms.add(22);}});
     return;
   }
+  // R24 Jeu de Mémoire
+  if(inR(23,px)&&!r24ok){
+    if(!r24playing&&dist(px,py,R24_START.x,R24_START.y)<70){
+      r24playing=true;r24playIdx=0;r24playT=0;r24prog=0;r24armed=false;
+      return;
+    }
+    if(r24armed){
+      for(let i=0;i<R24_STATIONS.length;i++){
+        const s=R24_STATIONS[i];
+        if(dist(px,py,s.x,s.y)<55){
+          if(i===R24_SEQ[r24prog]){r24litIdx=i;r24prog++;if(r24prog>=R24_SEQ.length){r24ok=true;solvedRooms.add(23);}}
+          else{r24fl=1;r24prog=0;r24armed=false;}
+          return;
+        }
+      }
+    }
+    return;
+  }
+  // R25 Puzzle Coulissant
+  if(inR(24,px)&&!r25ok){
+    const emptyIdx=r25grid.indexOf(-1);
+    const ex=emptyIdx%3,ey=Math.floor(emptyIdx/3);
+    for(let i=0;i<9;i++){
+      const cx2=i%3,cy2=Math.floor(i/3);
+      const wx=R25_ORIGIN.x+cx2*R25_CELL,wy=R25_ORIGIN.y+cy2*R25_CELL;
+      if(dist(px,py,wx,wy)<48&&r25grid[i]!==-1){
+        const adj=(Math.abs(cx2-ex)+Math.abs(cy2-ey))===1;
+        if(adj){[r25grid[i],r25grid[emptyIdx]]=[r25grid[emptyIdx],r25grid[i]];
+          if(r25grid.every((v,idx)=>v===R25_TARGET[idx])){r25ok=true;solvedRooms.add(24);}
+        }
+        return;
+      }
+    }
+    return;
+  }
+  // R26 Chemin d'Euler
+  if(inR(25,px)&&!r26ok){
+    for(let n=0;n<NODES26.length;n++){
+      if(dist(px,py,NODES26[n].x,NODES26[n].y)<45){
+        if(n===r26pos)return;
+        const ei=findEdge26(r26pos,n);
+        if(ei<0)return;// not directly connected
+        if(edgeLit26[ei]){edgeLit26=EDGES26.map(()=>false);r26pos=R26_START;r26fl=1;return;}
+        edgeLit26[ei]=true;r26pos=n;
+        if(edgeLit26.every(v=>v)){r26ok=true;solvedRooms.add(25);}
+        return;
+      }
+    }
+  }
 }
 function upd(){
   document.getElementById('wB').textContent=burn.wear;
@@ -818,14 +915,27 @@ function update(dt){
     PRISMS8.forEach(p=>{
       if(p.fixed)return;
       const pd=dist(player.x,player.y,p.x,p.y);
-      if(pd<player.r+22){
+      if(pd<player.r+32){
         const edx=p.x-player.x,edy=p.y-player.y,len=Math.hypot(edx,edy)||1;
-        const speed=110*dt;
-        const nx2=clamp(p.x+edx/len*speed,ROOMS[7].x0+BD+15,ROOMS[7].x1-BD-15);
-        const ny2=clamp(p.y+edy/len*speed,BD+15,world.h-BD-15);
-        p.x=nx2;p.y=ny2;checkBeam();
+        const speed=200*dt;
+        p.x=clamp(p.x+edx/len*speed,ROOMS[7].x0+BD+15,ROOMS[7].x1-BD-15);
+        p.y=clamp(p.y+edy/len*speed,BD+15,world.h-BD-15);
       }
     });
+    // keep the two movable prisms from overlapping/merging into each other
+    const movables=PRISMS8.filter(p=>!p.fixed);
+    if(movables.length===2){
+      const[m1,m2]=movables;const minSep=40;
+      const d=dist(m1.x,m1.y,m2.x,m2.y);
+      if(d<minSep&&d>0.01){
+        const push=(minSep-d)/2,ux=(m1.x-m2.x)/d,uy=(m1.y-m2.y)/d;
+        m1.x=clamp(m1.x+ux*push,ROOMS[7].x0+BD+15,ROOMS[7].x1-BD-15);
+        m1.y=clamp(m1.y+uy*push,BD+15,world.h-BD-15);
+        m2.x=clamp(m2.x-ux*push,ROOMS[7].x0+BD+15,ROOMS[7].x1-BD-15);
+        m2.y=clamp(m2.y-uy*push,BD+15,world.h-BD-15);
+      }
+    }
+    checkBeam();
   }
   // camera lock to room
   const rm=roomOf(player.x);const rw=rm.x1-rm.x0;
@@ -864,6 +974,16 @@ function update(dt){
   if(r13fl>0)r13fl=Math.max(0,r13fl-dt*2.5);
   if(r15fl>0)r15fl=Math.max(0,r15fl-dt*2.5);
   if(r18fl>0)r18fl=Math.max(0,r18fl-dt*2.5);
+  if(r24fl>0)r24fl=Math.max(0,r24fl-dt*2.5);
+  if(r26fl>0)r26fl=Math.max(0,r26fl-dt*2.5);
+  // R24 memory playback
+  if(r24playing){
+    r24playT+=dt;
+    if(r24playT>0.75){
+      r24playT=0;r24litIdx=R24_SEQ[r24playIdx];r24playIdx++;
+      if(r24playIdx>R24_SEQ.length){r24playing=false;r24litIdx=-1;r24armed=true;}
+    }
+  }else if(!r24armed){r24litIdx=-1;}
   if(r20fl>0)r20fl=Math.max(0,r20fl-dt*2.5);
   BELLS18.forEach(b=>{if(b.pulse>0)b.pulse=Math.max(0,b.pulse-dt*1.4);});
   if(!r20ok){r20angle=(r20angle+R20_SPEED*dt)%(Math.PI*2);r20angle2=(r20angle2+R20_SPEED2*dt)%(Math.PI*2);}
@@ -901,10 +1021,16 @@ function drawPlayer(dt){
   ctx.restore();ctx.globalAlpha=1;
 }
 function drawGlow(){
-  if(!(erasure&&halo>0))return;
-  const[px,py]=w2s(player.x,player.y);const r=(50+halo*160)*DPR;
-  const g=ctx.createRadialGradient(px,py,0,px,py,r);g.addColorStop(0,'rgba(255,236,190,.5)');g.addColorStop(.4,'rgba(255,220,160,.22)');g.addColorStop(.7,'rgba(255,210,140,.1)');g.addColorStop(1,'rgba(255,210,140,0)');
-  ctx.save();ctx.fillStyle=g;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();ctx.restore();
+  if(erasure&&halo>0){
+    const[px,py]=w2s(player.x,player.y);const r=(50+halo*160)*DPR;
+    const g=ctx.createRadialGradient(px,py,0,px,py,r);g.addColorStop(0,'rgba(255,236,190,.5)');g.addColorStop(.4,'rgba(255,220,160,.22)');g.addColorStop(.7,'rgba(255,210,140,.1)');g.addColorStop(1,'rgba(255,210,140,0)');
+    ctx.save();ctx.fillStyle=g;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+  if(carryFireflies&&!r7ok){
+    const[px,py]=w2s(player.x,player.y);const r=110*DPR;
+    const g=ctx.createRadialGradient(px,py,0,px,py,r);g.addColorStop(0,'rgba(200,230,160,.4)');g.addColorStop(.5,'rgba(180,220,150,.18)');g.addColorStop(1,'rgba(180,220,150,0)');
+    ctx.save();ctx.fillStyle=g;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
 }
 
 // ── render ─────────────────────────────────────────────────────────────────
@@ -1026,7 +1152,7 @@ function render(dt){
   // R7 stars
   if(ri===6){
     const now=performance.now();ctx.save();
-    if(!r7ok){ctx.fillStyle='rgba(10,8,6,.25)';ctx.fillRect(0,0,W,H);}// faint mood tint only; real darkness comes from the mask below
+    if(!r7ok){ctx.fillStyle='rgba(20,16,10,.42)';ctx.fillRect(0,0,W,H);}
     ctx.strokeStyle='rgba(180,210,220,.3)';ctx.lineWidth=1.5*DPR;
     for(let i=0;i<r7prog-1;i++){const a=STARS7[i],b=STARS7[i+1];const[ax,ay]=w2s(a.x,a.y),[bx,by]=w2s(b.x,b.y);ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();}
     STARS7.forEach(st=>{
@@ -1355,9 +1481,55 @@ function drawHourglassIcon(x,y,col,sz){
     if(!r23ok&&dist(player.x,player.y,R23_DOOR.x,R23_DOOR.y)<100)G('[E] le mot',R23_DOOR.x,R23_DOOR.y-40,'rgba(201,168,216,.7)',13);
   }
 
+  // ── R24 Le Jeu de Mémoire
+  if(ri===23){
+    R24_STATIONS.forEach((s,i)=>{
+      const lit=i===r24litIdx;
+      const done=r24ok||(r24armed&&R24_SEQ.indexOf(i)<r24prog&&R24_SEQ[r24prog-1]===i);
+      if(lit){const[sx,sy]=w2s(s.x,s.y);const g=ctx.createRadialGradient(sx,sy,0,sx,sy,55*DPR);g.addColorStop(0,hexA(s.col,.55));g.addColorStop(1,hexA(s.col,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(sx,sy,55*DPR,0,Math.PI*2);ctx.fill();}
+      G(s.sym,s.x,s.y,lit?'#fff8e8':(r24ok?'#3a6b3a':s.col),36);
+    });
+    if(!r24playing&&!r24armed&&!r24ok)G('[E] observer',R24_START.x,R24_START.y-30,'rgba(201,168,216,.75)',14);
+    if(r24armed&&!r24ok)G('reproduis l\'ordre',R24_START.x,R24_START.y-30,'rgba(201,168,216,.55)',12);
+    G(r24ok?'✓':'⛤',R24_START.x,R24_START.y,r24ok?'#3a6b3a':'#8a7455',24);
+    if(r24fl>.01){ctx.save();ctx.fillStyle=`rgba(122,46,30,${r24fl*.25})`;ctx.fillRect(0,0,W,H);ctx.restore();}
+  }
+
+  // ── R25 Le Puzzle Coulissant
+  if(ri===24){
+    for(let i=0;i<9;i++){
+      const cx2=i%3,cy2=Math.floor(i/3);
+      const wx=R25_ORIGIN.x+cx2*R25_CELL,wy=R25_ORIGIN.y+cy2*R25_CELL;
+      const[sx,sy]=w2s(wx,wy);
+      const v=r25grid[i];
+      if(v===-1){
+        ctx.save();ctx.strokeStyle='rgba(90,74,53,.3)';ctx.lineWidth=1*DPR;ctx.setLineDash([3*DPR,5*DPR]);ctx.strokeRect(sx-38*DPR,sy-38*DPR,76*DPR,76*DPR);ctx.setLineDash([]);ctx.restore();
+      }else{
+        ctx.save();ctx.strokeStyle=r25ok?'rgba(58,107,58,.6)':'rgba(90,74,53,.6)';ctx.lineWidth=1.5*DPR;ctx.strokeRect(sx-38*DPR,sy-38*DPR,76*DPR,76*DPR);ctx.restore();
+        G(R25_SYMS[v],wx,wy,r25ok?'#3a6b3a':'#8a7455',34);
+      }
+    }
+    if(r25ok)G('✓',R25_ORIGIN.x+R25_CELL,R25_ORIGIN.y-60,'#3a6b3a',30);
+  }
+
+  // ── R26 Le Chemin d'Euler
+  if(ri===25){
+    EDGES26.forEach((e,i)=>{
+      const a=NODES26[e[0]],b=NODES26[e[1]];
+      const[ax,ay]=w2s(a.x,a.y),[bx,by]=w2s(b.x,b.y);
+      ctx.save();ctx.strokeStyle=edgeLit26[i]?'rgba(212,161,90,.85)':'rgba(90,74,53,.4)';ctx.lineWidth=edgeLit26[i]?3*DPR:1.5*DPR;
+      ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();ctx.restore();
+    });
+    NODES26.forEach((n,i)=>{
+      const isCur=i===r26pos;
+      G(isCur?'☉':'⦿',n.x,n.y,isCur?'#d4a15a':(r26ok?'#3a6b3a':'#8a7455'),isCur?30:22);
+    });
+    if(r26ok)G('✓',R26x+450,150,'#3a6b3a',30);
+    if(r26fl>.01){ctx.save();ctx.fillStyle=`rgba(122,46,30,${r26fl*.25})`;ctx.fillRect(0,0,W,H);ctx.restore();G('déjà franchi…',player.x,player.y-56,`rgba(180,80,60,${r26fl})`,13);}
+  }
+
   drawGlow();drawPlayer(dt);
   if(ri===2&&!jarDone)drawDark();
-  if(ri===6&&!r7ok)drawDark7();
   // R1 negative inside tear
   if(ri===0&&tear&&dist(player.x,player.y,tear.x,tear.y)<tear.r*.82){
     drawNegative(null);

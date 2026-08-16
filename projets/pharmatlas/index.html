@@ -613,6 +613,16 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 .osd-ruler-bar{width:120px;height:5px;background:#fff;border:1px solid #000;
   border-left:2px solid #000;border-right:2px solid #000}
 .osd-ruler-lbl{font-size:9px;color:#fff;text-shadow:0 0 3px #000;letter-spacing:.5px;font-style:italic}
+/* Bandeau légende + overlay chargement du viewer lame DICOM intégré */
+.osd-legend{position:absolute;left:0;right:0;bottom:0;z-index:35;pointer-events:none;
+  padding:8px 12px;background:linear-gradient(to top,rgba(8,10,18,.82),rgba(8,10,18,0));
+  color:#eef;font-size:12px}
+.osd-legend-main{font-weight:600;letter-spacing:.2px}
+.osd-legend-sub{opacity:.6;font-weight:400;font-size:11px}
+.osd-note{margin-top:3px;font-size:10.5px;line-height:1.35;color:#ffd27a;opacity:.92;max-width:90%}
+.osd-loading{position:absolute;inset:0;z-index:45;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;background:#0b0e14;color:#cdd6f4}
+.osd-loading-lbl{font-size:12px;letter-spacing:.3px;opacity:.8;text-align:center;max-width:80%}
 /* Bandeau EN BAS : une seule ligne (PDB · titre court · liens externes) */
 .sci2d-desc{flex-shrink:0;background:#fff;border-top:1px solid var(--border);padding:9px 14px}
 .sci2d-descrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -10586,1020 +10596,224 @@ const BACT_PDB_MAP = {
   'Campylobacter jejuni':                 { pdb: '9HMF',  label: 'Moteur flagellaire in situ \u2014 cryo-EM C17' },
   'Shigella dysenteriae':                 { pdb: '1DM0',  label: 'Toxine Shiga \u2014 holotoxine AB\u2085' },
 };
-
-/* ── Viewer IDC Collection Browser ─────────────────────────────────
-   Pour les organes avec collection IDC mais sans slide URL spécifique :
-   Affiche le portail IDC filtré sur la collection + bouton vers Histology Guide
-   ─────────────────────────────────────────────────────────────────── */
-function initSheetRendererIDCExplore(m, slide) {
-  var container = document.getElementById('sheetViewer');
-  while(container.firstChild) container.removeChild(container.firstChild);
-  if (sheetAnimId)  { cancelAnimationFrame(sheetAnimId); sheetAnimId = null; }
-  if (sheetRenderer){ sheetRenderer.dispose(); sheetRenderer = null; }
-  osdDestroy();
-  container.setAttribute('data-mode', 'idc-explore');
-  container.style.position = 'relative';
-
-  var exploreUrl = slide.idc_explore;
-  var guideUrl   = slide.guide ? 'https://histologyguide.com/slideview/' + slide.guide + '.html' : '';
-  var wikiUrl    = slide.wiki  ? 'https://en.wikipedia.org/wiki/' + slide.wiki : '';
-  var collName   = (slide.idc_label || '').replace(/IDC \/ /, '').replace(/ \(WSI.*\)/, '');
-
-  container.innerHTML =
-    '<div style="width:100%;height:100%;display:flex;flex-direction:column;'
-   +'  background:linear-gradient(160deg,#0a0c18 0%,#060810 100%);overflow-y:auto;">'
-   +'  <div style="flex:1;display:flex;flex-direction:column;align-items:center;'
-   +'    justify-content:center;padding:24px 20px;gap:20px;text-align:center;">'
-
-   // Icone + titre
-   +'    <div style="font-size:48px;opacity:.35;margin-bottom:-6px;">🔬</div>'
-   +'    <div>'
-   +'      <div style="font-family:Bebas Neue,sans-serif;font-size:20px;letter-spacing:3px;'
-   +'        color:rgba(80,170,255,0.9);">' + escHtml(m.name) + '</div>'
-   +'      <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:3px;letter-spacing:.5px;">'
-   +        escHtml(slide.note || '') + '</div>'
-   +'    </div>'
-
-   // Badges
-   +'    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">'
-   +'      <span style="font-size:9px;font-weight:700;background:rgba(0,180,100,0.12);'
-   +'        border:1px solid rgba(0,200,120,0.3);color:rgba(0,220,140,0.75);'
-   +'        border-radius:4px;padding:2px 9px;">✓ CC-BY NCI/NIH</span>'
-   +'      <span style="font-size:9px;font-weight:700;background:rgba(40,150,255,0.1);'
-   +'        border:1px solid rgba(40,150,255,0.25);color:rgba(80,170,255,0.7);'
-   +'        border-radius:4px;padding:2px 9px;">DICOM WSI H&amp;E</span>'
-   +'      <span style="font-size:9px;font-weight:600;background:rgba(255,255,255,0.05);'
-   +'        border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.4);'
-   +'        border-radius:4px;padding:2px 9px;">' + escHtml(collName) + '</span>'
-   +'    </div>'
-
-   // Explication
-   +'    <div style="font-size:11.5px;color:rgba(255,255,255,0.38);max-width:280px;'
-   +'      line-height:1.7;background:rgba(40,150,255,0.06);border:1px solid rgba(40,150,255,0.15);'
-   +'      border-radius:10px;padding:12px 16px;">'
-   +'      Des centaines de lames entières (WSI) TCGA en H&amp;E sont disponibles dans cette collection IDC.<br>'
-   +'      <span style="opacity:.6;font-size:10px;">Cliquez sur la collection pour parcourir et choisir une lame spécifique.</span>'
-   +'    </div>'
-
-   // Boutons principaux
-   +'    <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px;">'
-   +'      <a href="' + escHtml(exploreUrl) + '" target="_blank" rel="noopener"'
-   +'         style="display:flex;align-items:center;justify-content:center;gap:8px;'
-   +'         background:rgba(40,150,255,0.18);border:1.5px solid rgba(40,150,255,0.55);'
-   +'         color:rgba(80,170,255,0.95);border-radius:10px;padding:12px 20px;'
-   +'         text-decoration:none;font-size:13px;font-weight:700;">'
-   +'         🔬 Explorer la collection IDC ↗</a>'
-   + (guideUrl
-       ? '      <a href="' + escHtml(guideUrl) + '" target="_blank" rel="noopener"'
-        +'         style="display:flex;align-items:center;justify-content:center;gap:8px;'
-        +'         background:rgba(100,140,255,0.1);border:1px solid rgba(100,140,255,0.3);'
-        +'         color:rgba(120,160,255,0.75);border-radius:10px;padding:10px 20px;'
-        +'         text-decoration:none;font-size:12px;font-weight:600;">'
-        +'         📖 Histology Guide — ' + escHtml(m.histo_type||'') + ' ↗</a>'
-       : '')
-   + (wikiUrl
-       ? '      <a href="' + escHtml(wikiUrl) + '" target="_blank" rel="noopener"'
-        +'         style="display:flex;align-items:center;justify-content:center;gap:8px;'
-        +'         background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);'
-        +'         color:rgba(255,255,255,0.35);border-radius:10px;padding:8px 20px;'
-        +'         text-decoration:none;font-size:11px;">'
-        +'         🌐 Wikipedia ↗</a>'
-       : '')
-   +'    </div>'
-   +'  </div>'
-   +'</div>';
+function resolveBactEntry(m) {
+  if (m.pdb_id) return { pdb: m.pdb_id, label: m.pdb_label || null };
+  return BACT_PDB_MAP[m.name] || null;
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   VIEWER IDC (NCI Imaging Data Commons) — Slim DICOM Viewer
-   Lames WSI TCGA embarquées via iframe — CC-BY — X-Frame-Options: none
-   viewer.imaging.datacommons.cancer.gov/slim/studies/{}/series/{}
-   ══════════════════════════════════════════════════════════════════ */
-function initSheetRendererIDC(m, slide) {
-  var container = document.getElementById('sheetViewer');
-  while(container.firstChild) container.removeChild(container.firstChild);
-  if (sheetAnimId)  { cancelAnimationFrame(sheetAnimId); sheetAnimId = null; }
-  if (sheetRenderer){ sheetRenderer.dispose(); sheetRenderer = null; }
-  osdDestroy();
-  container.setAttribute('data-mode', 'idc');
-  container.style.position = 'relative';
 
-  var idcUrl     = slide.idc_url;
-  var exploreUrl = slide.idc_explore || 'https://portal.imaging.datacommons.cancer.gov/explore/';
-  var guideUrl   = slide.guide ? 'https://histologyguide.com/slideview/' + slide.guide + '.html' : '';
+/* ══════════════════════════════════════════════════════════════════════════
+   VIEWER HISTOLOGIE — LAME DICOM WSI IDC, INTÉGRÉE (OpenSeadragon)
+   ─────────────────────────────────────────────────────────────────────────
+   Aucun lien externe, aucune iframe : les tuiles DICOM (WADO-RS rendered
+   frames) sont chargées directement depuis le proxy public IDC (CC-BY, NCI/NIH)
+   et rendues dans le panneau de gauche (#sheetViewer) via un TileSource
+   OpenSeadragon sur-mesure.
+   ══════════════════════════════════════════════════════════════════════════ */
 
-  container.innerHTML =
-    '<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:#060810;">'
+/* Proxy DICOMweb public IDC (pas d'authentification, couverture 100%) */
+var IDC_DICOMWEB = 'https://proxy.imaging.datacommons.cancer.gov/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb';
 
-   // ── Toolbar supérieure ──────────────────────────────────────────
-   +'<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;flex-shrink:0;flex-wrap:wrap;'
-   +'  background:rgba(6,8,16,0.97);border-bottom:1px solid rgba(40,150,255,0.3);">'
-   +'  <span style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;'
-   +'    background:rgba(0,100,220,0.18);border:1px solid rgba(40,150,255,0.55);'
-   +'    color:rgba(80,170,255,0.95);border-radius:4px;padding:2px 9px;white-space:nowrap;">'
-   +'    🔬 IDC · NCI</span>'
-   +'  <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.38);'
-   +'    background:rgba(40,150,255,0.08);border:1px solid rgba(40,150,255,0.2);'
-   +'    border-radius:4px;padding:2px 7px;white-space:nowrap;">'
-   +    escHtml(slide.idc_label || 'TCGA WSI H&E') + '</span>'
-   +'  <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.3);'
-   +'    background:rgba(40,150,255,0.06);border:1px solid rgba(40,150,255,0.15);'
-   +'    border-radius:4px;padding:2px 7px;white-space:nowrap;">'
-   +    escHtml(slide.stain || 'HES') + '</span>'
-   +'  <span style="font-size:9px;color:rgba(255,255,255,0.28);flex:1;overflow:hidden;'
-   +'    text-overflow:ellipsis;white-space:nowrap;min-width:0;" title="' + escHtml(slide.note||'') + '">'
-   +    escHtml(slide.note || '') + '</span>'
-   +'  <a href="' + escHtml(idcUrl) + '" target="_blank" rel="noopener"'
-   +'     style="border:1px solid rgba(40,150,255,0.45);border-radius:5px;padding:3px 9px;'
-   +'     font-size:10px;color:rgba(80,170,255,0.85);text-decoration:none;'
-   +'     white-space:nowrap;flex-shrink:0;font-weight:700;">Ouvrir ↗</a>'
-   +'  <a href="' + escHtml(exploreUrl) + '" target="_blank" rel="noopener"'
-   +'     style="border:1px solid rgba(40,150,255,0.3);border-radius:5px;padding:3px 9px;'
-   +'     font-size:10px;color:rgba(80,150,255,0.65);text-decoration:none;'
-   +'     white-space:nowrap;flex-shrink:0;">Collection ↗</a>'
-   + (guideUrl
-       ? '  <a href="' + escHtml(guideUrl) + '" target="_blank" rel="noopener"'
-        +'     style="border:1px solid rgba(100,140,255,0.25);border-radius:5px;padding:3px 9px;'
-        +'     font-size:10px;color:rgba(100,140,255,0.55);text-decoration:none;white-space:nowrap;flex-shrink:0;">Guide ↗</a>'
-       : '')
-   + (slide.crs_url
-       ? '  <button onclick="initSheetRendererCRS(activeModel, resolveHistoSlide(activeModel))"'
-        +'     style="border:1px solid rgba(160,130,255,0.35);border-radius:5px;padding:3px 9px;'
-        +'     font-size:10px;cursor:pointer;background:transparent;'
-        +'     color:rgba(160,130,255,0.7);font-family:inherit;white-space:nowrap;flex-shrink:0;">'
-        +'     🏫 CRS</button>'
-       : '')
-   +'</div>'
+/* Carte des lames histologiques (générée depuis IDC v24 — GTEx tissus normaux
+   sauf mention). Chaque entrée : study/series + pyramide (niveaux VOLUME). */
+var HISTO_SLIDE_MAP = {"Épithélium pavimenteux simple":{"study":"2.25.306824149934777539199110148643346013442","series":"1.3.6.1.4.1.5962.99.1.1964983831.1461010825.1719951934999.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.1964983831.1461010825.1719951934999.10.0","w":65735,"h":40946},{"sop":"1.3.6.1.4.1.5962.99.1.1964983831.1461010825.1719951934999.24.0","w":16433,"h":10236},{"sop":"1.3.6.1.4.1.5962.99.1.1964983831.1461010825.1719951934999.31.0","w":4108,"h":2559},{"sop":"1.3.6.1.4.1.5962.99.1.1964983831.1461010825.1719951934999.38.0","w":2054,"h":1279}],"mpp":0.4942,"coll":"gtex","anat":"Tibial artery","lic":"CC BY 4.0"},"Épithélium prismatique simple":{"study":"2.25.60559427929615526180660525251923043849","series":"1.3.6.1.4.1.5962.99.1.2356976951.1724183653.1720343928119.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2356976951.1724183653.1720343928119.10.0","w":79679,"h":45651},{"sop":"1.3.6.1.4.1.5962.99.1.2356976951.1724183653.1720343928119.24.0","w":19919,"h":11412},{"sop":"1.3.6.1.4.1.5962.99.1.2356976951.1724183653.1720343928119.31.0","w":4979,"h":2853},{"sop":"1.3.6.1.4.1.5962.99.1.2356976951.1724183653.1720343928119.38.0","w":2489,"h":1426}],"mpp":0.4942,"coll":"gtex","anat":"Transverse colon","lic":"CC BY 4.0"},"Épithélium pseudostratifié cilié":{"study":"2.25.67411218519570439801183000020655236634","series":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.10.0","w":67727,"h":43002},{"sop":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.24.0","w":16931,"h":10750},{"sop":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.31.0","w":4232,"h":2687},{"sop":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.38.0","w":2116,"h":1343}],"mpp":0.4942,"coll":"gtex","anat":"Lung","lic":"CC BY 4.0"},"Épithélium transitionnel (urothélium)":{"study":"2.25.22827724969749345717934853334641102662","series":"1.3.6.1.4.1.5962.99.1.2078301225.608394926.1720065252393.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2078301225.608394926.1720065252393.10.0","w":67727,"h":47543},{"sop":"1.3.6.1.4.1.5962.99.1.2078301225.608394926.1720065252393.24.0","w":16931,"h":11885},{"sop":"1.3.6.1.4.1.5962.99.1.2078301225.608394926.1720065252393.31.0","w":4232,"h":2971},{"sop":"1.3.6.1.4.1.5962.99.1.2078301225.608394926.1720065252393.38.0","w":2116,"h":1485}],"mpp":0.4942,"coll":"gtex","anat":"Urinary bladder","lic":"CC BY 4.0"},"Épithélium pavimenteux stratifié":{"study":"2.25.194058279383201614259624295745405877815","series":"1.3.6.1.4.1.5962.99.1.2428821779.1848034370.1720415772947.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2428821779.1848034370.1720415772947.10.0","w":69719,"h":46539},{"sop":"1.3.6.1.4.1.5962.99.1.2428821779.1848034370.1720415772947.24.0","w":17429,"h":11634},{"sop":"1.3.6.1.4.1.5962.99.1.2428821779.1848034370.1720415772947.31.0","w":4357,"h":2908},{"sop":"1.3.6.1.4.1.5962.99.1.2428821779.1848034370.1720415772947.38.0","w":2178,"h":1454}],"mpp":0.4942,"coll":"gtex","anat":"Esophageal mucous membrane","lic":"CC BY 4.0"},"Tissu conjonctif lâche":{"study":"2.25.72071580107881835772227572124328554054","series":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.10.0","w":85655,"h":45460},{"sop":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.24.0","w":21413,"h":11365},{"sop":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.31.0","w":5353,"h":2841},{"sop":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.38.0","w":2676,"h":1420}],"mpp":0.4942,"coll":"gtex","anat":"Adipose tissue","lic":"CC BY 4.0"},"Tissu osseux compact (os cortical)":{"study":"2.25.139135909138452178860056530082953628823","series":"1.3.6.1.4.1.5962.99.1.810638931.128656098.1727387524691.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.810638931.128656098.1727387524691.10.0","w":167951,"h":86952},{"sop":"1.3.6.1.4.1.5962.99.1.810638931.128656098.1727387524691.24.0","w":41987,"h":21738},{"sop":"1.3.6.1.4.1.5962.99.1.810638931.128656098.1727387524691.31.0","w":10496,"h":5434},{"sop":"1.3.6.1.4.1.5962.99.1.810638931.128656098.1727387524691.38.0","w":2624,"h":1358}],"mpp":0.2635,"coll":"ccdi_mci","anat":"Long bone of lower limb","lic":"CC BY 4.0","note":"Os (ostéosarcome pédiatrique, CCDI) — pas d’os cortical normal isolé dans IDC ; trame osseuse visible."},"Tissu adipeux blanc (WAT)":{"study":"2.25.72071580107881835772227572124328554054","series":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.10.0","w":85655,"h":45460},{"sop":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.24.0","w":21413,"h":11365},{"sop":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.31.0","w":5353,"h":2841},{"sop":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.38.0","w":2676,"h":1420}],"mpp":0.4942,"coll":"gtex","anat":"Adipose tissue","lic":"CC BY 4.0"},"Muscle lisse viscéral":{"study":"2.25.45428872115410372622936361884201148986","series":"1.3.6.1.4.1.5962.99.1.2119763550.1388396864.1720106714718.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2119763550.1388396864.1720106714718.10.0","w":77687,"h":46249},{"sop":"1.3.6.1.4.1.5962.99.1.2119763550.1388396864.1720106714718.24.0","w":19421,"h":11562},{"sop":"1.3.6.1.4.1.5962.99.1.2119763550.1388396864.1720106714718.31.0","w":4855,"h":2890},{"sop":"1.3.6.1.4.1.5962.99.1.2119763550.1388396864.1720106714718.38.0","w":2427,"h":1445}],"mpp":0.4942,"coll":"gtex","anat":"Sigmoid colon","lic":"CC BY 4.0"},"Muscle strié squelettique":{"study":"2.25.157556808687337773391515473994207840832","series":"1.3.6.1.4.1.5962.99.1.2277246294.2005606795.1720264197462.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2277246294.2005606795.1720264197462.10.0","w":109559,"h":50518},{"sop":"1.3.6.1.4.1.5962.99.1.2277246294.2005606795.1720264197462.24.0","w":27389,"h":12629},{"sop":"1.3.6.1.4.1.5962.99.1.2277246294.2005606795.1720264197462.31.0","w":6847,"h":3157},{"sop":"1.3.6.1.4.1.5962.99.1.2277246294.2005606795.1720264197462.38.0","w":3423,"h":1578}],"mpp":0.4942,"coll":"gtex","anat":"Skeletal muscle","lic":"CC BY 4.0"},"Muscle cardiaque (myocarde)":{"study":"2.25.67411218519570439801183000020655236634","series":"1.3.6.1.4.1.5962.99.1.2253048874.137695601.1720240000042.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2253048874.137695601.1720240000042.10.0","w":73703,"h":42875},{"sop":"1.3.6.1.4.1.5962.99.1.2253048874.137695601.1720240000042.24.0","w":18425,"h":10718},{"sop":"1.3.6.1.4.1.5962.99.1.2253048874.137695601.1720240000042.31.0","w":4606,"h":2679},{"sop":"1.3.6.1.4.1.5962.99.1.2253048874.137695601.1720240000042.38.0","w":2303,"h":1339}],"mpp":0.4942,"coll":"gtex","anat":"Heart","lic":"CC BY 4.0"},"Neurone":{"study":"2.25.162232085069864365826724092635014923822","series":"1.3.6.1.4.1.5962.99.1.2063524666.38342624.1720050475834.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2063524666.38342624.1720050475834.10.0","w":79679,"h":49793},{"sop":"1.3.6.1.4.1.5962.99.1.2063524666.38342624.1720050475834.24.0","w":19919,"h":12448},{"sop":"1.3.6.1.4.1.5962.99.1.2063524666.38342624.1720050475834.31.0","w":4979,"h":3112},{"sop":"1.3.6.1.4.1.5962.99.1.2063524666.38342624.1720050475834.38.0","w":2489,"h":1556}],"mpp":0.4942,"coll":"gtex","anat":"Cerebral cortex","lic":"CC BY 4.0"},"Foie — Architecture hépatique":{"study":"2.25.263632796738283606636624613470981105272","series":"1.3.6.1.4.1.5962.99.1.2238546596.548582894.1720225497764.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2238546596.548582894.1720225497764.10.0","w":75695,"h":46593},{"sop":"1.3.6.1.4.1.5962.99.1.2238546596.548582894.1720225497764.24.0","w":18923,"h":11648},{"sop":"1.3.6.1.4.1.5962.99.1.2238546596.548582894.1720225497764.31.0","w":4730,"h":2912},{"sop":"1.3.6.1.4.1.5962.99.1.2238546596.548582894.1720225497764.38.0","w":2365,"h":1456}],"mpp":0.4942,"coll":"gtex","anat":"Liver","lic":"CC BY 4.0"},"Rein — Glomérule et Tubules":{"study":"2.25.129521582082880432035985268982507948131","series":"1.3.6.1.4.1.5962.99.1.2026892732.1709765899.1720013843900.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2026892732.1709765899.1720013843900.10.0","w":77687,"h":49310},{"sop":"1.3.6.1.4.1.5962.99.1.2026892732.1709765899.1720013843900.24.0","w":19421,"h":12327},{"sop":"1.3.6.1.4.1.5962.99.1.2026892732.1709765899.1720013843900.31.0","w":4855,"h":3081},{"sop":"1.3.6.1.4.1.5962.99.1.2026892732.1709765899.1720013843900.38.0","w":2427,"h":1540}],"mpp":0.4942,"coll":"gtex","anat":"Renal cortex","lic":"CC BY 4.0"},"Intestin grêle — Villosités et Cryptes":{"study":"2.25.262417716004159684555168484022340066441","series":"1.3.6.1.4.1.5962.99.1.2328293424.933636558.1720315244592.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2328293424.933636558.1720315244592.10.0","w":75695,"h":46840},{"sop":"1.3.6.1.4.1.5962.99.1.2328293424.933636558.1720315244592.24.0","w":18923,"h":11710},{"sop":"1.3.6.1.4.1.5962.99.1.2328293424.933636558.1720315244592.31.0","w":4730,"h":2927},{"sop":"1.3.6.1.4.1.5962.99.1.2328293424.933636558.1720315244592.38.0","w":2365,"h":1463}],"mpp":0.4942,"coll":"gtex","anat":"Ileum","lic":"CC BY 4.0"},"Poumon — Alvéoles et Parenchyme":{"study":"2.25.67411218519570439801183000020655236634","series":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.10.0","w":67727,"h":43002},{"sop":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.24.0","w":16931,"h":10750},{"sop":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.31.0","w":4232,"h":2687},{"sop":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.38.0","w":2116,"h":1343}],"mpp":0.4942,"coll":"gtex","anat":"Lung","lic":"CC BY 4.0"},"Pancréas — Exocrine et Endocrine":{"study":"2.25.175453289089207716636487455967112265591","series":"1.3.6.1.4.1.5962.99.1.2087165486.2144888028.1720074116654.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2087165486.2144888028.1720074116654.10.0","w":71711,"h":48350},{"sop":"1.3.6.1.4.1.5962.99.1.2087165486.2144888028.1720074116654.24.0","w":17927,"h":12087},{"sop":"1.3.6.1.4.1.5962.99.1.2087165486.2144888028.1720074116654.31.0","w":4481,"h":3021},{"sop":"1.3.6.1.4.1.5962.99.1.2087165486.2144888028.1720074116654.38.0","w":2240,"h":1510}],"mpp":0.4942,"coll":"gtex","anat":"Pancreas","lic":"CC BY 4.0"},"Glandes surrénales — Cortex et Médulla":{"study":"2.25.290650832172723014084357606340725892937","series":"1.3.6.1.4.1.5962.99.1.2458150310.1101181697.1720445101478.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2458150310.1101181697.1720445101478.10.0","w":75695,"h":49156},{"sop":"1.3.6.1.4.1.5962.99.1.2458150310.1101181697.1720445101478.24.0","w":18923,"h":12289},{"sop":"1.3.6.1.4.1.5962.99.1.2458150310.1101181697.1720445101478.31.0","w":4730,"h":3072},{"sop":"1.3.6.1.4.1.5962.99.1.2458150310.1101181697.1720445101478.38.0","w":2365,"h":1536}],"mpp":0.4942,"coll":"gtex","anat":"Adrenal gland","lic":"CC BY 4.0"},"Tissu Cartilagineux (Hyalin, Élastique, Fibreux)":{"study":"2.25.67411218519570439801183000020655236634","series":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.10.0","w":67727,"h":43002},{"sop":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.24.0","w":16931,"h":10750},{"sop":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.31.0","w":4232,"h":2687},{"sop":"1.3.6.1.4.1.5962.99.1.2339313956.1676999111.1720326265124.38.0","w":2116,"h":1343}],"mpp":0.4942,"coll":"gtex","anat":"Lung","lic":"CC BY 4.0","note":"⚠ Pas de lame de cartilage dédiée dans IDC. Lame de poumon GTEx : cartilage hyalin bronchique visible dans les grosses voies aériennes."},"Tissu Adipeux Brun (BAT)":{"study":"2.25.72071580107881835772227572124328554054","series":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.10.0","w":85655,"h":45460},{"sop":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.24.0","w":21413,"h":11365},{"sop":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.31.0","w":5353,"h":2841},{"sop":"1.3.6.1.4.1.5962.99.1.2157201603.1697374337.1720144152771.38.0","w":2676,"h":1420}],"mpp":0.4942,"coll":"gtex","anat":"Adipose tissue","lic":"CC BY 4.0","note":"⚠ Aucune lame de tissu adipeux BRUN dans IDC. Lame d’adipeux blanc GTEx par défaut."},"Rate — Pulpe Rouge et Pulpe Blanche":{"study":"2.25.60738375414573063200913805428630919133","series":"1.3.6.1.4.1.5962.99.1.1979580582.287328775.1719966531750.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.1979580582.287328775.1719966531750.10.0","w":75695,"h":46345},{"sop":"1.3.6.1.4.1.5962.99.1.1979580582.287328775.1719966531750.24.0","w":18923,"h":11586},{"sop":"1.3.6.1.4.1.5962.99.1.1979580582.287328775.1719966531750.31.0","w":4730,"h":2896},{"sop":"1.3.6.1.4.1.5962.99.1.1979580582.287328775.1719966531750.38.0","w":2365,"h":1448}],"mpp":0.4942,"coll":"gtex","anat":"Spleen","lic":"CC BY 4.0"},"Thymus — Cortex et Médulla":{"study":"2.25.111181337669019155476916314899355602781","series":"1.3.6.1.4.1.5962.99.1.3592322651.956151977.1639974895195.2.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.3592322651.956151977.1639974895195.8.0","w":226176,"h":108544},{"sop":"1.3.6.1.4.1.5962.99.1.3592322651.956151977.1639974895195.22.0","w":56544,"h":27136},{"sop":"1.3.6.1.4.1.5962.99.1.3592322651.956151977.1639974895195.29.0","w":14136,"h":6784},{"sop":"1.3.6.1.4.1.5962.99.1.3592322651.956151977.1639974895195.36.0","w":3534,"h":1696}],"mpp":0.2279,"coll":"tcga_thym","anat":"Thymus","lic":"CC BY 3.0","note":"Thymus (TCGA-THYM, thymome) — cortex/médulla identifiables."},"Tissu Conjonctif Dense":{"study":"2.25.162186559896975211911888864603348081549","series":"1.3.6.1.4.1.5962.99.1.2051041290.1626843602.1720037992458.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2051041290.1626843602.1720037992458.10.0","w":89639,"h":44600},{"sop":"1.3.6.1.4.1.5962.99.1.2051041290.1626843602.1720037992458.24.0","w":22409,"h":11150},{"sop":"1.3.6.1.4.1.5962.99.1.2051041290.1626843602.1720037992458.31.0","w":5602,"h":2787},{"sop":"1.3.6.1.4.1.5962.99.1.2051041290.1626843602.1720037992458.38.0","w":2801,"h":1393}],"mpp":0.4942,"coll":"gtex","anat":"Skin of lower leg","lic":"CC BY 4.0"},"Cellules de Sertoli et de Leydig (Testicule)":{"study":"2.25.60738375414573063200913805428630919133","series":"1.3.6.1.4.1.5962.99.1.2021997990.590347922.1720008949158.4.0","levels":[{"sop":"1.3.6.1.4.1.5962.99.1.2021997990.590347922.1720008949158.10.0","w":71711,"h":41982},{"sop":"1.3.6.1.4.1.5962.99.1.2021997990.590347922.1720008949158.24.0","w":17927,"h":10495},{"sop":"1.3.6.1.4.1.5962.99.1.2021997990.590347922.1720008949158.31.0","w":4481,"h":2623},{"sop":"1.3.6.1.4.1.5962.99.1.2021997990.590347922.1720008949158.38.0","w":2240,"h":1311}],"mpp":0.4942,"coll":"gtex","anat":"Testis","lic":"CC BY 4.0"}};
 
-   // ── Iframe IDC Slim Viewer ────────────────────────────────────────
-   +'<div style="position:relative;flex:1;min-height:0;">'
-   +'  <iframe id="idc-frame" src="' + escHtml(idcUrl) + '"'
-   +'    style="width:100%;height:100%;border:none;display:block;"'
-   +'    allowfullscreen loading="lazy"'
-   +'    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads">'
-   +'  </iframe>'
-
-   // ── Spinner de chargement ─────────────────────────────────────────
-   +'  <div id="idc-loading" style="position:absolute;inset:0;display:flex;flex-direction:column;'
-   +'    align-items:center;justify-content:center;background:#060810;z-index:5;gap:12px;'
-   +'    pointer-events:none;transition:opacity .5s;">'
-   +'    <div class="spinner" style="border-color:rgba(40,150,255,0.18);border-top-color:rgb(80,160,255);'
-   +'      width:40px;height:40px;border-width:3px;"></div>'
-   +'    <div style="font-family:Bebas Neue,sans-serif;font-size:15px;letter-spacing:2.5px;'
-   +'      color:rgb(80,170,255);">' + escHtml(m.name) + '</div>'
-   +'    <div style="font-size:10px;color:rgba(255,255,255,0.28);">Chargement viewer IDC · DICOM WSI…</div>'
-   +'    <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">'
-   +'      <span style="font-size:9px;background:rgba(0,180,100,0.12);border:1px solid rgba(0,200,120,0.3);'
-   +'        color:rgba(0,220,140,0.75);border-radius:4px;padding:2px 8px;">✓ CC-BY NCI/TCGA</span>'
-   +'      <span style="font-size:9px;background:rgba(40,150,255,0.1);border:1px solid rgba(40,150,255,0.25);'
-   +'        color:rgba(80,170,255,0.7);border-radius:4px;padding:2px 8px;">DICOM WSI · H&amp;E</span>'
-   +'    </div>'
-   +'  </div>'
-
-   // ── Écran fallback (si iframe bloquée) ────────────────────────────
-   +'  <div id="idc-fallback" style="display:none;position:absolute;inset:0;z-index:10;'
-   +'    flex-direction:column;align-items:center;justify-content:center;background:#060810;gap:16px;">'
-   +'    <div style="font-size:36px;">🧬</div>'
-   +'    <div style="font-family:Bebas Neue,sans-serif;font-size:18px;letter-spacing:2px;'
-   +'      color:rgba(80,170,255,0.9);">NCI Imaging Data Commons</div>'
-   +'    <div style="font-size:11.5px;color:rgba(255,255,255,0.4);max-width:280px;text-align:center;line-height:1.7;">'
-   +      escHtml(slide.idc_label || 'TCGA WSI') + '<br>'
-   +'      <span style="opacity:.6">Lame DICOM entière — CC-BY — NCI/NIH</span></div>'
-   +'    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">'
-   +'      <button onclick="document.getElementById(&quot;idc-fallback&quot;).style.display=&quot;none&quot;;document.getElementById(&quot;idc-frame&quot;).src=document.getElementById(&quot;idc-frame&quot;).src;"'
-   +'        style="background:rgba(40,150,255,0.15);border:1px solid rgba(40,150,255,0.4);'
-   +'        color:rgba(80,170,255,0.9);border-radius:8px;padding:9px 18px;cursor:pointer;'
-   +'        font-family:inherit;font-size:12px;font-weight:600;">↺ Réessayer</button>'
-   +'      <a href="' + escHtml(idcUrl) + '" target="_blank" rel="noopener"'
-   +'         style="display:inline-flex;align-items:center;background:rgba(40,150,255,0.2);'
-   +'         border:1px solid rgba(40,150,255,0.5);color:rgba(80,170,255,0.9);border-radius:8px;'
-   +'         padding:9px 18px;text-decoration:none;font-size:12px;font-weight:600;">'
-   +'         Ouvrir dans un onglet ↗</a>'
-   +'      <a href="' + escHtml(exploreUrl) + '" target="_blank" rel="noopener"'
-   +'         style="display:inline-flex;align-items:center;background:rgba(40,150,255,0.1);'
-   +'         border:1px solid rgba(40,150,255,0.3);color:rgba(80,150,255,0.75);border-radius:8px;'
-   +'         padding:9px 18px;text-decoration:none;font-size:12px;">'
-   +'         Explorer la collection ↗</a>'
-   +'    </div>'
-   +'  </div>'
-   +'</div>'
-   +'</div>';
-
-  // Événements iframe
-  var frame   = document.getElementById('idc-frame');
-  var loading = document.getElementById('idc-loading');
-  var fallback= document.getElementById('idc-fallback');
-
-  if (frame) {
-    frame.addEventListener('load', function(){
-      if (loading) { loading.style.opacity='0'; setTimeout(function(){ loading.style.display='none'; }, 500); }
-    });
-    frame.addEventListener('error', function(){
-      if (loading)  loading.style.display='none';
-      if (fallback) fallback.style.display='flex';
-    });
-    // Timeout 15s (IDC Slim peut être lent à initialiser)
-    setTimeout(function(){
-      if (loading && loading.style.display !== 'none' && loading.style.opacity !== '0') {
-        if (fallback) fallback.style.display='flex';
-        if (loading)  loading.style.display='none';
-      }
-    }, 15000);
-  }
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   VIEWER LAME CRS — crsonline.biomedicale.parisdescartes.fr
-   Iframe directe — Réseau/VPN Université Paris Cité requis
-   X-Frame-Options: non défini → embarquement autorisé
-   ══════════════════════════════════════════════════════════════════ */
-function initSheetRendererCRS(m, slide) {
-  var container = document.getElementById('sheetViewer');
-  while(container.firstChild) container.removeChild(container.firstChild);
-  if (sheetAnimId) { cancelAnimationFrame(sheetAnimId); sheetAnimId = null; }
-  if (sheetRenderer) { sheetRenderer.dispose(); sheetRenderer = null; }
-  osdDestroy();
-  container.setAttribute('data-mode', 'crs');
-  container.style.position = 'relative';
-
-  var crsUrl   = slide.crs_url;
-  var guideUrl = slide.guide ? 'https://histologyguide.com/slideview/' + slide.guide + '.html' : '';
-
-  container.innerHTML =
-    '<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:#080812;">'
-   +'  <button class="v3d-fsbtn" onclick="v3dFullscreen()" title="Plein \u00e9cran" style="top:46px;z-index:40">\u26F6</button>'
-   // Badge "CRS Paris Cité" + toolbar
-   +'  <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;flex-shrink:0;'
-   +'    background:rgba(8,8,18,0.97);border-bottom:1px solid rgba(130,100,220,0.3);">'
-   +'    <span style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;'
-   +'      background:rgba(130,100,220,0.15);border:1px solid rgba(130,100,220,0.45);'
-   +'      color:rgba(160,130,255,0.9);border-radius:4px;padding:2px 9px;white-space:nowrap;">'
-   +'      🏫 ' + escHtml(slide.crs_label || 'CRS Paris Cité') + '</span>'
-   +'    <span style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.45);'
-   +'      background:rgba(160,130,255,0.08);border:1px solid rgba(160,130,255,0.2);'
-   +'      border-radius:4px;padding:2px 8px;white-space:nowrap;">'
-   +      escHtml(slide.stain || 'HES') + '</span>'
-   +'    <span style="font-size:10px;color:rgba(255,255,255,0.32);flex:1;overflow:hidden;'
-   +'      text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(slide.note||'') + '">'
-   +      escHtml(slide.note || '') + '</span>'
-   +'    <a href="' + escHtml(crsUrl) + '" target="_blank" rel="noopener"'
-   +'       style="border:1px solid rgba(160,130,255,0.4);border-radius:5px;padding:3px 9px;'
-   +'       font-size:10px;color:rgba(160,130,255,0.85);text-decoration:none;white-space:nowrap;flex-shrink:0;">'
-   +'      Ouvrir ↗</a>'
-   + (guideUrl
-       ? '    <a href="' + escHtml(guideUrl) + '" target="_blank" rel="noopener"'
-        +'       style="border:1px solid rgba(130,160,255,0.35);border-radius:5px;padding:3px 9px;'
-        +'       font-size:10px;color:rgba(130,160,255,0.75);text-decoration:none;white-space:nowrap;flex-shrink:0;">'
-        +'      Guide ↗</a>'
-       : '')
-   +'  </div>'
-   // Iframe principale
-   +'  <div style="position:relative;flex:1;min-height:0;">'
-   +'    <iframe id="crs-frame" src="' + escHtml(crsUrl) + '"'
-   +'      style="width:100%;height:100%;border:none;display:block;"'
-   +'      allowfullscreen loading="lazy"'
-   +'      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox">'
-   +'    </iframe>'
-   // Overlay de chargement (disparaît dès que l'iframe charge)
-   +'    <div id="crs-loading" style="position:absolute;inset:0;display:flex;flex-direction:column;'
-   +'      align-items:center;justify-content:center;background:#080812;z-index:5;gap:12px;'
-   +'      pointer-events:none;transition:opacity .5s;">'
-   +'      <div class="spinner" style="border-color:rgba(130,100,220,0.25);border-top-color:rgb(160,130,255);'
-   +'        width:36px;height:36px;border-width:3px;"></div>'
-   +'      <div style="font-family:Bebas Neue,sans-serif;font-size:14px;letter-spacing:2px;'
-   +'        color:rgb(160,130,255);">' + escHtml(m.name) + '</div>'
-   +'      <div style="font-size:10px;color:rgba(255,255,255,0.3);">Chargement lame CRS Paris Cité…</div>'
-   +'      <div style="font-size:10px;color:rgba(255,220,80,0.7);max-width:240px;text-align:center;'
-   +'        background:rgba(255,180,0,0.1);border:1px solid rgba(255,180,0,0.25);border-radius:6px;'
-   +'        padding:6px 12px;line-height:1.5;">'
-   +'        ⚠️ Réseau Université Paris Cité requis<br>'
-   +'        <span style="opacity:.7">(VPN ou Wi-Fi campus)</span>'
-   +'      </div>'
-   +'    </div>'
-   +'  </div>'
-   // Fallback OSD en cas d'échec iframe
-   +'  <div id="crs-fallback" style="display:none;position:absolute;inset:0;z-index:10;'
-   +'    flex-direction:column;align-items:center;justify-content:center;background:#080812;gap:14px;">'
-   +'    <div style="font-size:32px;">🔒</div>'
-   +'    <div style="font-family:Bebas Neue,sans-serif;font-size:16px;letter-spacing:2px;'
-   +'      color:rgba(255,200,80,0.9);">Accès réseau requis</div>'
-   +'    <div style="font-size:11px;color:rgba(255,255,255,0.45);max-width:260px;text-align:center;line-height:1.6;">'
-   +'      Cette lame est hébergée sur les serveurs de l\'Université Paris Cité.<br>'
-   +'      Connectez-vous au réseau campus ou au VPN UP Cité.</div>'
-   +'    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px;">'
-   +'      <button onclick="document.getElementById(&quot;crs-fallback&quot;).style.display=&quot;none&quot;;'
-   +'        document.getElementById(&quot;crs-frame&quot;).style.display=&quot;block&quot;;"'
-   +'        style="background:rgba(160,130,255,0.15);border:1px solid rgba(160,130,255,0.4);'
-   +'        color:rgba(160,130,255,0.9);border-radius:8px;padding:8px 16px;cursor:pointer;'
-   +'        font-family:inherit;font-size:12px;font-weight:600;">↺ Réessayer</button>'
-   +'      <a href="' + escHtml(crsUrl) + '" target="_blank" rel="noopener"'
-   +'         style="display:inline-flex;align-items:center;background:rgba(160,130,255,0.2);'
-   +'         border:1px solid rgba(160,130,255,0.45);color:rgba(160,130,255,0.9);border-radius:8px;'
-   +'         padding:8px 16px;text-decoration:none;font-size:12px;font-weight:600;">'
-   +'         Ouvrir dans un onglet ↗</a>'
-   +'      <button onclick="initSheetRendererOSD(activeModel, resolveHistoSlide(activeModel))"'
-   +'        style="background:rgba(58,176,158,0.1);border:1px solid rgba(58,176,158,0.3);'
-   +'        color:rgba(58,176,158,0.75);border-radius:8px;padding:8px 16px;cursor:pointer;'
-   +'        font-family:inherit;font-size:12px;">🔬 Viewer alternatif</button>'
-   +'    </div>'
-   +'  </div>'
-   +'</div>';
-
-  // Écouter le chargement de l'iframe
-  var crsFrame   = document.getElementById('crs-frame');
-  var crsLoading = document.getElementById('crs-loading');
-  var crsFallback= document.getElementById('crs-fallback');
-
-  if (crsFrame) {
-    crsFrame.addEventListener('load', function(){
-      // Masquer le spinner
-      if (crsLoading) { crsLoading.style.opacity='0'; setTimeout(function(){ crsLoading.style.display='none'; }, 500); }
-    });
-    crsFrame.addEventListener('error', function(){
-      if (crsLoading) crsLoading.style.display='none';
-      if (crsFallback) crsFallback.style.display='flex';
-    });
-    // Timeout 12s : si l'iframe n'a pas chargé → afficher le fallback
-    setTimeout(function(){
-      if (crsLoading && crsLoading.style.display !== 'none' && crsLoading.style.opacity !== '0') {
-        if (crsFallback) crsFallback.style.display='flex';
-        if (crsLoading) crsLoading.style.display='none';
-      }
-    }, 12000);
-  }
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   VIEWER LAME HISTOLOGIQUE — OpenSeadragon + Wikimedia Commons
-   Images CC-BY/CC-BY-SA — CORS natif — pyramide multi-résolution
-   Sources : Wikimedia Commons (upload.wikimedia.org)
-   ══════════════════════════════════════════════════════════════════ */
-
-/* ── Carte entrée Histologie → image Wikimedia Commons ───────────── */
-const HISTO_SLIDE_MAP = {
-  // wiki  : article en.wikipedia.org → API REST /page/summary/ → originalimage
-  // Tous les articles ont une image principale de qualité histologique
-  'Épithélium pavimenteux simple':
-    { wiki:'Simple_squamous_epithelium',           stain:'HES', note:'Endothélium — cellules aplaties — membrane basale fine', guide:'MH-016-simple-epithelia/02-slide-1' },
-  'Épithélium prismatique simple':
-    { wiki:'Simple_columnar_epithelium',            stain:'HES', note:'Entérocytes + cellules caliciformes — plateau strié', guide:'MH-017-simple-epithelia/02-slide-2' },
-  'Épithélium pseudostratifié cilié':
-    { wiki:'Pseudostratified_columnar_epithelium',  stain:'HES', note:'Trachée — cils + cellules caliciformes + membrane basale', guide:'MH-018-pseudostratified/02-slide-1' },
-  'Épithélium transitionnel (urothélium)':
-    { wiki:'Transitional_epithelium',               stain:'HES', note:'Urothélium vésical — cellules parapluie', guide:'MH-022-stratified-epithelia/02-slide-2' , idc_label:'IDC / TCGA-BLCA — Vessie (WSI H&E)', idc_explore:'https://portal.imaging.datacommons.cancer.gov/explore/?collections=tcga_blca' },
-  'Épithélium pavimenteux stratifié':
-    { wiki:'Stratified_squamous_epithelium',         stain:'HES', note:'Peau — couches basale / épineuse / granuleuse / cornée', guide:'MH-019-stratified-squamous/02-slide-1' },
-  'Tissu conjonctif lâche':
-    { wiki:'Loose_connective_tissue',               stain:'HES', note:'Fibres de collagène + élastine + fibroblastes', guide:'MH-032-loose-connective/02-slide-1' },
-  'Tissu osseux compact (os cortical)':
-    { wiki:'Compact_bone',                          stain:'HES', note:'Ostéons de Havers — lamelles osseuses', guide:'MH-044-compact-bone/02-slide-1' },
-  'Tissu adipeux blanc (WAT)':
-    { wiki:'Adipose_tissue',                        stain:'HES', note:'Adipocytes uniloculaires — noyau en signet', guide:'MH-036-adipose/02-slide-1' , idc_label:'IDC / TCGA-BRCA — Tissu adipeux (WSI H&E)', idc_explore:'https://portal.imaging.datacommons.cancer.gov/explore/?collections=tcga_brca' },
-  'Muscle lisse viscéral':
-    { wiki:'Smooth_muscle_tissue',                  stain:'HES', note:'Cellules fusiformes — noyau central allongé', guide:'MH-052-smooth-muscle/02-slide-1' },
-  'Muscle strié squelettique':
-    { wiki:'Skeletal_muscle',                       stain:'HES', note:'Stries transversales — noyaux périphériques — sarcomères', guide:'MH-051-skeletal-muscle/02-slide-1' },
-  'Muscle cardiaque (myocarde)':
-    { wiki:'Cardiac_muscle',                        stain:'HES', note:'Disques intercalaires + stries + noyaux centraux', guide:'MH-053-cardiac-muscle/02-slide-1' },
-  'Neurone':
-    { wiki:'Neuron', crs_url:'https://crsonline.biomedicale.parisdescartes.fr/neuro/', crs_label:'CRS Paris Cité — Neurologie', stain:'Nissl / HES', note:'Corps de Nissl — prolongements — axone hillock', guide:'MH-061-neurons/02-slide-1' , idc_label:'IDC / TCGA-GBM — Cerveau (WSI H&E)', idc_explore:'https://portal.imaging.datacommons.cancer.gov/explore/?collections=tcga_gbm' },
-  'Foie — Architecture hépatique':
-    { wiki:'Hepatocyte',                            stain:'HES', note:'Lobule classique — veine centrolobulaire — espaces de Disse', guide:'MH-152-liver/02-slide-1' , idc_label:'IDC / TCGA-LIHC — Foie (WSI H&E)', idc_explore:'https://portal.imaging.datacommons.cancer.gov/explore/?collections=tcga_lihc' },
-  'Rein — Glomérule et Tubules':
-    { wiki:'Renal_corpuscle', crs_url:'https://crsonline.biomedicale.parisdescartes.fr/rein/', crs_label:'CRS Paris Cité — Rein', stain:'HES (Masson)', note:'Corpuscule de Malpighi — Bowman — TCP/TCD', guide:'MH-162-kidney/02-slide-1' , idc_url:'https://viewer.imaging.datacommons.cancer.gov/slim/studies/2.25.64404364470879153092405763487370509755/series/1.3.6.1.4.1.5962.99.1.265406396.1623094220.1640942946236.2.0', idc_label:'IDC / TCGA-KIRC — Rein (WSI H&E)', idc_explore:'https://portal.imaging.datacommons.cancer.gov/explore/?collections=tcga_kirc' },
-  'Intestin grêle — Villosités et Cryptes':
-    { wiki:'Intestinal_villus',                     stain:'HES', note:'Villosités — cryptes de Lieberkühn — plateau strié', guide:'MH-133-small-intestine/02-slide-1' , idc_label:'IDC / TCGA-COAD — Côlon (WSI H&E)', idc_explore:'https://portal.imaging.datacommons.cancer.gov/explore/?collections=tcga_coad' },
-  'Poumon — Alvéoles et Parenchyme':
-    { wiki:'Pulmonary_alveolus',                    stain:'HES', note:'Alvéoles — pneumocytes I/II — capillaires septaux', guide:'MH-173-lung/02-slide-1' , idc_label:'IDC / TCGA-LUAD — Poumon (WSI H&E)', idc_explore:'https://portal.imaging.datacommons.cancer.gov/explore/?collections=tcga_luad' },
-  'Pancréas — Exocrine et Endocrine':
-    { wiki:'Pancreatic_islets',                     stain:'HES', note:'Acini séreux — îlots de Langerhans — canaux', guide:'MH-155-pancreas/02-slide-1' , idc_label:'IDC / TCGA-PAAD — Pancréas (WSI H&E)', idc_explore:'https://portal.imaging.datacommons.cancer.gov/explore/?collections=tcga_paad' },
-  'Glandes surrénales — Cortex et Médulla':
-    { wiki:'Adrenal_cortex',                        stain:'HES', note:'Zones glomérulée / fasciculée / réticulée — médulla chromaffine', guide:'MH-177-adrenal/02-slide-1' , idc_label:'IDC / TCGA-ACC — Surrénale (WSI H&E)', idc_explore:'https://portal.imaging.datacommons.cancer.gov/explore/?collections=tcga_acc' },
-};
-
-/* ── Résoudre l'entrée slide pour un item Histologie ─────────────── */
-function resolveHistoSlide(m) {
-  if (m.slide_wm) return { file: m.slide_wm, stain: m.slide_stain||'HES', note: m.slide_note||'', guide: m.slide_guide||'' };
+function resolveHistoSlide(m){
+  if(!m) return null;
   return HISTO_SLIDE_MAP[m.name] || null;
 }
 
-/* ── URL Wikimedia Commons (multi-résolution) ────────────────────── */
-function wmUrl(filename, width) {
-  // Wikimedia URL pattern: /thumb/X/XX/Filename/WIDTHpx-Filename
-  // For files without /thumb subdir, use direct URL
-  var encoded = encodeURIComponent(filename).replace(/%20/g,'_').replace(/%2F/g,'/');
-  // We use the API-style thumbnail URL which is always available
-  return 'https://upload.wikimedia.org/wikipedia/commons/thumb/auto-orient/lossy-page1-' + width + 'px-' + encoded;
-}
-
-function wmDirectUrl(filename) {
-  // Direct Wikimedia image URL via API
-  var encoded = filename.replace(/ /g,'_');
-  return 'https://upload.wikimedia.org/wikipedia/commons/' + encoded;
-}
-
-/* ── Chargeur OpenSeadragon (lazy) ───────────────────────────────── */
-var _osdLoaded = false;
-var _osdCBs    = [];
-function _loadOSD(cb) {
-  if (_osdLoaded && typeof OpenSeadragon !== 'undefined') { cb(); return; }
-  if (_osdLoaded) { cb(true); return; }
+/* Loader OpenSeadragon (lazy, CDN autorisé) */
+var _osdLoaded=false, _osdCBs=[];
+function _loadOSD(cb){
+  if(_osdLoaded && typeof OpenSeadragon!=='undefined'){ cb(); return; }
+  if(_osdLoaded){ cb(true); return; }
   _osdCBs.push(cb);
-  if (_osdCBs.length > 1) return;
-  var s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/openseadragon.min.js';
-  s.onload = function(){ _osdLoaded=true; _osdCBs.forEach(function(fn){fn();}); _osdCBs=[]; };
-  s.onerror = function(){
-    var s2 = document.createElement('script');
-    s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js';
-    s2.onload = function(){ _osdLoaded=true; _osdCBs.forEach(function(fn){fn();}); _osdCBs=[]; };
-    s2.onerror = function(){ _osdLoaded=true; _osdCBs.forEach(function(fn){fn(true);}); _osdCBs=[]; };
+  if(_osdCBs.length>1) return;
+  var s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/openseadragon.min.js';
+  s.onload=function(){ _osdLoaded=true; _osdCBs.forEach(function(f){f();}); _osdCBs=[]; };
+  s.onerror=function(){
+    var s2=document.createElement('script');
+    s2.src='https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js';
+    s2.onload=function(){ _osdLoaded=true; _osdCBs.forEach(function(f){f();}); _osdCBs=[]; };
+    s2.onerror=function(){ _osdLoaded=true; _osdCBs.forEach(function(f){f(true);}); _osdCBs=[]; };
     document.head.appendChild(s2);
   };
   document.head.appendChild(s);
 }
 
-/* ── Viewer OSD actif ────────────────────────────────────────────── */
-var _osdViewer = null;
-var _osdCurrentSlide = null;
+var _osdViewer=null;
+function osdDestroy(){
+  if(_osdViewer){ try{_osdViewer.destroy();}catch(e){} _osdViewer=null; }
+  window._osdViewer=null;
+}
 
-// Injecte la barre d'outils flottante histologie dans le viewport OSD
+/* Récupère les métadonnées DICOM d'une instance (1 requête) pour connaître
+   la taille de tuile (Columns/Rows), le nb de frames et la grille. */
+function _dcmLevelMeta(study, series, sop){
+  var url = IDC_DICOMWEB+'/studies/'+study+'/series/'+series+'/instances/'+sop+'/metadata';
+  return fetch(url,{headers:{'Accept':'application/dicom+json'}})
+    .then(function(r){ if(!r.ok) throw new Error('meta '+r.status); return r.json(); })
+    .then(function(j){
+      var d = Array.isArray(j)? j[0] : j;
+      function V(tag){ var e=d[tag]; return e && e.Value ? e.Value[0] : undefined; }
+      var tileW = +V('00280011'); // Columns (largeur d'une frame)
+      var tileH = +V('00280010'); // Rows (hauteur d'une frame)
+      var totW  = +V('00480006'); // TotalPixelMatrixColumns
+      var totH  = +V('00480007'); // TotalPixelMatrixRows
+      var nFrames = +V('00280008')||1; // NumberOfFrames
+      var cols = Math.ceil(totW/tileW);
+      var rows = Math.ceil(totH/tileH);
+      return {sop:sop, tileW:tileW, tileH:tileH, totW:totW, totH:totH,
+              cols:cols, rows:rows, nFrames:nFrames};
+    });
+}
+
+/* Construit un TileSource OpenSeadragon multi-niveaux à partir de la pyramide
+   DICOM. Chaque niveau = 1 instance DICOM tuilée en frames. */
+function _buildDicomTileSource(study, series, levelsMeta){
+  // levelsMeta trié du plus GRAND au plus PETIT
+  var big = levelsMeta[0];
+  var width = big.totW, height = big.totH;
+  var tileW = big.tileW, tileH = big.tileH;
+
+  // OSD attend des niveaux 0..N croissants (0 = plus petit). On mappe
+  // chaque niveau OSD vers l'instance DICOM de résolution la plus proche.
+  var osdMaxLevel = Math.ceil(Math.log2(Math.max(width,height)));
+
+  return {
+    width: width,
+    height: height,
+    tileWidth: tileW,
+    tileHeight: tileH,
+    minLevel: 0,
+    maxLevel: osdMaxLevel,
+    getTileUrl: function(level, x, y){
+      // Échelle du niveau OSD demandé par rapport au niveau plein (level max)
+      var scale  = Math.pow(2, osdMaxLevel - level); // >=1
+      var levelW = width / scale;                    // largeur affichée à ce niveau
+      // Instance DICOM dont la résolution est juste >= au niveau OSD demandé
+      var chosen = levelsMeta[levelsMeta.length-1];
+      for(var i=levelsMeta.length-1;i>=0;i--){
+        if(levelsMeta[i].totW >= levelW - 1){ chosen = levelsMeta[i]; break; }
+      }
+      // Coin haut-gauche de la tuile OSD, exprimé en fraction de l'image entière
+      var fracX = (x * tileW * scale) / width;
+      var fracY = (y * tileH * scale) / height;
+      // Colonne / ligne de frame correspondante DANS l'instance choisie
+      var col = Math.floor(fracX * chosen.totW / chosen.tileW);
+      var row = Math.floor(fracY * chosen.totH / chosen.tileH);
+      if(col<0) col=0; if(row<0) row=0;
+      if(col>=chosen.cols) col=chosen.cols-1;
+      if(row>=chosen.rows) row=chosen.rows-1;
+      var frame = row * chosen.cols + col + 1; // frames DICOM 1-indexées
+      if(frame<1) frame=1; if(frame>chosen.nFrames) frame=chosen.nFrames;
+      return IDC_DICOMWEB+'/studies/'+study+'/series/'+series+
+             '/instances/'+chosen.sop+'/frames/'+frame+'/rendered';
+    },
+    // les frames rendered sont des JPEG standard
+    getTileAjaxHeaders: function(){ return {'Accept':'image/jpeg'}; }
+  };
+}
+
+/* Barre d'outils flottante (plein écran, rotation, capture) */
 function _osdInjectTools(){
   var vp=document.getElementById('osd-viewport');
   if(!vp || document.getElementById('osd-tools')) return;
   var bar=document.createElement('div');
-  bar.id='osd-tools';
-  bar.className='osd-toolsbar';
+  bar.id='osd-tools'; bar.className='osd-toolsbar';
   bar.innerHTML=
-     '<button class="osd-toolbtn" onclick="v3dFullscreen()" title="Plein \u00e9cran">\u26F6</button>'
-    +'<button class="osd-toolbtn" onclick="osdRotate()" title="Pivoter 90\u00b0">\u21BB</button>'
-    +'<button class="osd-toolbtn" onclick="osdCapture()" title="Capturer la vue (PNG)">\uD83D\uDCF7</button>'
-    +'<button class="osd-toolbtn" id="osdRulerBtn" onclick="osdToggleRuler()" title="\u00c9chelle indicative">\uD83D\uDCCF</button>';
+     '<button class="osd-toolbtn" onclick="v3dFullscreen&&v3dFullscreen()" title="Plein écran">\u26F6</button>'
+    +'<button class="osd-toolbtn" onclick="osdRotate()" title="Pivoter 90°">\u21BB</button>'
+    +'<button class="osd-toolbtn" onclick="osdCapture()" title="Capturer la vue (PNG)">\uD83D\uDCF7</button>';
   vp.appendChild(bar);
 }
-// Rotation de la lame par pas de 90°
 window.osdRotate=function(){
   if(!_osdViewer||!_osdViewer.viewport) return;
   try{ var a=_osdViewer.viewport.getRotation(); _osdViewer.viewport.setRotation((a+90)%360); }catch(_){}
 };
-// Capture PNG de la vue courante
 window.osdCapture=function(){
   try{
-    var cv=document.querySelector('#osd-viewport canvas');
-    if(!cv){ alert('Capture indisponible.'); return; }
-    var name=(_osdCurrentSlide&&(_osdCurrentSlide.name))?_osdCurrentSlide.name:'lame';
-    name=String(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9_-]+/g,'_');
-    var a=document.createElement('a'); a.href=cv.toDataURL('image/png'); a.download=name+'.png';
-    document.body.appendChild(a); a.click(); a.remove();
-  }catch(_){ alert('Capture indisponible.'); }
-};
-// Échelle indicative (barre + label) — overlay simple, non calibrée en µm
-window._osdRulerOn=false;
-window.osdToggleRuler=function(){
-  var vp=document.getElementById('osd-viewport'); if(!vp) return;
-  var ex=document.getElementById('osd-ruler');
-  var b=document.getElementById('osdRulerBtn');
-  if(ex){ ex.remove(); window._osdRulerOn=false; if(b)b.classList.remove('on'); return; }
-  var r=document.createElement('div');
-  r.id='osd-ruler'; r.className='osd-ruler';
-  r.innerHTML='<div class="osd-ruler-bar"></div><div class="osd-ruler-lbl">\u00e9chelle indicative</div>';
-  vp.appendChild(r);
-  window._osdRulerOn=true; if(b)b.classList.add('on');
+    var cv=document.querySelector('#osd-viewport canvas'); if(!cv) return;
+    var a=document.createElement('a'); a.download='lame.png'; a.href=cv.toDataURL('image/png'); a.click();
+  }catch(_){}
 };
 
-function osdDestroy() {
-  if (_osdViewer) { try{ _osdViewer.destroy(); }catch(e){} _osdViewer=null; }
-}
-
-/* ── Représentations OSD disponibles ─────────────────────────────── */
-var OSD_REPS = [
-  {id:'HES',    label:'HES',    title:'Hématoxyline-Éosine-Safran',   filter:'none'},
-  {id:'BF',     label:'Clair',  title:'Champ clair — sans filtre',    filter:'none'},
-  {id:'CONTR',  label:'↑ Contraste', title:'Contraste augmenté',     filter:'contrast(1.8) saturate(1.4)'},
-  {id:'DESAT',  label:'N&B',    title:'Niveaux de gris',              filter:'grayscale(1) contrast(1.3)'},
-];
-var _osdCurrentRep = 'HES';
-
-function osdSetRep(repId) {
-  _osdCurrentRep = repId;
-  var rep = OSD_REPS.find(function(r){return r.id===repId;});
-  var canvas = document.querySelector('#osd-viewport canvas');
-  if (canvas) canvas.style.filter = rep ? rep.filter : 'none';
-  OSD_REPS.forEach(function(r){
-    var btn = document.getElementById('osd-rep-'+r.id);
-    if (!btn) return;
-    var active = r.id === repId;
-    btn.style.background = active ? 'rgba(58,176,158,0.2)' : 'transparent';
-    btn.style.borderColor = active ? 'rgba(58,176,158,0.8)' : 'rgba(58,176,158,0.3)';
-    btn.style.color = active ? 'rgb(58,176,158)' : 'rgba(255,255,255,0.5)';
-  });
-}
-
-/* ── Initialiseur principal OSD ───────────────────────────────────── */
-function initSheetRendererOSD(m, slide) {
-  var container = document.getElementById('sheetViewer');
+/* Initialiseur principal — lame DICOM WSI intégrée */
+function initSheetRendererHistoDICOM(m, slide){
+  var container=document.getElementById('sheetViewer');
   while(container.firstChild) container.removeChild(container.firstChild);
-  if (sheetAnimId) { cancelAnimationFrame(sheetAnimId); sheetAnimId=null; }
-  if (sheetRenderer) { sheetRenderer.dispose(); sheetRenderer=null; }
+  if(typeof sheetAnimId!=='undefined' && sheetAnimId){ cancelAnimationFrame(sheetAnimId); sheetAnimId=null; }
+  if(typeof sheetRenderer!=='undefined' && sheetRenderer){ try{sheetRenderer.dispose();}catch(e){} sheetRenderer=null; }
   osdDestroy();
-  _osdCurrentSlide = slide;
-
   container.setAttribute('data-mode','osd');
-  container.style.position = 'relative';  // Required for absolute loading overlay
 
-  var guideUrl = slide.guide ? 'https://histologyguide.com/slideview/' + slide.guide + '.html' : 'https://histologyguide.com/';
-  // ── Cascade multi-sources ────────────────────────────────────────────────
-  // 1. Wikipedia REST API /page/summary → originalimage (CORS natif)
-  // 2. Wikipedia API pageimages → thumbnail 4000px
-  // 3. Wikimedia Commons Search API → première image trouvée
-  // 4. Fallback card avec liens alternatifs
+  // structure DOM : viewport OSD + bandeau légende
+  var vp=document.createElement('div');
+  vp.id='osd-viewport';
+  vp.style.cssText='position:absolute;inset:0;width:100%;height:100%;background:#0b0e14';
+  container.appendChild(vp);
 
-  var _wikiTitle  = encodeURIComponent(slide.wiki || 'Histology');
-  var _wikiRest   = 'https://en.wikipedia.org/api/rest_v1/page/summary/' + _wikiTitle;
-  var _wikiPi     = 'https://en.wikipedia.org/w/api.php?action=query&titles=' + _wikiTitle
-                    + '&prop=pageimages&pithumbsize=4000&pilicense=any&format=json&origin=*';
-  var _commSearch = 'https://commons.wikimedia.org/w/api.php?action=query'
-                    + '&generator=search&gsrnamespace=6&gsrlimit=5'
-                    + '&gsrsearch=' + encodeURIComponent((slide.wiki||'histology').replace(/_/g,' ') + ' histology microscopy')
-                    + '&prop=imageinfo&iiprop=url|size&iiurlwidth=4000&format=json&origin=*';
-  var _guideUrl   = slide.guide ? 'https://histologyguide.com/slideview/' + slide.guide + '.html' : 'https://histologyguide.com/';
-  var _exploreUrl = slide.idc_explore || '';
+  var legend=document.createElement('div');
+  legend.className='osd-legend';
+  var noteHtml = slide.note ? '<div class="osd-note">'+escHtml(slide.note)+'</div>' : '';
+  legend.innerHTML=
+     '<div class="osd-legend-main">🔬 '+escHtml(slide.anat||'')+
+     ' <span class="osd-legend-sub">· '+escHtml((slide.coll||'').toUpperCase())+' · '+escHtml(slide.lic||'')+'</span></div>'
+    +noteHtml;
+  container.appendChild(legend);
 
-  function _tryFetch(url, parse, timeout) {
-    var ctrl  = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, timeout||8000) : null;
-    return fetch(url, ctrl ? { signal: ctrl.signal } : {})
-      .then(function(r){ clearTimeout(timer); return r.ok ? r.json() : Promise.reject(r.status); })
-      .then(parse);
-  }
+  // overlay de chargement
+  var load=document.createElement('div');
+  load.className='osd-loading';
+  load.innerHTML='<div class="spinner"></div><div class="osd-loading-lbl">Chargement de la lame DICOM…</div>';
+  container.appendChild(load);
 
-  function _launchImg(imgUrl) {
-    if (!imgUrl) { _showOsdError('Aucune image histologique disponible'); return; }
-    _loadOSD(function(err){
-      if (err || typeof OpenSeadragon === 'undefined') {
-        _showOsdError('OpenSeadragon indisponible'); return;
-      }
-      requestAnimationFrame(function(){
-        var vp = document.getElementById('osd-viewport');
-        if (!vp) return;
-        try {
-          _osdViewer = OpenSeadragon({
-            id: 'osd-viewport',
-            prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/images/',
-            tileSources: { type:'image', url: imgUrl },
-            showNavigationControl: false,
-            showNavigator: true,
-            navigatorPosition: 'BOTTOM_RIGHT',
-            navigatorHeight: '70px', navigatorWidth: '110px',
-            animationTime: 0.3, minZoomImageRatio: 0.5, maxZoomPixelRatio: 12,
-            gestureSettingsMouse: { clickToZoom: false, scrollToZoom: true },
-            gestureSettingsTouch: { pinchToZoom: true },
-            showRotationControl: true,
-            backgroundColor: '#080810',
-          });
-          _osdViewer.addHandler('open', function(){
-            var el = document.getElementById('osd-loading');
-            if (el) el.style.display = 'none';
-            osdSetRep(_osdCurrentRep);
-            _osdInjectTools();
-          });
-          _osdViewer.addHandler('open-failed', function(){
-            _showOsdError('Image non chargeable — format incompatible');
-          });
-        } catch(e) { _showOsdError('Erreur OSD : ' + String(e)); }
-      });
-    });
-  }
-
-  // Source 1 : Wikipedia REST summary (originalimage)
-  _tryFetch(_wikiRest, function(d){
-    var src = (d.originalimage && d.originalimage.source) || (d.thumbnail && d.thumbnail.source);
-    if (!src) return Promise.reject('no_image');
-    return src;
-  }, 6000)
-  .catch(function(){
-    // Source 2 : Wikipedia pageimages API
-    return _tryFetch(_wikiPi, function(data){
-      var pages = data.query && data.query.pages;
-      if (!pages) return Promise.reject('no_pages');
-      var p = Object.values(pages)[0];
-      if (!p || p.missing !== undefined || !p.thumbnail) return Promise.reject('no_thumb');
-      return p.thumbnail.source.replace(/\/\d+px-/, '/4000px-');
-    }, 6000);
-  })
-  .catch(function(){
-    // Source 3 : Wikimedia Commons search
-    return _tryFetch(_commSearch, function(data){
-      var pages = data.query && data.query.pages;
-      if (!pages) return Promise.reject('no_commons');
-      var candidates = Object.values(pages)
-        .filter(function(p){ return p.imageinfo && p.imageinfo[0] && p.imageinfo[0].url; })
-        .sort(function(a,b){
-          var wa = (a.imageinfo[0].width||0), wb = (b.imageinfo[0].width||0);
-          return wb - wa; // largest first
-        });
-      if (!candidates.length) return Promise.reject('no_candidates');
-      return candidates[0].imageinfo[0].url;
-    }, 8000);
-  })
-  .then(function(imgUrl){ _launchImg(imgUrl); })
-  .catch(function(){
-    // Fallback final : carte avec liens
-    var ldEl = document.getElementById('osd-loading');
-    if (ldEl) {
-      ldEl.innerHTML =
-        '<div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px;max-width:300px;text-align:center;">'
-       +'<div style="font-size:36px;opacity:.4;">🔬</div>'
-       +'<div style="font-family:Bebas Neue,sans-serif;font-size:16px;letter-spacing:2px;color:rgba(58,176,158,0.85);">'
-       +escHtml(m.name)+'</div>'
-       +'<div style="font-size:10.5px;color:rgba(255,255,255,0.35);line-height:1.7;">'
-       +'Image non disponible automatiquement.<br>'
-       +'<span style="opacity:.6;">Consulter les ressources ci-dessous.</span></div>'
-       +'<div style="display:flex;flex-direction:column;gap:8px;width:100%;">'
-       +'<a href="'+escHtml(_guideUrl)+'" target="_blank" rel="noopener"'
-       +'   style="display:flex;align-items:center;justify-content:center;gap:6px;'
-       +'   background:rgba(58,176,158,0.15);border:1px solid rgba(58,176,158,0.45);'
-       +'   color:rgb(58,176,158);border-radius:8px;padding:9px;text-decoration:none;'
-       +'   font-size:12px;font-weight:700;">📖 Histology Guide ↗</a>'
-       +(_exploreUrl
-           ? '<a href="'+escHtml(_exploreUrl)+'" target="_blank" rel="noopener"'
-            +'   style="display:flex;align-items:center;justify-content:center;gap:6px;'
-            +'   background:rgba(40,150,255,0.1);border:1px solid rgba(40,150,255,0.3);'
-            +'   color:rgba(80,170,255,0.8);border-radius:8px;padding:9px;text-decoration:none;'
-            +'   font-size:12px;font-weight:600;">🔬 Collection IDC / TCGA ↗</a>'
-           : '')
-       +'<a href="https://en.wikipedia.org/wiki/'+encodeURIComponent(slide.wiki||'Histology')+'" target="_blank" rel="noopener"'
-       +'   style="display:flex;align-items:center;justify-content:center;gap:6px;'
-       +'   background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);'
-       +'   color:rgba(255,255,255,0.35);border-radius:8px;padding:8px;text-decoration:none;font-size:11px;">'
-       +'   🌐 Wikipedia ↗</a>'
-       +'</div></div>';
-      ldEl.style.display = 'flex';
-      ldEl.style.pointerEvents = 'auto';
+  _loadOSD(function(err){
+    if(err || typeof OpenSeadragon==='undefined'){
+      load.innerHTML='<div class="osd-loading-lbl">OpenSeadragon indisponible (vérifiez la connexion).</div>';
+      return;
     }
+    // charge les métadonnées de chaque niveau de la pyramide
+    var levels = slide.levels || [];
+    Promise.all(levels.map(function(lv){
+      return _dcmLevelMeta(slide.study, slide.series, lv.sop)
+        .catch(function(){ return {sop:lv.sop, tileW:256, tileH:256, totW:lv.w, totH:lv.h,
+                 cols:Math.ceil(lv.w/256), rows:Math.ceil(lv.h/256), nFrames:Math.ceil(lv.w/256)*Math.ceil(lv.h/256)}; });
+    })).then(function(metas){
+      metas.sort(function(a,b){ return b.totW*b.totH - a.totW*a.totH; });
+      var ts=_buildDicomTileSource(slide.study, slide.series, metas);
+      try{
+        _osdViewer=OpenSeadragon({
+          element: vp,
+          prefixUrl:'https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/images/',
+          tileSources: ts,
+          showNavigator:true,
+          navigatorPosition:'BOTTOM_RIGHT',
+          navigatorHeight:'90px', navigatorWidth:'120px',
+          crossOriginPolicy:'Anonymous',
+          loadTilesWithAjax:true,
+          ajaxHeaders:{'Accept':'image/jpeg'},
+          gestureSettingsMouse:{clickToZoom:false,dblClickToZoom:true},
+          minZoomImageRatio:0.6, maxZoomPixelRatio:2.5,
+          visibilityRatio:1, constrainDuringPan:true,
+          animationTime:0.5, blendTime:0.25
+        });
+        window._osdViewer=_osdViewer;
+        _osdViewer.addOnceHandler('open',function(){ load.remove(); _osdInjectTools(); });
+        _osdViewer.addHandler('open-failed',function(){
+          load.innerHTML='<div class="osd-loading-lbl">Impossible de charger la lame (quota IDC ou réseau).</div>';
+        });
+      }catch(e){
+        load.innerHTML='<div class="osd-loading-lbl">Erreur d\'initialisation du viewer.</div>';
+      }
+    }).catch(function(){
+      load.innerHTML='<div class="osd-loading-lbl">Métadonnées DICOM indisponibles.</div>';
+    });
   });
 }
 
-
-/* ── Résoudre l'entrée bactérie depuis l'item ─────────────────── */
-function resolveBactEntry(m) {
-  if (m.pdb_id) return { pdb: m.pdb_id, label: m.pdb_label || null };
-  return BACT_PDB_MAP[m.name] || null;
-}
-
-/* ── Viewer IDC Collection Browser ─────────────────────────────────
-   Pour les organes avec collection IDC mais sans slide URL spécifique :
-   Affiche le portail IDC filtré sur la collection + bouton vers Histology Guide
-   ─────────────────────────────────────────────────────────────────── */
-function initSheetRendererIDCExplore(m, slide) {
-  var container = document.getElementById('sheetViewer');
-  while(container.firstChild) container.removeChild(container.firstChild);
-  if (sheetAnimId)  { cancelAnimationFrame(sheetAnimId); sheetAnimId = null; }
-  if (sheetRenderer){ sheetRenderer.dispose(); sheetRenderer = null; }
-  osdDestroy();
-  container.setAttribute('data-mode', 'idc-explore');
-  container.style.position = 'relative';
-
-  var exploreUrl = slide.idc_explore;
-  var guideUrl   = slide.guide ? 'https://histologyguide.com/slideview/' + slide.guide + '.html' : '';
-  var wikiUrl    = slide.wiki  ? 'https://en.wikipedia.org/wiki/' + slide.wiki : '';
-  var collName   = (slide.idc_label || '').replace(/IDC \/ /, '').replace(/ \(WSI.*\)/, '');
-
-  container.innerHTML =
-    '<div style="width:100%;height:100%;display:flex;flex-direction:column;'
-   +'  background:linear-gradient(160deg,#0a0c18 0%,#060810 100%);overflow-y:auto;">'
-   +'  <div style="flex:1;display:flex;flex-direction:column;align-items:center;'
-   +'    justify-content:center;padding:24px 20px;gap:20px;text-align:center;">'
-
-   // Icone + titre
-   +'    <div style="font-size:48px;opacity:.35;margin-bottom:-6px;">🔬</div>'
-   +'    <div>'
-   +'      <div style="font-family:Bebas Neue,sans-serif;font-size:20px;letter-spacing:3px;'
-   +'        color:rgba(80,170,255,0.9);">' + escHtml(m.name) + '</div>'
-   +'      <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:3px;letter-spacing:.5px;">'
-   +        escHtml(slide.note || '') + '</div>'
-   +'    </div>'
-
-   // Badges
-   +'    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">'
-   +'      <span style="font-size:9px;font-weight:700;background:rgba(0,180,100,0.12);'
-   +'        border:1px solid rgba(0,200,120,0.3);color:rgba(0,220,140,0.75);'
-   +'        border-radius:4px;padding:2px 9px;">✓ CC-BY NCI/NIH</span>'
-   +'      <span style="font-size:9px;font-weight:700;background:rgba(40,150,255,0.1);'
-   +'        border:1px solid rgba(40,150,255,0.25);color:rgba(80,170,255,0.7);'
-   +'        border-radius:4px;padding:2px 9px;">DICOM WSI H&amp;E</span>'
-   +'      <span style="font-size:9px;font-weight:600;background:rgba(255,255,255,0.05);'
-   +'        border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.4);'
-   +'        border-radius:4px;padding:2px 9px;">' + escHtml(collName) + '</span>'
-   +'    </div>'
-
-   // Explication
-   +'    <div style="font-size:11.5px;color:rgba(255,255,255,0.38);max-width:280px;'
-   +'      line-height:1.7;background:rgba(40,150,255,0.06);border:1px solid rgba(40,150,255,0.15);'
-   +'      border-radius:10px;padding:12px 16px;">'
-   +'      Des centaines de lames entières (WSI) TCGA en H&amp;E sont disponibles dans cette collection IDC.<br>'
-   +'      <span style="opacity:.6;font-size:10px;">Cliquez sur la collection pour parcourir et choisir une lame spécifique.</span>'
-   +'    </div>'
-
-   // Boutons principaux
-   +'    <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px;">'
-   +'      <a href="' + escHtml(exploreUrl) + '" target="_blank" rel="noopener"'
-   +'         style="display:flex;align-items:center;justify-content:center;gap:8px;'
-   +'         background:rgba(40,150,255,0.18);border:1.5px solid rgba(40,150,255,0.55);'
-   +'         color:rgba(80,170,255,0.95);border-radius:10px;padding:12px 20px;'
-   +'         text-decoration:none;font-size:13px;font-weight:700;">'
-   +'         🔬 Explorer la collection IDC ↗</a>'
-   + (guideUrl
-       ? '      <a href="' + escHtml(guideUrl) + '" target="_blank" rel="noopener"'
-        +'         style="display:flex;align-items:center;justify-content:center;gap:8px;'
-        +'         background:rgba(100,140,255,0.1);border:1px solid rgba(100,140,255,0.3);'
-        +'         color:rgba(120,160,255,0.75);border-radius:10px;padding:10px 20px;'
-        +'         text-decoration:none;font-size:12px;font-weight:600;">'
-        +'         📖 Histology Guide — ' + escHtml(m.histo_type||'') + ' ↗</a>'
-       : '')
-   + (wikiUrl
-       ? '      <a href="' + escHtml(wikiUrl) + '" target="_blank" rel="noopener"'
-        +'         style="display:flex;align-items:center;justify-content:center;gap:8px;'
-        +'         background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);'
-        +'         color:rgba(255,255,255,0.35);border-radius:10px;padding:8px 20px;'
-        +'         text-decoration:none;font-size:11px;">'
-        +'         🌐 Wikipedia ↗</a>'
-       : '')
-   +'    </div>'
-   +'  </div>'
-   +'</div>';
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   VIEWER IDC (NCI Imaging Data Commons) — Slim DICOM Viewer
-   Lames WSI TCGA embarquées via iframe — CC-BY — X-Frame-Options: none
-   viewer.imaging.datacommons.cancer.gov/slim/studies/{}/series/{}
-   ══════════════════════════════════════════════════════════════════ */
-function initSheetRendererIDC(m, slide) {
-  var container = document.getElementById('sheetViewer');
-  while(container.firstChild) container.removeChild(container.firstChild);
-  if (sheetAnimId)  { cancelAnimationFrame(sheetAnimId); sheetAnimId = null; }
-  if (sheetRenderer){ sheetRenderer.dispose(); sheetRenderer = null; }
-  osdDestroy();
-  container.setAttribute('data-mode', 'idc');
-  container.style.position = 'relative';
-
-  var idcUrl     = slide.idc_url;
-  var exploreUrl = slide.idc_explore || 'https://portal.imaging.datacommons.cancer.gov/explore/';
-  var guideUrl   = slide.guide ? 'https://histologyguide.com/slideview/' + slide.guide + '.html' : '';
-
-  container.innerHTML =
-    '<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:#060810;">'
-
-   // ── Toolbar supérieure ──────────────────────────────────────────
-   +'<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;flex-shrink:0;flex-wrap:wrap;'
-   +'  background:rgba(6,8,16,0.97);border-bottom:1px solid rgba(40,150,255,0.3);">'
-   +'  <span style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;'
-   +'    background:rgba(0,100,220,0.18);border:1px solid rgba(40,150,255,0.55);'
-   +'    color:rgba(80,170,255,0.95);border-radius:4px;padding:2px 9px;white-space:nowrap;">'
-   +'    🔬 IDC · NCI</span>'
-   +'  <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.38);'
-   +'    background:rgba(40,150,255,0.08);border:1px solid rgba(40,150,255,0.2);'
-   +'    border-radius:4px;padding:2px 7px;white-space:nowrap;">'
-   +    escHtml(slide.idc_label || 'TCGA WSI H&E') + '</span>'
-   +'  <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.3);'
-   +'    background:rgba(40,150,255,0.06);border:1px solid rgba(40,150,255,0.15);'
-   +'    border-radius:4px;padding:2px 7px;white-space:nowrap;">'
-   +    escHtml(slide.stain || 'HES') + '</span>'
-   +'  <span style="font-size:9px;color:rgba(255,255,255,0.28);flex:1;overflow:hidden;'
-   +'    text-overflow:ellipsis;white-space:nowrap;min-width:0;" title="' + escHtml(slide.note||'') + '">'
-   +    escHtml(slide.note || '') + '</span>'
-   +'  <a href="' + escHtml(idcUrl) + '" target="_blank" rel="noopener"'
-   +'     style="border:1px solid rgba(40,150,255,0.45);border-radius:5px;padding:3px 9px;'
-   +'     font-size:10px;color:rgba(80,170,255,0.85);text-decoration:none;'
-   +'     white-space:nowrap;flex-shrink:0;font-weight:700;">Ouvrir ↗</a>'
-   +'  <a href="' + escHtml(exploreUrl) + '" target="_blank" rel="noopener"'
-   +'     style="border:1px solid rgba(40,150,255,0.3);border-radius:5px;padding:3px 9px;'
-   +'     font-size:10px;color:rgba(80,150,255,0.65);text-decoration:none;'
-   +'     white-space:nowrap;flex-shrink:0;">Collection ↗</a>'
-   + (guideUrl
-       ? '  <a href="' + escHtml(guideUrl) + '" target="_blank" rel="noopener"'
-        +'     style="border:1px solid rgba(100,140,255,0.25);border-radius:5px;padding:3px 9px;'
-        +'     font-size:10px;color:rgba(100,140,255,0.55);text-decoration:none;white-space:nowrap;flex-shrink:0;">Guide ↗</a>'
-       : '')
-   + (slide.crs_url
-       ? '  <button onclick="initSheetRendererCRS(activeModel, resolveHistoSlide(activeModel))"'
-        +'     style="border:1px solid rgba(160,130,255,0.35);border-radius:5px;padding:3px 9px;'
-        +'     font-size:10px;cursor:pointer;background:transparent;'
-        +'     color:rgba(160,130,255,0.7);font-family:inherit;white-space:nowrap;flex-shrink:0;">'
-        +'     🏫 CRS</button>'
-       : '')
-   +'</div>'
-
-   // ── Iframe IDC Slim Viewer ────────────────────────────────────────
-   +'<div style="position:relative;flex:1;min-height:0;">'
-   +'  <iframe id="idc-frame" src="' + escHtml(idcUrl) + '"'
-   +'    style="width:100%;height:100%;border:none;display:block;"'
-   +'    allowfullscreen loading="lazy"'
-   +'    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads">'
-   +'  </iframe>'
-
-   // ── Spinner de chargement ─────────────────────────────────────────
-   +'  <div id="idc-loading" style="position:absolute;inset:0;display:flex;flex-direction:column;'
-   +'    align-items:center;justify-content:center;background:#060810;z-index:5;gap:12px;'
-   +'    pointer-events:none;transition:opacity .5s;">'
-   +'    <div class="spinner" style="border-color:rgba(40,150,255,0.18);border-top-color:rgb(80,160,255);'
-   +'      width:40px;height:40px;border-width:3px;"></div>'
-   +'    <div style="font-family:Bebas Neue,sans-serif;font-size:15px;letter-spacing:2.5px;'
-   +'      color:rgb(80,170,255);">' + escHtml(m.name) + '</div>'
-   +'    <div style="font-size:10px;color:rgba(255,255,255,0.28);">Chargement viewer IDC · DICOM WSI…</div>'
-   +'    <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">'
-   +'      <span style="font-size:9px;background:rgba(0,180,100,0.12);border:1px solid rgba(0,200,120,0.3);'
-   +'        color:rgba(0,220,140,0.75);border-radius:4px;padding:2px 8px;">✓ CC-BY NCI/TCGA</span>'
-   +'      <span style="font-size:9px;background:rgba(40,150,255,0.1);border:1px solid rgba(40,150,255,0.25);'
-   +'        color:rgba(80,170,255,0.7);border-radius:4px;padding:2px 8px;">DICOM WSI · H&amp;E</span>'
-   +'    </div>'
-   +'  </div>'
-
-   // ── Écran fallback (si iframe bloquée) ────────────────────────────
-   +'  <div id="idc-fallback" style="display:none;position:absolute;inset:0;z-index:10;'
-   +'    flex-direction:column;align-items:center;justify-content:center;background:#060810;gap:16px;">'
-   +'    <div style="font-size:36px;">🧬</div>'
-   +'    <div style="font-family:Bebas Neue,sans-serif;font-size:18px;letter-spacing:2px;'
-   +'      color:rgba(80,170,255,0.9);">NCI Imaging Data Commons</div>'
-   +'    <div style="font-size:11.5px;color:rgba(255,255,255,0.4);max-width:280px;text-align:center;line-height:1.7;">'
-   +      escHtml(slide.idc_label || 'TCGA WSI') + '<br>'
-   +'      <span style="opacity:.6">Lame DICOM entière — CC-BY — NCI/NIH</span></div>'
-   +'    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">'
-   +'      <button onclick="document.getElementById(&quot;idc-fallback&quot;).style.display=&quot;none&quot;;document.getElementById(&quot;idc-frame&quot;).src=document.getElementById(&quot;idc-frame&quot;).src;"'
-   +'        style="background:rgba(40,150,255,0.15);border:1px solid rgba(40,150,255,0.4);'
-   +'        color:rgba(80,170,255,0.9);border-radius:8px;padding:9px 18px;cursor:pointer;'
-   +'        font-family:inherit;font-size:12px;font-weight:600;">↺ Réessayer</button>'
-   +'      <a href="' + escHtml(idcUrl) + '" target="_blank" rel="noopener"'
-   +'         style="display:inline-flex;align-items:center;background:rgba(40,150,255,0.2);'
-   +'         border:1px solid rgba(40,150,255,0.5);color:rgba(80,170,255,0.9);border-radius:8px;'
-   +'         padding:9px 18px;text-decoration:none;font-size:12px;font-weight:600;">'
-   +'         Ouvrir dans un onglet ↗</a>'
-   +'      <a href="' + escHtml(exploreUrl) + '" target="_blank" rel="noopener"'
-   +'         style="display:inline-flex;align-items:center;background:rgba(40,150,255,0.1);'
-   +'         border:1px solid rgba(40,150,255,0.3);color:rgba(80,150,255,0.75);border-radius:8px;'
-   +'         padding:9px 18px;text-decoration:none;font-size:12px;">'
-   +'         Explorer la collection ↗</a>'
-   +'    </div>'
-   +'  </div>'
-   +'</div>'
-   +'</div>';
-
-  // Événements iframe
-  var frame   = document.getElementById('idc-frame');
-  var loading = document.getElementById('idc-loading');
-  var fallback= document.getElementById('idc-fallback');
-
-  if (frame) {
-    frame.addEventListener('load', function(){
-      if (loading) { loading.style.opacity='0'; setTimeout(function(){ loading.style.display='none'; }, 500); }
-    });
-    frame.addEventListener('error', function(){
-      if (loading)  loading.style.display='none';
-      if (fallback) fallback.style.display='flex';
-    });
-    // Timeout 15s (IDC Slim peut être lent à initialiser)
-    setTimeout(function(){
-      if (loading && loading.style.display !== 'none' && loading.style.opacity !== '0') {
-        if (fallback) fallback.style.display='flex';
-        if (loading)  loading.style.display='none';
-      }
-    }, 15000);
-  }
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   VIEWER LAME CRS — crsonline.biomedicale.parisdescartes.fr
-   Iframe directe — Réseau/VPN Université Paris Cité requis
-   X-Frame-Options: non défini → embarquement autorisé
-   ══════════════════════════════════════════════════════════════════ */
-function initSheetRendererCRS(m, slide) {
-  var container = document.getElementById('sheetViewer');
-  while(container.firstChild) container.removeChild(container.firstChild);
-  if (sheetAnimId) { cancelAnimationFrame(sheetAnimId); sheetAnimId = null; }
-  if (sheetRenderer) { sheetRenderer.dispose(); sheetRenderer = null; }
-  osdDestroy();
-  container.setAttribute('data-mode', 'crs');
-  container.style.position = 'relative';
-
-  var crsUrl   = slide.crs_url;
-  var guideUrl = slide.guide ? 'https://histologyguide.com/slideview/' + slide.guide + '.html' : '';
-
-  container.innerHTML =
-    '<div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:#080812;">'
-   +'  <button class="v3d-fsbtn" onclick="v3dFullscreen()" title="Plein \u00e9cran" style="top:46px;z-index:40">\u26F6</button>'
-   // Badge "CRS Paris Cité" + toolbar
-   +'  <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;flex-shrink:0;'
-   +'    background:rgba(8,8,18,0.97);border-bottom:1px solid rgba(130,100,220,0.3);">'
-   +'    <span style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;'
-   +'      background:rgba(130,100,220,0.15);border:1px solid rgba(130,100,220,0.45);'
-   +'      color:rgba(160,130,255,0.9);border-radius:4px;padding:2px 9px;white-space:nowrap;">'
-   +'      🏫 ' + escHtml(slide.crs_label || 'CRS Paris Cité') + '</span>'
-   +'    <span style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.45);'
-   +'      background:rgba(160,130,255,0.08);border:1px solid rgba(160,130,255,0.2);'
-   +'      border-radius:4px;padding:2px 8px;white-space:nowrap;">'
-   +      escHtml(slide.stain || 'HES') + '</span>'
-   +'    <span style="font-size:10px;color:rgba(255,255,255,0.32);flex:1;overflow:hidden;'
-   +'      text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(slide.note||'') + '">'
-   +      escHtml(slide.note || '') + '</span>'
-   +'    <a href="' + escHtml(crsUrl) + '" target="_blank" rel="noopener"'
-   +'       style="border:1px solid rgba(160,130,255,0.4);border-radius:5px;padding:3px 9px;'
-   +'       font-size:10px;color:rgba(160,130,255,0.85);text-decoration:none;white-space:nowrap;flex-shrink:0;">'
-   +'      Ouvrir ↗</a>'
-   + (guideUrl
-       ? '    <a href="' + escHtml(guideUrl) + '" target="_blank" rel="noopener"'
-        +'       style="border:1px solid rgba(130,160,255,0.35);border-radius:5px;padding:3px 9px;'
-        +'       font-size:10px;color:rgba(130,160,255,0.75);text-decoration:none;white-space:nowrap;flex-shrink:0;">'
-        +'      Guide ↗</a>'
-       : '')
-   +'  </div>'
-   // Iframe principale
-   +'  <div style="position:relative;flex:1;min-height:0;">'
-   +'    <iframe id="crs-frame" src="' + escHtml(crsUrl) + '"'
-   +'      style="width:100%;height:100%;border:none;display:block;"'
-   +'      allowfullscreen loading="lazy"'
-   +'      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox">'
-   +'    </iframe>'
-   // Overlay de chargement (disparaît dès que l'iframe charge)
-   +'    <div id="crs-loading" style="position:absolute;inset:0;display:flex;flex-direction:column;'
-   +'      align-items:center;justify-content:center;background:#080812;z-index:5;gap:12px;'
-   +'      pointer-events:none;transition:opacity .5s;">'
-   +'      <div class="spinner" style="border-color:rgba(130,100,220,0.25);border-top-color:rgb(160,130,255);'
-   +'        width:36px;height:36px;border-width:3px;"></div>'
-   +'      <div style="font-family:Bebas Neue,sans-serif;font-size:14px;letter-spacing:2px;'
-   +'        color:rgb(160,130,255);">' + escHtml(m.name) + '</div>'
-   +'      <div style="font-size:10px;color:rgba(255,255,255,0.3);">Chargement lame CRS Paris Cité…</div>'
-   +'      <div style="font-size:10px;color:rgba(255,220,80,0.7);max-width:240px;text-align:center;'
-   +'        background:rgba(255,180,0,0.1);border:1px solid rgba(255,180,0,0.25);border-radius:6px;'
-   +'        padding:6px 12px;line-height:1.5;">'
-   +'        ⚠️ Réseau Université Paris Cité requis<br>'
-   +'        <span style="opacity:.7">(VPN ou Wi-Fi campus)</span>'
-   +'      </div>'
-   +'    </div>'
-   +'  </div>'
-   // Fallback OSD en cas d'échec iframe
-   +'  <div id="crs-fallback" style="display:none;position:absolute;inset:0;z-index:10;'
-   +'    flex-direction:column;align-items:center;justify-content:center;background:#080812;gap:14px;">'
-   +'    <div style="font-size:32px;">🔒</div>'
-   +'    <div style="font-family:Bebas Neue,sans-serif;font-size:16px;letter-spacing:2px;'
-   +'      color:rgba(255,200,80,0.9);">Accès réseau requis</div>'
-   +'    <div style="font-size:11px;color:rgba(255,255,255,0.45);max-width:260px;text-align:center;line-height:1.6;">'
-   +'      Cette lame est hébergée sur les serveurs de l\'Université Paris Cité.<br>'
-   +'      Connectez-vous au réseau campus ou au VPN UP Cité.</div>'
-   +'    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px;">'
-   +'      <button onclick="document.getElementById(&quot;crs-fallback&quot;).style.display=&quot;none&quot;;'
-   +'        document.getElementById(&quot;crs-frame&quot;).style.display=&quot;block&quot;;"'
-   +'        style="background:rgba(160,130,255,0.15);border:1px solid rgba(160,130,255,0.4);'
-   +'        color:rgba(160,130,255,0.9);border-radius:8px;padding:8px 16px;cursor:pointer;'
-   +'        font-family:inherit;font-size:12px;font-weight:600;">↺ Réessayer</button>'
-   +'      <a href="' + escHtml(crsUrl) + '" target="_blank" rel="noopener"'
-   +'         style="display:inline-flex;align-items:center;background:rgba(160,130,255,0.2);'
-   +'         border:1px solid rgba(160,130,255,0.45);color:rgba(160,130,255,0.9);border-radius:8px;'
-   +'         padding:8px 16px;text-decoration:none;font-size:12px;font-weight:600;">'
-   +'         Ouvrir dans un onglet ↗</a>'
-   +'      <button onclick="initSheetRendererOSD(activeModel, resolveHistoSlide(activeModel))"'
-   +'        style="background:rgba(58,176,158,0.1);border:1px solid rgba(58,176,158,0.3);'
-   +'        color:rgba(58,176,158,0.75);border-radius:8px;padding:8px 16px;cursor:pointer;'
-   +'        font-family:inherit;font-size:12px;">🔬 Viewer alternatif</button>'
-   +'    </div>'
-   +'  </div>'
-   +'</div>';
-
-  // Écouter le chargement de l'iframe
-  var crsFrame   = document.getElementById('crs-frame');
-  var crsLoading = document.getElementById('crs-loading');
-  var crsFallback= document.getElementById('crs-fallback');
-
-  if (crsFrame) {
-    crsFrame.addEventListener('load', function(){
-      // Masquer le spinner
-      if (crsLoading) { crsLoading.style.opacity='0'; setTimeout(function(){ crsLoading.style.display='none'; }, 500); }
-    });
-    crsFrame.addEventListener('error', function(){
-      if (crsLoading) crsLoading.style.display='none';
-      if (crsFallback) crsFallback.style.display='flex';
-    });
-    // Timeout 12s : si l'iframe n'a pas chargé → afficher le fallback
-    setTimeout(function(){
-      if (crsLoading && crsLoading.style.display !== 'none' && crsLoading.style.opacity !== '0') {
-        if (crsFallback) crsFallback.style.display='flex';
-        if (crsLoading) crsLoading.style.display='none';
-      }
-    }, 12000);
-  }
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   VIEWER LAME HISTOLOGIQUE — OpenSeadragon + Wikimedia Commons
-   Images CC-BY/CC-BY-SA — CORS natif — pyramide multi-résolution
-   Sources : Wikimedia Commons (upload.wikimedia.org)
-   ══════════════════════════════════════════════════════════════════ */
-
-/* ── Carte entrée Histologie → image Wikimedia Commons ───────────── *//* ── Résoudre l'entrée bactérie depuis l'item ─────────────────── */
-function resolveBactEntry(m) {
-  if (m.pdb_id) return { pdb: m.pdb_id, label: m.pdb_label || null };
-  return BACT_PDB_MAP[m.name] || null;
-}
 
 /* ══════════════════════════════════════════════════════════════════
    VIEWER GÉNÉTIQUE — iCn3D (NCBI)
@@ -12357,27 +11571,11 @@ function initSheetRenderer(m){
   }
 
   if (!m._forcePdbOff) {
-    // ── Priorité 0 : Histologie ─────────────────────────────────────────────────
+    // ── Priorité 0 : Histologie — lame DICOM WSI IDC intégrée (OpenSeadragon) ──
     if (m._cat === 'Histologie') {
       var _slide = resolveHistoSlide(m);
       if (_slide) {
-        // 0a : Lame IDC / NCI (iframe, DICOM WSI public CC-BY) — priorité max
-        if (_slide.idc_url) {
-          initSheetRendererIDC(m, _slide);
-          return;
-        }
-        // 0b : Lame CRS Paris Cité (iframe, réseau UP Cité)
-        if (_slide.crs_url) {
-          initSheetRendererCRS(m, _slide);
-          return;
-        }
-        // 0c : IDC collection browser (iframe portail IDC) si explore URL
-        if (_slide.idc_explore) {
-          initSheetRendererIDCExplore(m, _slide);
-          return;
-        }
-        // 0d : OpenSeadragon + Wikipedia REST API (fallback universel)
-        initSheetRendererOSD(m, _slide);
+        initSheetRendererHistoDICOM(m, _slide);
         return;
       }
     }

@@ -10673,46 +10673,49 @@ function _dcmLevelMeta(study, series, sop){
 /* Construit un TileSource OpenSeadragon multi-niveaux à partir de la pyramide
    DICOM. Chaque niveau = 1 instance DICOM tuilée en frames. */
 function _buildDicomTileSource(study, series, levelsMeta){
-  // levelsMeta trié du plus GRAND au plus PETIT
-  var big = levelsMeta[0];
-  var width = big.totW, height = big.totH;
-  var tileW = big.tileW, tileH = big.tileH;
+  // levelsMeta trié du plus GRAND au plus PETIT.
+  // On cale UN niveau OSD par instance DICOM réelle → pas d'interpolation,
+  // donc pas de décalage de tuiles aux niveaux intermédiaires.
+  var big    = levelsMeta[0];
+  var width  = big.totW, height = big.totH;
 
-  // OSD attend des niveaux 0..N croissants (0 = plus petit). On mappe
-  // chaque niveau OSD vers l'instance DICOM de résolution la plus proche.
-  var osdMaxLevel = Math.ceil(Math.log2(Math.max(width,height)));
+  // Niveaux OSD ordonnés du plus PETIT (level 0) au plus GRAND (level N-1)
+  var lvls = levelsMeta.slice().reverse();      // petit → grand
+  var maxLevel = lvls.length - 1;
 
   return {
-    width: width,
+    width:  width,
     height: height,
-    tileWidth: tileW,
-    tileHeight: tileH,
+    // taille de tuile de référence (niveau plein) — informatif pour OSD
+    tileWidth:  big.tileW,
+    tileHeight: big.tileH,
     minLevel: 0,
-    maxLevel: osdMaxLevel,
-    getTileUrl: function(level, x, y){
-      // Échelle du niveau OSD demandé par rapport au niveau plein (level max)
-      var scale  = Math.pow(2, osdMaxLevel - level); // >=1
-      var levelW = width / scale;                    // largeur affichée à ce niveau
-      // Instance DICOM dont la résolution est juste >= au niveau OSD demandé
-      var chosen = levelsMeta[levelsMeta.length-1];
-      for(var i=levelsMeta.length-1;i>=0;i--){
-        if(levelsMeta[i].totW >= levelW - 1){ chosen = levelsMeta[i]; break; }
-      }
-      // Coin haut-gauche de la tuile OSD, exprimé en fraction de l'image entière
-      var fracX = (x * tileW * scale) / width;
-      var fracY = (y * tileH * scale) / height;
-      // Colonne / ligne de frame correspondante DANS l'instance choisie
-      var col = Math.floor(fracX * chosen.totW / chosen.tileW);
-      var row = Math.floor(fracY * chosen.totH / chosen.tileH);
-      if(col<0) col=0; if(row<0) row=0;
-      if(col>=chosen.cols) col=chosen.cols-1;
-      if(row>=chosen.rows) row=chosen.rows-1;
-      var frame = row * chosen.cols + col + 1; // frames DICOM 1-indexées
-      if(frame<1) frame=1; if(frame>chosen.nFrames) frame=chosen.nFrames;
-      return IDC_DICOMWEB+'/studies/'+study+'/series/'+series+
-             '/instances/'+chosen.sop+'/frames/'+frame+'/rendered';
+    maxLevel: maxLevel,
+    tileOverlap: 0,
+
+    // Échelle du niveau : largeur de l'instance / largeur totale (0<..<=1)
+    getLevelScale: function(level){
+      var L = lvls[Math.max(0, Math.min(level, maxLevel))];
+      return L.totW / width;
     },
-    // les frames rendered sont des JPEG standard
+    // Nombre de tuiles (frames) du niveau, selon SA propre grille
+    getNumTiles: function(level){
+      var L = lvls[Math.max(0, Math.min(level, maxLevel))];
+      return new OpenSeadragon.Point(L.cols, L.rows);
+    },
+    // Dimensions d'une tuile de CE niveau (chaque instance a ses Columns/Rows)
+    getTileWidth:  function(level){ return lvls[Math.max(0,Math.min(level,maxLevel))].tileW; },
+    getTileHeight: function(level){ return lvls[Math.max(0,Math.min(level,maxLevel))].tileH; },
+
+    getTileUrl: function(level, x, y){
+      var L = lvls[Math.max(0, Math.min(level, maxLevel))];
+      var col = Math.max(0, Math.min(x, L.cols-1));
+      var row = Math.max(0, Math.min(y, L.rows-1));
+      var frame = row * L.cols + col + 1;           // frames DICOM 1-indexées
+      if(frame<1) frame=1; if(frame>L.nFrames) frame=L.nFrames;
+      return IDC_DICOMWEB+'/studies/'+study+'/series/'+series+
+             '/instances/'+L.sop+'/frames/'+frame+'/rendered';
+    },
     getTileAjaxHeaders: function(){ return {'Accept':'image/jpeg'}; }
   };
 }
@@ -10796,12 +10799,16 @@ function initSheetRendererHistoDICOM(m, slide){
           loadTilesWithAjax:true,
           ajaxHeaders:{'Accept':'image/jpeg'},
           gestureSettingsMouse:{clickToZoom:false,dblClickToZoom:true},
-          minZoomImageRatio:0.6, maxZoomPixelRatio:2.5,
+          minZoomImageRatio:0.8, maxZoomPixelRatio:2.5,
+          homeFillsViewer:true,
           visibilityRatio:1, constrainDuringPan:true,
           animationTime:0.5, blendTime:0.25
         });
         window._osdViewer=_osdViewer;
-        _osdViewer.addOnceHandler('open',function(){ load.remove(); _osdInjectTools(); });
+        _osdViewer.addOnceHandler('open',function(){
+          load.remove(); _osdInjectTools();
+          try{ _osdViewer.viewport.goHome(true); }catch(_){}
+        });
         _osdViewer.addHandler('open-failed',function(){
           load.innerHTML='<div class="osd-loading-lbl">Impossible de charger la lame (quota IDC ou réseau).</div>';
         });

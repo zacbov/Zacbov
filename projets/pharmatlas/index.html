@@ -1232,14 +1232,45 @@ async function _getToolHTML(meta){
 }
 
 // Monte un HTML d'outil dans un conteneur via iframe blob (facteur commun).
-function _mountToolIframe(container,html){
+function _mountToolIframe(container,html,opts){
+  opts=opts||{};
   container.innerHTML='';
   var blob=new Blob([html],{type:'text/html;charset=utf-8'});
   var url=URL.createObjectURL(blob);
   var iframe=document.createElement('iframe');
   iframe.style.cssText='width:100%;height:100%;border:none;display:block;';
-  iframe.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-popups');
+  // Délégation de permissions (Permissions Policy) : nécessaire pour getUserMedia
+  // dans une iframe. Sans 'allow="camera"', la caméra est refusée même si
+  // l'utilisateur a autorisé le site au niveau navigateur.
+  iframe.setAttribute('allow', 'camera; microphone; fullscreen');
+  // Pour les outils qui utilisent la caméra, on NE met PAS d'attribut sandbox :
+  // 'allow-same-origin'+'allow-scripts' déclenche l'avertissement d'évasion et,
+  // sur certains navigateurs, neutralise la Permissions Policy caméra.
+  // Les autres outils gardent un sandbox permissif classique.
+  if(!opts.camera){
+    iframe.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-popups');
+  }
   iframe.src=url;
+  container.appendChild(iframe);
+}
+
+// Outils nécessitant l'accès caméra (getUserMedia) → iframe avec allow="camera".
+function _toolNeedsCamera(meta){
+  if(!meta) return false;
+  var slug=meta._tool_slug||'';
+  return /scanner|microscope/i.test(slug) || /scanner|microscope/i.test(meta.name||'');
+}
+
+// Monte un outil caméra via iframe pointant sur le VRAI fichier (pas blob:).
+// getUserMedia est bien plus fiable depuis une URL http(s) normale que depuis blob:.
+function _mountToolIframeByUrl(container,slug){
+  container.innerHTML='';
+  var iframe=document.createElement('iframe');
+  iframe.style.cssText='width:100%;height:100%;border:none;display:block;';
+  // Permissions Policy : autoriser la caméra pour toutes origines de l'iframe.
+  iframe.setAttribute('allow','camera *; microphone *; fullscreen *');
+  iframe.setAttribute('allowfullscreen','true');
+  iframe.src='data/tools/'+slug+'.html';
   container.appendChild(iframe);
 }
 
@@ -1250,6 +1281,12 @@ function renderIframeTool(info,meta){
   if(sv){
     sv.style.width='100%';
     sv.style.minWidth='100%';
+    // Outil caméra → chargement par URL directe (getUserMedia fiable + permissions).
+    if(_toolNeedsCamera(meta)){
+      var slug=meta._tool_slug||_toolSlug(meta.name);
+      _mountToolIframeByUrl(sv,slug);
+      return;
+    }
     sv.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#7fa8d0;font-family:sans-serif;font-size:14px">Chargement de l\u2019outil…</div>';
     _getToolHTML(meta).then(function(html){
       if(!html){ buildOutilFallback(sv,'Outil indisponible.'); return; }
@@ -6784,7 +6821,7 @@ async function openSheet(m){
         _sv.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#7fa8d0;font-size:13px">Chargement…</div>';
         _getToolHTML(m._outil_meta||m).then(function(_html){
           if(!_html){ _sv.innerHTML=''; return; }
-          _mountToolIframe(_sv,_html);
+          _mountToolIframe(_sv,_html,{camera:_toolNeedsCamera(m._outil_meta||m)});
         });
       }
     }
@@ -6888,7 +6925,7 @@ async function openSheet(m){
         _svA.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#7fa8d0;font-size:13px">Chargement…</div>';
         _getToolHTML(m._outil_meta||m).then(function(_htmlA){
           if(!_htmlA){ _svA.innerHTML=''; return; }
-          _mountToolIframe(_svA,_htmlA);
+          _mountToolIframe(_svA,_htmlA,{camera:_toolNeedsCamera(m._outil_meta||m)});
         });
       }
     }

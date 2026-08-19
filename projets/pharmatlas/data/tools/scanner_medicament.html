@@ -132,16 +132,31 @@ var _scanVideoTrack=null, _scanTorchOn=false;
 // Le parent envoie sa base d'URL (là où se trouve index.html) pour construire
 // des chemins absolus vers data/ — indispensable depuis une iframe blob:.
 var PARENT_BASE = '';
+var _parentBaseResolved = null;   // Promise résolue quand le parent a répondu (ou timeout)
+var _parentBaseResolve = null;
+var _inIframe = (window.self !== window.top);
+if(_inIframe){
+  _parentBaseResolved = new Promise(function(res){ _parentBaseResolve = res; });
+}
 window.addEventListener('message', function(ev){
   var d = ev.data;
   if(d && d.source==='pharmatlas-host' && d.type==='init' && d.base){
     PARENT_BASE = d.base.replace(/\/[^\/]*$/,''); // dossier de index.html
+    if(_parentBaseResolve){ _parentBaseResolve(true); _parentBaseResolve=null; }
   }
 });
 // Demande la base au parent dès le chargement.
-try{ parent.postMessage({source:'pharmatlas-scanner', type:'ready'}, '*'); }catch(e){}
+if(_inIframe){
+  try{ parent.postMessage({source:'pharmatlas-scanner', type:'ready'}, '*'); }catch(e){}
+  // Filet de sécurité : si le parent ne répond pas sous 1,5 s, on continue quand même.
+  setTimeout(function(){ if(_parentBaseResolve){ _parentBaseResolve(false); _parentBaseResolve=null; } }, 1500);
+}
 
 async function _scanFetchJson(names){
+  // En iframe, attendre (brièvement) que le parent fournisse sa base absolue.
+  if(_inIframe && _parentBaseResolved && !PARENT_BASE){
+    try{ await _parentBaseResolved; }catch(e){}
+  }
   var bases = [];
   if(PARENT_BASE) bases.push(PARENT_BASE + '/data/');
   bases = bases.concat(SCAN_DATA_BASES);
@@ -311,13 +326,14 @@ async function _scanStartCamera(){
       if(want.length){ _scanDetector=new window.BarcodeDetector({formats:want}); detectorOk=true; }
     }catch(e){ detectorOk=false; }
   }
-  if(detectorOk){ _scanSetStatus('Visez le code-barres de la boîte…','live'); _scanLoop(); return; }
+  if(detectorOk){ _scanSetStatus('📷 Caméra active (détecteur natif) — visez le code-barres.','live'); _scanLoop(); return; }
 
-  if(!_scanGetZX()) _scanSetStatus('Initialisation du lecteur de code-barres…','live');
+  // Pas de BarcodeDetector (cas fréquent sur Chrome/Firefox PC) → ZXing.
+  _scanSetStatus('📷 Caméra active — chargement du lecteur de code-barres…','live');
   var loaded=await _scanLoadZXing();
   var ZX=_scanGetZX();
   if(!loaded||!ZX||!ZX.BrowserMultiFormatReader){
-    _scanSetStatus('Le lecteur de code-barres n\u0027a pas pu être chargé. Vérifiez la connexion, ou utilisez la saisie manuelle du CIP13 / la recherche par nom.','warn');
+    _scanSetStatus('📷 Caméra active, mais le lecteur de code-barres n\u0027a pas pu se charger (zxing.min.js absent et CDN injoignable). Saisissez le CIP13 à la main ou cherchez par nom.','warn');
     return;
   }
   try{

@@ -464,8 +464,19 @@ function _scanManualSubmit(){
 (function(){
   var env=_scanEnv();
   var el=document.getElementById('scanEnv');
-  if(el) el.innerHTML='Environnement détecté : <b>'+env.os+'</b>'+
-    (env.hasDetector&&env.hasMediaDevices?' · caméra prise en charge':' · saisie manuelle recommandée');
+  var inIframe=(window.self!==window.top);
+  var secure=window.isSecureContext;
+  var proto=location.protocol;
+  if(el){
+    el.innerHTML='Environnement : <b>'+env.os+'</b>'
+      +(env.hasDetector&&env.hasMediaDevices?' · caméra prise en charge':' · saisie manuelle recommandée')
+      +'<br><span style="font-size:10px;opacity:.75">'
+      +'contexte '+(secure?'sécurisé ✓':'NON sécurisé ✗')+' · '+proto
+      +(inIframe?' · dans iframe':' · autonome')+'</span>';
+  }
+  if(!secure){
+    _scanSetStatus('⚠ Contexte non sécurisé ('+proto+'). La caméra exige HTTPS ou localhost. La saisie manuelle et la recherche par nom restent disponibles.','warn');
+  }
   if(!env.hasMediaDevices){
     var box=document.getElementById('scanCamBox');
     if(box) box.style.display='none';

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scanner médicament — PharmAtlas</title>
+<style>
+  :root{
+    --bg:#0a0e16; --card:#131a26; --border:#26303f; --text:#e8eef5;
+    --muted:#8595a8; --accent:#3ab09e; --accent2:#1a6896;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.5;
+    display:flex; flex-direction:column;
+  }
+  .scan-root{display:flex;flex-direction:column;gap:14px;padding:18px;max-width:640px;margin:0 auto;width:100%;flex:1}
+  .scan-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(26,104,150,.18);
+    color:#7ec8e3;padding:6px 13px;border-radius:20px;font-weight:700;font-size:12px;align-self:flex-start}
+  .scan-badge .new-badge{background:var(--accent);color:#04120f;padding:1px 7px;border-radius:9px;font-size:10px}
+  .scan-env{font-size:11px;color:var(--muted)}
+  .scan-intro{font-size:12.5px;color:var(--muted)}
+  .scan-cam-box{width:100%;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .scan-video-wrap{position:relative;width:100%;aspect-ratio:4/3;background:#000;border-radius:10px;overflow:hidden}
+  .scan-video-wrap video{width:100%;height:100%;object-fit:cover;display:block}
+  .scan-reticle{position:absolute;inset:16% 14%;border:2px solid rgba(58,176,158,.85);border-radius:12px;
+    box-shadow:0 0 0 100vmax rgba(0,0,0,.28);pointer-events:none}
+  .scan-cam-controls{display:flex;align-items:center;gap:9px;margin-top:10px}
+  .scan-zoom-ic{font-size:15px}
+  .scan-zoom{flex:1;accent-color:var(--accent)}
+  .scan-zoom-val{font-size:11px;color:var(--muted);min-width:56px;text-align:right}
+  .scan-torch-btn{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:5px 9px;
+    cursor:pointer;font-size:15px}
+  .scan-torch-btn.on{background:#5a4a12;border-color:#b58a1a}
+  .scan-cam-btns{display:flex;gap:8px;margin-top:10px}
+  .scan-btn{border:none;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer}
+  .scan-btn.primary{background:var(--accent);color:#04120f}
+  .scan-btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+  .scan-status{font-size:12.5px;padding:10px 12px;border-radius:9px;background:var(--card);
+    border:1px solid var(--border);color:var(--muted)}
+  .scan-status.live{border-color:#1a6896;color:#7ec8e3}
+  .scan-status.ok{border-color:#1e7a48;color:#5fd39a}
+  .scan-status.warn{border-color:#9a5a16;color:#e0a45a}
+  .scan-manual{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:13px}
+  .scan-sub{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px}
+  .scan-row{display:flex;gap:8px}
+  .scan-input{flex:1;width:100%;border:1px solid var(--border);border-radius:9px;background:#0e141f;
+    color:var(--text);padding:10px 12px;font-size:14px}
+  .scan-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(58,176,158,.15)}
+  .scan-row .scan-btn{flex:0 0 auto}
+  .scan-results{margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto}
+  .scan-hit{text-align:left;background:#0e141f;border:1px solid var(--border);border-radius:10px;
+    padding:9px 11px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+  .scan-hit:hover{border-color:var(--accent);background:rgba(58,176,158,.08)}
+  .scan-hit-n{font-size:13px;font-weight:700;color:var(--text)}
+  .scan-hit-d{font-size:11.5px;color:var(--muted)}
+  .scan-empty{font-size:12.5px;color:var(--muted);padding:8px 2px}
+  .scan-foot{font-size:11px;color:var(--muted);line-height:1.5;margin-top:6px;border-top:1px solid var(--border);padding-top:12px}
+  .scan-results::-webkit-scrollbar{width:6px}
+  .scan-results::-webkit-scrollbar-thumb{background:rgba(58,176,158,.35);border-radius:6px}
+</style>
+</head>
+<body>
+<div class="scan-root">
+  <div class="scan-badge">📷 Scanner de boîte de médicament <span class="new-badge">EMBARQUÉ</span></div>
+  <div class="scan-env" id="scanEnv"></div>
+  <p class="scan-intro">Scannez le <b>code-barres</b> (Datamatrix ou EAN13) figurant sur la boîte d'un médicament : l'atlas ouvrira automatiquement la fiche de la spécialité correspondante.</p>
+
+  <div class="scan-cam-box" id="scanCamBox">
+    <div class="scan-video-wrap">
+      <video id="scanVideo" playsinline muted></video>
+      <div class="scan-reticle"></div>
+    </div>
+    <div class="scan-cam-controls" id="scanCamControls" style="display:none">
+      <span class="scan-zoom-ic">🔍</span>
+      <input type="range" id="scanZoom" class="scan-zoom" min="1" max="5" step="0.1" value="1" aria-label="Zoom">
+      <span id="scanZoomVal" class="scan-zoom-val">1.0×</span>
+      <button id="scanTorch" class="scan-torch-btn" onclick="_scanToggleTorch()" title="Lampe" style="display:none">🔦</button>
+    </div>
+    <div class="scan-cam-btns">
+      <button class="scan-btn primary" onclick="_scanStartCamera()">▶︎ Démarrer la caméra</button>
+      <button class="scan-btn ghost" onclick="_scanStopCamera();_scanSetStatus('Caméra arrêtée.','')">■ Arrêter</button>
+    </div>
+  </div>
+
+  <div class="scan-status" id="scanStatus">Prêt. Démarrez la caméra ou saisissez un code.</div>
+
+  <div class="scan-manual">
+    <div class="scan-sub">Saisie manuelle du code-barres (CIP13)</div>
+    <div class="scan-row">
+      <input id="scanManualInput" class="scan-input" inputmode="numeric" placeholder="3400…"
+        onkeydown="if(event.key==='Enter')_scanManualSubmit()">
+      <button class="scan-btn primary" onclick="_scanManualSubmit()">Ouvrir</button>
+    </div>
+  </div>
+
+  <div class="scan-manual">
+    <div class="scan-sub">Ou recherche par nom / DCI</div>
+    <input id="scanNameInput" class="scan-input" placeholder="ex. doliprane, amoxicilline…"
+      oninput="_scanSearchName(this.value)">
+    <div class="scan-results" id="scanResults"></div>
+  </div>
+
+  <div class="scan-foot">Source des correspondances code-barres : base publique des médicaments (ANSM/BDPM).
+    Aucune donnée n'est transmise : la résolution se fait localement sur l'appareil.</div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   Scanner médicament — OUTIL AUTONOME (iframe sandbox)
+   • Charge data/cis_cip.json (CIP13→CIS) et data/meds_noms.json (CIS→nom/DCI).
+   • Décode via BarcodeDetector natif, repli ZXing (data/vendor/zxing.min.js).
+   • L'ouverture de la fiche est déléguée à l'atlas parent via postMessage :
+        parent.postMessage({source:'pharmatlas-scanner', type:'openMed',
+                            cis, nom, dci}, '*')
+   ═══════════════════════════════════════════════════════════════════════ */
+
+// Base des données : l'iframe est chargée en blob:, donc les chemins relatifs
+// ne fonctionnent pas. On résout via l'URL du document parent transmise au load,
+// avec repli sur des chemins classiques.
+var SCAN_DATA_BASES = ['data/','./data/','../data/','',];
+var SCAN_CIS_CIP=null, SCAN_MEDS_NOMS=null, SCAN_NOMS_INDEX=null;
+var _scanDetector=null, _scanStream=null, _scanLoopId=null;
+var _zxingReader=null, _zxingLoading=null;
+var _scanVideoTrack=null, _scanTorchOn=false;
+
+// Le parent envoie sa base d'URL (là où se trouve index.html) pour construire
+// des chemins absolus vers data/ — indispensable depuis une iframe blob:.
+var PARENT_BASE = '';
+window.addEventListener('message', function(ev){
+  var d = ev.data;
+  if(d && d.source==='pharmatlas-host' && d.type==='init' && d.base){
+    PARENT_BASE = d.base.replace(/\/[^\/]*$/,''); // dossier de index.html
+  }
+});
+// Demande la base au parent dès le chargement.
+try{ parent.postMessage({source:'pharmatlas-scanner', type:'ready'}, '*'); }catch(e){}
+
+async function _scanFetchJson(names){
+  var bases = [];
+  if(PARENT_BASE) bases.push(PARENT_BASE + '/data/');
+  bases = bases.concat(SCAN_DATA_BASES);
+  for(var b=0;b<bases.length;b++){
+    for(var n=0;n<names.length;n++){
+      try{
+        var r = await fetch(bases[b] + names[n], {cache:'force-cache'});
+        if(r.ok) return await r.json();
+      }catch(e){}
+    }
+  }
+  return null;
+}
+
+async function _scanEnsureData(){
+  if(!SCAN_CIS_CIP){
+    _scanSetStatus('Chargement de la base médicaments…','live');
+    SCAN_CIS_CIP = await _scanFetchJson(['cis_cip.json','Cis_cip.json']) || {};
+  }
+  if(!SCAN_MEDS_NOMS){
+    SCAN_MEDS_NOMS = await _scanFetchJson(['meds_noms.json','Meds_noms.json']) || [];
+    SCAN_NOMS_INDEX = SCAN_MEDS_NOMS.map(function(m){
+      return {cis:m.cis, n:m.n||'', d:m.d||'', f:m.f||'',
+              hay:((m.n||'')+' '+(m.d||'')).toLowerCase()};
+    });
+  }
+}
+
+function _scanNormalizeBarcode(raw){
+  if(!raw) return null;
+  var s = String(raw).replace(/[\u001d\u00e8]/g,'').trim();
+  var gs1 = s.match(/01(\d{14})/);
+  if(gs1){
+    var cip13 = gs1[1].replace(/^0/,'');
+    if(/^\d{13}$/.test(cip13)) return cip13;
+  }
+  var ean = s.match(/\d{13}/);
+  if(ean) return ean[0];
+  var g14 = s.match(/\d{14}/);
+  if(g14){
+    var c = g14[0].replace(/^0/,'');
+    if(/^\d{13}$/.test(c)) return c;
+  }
+  return /^\d+$/.test(s) ? s : null;
+}
+
+async function _scanResolve(barcode){
+  await _scanEnsureData();
+  var cip = _scanNormalizeBarcode(barcode);
+  if(!cip) return null;
+  var cis = SCAN_CIS_CIP[cip];
+  if(!cis && cip.length===13 && SCAN_CIS_CIP['0'+cip]) cis = SCAN_CIS_CIP['0'+cip];
+  if(!cis) return {cip:cip, cis:null, rec:null};
+  var rec = (SCAN_MEDS_NOMS||[]).find(function(m){return m.cis===cis;}) || null;
+  return {cip:cip, cis:cis, rec:rec};
+}
+
+/* Délègue l'ouverture de la fiche à l'atlas parent. */
+function _openMedInParent(cis, nom, dci){
+  try{
+    parent.postMessage({source:'pharmatlas-scanner', type:'openMed',
+                        cis:cis, nom:nom||null, dci:dci||null}, '*');
+    return true;
+  }catch(e){ return false; }
+}
+
+function _scanEnv(){
+  var ua = navigator.userAgent||'';
+  var isAndroid=/Android/i.test(ua);
+  var isIOS=/iPad|iPhone|iPod/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  var isWindows=/Windows/i.test(ua);
+  var isMac=/Macintosh/i.test(ua)&&!isIOS;
+  var isMobile=isAndroid||isIOS||/Mobi/i.test(ua);
+  var os=isAndroid?'Android':isIOS?'iOS':isWindows?'Windows':isMac?'macOS':'Bureau';
+  var hasMediaDevices=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);
+  var hasDetector=('BarcodeDetector' in window);
+  return {os:os,isAndroid:isAndroid,isIOS:isIOS,isWindows:isWindows,isMobile:isMobile,
+          hasMediaDevices:hasMediaDevices,hasDetector:hasDetector,
+          facing:isMobile?'environment':'user'};
+}
+
+function _scanGetZX(){ return window.ZXing||window.ZXingBrowser||null; }
+function _scanLoadZXing(){
+  if(_scanGetZX()) return Promise.resolve(true);
+  if(_zxingLoading) return _zxingLoading;
+  var urls = [];
+  if(PARENT_BASE) urls.push(PARENT_BASE+'/data/vendor/zxing.min.js');
+  urls = urls.concat([
+    'data/vendor/zxing.min.js','./data/vendor/zxing.min.js','vendor/zxing.min.js',
+    'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js',
+    'https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js'
+  ]);
+  _zxingLoading = new Promise(function(resolve){
+    var idx=0;
+    function tryNext(){
+      if(idx>=urls.length){ resolve(false); return; }
+      var url=urls[idx++]; var s=document.createElement('script'); var done=false;
+      var to=setTimeout(function(){ if(!done){done=true;s.remove();tryNext();} },8000);
+      s.src=url; s.async=true;
+      s.onload=function(){ if(done)return; done=true; clearTimeout(to);
+        if(_scanGetZX())resolve(true); else tryNext(); };
+      s.onerror=function(){ if(done)return; done=true; clearTimeout(to); s.remove(); tryNext(); };
+      document.head.appendChild(s);
+    }
+    tryNext();
+  });
+  return _zxingLoading;
+}
+
+async function _scanStartCamera(){
+  var video=document.getElementById('scanVideo');
+  if(!video) return;
+  var env=_scanEnv();
+  if(!env.hasMediaDevices){
+    _scanSetStatus('Aucune caméra accessible sur cet environnement ('+env.os+'). Utilisez la saisie manuelle ou la recherche par nom.','warn');
+    return;
+  }
+  try{
+    _scanStream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:env.facing},width:{ideal:1920},height:{ideal:1080}},audio:false});
+  }catch(e){
+    try{
+      _scanStream = await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:false});
+    }catch(e2){
+      try{ _scanStream = await navigator.mediaDevices.getUserMedia({video:true,audio:false}); }
+      catch(e3){ _scanSetStatus('Accès caméra refusé ou indisponible. Utilisez la saisie manuelle ou la recherche par nom.','warn'); return; }
+    }
+  }
+  try{
+    video.setAttribute('playsinline',''); video.setAttribute('muted','');
+    video.muted=true; video.playsInline=true; video.srcObject=_scanStream;
+    await video.play();
+  }catch(e){ video.onloadedmetadata=function(){ video.play().catch(function(){}); }; }
+
+  _scanSetupControls();
+
+  var detectorOk=false;
+  if(env.hasDetector){
+    try{
+      var fmts=await window.BarcodeDetector.getSupportedFormats();
+      var want=['ean_13','data_matrix','code_128','qr_code','ean_8','upc_a','upc_e','code_39'].filter(function(f){return fmts.indexOf(f)>=0;});
+      if(want.length){ _scanDetector=new window.BarcodeDetector({formats:want}); detectorOk=true; }
+    }catch(e){ detectorOk=false; }
+  }
+  if(detectorOk){ _scanSetStatus('Visez le code-barres de la boîte…','live'); _scanLoop(); return; }
+
+  if(!_scanGetZX()) _scanSetStatus('Initialisation du lecteur de code-barres…','live');
+  var loaded=await _scanLoadZXing();
+  var ZX=_scanGetZX();
+  if(!loaded||!ZX||!ZX.BrowserMultiFormatReader){
+    _scanSetStatus('Le lecteur de code-barres n\u0027a pas pu être chargé. Vérifiez la connexion, ou utilisez la saisie manuelle du CIP13 / la recherche par nom.','warn');
+    return;
+  }
+  try{
+    var hints=null;
+    try{
+      if(ZX.DecodeHintType&&ZX.BarcodeFormat){
+        hints=new Map();
+        hints.set(ZX.DecodeHintType.POSSIBLE_FORMATS,[
+          ZX.BarcodeFormat.EAN_13,ZX.BarcodeFormat.EAN_8,ZX.BarcodeFormat.UPC_A,ZX.BarcodeFormat.UPC_E,
+          ZX.BarcodeFormat.CODE_128,ZX.BarcodeFormat.CODE_39,ZX.BarcodeFormat.DATA_MATRIX,ZX.BarcodeFormat.QR_CODE]);
+        hints.set(ZX.DecodeHintType.TRY_HARDER,true);
+      }
+    }catch(eh){ hints=null; }
+    _zxingReader=new ZX.BrowserMultiFormatReader(hints,300);
+    _scanSetStatus('Visez le code-barres de la boîte…','live');
+    _zxingReader.decodeFromVideoElement(video,function(result,err){
+      if(result){
+        var val=result.getText?result.getText():(result.text||'');
+        if(val){ _scanStopCamera(); _scanSetStatus('Code détecté : '+val,'ok'); _scanHandleBarcode(val); }
+      }
+    });
+  }catch(e){ _scanSetStatus('Impossible de démarrer le lecteur. Utilisez la saisie manuelle ou la recherche par nom.','warn'); }
+}
+
+function _scanLoop(){
+  var video=document.getElementById('scanVideo');
+  if(!video||!_scanDetector||!_scanStream) return;
+  var busy=false;
+  _scanLoopId=setInterval(async function(){
+    if(busy||video.readyState<2) return;
+    busy=true;
+    try{
+      var codes=await _scanDetector.detect(video);
+      if(codes&&codes.length){
+        var val=codes[0].rawValue;
+        _scanStopCamera(); _scanSetStatus('Code détecté : '+val,'ok'); _scanHandleBarcode(val);
+      }
+    }catch(e){}
+    busy=false;
+  },300);
+}
+
+function _scanStopCamera(){
+  if(_scanLoopId){ clearInterval(_scanLoopId); _scanLoopId=null; }
+  if(_zxingReader){ try{_zxingReader.reset();}catch(e){} _zxingReader=null; }
+  if(_scanStream){ _scanStream.getTracks().forEach(function(t){t.stop();}); _scanStream=null; }
+  _scanVideoTrack=null; _scanTorchOn=false;
+  var ctrls=document.getElementById('scanCamControls'); if(ctrls) ctrls.style.display='none';
+  var video=document.getElementById('scanVideo');
+  if(video){ try{video.pause();}catch(e){} video.srcObject=null; video.style.transform=''; }
+}
+
+function _scanSetupControls(){
+  var ctrls=document.getElementById('scanCamControls');
+  var slider=document.getElementById('scanZoom');
+  var zoomVal=document.getElementById('scanZoomVal');
+  var torchBtn=document.getElementById('scanTorch');
+  var video=document.getElementById('scanVideo');
+  if(!ctrls||!slider||!video) return;
+  try{ _scanVideoTrack=_scanStream?_scanStream.getVideoTracks()[0]:null; }catch(e){ _scanVideoTrack=null; }
+  if(!_scanVideoTrack){ ctrls.style.display='none'; return; }
+  try{ _scanVideoTrack.applyConstraints({advanced:[{focusMode:'continuous'}]}); }catch(e){}
+  setTimeout(function(){
+    var caps={};
+    try{ caps=_scanVideoTrack.getCapabilities?_scanVideoTrack.getCapabilities():{}; }catch(e){}
+    var anyControl=false;
+    if(caps.zoom&&typeof caps.zoom.min==='number'&&caps.zoom.max>caps.zoom.min){
+      anyControl=true;
+      slider.min=caps.zoom.min; slider.max=caps.zoom.max; slider.step=caps.zoom.step||0.1;
+      var cur=caps.zoom.min;
+      try{ cur=_scanVideoTrack.getSettings().zoom||caps.zoom.min; }catch(e){}
+      slider.value=cur; zoomVal.textContent=Number(cur).toFixed(1)+'×';
+      slider.oninput=function(){ var z=Number(slider.value); zoomVal.textContent=z.toFixed(1)+'×';
+        try{ _scanVideoTrack.applyConstraints({advanced:[{zoom:z}]}); }catch(e){} };
+    } else {
+      anyControl=true;
+      slider.min=1; slider.max=4; slider.step=0.1; slider.value=1; zoomVal.textContent='1.0×';
+      slider.oninput=function(){ var z=Number(slider.value); zoomVal.textContent=z.toFixed(1)+'× (num.)';
+        video.style.transform='scale('+z+')'; video.style.transformOrigin='center center'; };
+    }
+    if(caps.torch){ torchBtn.style.display=''; anyControl=true; } else { torchBtn.style.display='none'; }
+    ctrls.style.display=anyControl?'flex':'none';
+  },400);
+}
+
+function _scanToggleTorch(){
+  if(!_scanVideoTrack) return;
+  _scanTorchOn=!_scanTorchOn;
+  var btn=document.getElementById('scanTorch');
+  try{ _scanVideoTrack.applyConstraints({advanced:[{torch:_scanTorchOn}]});
+    if(btn) btn.classList.toggle('on',_scanTorchOn); }catch(e){}
+}
+
+function _scanSetStatus(msg,kind){
+  var el=document.getElementById('scanStatus'); if(!el) return;
+  el.textContent=msg; el.className='scan-status '+(kind||'');
+}
+
+async function _scanHandleBarcode(raw){
+  _scanSetStatus('Recherche…','live');
+  var res=await _scanResolve(raw);
+  if(!res){ _scanSetStatus('Code-barres non reconnu.','warn'); return; }
+  if(!res.cis){ _scanSetStatus('CIP '+(res.cip||raw)+' inconnu dans la base. Essayez la recherche par nom.','warn'); return; }
+  var nom=res.rec?res.rec.n:null, dci=res.rec?res.rec.d:null;
+  _scanSetStatus('✓ '+(nom||('CIS '+res.cis))+' — ouverture de la fiche…','ok');
+  _openMedInParent(res.cis,nom,dci);
+}
+
+async function _scanSearchName(q){
+  await _scanEnsureData();
+  var box=document.getElementById('scanResults'); if(!box) return;
+  q=(q||'').trim().toLowerCase();
+  if(q.length<2){ box.innerHTML=''; return; }
+  var terms=q.split(/\s+/); var out=[];
+  for(var i=0;i<SCAN_NOMS_INDEX.length&&out.length<25;i++){
+    var rec=SCAN_NOMS_INDEX[i]; var ok=true;
+    for(var t=0;t<terms.length;t++){ if(rec.hay.indexOf(terms[t])<0){ok=false;break;} }
+    if(ok) out.push(rec);
+  }
+  if(!out.length){ box.innerHTML='<div class="scan-empty">Aucun médicament trouvé.</div>'; return; }
+  box.innerHTML=out.map(function(r){
+    return '<button class="scan-hit" data-cis="'+_scanEsc(r.cis)+'" data-nom="'+_scanEsc(r.n)+'" data-dci="'+_scanEsc(r.d||r.n)+'">'
+      +'<span class="scan-hit-n">'+_scanEsc(r.n)+'</span>'
+      +(r.d?'<span class="scan-hit-d">'+_scanEsc(r.d)+'</span>':'')+'</button>';
+  }).join('');
+  Array.prototype.forEach.call(box.querySelectorAll('.scan-hit'),function(btn){
+    btn.addEventListener('click',function(){
+      _openMedInParent(btn.getAttribute('data-cis'),btn.getAttribute('data-nom'),btn.getAttribute('data-dci'));
+    });
+  });
+}
+
+function _scanEsc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function _scanManualSubmit(){
+  var inp=document.getElementById('scanManualInput');
+  if(inp&&inp.value.trim()) _scanHandleBarcode(inp.value.trim());
+}
+
+// Init UI
+(function(){
+  var env=_scanEnv();
+  var el=document.getElementById('scanEnv');
+  if(el) el.innerHTML='Environnement détecté : <b>'+env.os+'</b>'+
+    (env.hasDetector&&env.hasMediaDevices?' · caméra prise en charge':' · saisie manuelle recommandée');
+  if(!env.hasMediaDevices){
+    var box=document.getElementById('scanCamBox');
+    if(box) box.style.display='none';
+  }
+  _scanEnsureData();
+})();
+</script>
+</body>
+</html>

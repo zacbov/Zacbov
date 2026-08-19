@@ -157,6 +157,7 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 .nav-link-card .nlc-body{flex:1;min-width:0}
 .nav-link-card .nlc-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nav-link-card .nlc-sub{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic}
+.nav-link-card .nlc-gab{font-size:9px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;margin-top:3px}
 .nav-link-card .nlc-cat{font-size:9px;font-weight:700;color:var(--accent);background:var(--accent-light);padding:2px 7px;border-radius:10px;flex-shrink:0;white-space:nowrap}
 .nav-link-card .nlc-arrow{color:var(--accent);font-size:16px;flex-shrink:0;opacity:.7}
 
@@ -924,7 +925,8 @@ let currentLevel = 0;
 
 (async function loadLevelsConfig(){
   try{
-    const r = await fetch('pharmatlas_levels.json');
+    let r = await fetch('data/pharmatlas_levels.json');
+    if(!r.ok) r = await fetch('pharmatlas_levels.json');
     if(!r.ok) return;
     PHARMATLAS_LEVELS = await r.json();
     document.querySelectorAll('.level-btn.pending').forEach(b=>b.classList.remove('pending'));
@@ -1204,17 +1206,71 @@ function buildOutilFallback(info,msg){
   info.innerHTML=`<div class="empty-cat"><div class="big">🛠️</div>${escHtml(msg||'Outil non disponible.')}</div>`;
 }
 
+// Slug déterministe à partir du nom → data/tools/<slug>.html
+function _toolSlug(name){
+  return (name||'outil').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,60) || 'outil';
+}
+
+// Cache mémoire des HTML d'outils déjà chargés (par slug).
+const _toolHTMLCache={};
+
+// Récupère le HTML d'un outil depuis data/tools/<slug>.html (chargé une seule fois).
+// Repli sur un éventuel content_base64 encore inline (ancien format monolithique).
+async function _getToolHTML(meta){
+  if(!meta) return null;
+  const slug=meta._tool_slug||_toolSlug(meta.name);
+  if(_toolHTMLCache[slug]!=null) return _toolHTMLCache[slug];
+  try{
+    const r=await fetch('data/tools/'+slug+'.html',{cache:'force-cache'});
+    if(r.ok){ _toolHTMLCache[slug]=await r.text(); return _toolHTMLCache[slug]; }
+  }catch(e){}
+  if(meta.content_base64){
+    try{ _toolHTMLCache[slug]=decodeURIComponent(escape(atob(meta.content_base64))); return _toolHTMLCache[slug]; }catch(e){}
+  }
+  return null;
+}
+
+// Monte un HTML d'outil dans un conteneur via iframe blob (facteur commun).
+function _mountToolIframe(container,html){
+  container.innerHTML='';
+  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var iframe=document.createElement('iframe');
+  iframe.style.cssText='width:100%;height:100%;border:none;display:block;';
+  iframe.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-popups');
+  iframe.src=url;
+  container.appendChild(iframe);
+}
+
+function renderIframeTool(info,meta){
+  var sv=document.getElementById('sheetViewer');
+  var si=document.getElementById('sheetInfo');
+  if(si){si.style.display='none';}
+  if(sv){
+    sv.style.width='100%';
+    sv.style.minWidth='100%';
+    sv.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#7fa8d0;font-family:sans-serif;font-size:14px">Chargement de l\u2019outil…</div>';
+    _getToolHTML(meta).then(function(html){
+      if(!html){ buildOutilFallback(sv,'Outil indisponible.'); return; }
+      _mountToolIframe(sv,html);
+    });
+  }
+}
+
 function buildOutilRenderFromMeta(meta){
   if(meta && meta.tool_mode==='native'){
     return function(info){ buildOutilFallback(info,'Outil natif non pris en charge.'); };
   }
-  if(meta && meta.tool_mode==='blob_html_base64' && meta.content_base64){
-    return function(info){ renderIframeTool(info,meta.content_base64); };
+  if(meta && meta.tool_mode==='blob_html_base64'){
+    return function(info){ renderIframeTool(info,meta); };
   }
   return function(info){ buildOutilFallback(info,'Outil non disponible.'); };
 }
 
 function normaliseOutilItem(meta){
+  meta=meta||{};
+  if(meta.tool_mode==='blob_html_base64' && !meta._tool_slug) meta._tool_slug=_toolSlug(meta.name);
   return {
     _id:_outilsIdCtr++,
     _cat:'Outils',
@@ -1230,16 +1286,22 @@ function normaliseOutilItem(meta){
 }
 
 function defaultOutilsCatalog(){
-  // Scanner médicament et Hémogramme/NFS retirés définitivement du catalogue.
-  return [];
+  // Scanner médicament : outil HTML autonome (data/tools/scanner_medicament.html),
+  // toujours présent même si absent de tools.json.
+  return [{
+    name:'Scanner médicament',
+    desc:'Scannez le code-barres d\u0027une boîte pour ouvrir la fiche de la spécialité',
+    _icon:'📷',
+    tool_mode:'blob_html_base64',
+    matiere:'Pharmacie',
+    _tool_slug:'scanner_medicament'
+  }];
 }
 
 async function loadToolsCatalog(){
   const candidates=[
-    './tools.json','tools.json',
-    'data/tools.json','./data/tools.json',
-    'Tools.json','./Tools.json',
-    'Outils.json','./Outils.json',
+    'data/tools.json',
+    'tools.json',
   ];
   for(const path of candidates){
     try{
@@ -1251,13 +1313,10 @@ async function loadToolsCatalog(){
                 : Array.isArray(data?.Tools)  ? data.Tools
                 : [];
       if(raw.length){
-        // Retrait définitif de Scanner médicament et Hémogramme/NFS, même si présents dans tools.json
-        const filteredRaw = raw.filter(o=>{
-          const isScanner = o.native_renderer==='renderMedScanner' || /scanner/i.test(o.name||'');
-          const isNFS = o.native_renderer==='renderHemogramme' || /NFS|Hémogramme/i.test(o.name||'');
-          return !isScanner && !isNFS;
-        });
-        OUTILS_ITEMS = filteredRaw.map(normaliseOutilItem);
+        // Injecter le Scanner médicament s'il n'est pas déjà présent dans tools.json.
+        const hasScanner = raw.some(o=>/scanner/i.test(o.name||'') || o._tool_slug==='scanner_medicament');
+        const base = hasScanner ? [] : defaultOutilsCatalog();
+        OUTILS_ITEMS = [...base, ...raw].map(normaliseOutilItem);
         return true;
       }
     }catch(e){}
@@ -1271,7 +1330,9 @@ let gallery={};
 let baseUrl='';
 let localMode=false;
 const DATA_DIR='data/';
-const JSON_DIRS_TO_TRY=['', DATA_DIR].filter((v,i,a)=>a.indexOf(v)===i);
+const JSON_DIRS_TO_TRY=[DATA_DIR];
+// Catégories dont le nom de fichier diffère de l'id (évite tout scan à l'aveugle)
+const FILENAME_OVERRIDES={'Math_Stats':'Math-Stats'};
 // Map filename.glb → blob:URL (pour file:// protocol)
 const fileMap = new Map();
 let activeCat='';
@@ -1286,9 +1347,12 @@ async function loadFromServer(){
   const base = window.location.href.replace(/\/[^\/]*$/, '');
   await loadToolsCatalog();
 
-  // 1) index.json externe dans le même dossier si présent
+  // 1) Architecture multi-fichiers data/<CatId>.json (cas nominal)
+  if(await loadFromMultiCategoryServer(base)) return;
+
+  // 2) index.json monolithique (ancien format), seulement si présent
   try{
-    const r = await fetch('./index.json', {cache:'no-store'});
+    const r = await fetch('data/index.json', {cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const data = await r.json();
     baseUrl = base;
@@ -1300,10 +1364,6 @@ async function loadFromServer(){
     }
     return;
   }catch(e){/* fallback plus bas */}
-
-  // 2) Architecture multi-fichiers <CatId>.json dans le même dossier
-  //    puis data/<CatId>.json pour compatibilité
-  if(await loadFromMultiCategoryServer(base)) return;
 
   // 3) Données embarquées directement dans ce fichier HTML (secours)
   if(window.__ATLAS_DATA__){
@@ -1334,13 +1394,10 @@ async function loadFromMultiCategoryServer(base){
   }
 
   await Promise.all(catsToTry.map(async c => {
-    // Noms de fichiers à essayer : id exact + variante avec tirets + extraFilenames
-    const filenames = [c.id];
-    const hyphen = c.id.replace(/_/g, '-');
-    if(hyphen !== c.id) filenames.push(hyphen);
-    const lower = hyphen.toLowerCase();
-    if(lower !== hyphen) filenames.push(lower);
-    // Noms supplémentaires déclarés dans CATS_DEF (ex: Médicaments0)
+    // Nom de fichier exact (= id), éventuel override, puis extraFilenames.
+    const filenames = [];
+    if(FILENAME_OVERRIDES[c.id]) filenames.push(FILENAME_OVERRIDES[c.id]);
+    filenames.push(c.id);
     if(c.extraFilenames && Array.isArray(c.extraFilenames)){
       c.extraFilenames.forEach(function(ef){ if(!filenames.includes(ef)) filenames.push(ef); });
     }
@@ -1349,7 +1406,7 @@ async function loadFromMultiCategoryServer(base){
     // IMPORTANT PERF : on ne charge plus Médicaments1.json...Médicaments10.json au démarrage.
     // Le détail complet est chargé seulement au clic depuis data/medicaments_full/<cis>.json.
     if(c.id === 'Médicaments'){
-      const _lightFiles = ['medicaments_grouped_light', 'Medicaments_grouped_light', 'Médicaments_grouped_light', 'medicaments_light', 'Medicaments_light', 'Médicaments_light'];
+      const _lightFiles = ['medicaments_grouped_light', 'medicaments_light'];
       for(const _mDir of JSON_DIRS_TO_TRY){
         for(const _lf of _lightFiles){
           try{
@@ -1810,6 +1867,21 @@ function normaliseItem(item,catId,base){
     sp_score_risque:             item.score_risque             || null,
     sp_adipokines:               item.adipokines               || null,
     sp_prevention_niveaux:       item.prevention_niveaux       || null,
+    sp_role_pharmacien:          item.role_pharmacien          || null,
+    sp_acteurs:                  item.acteurs                  || null,
+    // ── Champs canoniques par gabarit ──
+    sp_indicateurs_mesures:      item.indicateurs_mesures      || null,
+    sp_types_etudes:             item.types_etudes             || null,
+    sp_forces_limites:           item.forces_limites           || null,
+    sp_etudes_reference:         item.etudes_reference         || null,
+    sp_enjeu:                    item.enjeu                    || null,
+    sp_objectif:                 item.objectif                 || null,
+    sp_chiffres_cles:            item.chiffres_cles            || null,
+    sp_cadre_acteurs:            item.cadre_acteurs            || null,
+    sp_application:              item.application              || null,
+    sp_lien_pharma:              item.lien_pharma              || null,
+    annee:                       item.annee                    || null,
+    gabarit:                     item.gabarit                  || null,
     // ChEMBL — Données physico-chimiques (RDKit / ChEMBL MCP)
     chembl_mw:       item.chembl_mw       ?? null,
     chembl_logp:     item.chembl_logp     ?? null,
@@ -2903,6 +2975,16 @@ const SUBFILTER_DEFS={
       {label:'💊 Interactions médicam.',   fn:function(m){return !!(m.interactions_medicamenteuses);}},
       {label:'👨‍⚕️ Rôle pharmacien',        fn:function(m){return !!(m.role_pharmacien);}},
     ]
+  },
+  'Sante_Publique':{
+    field:'annee',
+    label:'Année',
+    minCount:1,
+    extra:[
+      {label:'🔬 Méthodes',     fn:function(m){return m.gabarit==='methode';}},
+      {label:'🫀 Pathologies',  fn:function(m){return m.gabarit==='pathologie';}},
+      {label:'🌍 Thématiques',  fn:function(m){return m.gabarit==='thematique';}},
+    ]
   }
 };
 
@@ -3452,14 +3534,28 @@ function renderNavCard(item, catId){
     'Génétique':'🧬','Physiologie':'❤️','Immunologie':'🛡️',
     'Hematologie':'🩸','Microscopiques':'🧫','Sante_Publique':'📊',
     'Optique':'👁️','Toxicologie':'☠️'};
-  const icon=CAT_ICONS[catId]||'📦';
+  // ── Santé Publique : icône + étiquette par gabarit ──────────────────
+  const SP_GABARITS={
+    methode:    {icon:'🔬', label:'Méthode',    color:'#0d47a1'},
+    pathologie: {icon:'🫀', label:'Pathologie', color:'#b71c1c'},
+    thematique: {icon:'🌍', label:'Thématique', color:'#1b5e20'},
+  };
+  let icon=CAT_ICONS[catId]||'📦';
+  let gabTag='';
+  if(catId==='Sante_Publique' && item.gabarit && SP_GABARITS[item.gabarit]){
+    const g=SP_GABARITS[item.gabarit];
+    icon=g.icon;
+    const an=item.annee?` · ${escHtml(item.annee)}`:'';
+    gabTag=`<div class="nlc-gab" style="color:${g.color}">${escHtml(g.label)}${an}</div>`;
+  }
   const sub=item.latin||item.scientific||item.formula||item.desc||'';
   const safeName=(item.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   return `<button class="nav-link-card" onclick="navigateToItem('${safeName}')">`
     +`<span class="nlc-icon">${icon}</span>`
     +`<div class="nlc-body">`
       +`<div class="nlc-name">${escHtml(item.name||'')}</div>`
-      +(sub?`<div class="nlc-sub">${escHtml(sub)}</div>`:'')
+      +gabTag
+      +(sub&&!gabTag?`<div class="nlc-sub">${escHtml(sub)}</div>`:'')
     +`</div>`
     +`<span class="nlc-cat">${escHtml(catId)}</span>`
     +`<span class="nlc-arrow">→</span>`
@@ -4216,15 +4312,25 @@ function copySmiles(btn, smiles){
 }
 
 
-function _getTableauHTML(item){
+// Tableau périodique : fichier HTML autonome dans data/, chargé à la demande.
+let _tableauHTMLCache=null;
+async function _getTableauHTML(item){
+  if(_tableauHTMLCache!=null) return _tableauHTMLCache;
+  try{
+    var r=await fetch('data/tableau_periodique.html',{cache:'force-cache'});
+    if(r.ok){ _tableauHTMLCache=await r.text(); return _tableauHTMLCache; }
+  }catch(e){}
+  // Repli : blob encore inline dans l'item (ancien format).
   try{
     var b64=(item&&item.tableau_html_b64)||'';
-    if(!b64) return '<html><body style="color:red">tableau_html_b64 manquant dans Chimie_Inorganique.json</body></html>';
-    var bin=atob(b64);
-    var bytes=new Uint8Array(bin.length);
-    for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-    return new TextDecoder('utf-8').decode(bytes);
-  }catch(e){return '<html><body style="color:red">Erreur décodage tableau</body></html>';}
+    if(b64){
+      var bin=atob(b64), bytes=new Uint8Array(bin.length);
+      for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+      _tableauHTMLCache=new TextDecoder('utf-8').decode(bytes);
+      return _tableauHTMLCache;
+    }
+  }catch(e){}
+  return '<html><body style="color:#e57373;font-family:sans-serif;padding:20px">Tableau périodique introuvable : placez <code>tableau_periodique.html</code> dans <code>data/</code>.</body></html>';
 }
 
 function renderSolvants(m){
@@ -4954,6 +5060,63 @@ function renderCasInfoItem(m){
 
 
 const MED_FULL_CACHE = new Map();
+
+/* ── Ouvre la fiche Médicament correspondant à un CIS ──────────────────
+   Priorité : (1) entrée déjà présente dans la galerie (groupée ou légère),
+   (2) hydratation directe par CIS via data/medicaments_full/<cis>.json.
+   Utilisé par l'outil Scanner médicament (via postMessage). */
+async function openMedByCis(cis, fallbackName, dci){
+  if(!cis) return false;
+  cis = String(cis);
+  // (1) Chercher dans la galerie déjà chargée.
+  var pool = (gallery && gallery['Médicaments']) ? gallery['Médicaments'] : [];
+  var hit = pool.find(function(m){
+    return String(m.med_cis||m._source_id||m.id||'')===cis
+        || (Array.isArray(m._cis_list) && m._cis_list.indexOf(cis)>=0);
+  });
+  if(hit){
+    // S'assurer que la catégorie Médicaments est active pour la navigation.
+    if(activeCat!=='Médicaments' && typeof selectCat==='function'){ try{ selectCat('Médicaments'); }catch(e){} }
+    await openSheet(hit);
+    return true;
+  }
+  // (2) Hydratation directe par CIS : item léger, openSheet ira chercher la fiche complète.
+  var stub = {
+    _id: (typeof _itemIdCounter!=='undefined' ? (_itemIdCounter++) : Date.now()),
+    _cat:'Médicaments', _light:true, med_cis:cis,
+    name: fallbackName || ('CIS ' + cis),
+    dci: dci || null
+  };
+  try{
+    var hydrated = await hydrateMedicamentsItem(stub);
+    if(hydrated && hydrated!==stub){
+      if(activeCat!=='Médicaments' && typeof selectCat==='function'){ try{ selectCat('Médicaments'); }catch(e){} }
+      await openSheet(hydrated);
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+/* ── Pont avec l'outil Scanner médicament (iframe sandbox) ──────────────
+   L'outil autonome envoie le CIS résolu ; l'atlas ouvre la fiche ici. */
+window.addEventListener('message', function(ev){
+  var d = ev.data;
+  if(!d || d.source!=='pharmatlas-scanner') return;
+  if(d.type==='ready'){
+    // Répondre avec la base d'URL pour que l'iframe résolve data/ en absolu.
+    try{
+      ev.source && ev.source.postMessage({
+        source:'pharmatlas-host', type:'init',
+        base: window.location.href
+      }, '*');
+    }catch(e){}
+    return;
+  }
+  if(d.type==='openMed' && d.cis){
+    openMedByCis(d.cis, d.nom, d.dci);
+  }
+});
 async function hydrateMedicamentsItem(m){
   if(!m || m._cat !== 'Médicaments') return m;
 
@@ -6611,22 +6774,18 @@ async function openSheet(m){
       +formulaHtml
       +sec('Application clinique',escHtml(m.clinical||'—'))
       +_ctLinksFromText((m.clinical||'')+(m.parameters||''))+_chimieLinksFromText(m.clinical||'');
-    if(m.tool_mode==='blob_html_base64'&&m.content_base64){
+    if(m.tool_mode==='blob_html_base64'){
       var _sv=document.getElementById('sheetViewer');
       var _si=document.getElementById('sheetInfo');
       if(_sv&&_si){
         // Widget 55% gauche, fiche 45% droite — les deux visibles
         _sv.style.width='55%';_sv.style.minWidth='55%';_sv.style.borderRight='1px solid var(--border)';
         _si.style.display='';_si.style.flex='1';_si.style.overflowY='auto';
-        _sv.innerHTML='';
-        var _html=decodeURIComponent(escape(atob(m.content_base64)));
-        var _blob=new Blob([_html],{type:'text/html;charset=utf-8'});
-        var _url=URL.createObjectURL(_blob);
-        var _iframe=document.createElement('iframe');
-        _iframe.style.cssText='width:100%;height:100%;border:none;display:block;';
-        _iframe.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-popups');
-        _iframe.src=_url;
-        _sv.appendChild(_iframe);
+        _sv.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#7fa8d0;font-size:13px">Chargement…</div>';
+        _getToolHTML(m._outil_meta||m).then(function(_html){
+          if(!_html){ _sv.innerHTML=''; return; }
+          _mountToolIframe(_sv,_html);
+        });
       }
     }
 
@@ -6720,20 +6879,17 @@ async function openSheet(m){
       +sec('Application',escHtml(m.application||'—'))
       +sec('Exemples',escHtml(m.examples||'—'))
       +_chimieLinksFromText((m.examples||'')+(m.application||''));
-    if(m.tool_mode==='blob_html_base64'&&m.content_base64){
+    if(m.tool_mode==='blob_html_base64'){
       var _svA=document.getElementById('sheetViewer');
       var _siA=document.getElementById('sheetInfo');
       if(_svA&&_siA){
         _svA.style.width='55%';_svA.style.minWidth='55%';_svA.style.borderRight='1px solid var(--border)';
         _siA.style.display='';_siA.style.flex='1';_siA.style.overflowY='auto';
-        _svA.innerHTML='';
-        var _htmlA=decodeURIComponent(escape(atob(m.content_base64)));
-        var _blobA=new Blob([_htmlA],{type:'text/html;charset=utf-8'});
-        var _ifrA=document.createElement('iframe');
-        _ifrA.style.cssText='width:100%;height:100%;border:none;display:block;';
-        _ifrA.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-popups');
-        _ifrA.src=URL.createObjectURL(_blobA);
-        _svA.appendChild(_ifrA);
+        _svA.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#7fa8d0;font-size:13px">Chargement…</div>';
+        _getToolHTML(m._outil_meta||m).then(function(_htmlA){
+          if(!_htmlA){ _svA.innerHTML=''; return; }
+          _mountToolIframe(_svA,_htmlA);
+        });
       }
     }
 
@@ -6744,10 +6900,13 @@ async function openSheet(m){
       var _si2=document.getElementById('sheetInfo');
       if(_sv2) _sv2.style.display='none';
       if(_si2){_si2.style.flex='1';_si2.style.padding='0';_si2.style.overflow='hidden';}
-      var _tpHtml=_getTableauHTML(m);
-      var _tpBlob=new Blob([_tpHtml],{type:'text/html;charset=utf-8'});
-      window._tableauBlobUrl=URL.createObjectURL(_tpBlob);
-      info.innerHTML='<iframe src="'+window._tableauBlobUrl+'" style="width:100%;height:100%;border:none;display:block;background:#06080e" title="Tableau Périodique"></iframe>';
+      info.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#7fa8d0;font-family:sans-serif;font-size:14px">Chargement du tableau périodique…</div>';
+      _getTableauHTML(m).then(function(_tpHtml){
+        var _tpBlob=new Blob([_tpHtml],{type:'text/html;charset=utf-8'});
+        if(window._tableauBlobUrl){ try{URL.revokeObjectURL(window._tableauBlobUrl);}catch(e){} }
+        window._tableauBlobUrl=URL.createObjectURL(_tpBlob);
+        info.innerHTML='<iframe src="'+window._tableauBlobUrl+'" style="width:100%;height:100%;border:none;display:block;background:#06080e" title="Tableau Périodique"></iframe>';
+      });
       return;
     }
     const inorgaColors={
@@ -8836,72 +8995,173 @@ else if(wt==='bootstrap_viz'){
   }else if(cat==='Sante_Publique'){
     // ── Rendu Santé Publique ──────────────────────────────────────────────
     const spCatColors={
-      'Épidémiologie fondamentale': {bg:'#e8f5e9',color:'#1b5e20',icon:'🔬'},
-      'Biostatistiques':            {bg:'#e3f2fd',color:'#0d47a1',icon:'📐'},
-      'Pharmaco-épidémiologie':     {bg:'#fff3e0',color:'#e65100',icon:'💊'},
-      'Surveillance':               {bg:'#fce4ec',color:'#880e4f',icon:'📡'},
-      'Indicateurs de santé':       {bg:'#f3e5f5',color:'#6a1b9a',icon:'📊'},
-      'Santé Environnementale':     {bg:'#e0f2f1',color:'#004d40',icon:'🌿'},
-      'One Health':                  {bg:'#e8f5e9',color:'#1b5e20',icon:'🌐'},
-      'Maladies Métaboliques':       {bg:'#fff3e0',color:'#e65100',icon:'🩺'},
-      'Épidémiologie des MNT':       {bg:'#fce4ec',color:'#880e4f',icon:'📉'},
+      'Fondements':                     {bg:'#e3f2fd',color:'#0d47a1',icon:'📖'},
+      'Épidémiologie':                  {bg:'#e8f5e9',color:'#1b5e20',icon:'🔬'},
+      'Vigilances':                     {bg:'#fff3e0',color:'#e65100',icon:'📡'},
+      'Prévention':                     {bg:'#e0f7fa',color:'#006064',icon:'🔭'},
+      'Organisation du système de santé':{bg:'#ede7f6',color:'#4527a0',icon:'🏛️'},
+      'Pathologies':                    {bg:'#ffebee',color:'#b71c1c',icon:'🫀'},
+      'Santé Environnementale':         {bg:'#e0f2f1',color:'#004d40',icon:'🌿'},
+      'One Health':                     {bg:'#e8f5e9',color:'#1b5e20',icon:'🌐'},
     };
     const spCat=m.category||m.immu_category||null;
     const spCC=spCatColors[spCat]||{bg:'rgba(58,176,158,.1)',color:'rgb(48,146,138)',icon:'🏥'};
+    const SP_GAB_BADGE={
+      methode:    {bg:'#e3f2fd',color:'#0d47a1',icon:'🔬',label:'Méthode'},
+      pathologie: {bg:'#ffebee',color:'#b71c1c',icon:'🫀',label:'Pathologie'},
+      thematique: {bg:'#e8f5e9',color:'#1b5e20',icon:'🌍',label:'Thématique'},
+    };
     let spHtml=imgHtml;
+    const _gb=SP_GAB_BADGE[m.gabarit];
+    if(_gb){
+      const _an=m.annee?` · ${escHtml(m.annee)}`:'';
+      spHtml+=`<div style="display:inline-flex;align-items:center;gap:6px;background:${_gb.bg};color:${_gb.color};padding:4px 12px;border-radius:20px;font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;margin-right:8px">${_gb.icon} ${_gb.label}${_an}</div>`;
+    }
     if(spCat) spHtml+=`<div style="display:inline-flex;align-items:center;gap:7px;background:${spCC.bg};color:${spCC.color};padding:5px 14px;border-radius:20px;font-weight:700;font-size:12px;margin-bottom:14px">${spCC.icon} ${escHtml(spCat)}</div>`;
     if(m.desc) spHtml+=sec('Description',escHtml(m.desc),'desc');
-    if(m.definition) spHtml+=sec('Définition',escHtml(m.definition),'definition');
-    const spFields=[
-      ['sp_criteres_hill','✅ Critères de Hill'],
-      ['sp_facteurs_risque','⚠️ Facteurs de risque'],
-      ['sp_incidence','📈 Incidence'],
-      ['sp_prevalence','📊 Prévalence'],
-      ['sp_mortalite','💀 Mortalité'],
-      ['sp_rr_or','🔢 RR / OR / HR'],
-      ['sp_risque_attribuable','📉 Risque Attribuable'],
-      ['sp_ic_pvalue','📐 IC & p-valeur'],
-      ['sp_observationnelles','🔍 Études Observationnelles'],
-      ['sp_experimentales','🧪 Études Expérimentales'],
-      ['sp_biais','⚠️ Biais'],
-      ['sp_pmsi_snds','🗄️ PMSI & SNDS'],
-      ['sp_cepidc_registres','📋 CépiDc & Registres'],
-      ['sp_sentinelles','🌡️ Réseaux Sentinelles'],
-      ['sp_standardisation','📏 Standardisation'],
-      ['sp_standardisation_directe','📏 Standardisation Directe'],
-      ['sp_standardisation_indirecte','📏 Standardisation Indirecte'],
-      ['sp_indicateurs','📊 Indicateurs de Santé'],
-      ['sp_depistage','🔭 Dépistage'],
-      ['sp_notification','📢 Notification'],
-      ['sp_signal','🚨 Signal de Pharmacovigilance'],
-      ['sp_imputabilite','⚖️ Imputabilité'],
-      ['sp_dohad',                   '🧬 DOHaD — Origines Développementales'],
-      ['sp_plasticite',              '🔄 Plasticité Développementale'],
-      ['sp_complications_grossesse', '🤰 Complications de la Grossesse'],
-      ['sp_iatrogenie',              '💊 Iatrogénie & Tératogénicité'],
-      ['sp_exposome',                '🌍 Exposome'],
-      ['sp_epigenetique',            '🔬 Épigénétique & Programmation'],
-      ['sp_transgenerationnel',      '🧬 Héritage Transgénérationnel'],
-      ['sp_one_health',              '🌐 One Health — Une Seule Santé'],
-      ['sp_sante_env',               '🏙️ Santé Environnementale & Anthropocène'],
-      ['sp_polluants',               '☁️ Polluants & Effets Sanitaires'],
-      ['sp_physiopathologie',        '🔬 Physiopathologie'],
-      ['sp_epidemiologie',           '📊 Épidémiologie descriptive'],
-      ['sp_registres',               '🗄️ Registres & Sources de données'],
-      ['sp_depistage',               '🔍 Dépistage & Surveillance'],
-      ['sp_prise_en_charge',         '💊 Prise en charge'],
-      ['sp_score_risque',            '📐 Scores de risque'],
-      ['sp_adipokines',              '🧬 Adipokines & Sécrétome'],
-      ['sp_prevention_niveaux',      '🛡️ Prévention primaire / secondaire / tertiaire'],
+    if(m.definition) spHtml+=`<div class="info-section"><div class="info-label">Définition</div><div class="info-value" style="line-height:1.7;white-space:pre-wrap">${escHtml(m.definition)}</div></div>`;
+    // ── Widget Chiffres clés (fiches pathologie) ──
+    if(m.sp_chiffres_cles && Array.isArray(m.sp_chiffres_cles.indicateurs)){
+      const cc=m.sp_chiffres_cles;
+      let rows='';
+      cc.indicateurs.forEach(function(it){
+        rows+=`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07)">`
+          +`<div style="flex:1"><div style="font-size:12.5px;color:#c9d3ee;font-weight:600">${escHtml(it.label)}</div>`
+          +(it.note?`<div style="font-size:10.5px;color:#7a86a8;margin-top:1px">${escHtml(it.note)}</div>`:'')+`</div>`
+          +`<div style="text-align:right;white-space:nowrap"><div style="font-size:15px;font-weight:800;color:#4fd1c5">${escHtml(it.valeur)}</div>`
+          +`<div style="font-size:9.5px;color:#7a86a8;letter-spacing:.03em">${escHtml(it.annee)}</div></div>`
+        +`</div>`;
+      });
+      spHtml+=`<div class="info-section" style="background:linear-gradient(135deg,#12182b,#161d33);border:1px solid #26304d;border-radius:12px;padding:15px 16px;margin:6px 0 14px">`
+        +`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:16px">📊</span>`
+        +`<span style="font-size:13px;font-weight:700;color:#e8eeff;letter-spacing:.02em">${escHtml(cc.titre||'Chiffres clés — France')}</span></div>`
+        +rows
+        +`<div style="margin-top:11px;font-size:10px;color:#6b7699;line-height:1.5">Source : ${escHtml(cc.source||'')}`
+        +(cc.url?` · <a href="${escHtml(cc.url)}" target="_blank" rel="noopener" style="color:#4fd1c5;text-decoration:none;font-weight:600">consulter ↗</a>`:'')+`</div>`
+      +`</div>`;
+    }
+    // ── Rendu ordonné par gabarit ──────────────────────────────────
+    const spSec=(key,label)=>{ if(m[key]) spHtml+=`<div class="info-section"><div class="info-label">${label}</div><div class="info-value" style="line-height:1.7;white-space:pre-wrap">${escHtml(String(m[key]))}</div></div>`; };
+    const SP_ORDER={
+      methode:[
+        ['sp_objectif','🎯 Quand l\'utiliser'],
+        ['sp_indicateurs_mesures','📊 Indicateurs & mesures'],
+        ['sp_types_etudes','🧪 Types d\'études'],
+        ['sp_forces_limites','⚖️ Forces, limites & biais'],
+      ],
+      pathologie:[
+        ['sp_epidemiologie','📊 Épidémiologie descriptive'],
+        ['sp_physiopathologie','🔬 Physiopathologie'],
+        ['sp_facteurs_risque','⚠️ Facteurs de risque'],
+        ['sp_registres','🗄️ Registres & sources de données'],
+        ['sp_score_risque','📐 Scores de risque'],
+        ['sp_etudes_reference','🔬 Études de référence'],
+        ['sp_prevention_niveaux','🛡️ Prévention (primaire / secondaire / tertiaire)'],
+      ],
+      thematique:[
+        ['sp_enjeu','🎯 Enjeu'],
+        ['sp_cadre_acteurs','🏛️ Cadre, acteurs & réglementation'],
+        ['sp_application','📌 Application pratique'],
+      ],
+    };
+    const _order=SP_ORDER[m.gabarit];
+    const _shown=new Set();
+    if(_order){
+      _order.forEach(([k,l])=>{ spSec(k,l); _shown.add(k); });
+    }
+    // Champs hérités éventuels non couverts par le gabarit (aucune perte)
+    const spLegacy=[
+      ['sp_criteres_hill','✅ Critères de Hill'],['sp_incidence','📈 Incidence'],
+      ['sp_prevalence','📊 Prévalence'],['sp_mortalite','💀 Mortalité'],
+      ['sp_rr_or','🔢 RR / OR / HR'],['sp_risque_attribuable','📉 Risque attribuable'],
+      ['sp_ic_pvalue','📐 IC & p-valeur'],['sp_observationnelles','🔍 Études observationnelles'],
+      ['sp_experimentales','🧪 Études expérimentales'],['sp_biais','⚠️ Biais'],
+      ['sp_pmsi_snds','🗄️ PMSI & SNDS'],['sp_cepidc_registres','📋 CépiDc & Registres'],
+      ['sp_sentinelles','🌡️ Réseaux Sentinelles'],['sp_standardisation','📏 Standardisation'],
+      ['sp_standardisation_directe','📏 Standardisation directe'],['sp_standardisation_indirecte','📏 Standardisation indirecte'],
+      ['sp_indicateurs','📊 Indicateurs de santé'],['sp_depistage','🔭 Dépistage'],
+      ['sp_notification','📢 Notification'],['sp_signal','🚨 Signal de pharmacovigilance'],
+      ['sp_imputabilite','⚖️ Imputabilité'],['sp_dohad','🧬 DOHaD'],
+      ['sp_plasticite','🔄 Plasticité développementale'],['sp_complications_grossesse','🤰 Complications de la grossesse'],
+      ['sp_iatrogenie','💊 Iatrogénie & tératogénicité'],['sp_exposome','🌍 Exposome'],
+      ['sp_epigenetique','🔬 Épigénétique'],['sp_transgenerationnel','🧬 Héritage transgénérationnel'],
+      ['sp_one_health','🌐 One Health'],['sp_sante_env','🏙️ Santé environnementale'],
+      ['sp_polluants','☁️ Polluants & effets'],['sp_prise_en_charge','💊 Prise en charge'],
+      ['sp_adipokines','🧬 Adipokines'],['sp_prevention_niveaux','🛡️ Prévention'],
+      ['sp_physiopathologie','🔬 Physiopathologie'],['sp_epidemiologie','📊 Épidémiologie'],
+      ['sp_registres','🗄️ Registres'],['sp_score_risque','📐 Scores de risque'],
+      ['sp_facteurs_risque','⚠️ Facteurs de risque'],['sp_indicateurs_mesures','📊 Indicateurs & mesures'],
+      ['sp_types_etudes','🧪 Types d\'études'],['sp_forces_limites','⚖️ Forces & limites'],
+      ['sp_enjeu','🎯 Enjeu'],['sp_cadre_acteurs','🏛️ Cadre & acteurs'],['sp_application','📌 Application'],
     ];
-    spFields.forEach(([key,label])=>{
-      if(m[key]) spHtml+=`<div class="info-section"><div class="info-label">${label}</div><div class="info-value" style="line-height:1.7">${escHtml(String(m[key]))}</div></div>`;
-    });
+    spLegacy.forEach(([k,l])=>{ if(!_shown.has(k)){ spSec(k,l); _shown.add(k); } });
+    // Formules
     if(m.formula) spHtml+=`<div class="info-section" style="background:#1a1a2e;border-radius:10px;padding:14px"><div class="info-label" style="color:#7ec8e3">📐 Formules</div><div style="font-family:'Courier New',monospace;color:#e8f4ff;font-size:12px;line-height:1.8;white-space:pre-wrap">${escHtml(m.formula)}</div></div>`;
-    if(m.pharmacology) spHtml+=sec('Applications pharmaceutiques',escHtml(m.pharmacology));
+    // Rôle du pharmacien / applications (fin de fiche)
+    if(m.sp_lien_pharma) spHtml+=`<div class="info-section"><div class="info-label">👨‍⚕️ Lien avec la pratique pharmaceutique</div><div class="info-value" style="line-height:1.7;white-space:pre-wrap">${escHtml(m.sp_lien_pharma)}</div></div>`;
+    if(m.sp_role_pharmacien) spHtml+=`<div class="info-section"><div class="info-label">👨‍⚕️ Rôle du pharmacien</div><div class="info-value" style="line-height:1.7;white-space:pre-wrap">${escHtml(m.sp_role_pharmacien)}</div></div>`;
+    if(m.pharmacology) spHtml+=`<div class="info-section"><div class="info-label">Applications pharmaceutiques</div><div class="info-value" style="line-height:1.7;white-space:pre-wrap">${escHtml(m.pharmacology)}</div></div>`;
     if(m.exemple_essai) spHtml+='<div class="info-section"><div class="info-label">🔬 Exemple d\'essai clinique emblématique</div>'+renderEssai(m.exemple_essai)+'</div>';
-    spHtml+=_ctLinksFromText(m.pharmacology||'');
+    spHtml+=_ctLinksFromText(m.pharmacology||m.sp_role_pharmacien||'');
     info.innerHTML=spHtml;
+    /* ── Acteurs de Santé Publique : organigramme cliquable ── */
+    if(Array.isArray(m.sp_acteurs) && m.sp_acteurs.length){
+      window.__spActeurs=m.sp_acteurs;
+      window.__spActeursBase=spHtml;
+      var _svA=document.getElementById('sheetViewer');
+      if(_svA){
+        _svA.removeAttribute('data-mode');
+        _svA.style.background='#0b0e18';
+        _svA.style.overflowY='auto'; _svA.style.overflowX='hidden';
+        _svA.style.padding='0'; _svA.style.boxSizing='border-box';
+        var _echelons=[
+          {key:'international', label:'🌍 International', color:'#01579b'},
+          {key:'national',      label:'🇫🇷 National',      color:'#0d47a1'},
+          {key:'regional',      label:'📍 Régional',      color:'#6a1b9a'},
+          {key:'local',         label:'🏥 Local / Terrain', color:'#1b5e20'},
+        ];
+        var _oh='<div style="font-family:system-ui,sans-serif;color:#dde2f5;padding:14px">';
+        _oh+='<div style="font-size:14px;font-weight:700;margin-bottom:4px">Système de santé publique</div>';
+        _oh+='<div style="font-size:11px;color:#8b93b0;margin-bottom:14px">Cliquez un acteur pour afficher sa fiche →</div>';
+        _echelons.forEach(function(ech){
+          var acts=m.sp_acteurs.filter(function(a){return a.echelon===ech.key;});
+          if(!acts.length) return;
+          _oh+='<div style="margin-bottom:14px">';
+          _oh+='<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:'+ech.color+';border-left:3px solid '+ech.color+';padding-left:8px;margin-bottom:8px">'+ech.label+'</div>';
+          _oh+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+          acts.forEach(function(a){
+            var i=m.sp_acteurs.indexOf(a);
+            _oh+='<button class="sp-acteur-btn" data-idx="'+i+'" style="cursor:pointer;background:#151a2b;border:1px solid #2a3350;border-radius:9px;padding:9px 12px;color:#dde2f5;font-family:inherit;font-size:12px;font-weight:600;transition:all .15s;display:flex;align-items:center;gap:7px">'
+              +'<span style="font-size:16px">'+(a.icon||'🏛️')+'</span>'
+              +'<span>'+escHtml(a.sigle||a.name||'')+'</span></button>';
+          });
+          _oh+='</div></div>';
+        });
+        _oh+='</div>';
+        _svA.innerHTML=_oh;
+        window.__spShowActeur=function(idx){
+          var a=window.__spActeurs[idx]; if(!a) return;
+          var h='<div style="display:inline-flex;align-items:center;gap:9px;background:rgba(58,176,158,.12);color:#3ab09e;padding:6px 15px;border-radius:20px;font-weight:700;font-size:13px;margin-bottom:14px">'+(a.icon||'🏛️')+' '+escHtml(a.name||'')+'</div>';
+          if(a.sigle && a.sigle!==a.name) h+='<div style="font-size:12px;color:var(--muted);margin:-8px 0 14px">'+escHtml(a.sigle)+'</div>';
+          function _s(lbl,val){return val?'<div class="info-section"><div class="info-label">'+lbl+'</div><div class="info-value" style="line-height:1.7">'+escHtml(String(val))+'</div></div>':'';}
+          h+=_s('🏛️ Échelon / statut', a.statut);
+          h+=_s('⛓️ Tutelle', a.tutelle);
+          h+=_s('🎯 Missions', a.missions);
+          h+=_s('📌 Exemples d\'action', a.exemples);
+          h+=_s('👨‍⚕️ Lien avec le pharmacien', a.pharma);
+          h+='<div style="margin-top:16px"><button onclick="document.getElementById(\'sheetInfo\').innerHTML=window.__spActeursBase" style="cursor:pointer;background:none;border:1px solid var(--border);border-radius:8px;padding:7px 14px;color:var(--accent);font-family:inherit;font-size:12px;font-weight:600">← Retour à la présentation</button></div>';
+          document.getElementById('sheetInfo').innerHTML=h;
+        };
+        requestAnimationFrame(function(){
+          _svA.querySelectorAll('.sp-acteur-btn').forEach(function(b){
+            b.addEventListener('mouseenter',function(){b.style.borderColor='#3ab09e';b.style.background='#1a2138';});
+            b.addEventListener('mouseleave',function(){b.style.borderColor='#2a3350';b.style.background='#151a2b';});
+            b.addEventListener('click',function(){window.__spShowActeur(parseInt(b.dataset.idx,10));});
+          });
+        });
+      }
+      return;
+    }
     /* ── Widget interactif Santé Publique ── */
     if(m.ms_widget_def && m.ms_widget_def.html){
       var _svSP=document.getElementById('sheetViewer');
@@ -11548,7 +11808,7 @@ function initSheetRenderer(m){
   }
 
   // ── Priorité 0 : blob_html_base64 — widget + fiche côte à côte ─────────────────
-  if(m.tool_mode==='blob_html_base64'&&m.content_base64){
+  if(m.tool_mode==='blob_html_base64'){
     var _svT=document.getElementById('sheetViewer');
     var _siT=document.getElementById('sheetInfo');
     if(_svT){_svT.style.width='55%';_svT.style.minWidth='55%';_svT.style.borderRight='1px solid var(--border)';}
@@ -11623,7 +11883,7 @@ function initSheetRenderer(m){
   if(m._cat==='Math_Stats' && (m.ms_widget||m.ms_widget_def)) return;
   if(m._cat==='Optique' && m.ms_widget) return;
   if(m._cat==='Physique' && m.ms_widget_def) return;
-  if(m._cat==='Sante_Publique' && m.ms_widget_def){
+  if(m._cat==='Sante_Publique' && (m.ms_widget_def || (Array.isArray(m.sp_acteurs)&&m.sp_acteurs.length))){
     /* Viewer déjà configuré par renderSheet — ne pas écraser avec Three.js */
     return;
   }

@@ -120,7 +120,10 @@
 // Base des données : l'iframe est chargée en blob:, donc les chemins relatifs
 // ne fonctionnent pas. On résout via l'URL du document parent transmise au load,
 // avec repli sur des chemins classiques.
-var SCAN_DATA_BASES = ['data/','./data/','../data/','',];
+// Le scanner est servi depuis data/tools/scanner_medicament.html.
+// Les JSON (cis_cip, meds_noms) sont dans data/, donc un cran au-dessus : '../'.
+// On tente aussi des chemins absolus (racine du site) en repli.
+var SCAN_DATA_BASES = ['../','./','../../data/','data/','/data/',''];
 var SCAN_CIS_CIP=null, SCAN_MEDS_NOMS=null, SCAN_NOMS_INDEX=null;
 var _scanDetector=null, _scanStream=null, _scanLoopId=null;
 var _zxingReader=null, _zxingLoading=null;
@@ -165,6 +168,12 @@ async function _scanEnsureData(){
               hay:((m.n||'')+' '+(m.d||'')).toLowerCase()};
     });
   }
+  var nCip=Object.keys(SCAN_CIS_CIP||{}).length, nNoms=(SCAN_MEDS_NOMS||[]).length;
+  if(!nCip && !nNoms){
+    _scanSetStatus('⚠ Base médicaments introuvable : vérifiez que cis_cip.json et meds_noms.json sont bien dans le dossier data/.','warn');
+    return false;
+  }
+  return true;
 }
 
 function _scanNormalizeBarcode(raw){
@@ -227,7 +236,8 @@ function _scanLoadZXing(){
   var urls = [];
   if(PARENT_BASE) urls.push(PARENT_BASE+'/data/vendor/zxing.min.js');
   urls = urls.concat([
-    'data/vendor/zxing.min.js','./data/vendor/zxing.min.js','vendor/zxing.min.js',
+    '../vendor/zxing.min.js','./vendor/zxing.min.js','../../data/vendor/zxing.min.js',
+    'data/vendor/zxing.min.js','/data/vendor/zxing.min.js',
     'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js',
     'https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js'
   ]);
@@ -257,14 +267,32 @@ async function _scanStartCamera(){
     return;
   }
   try{
-    _scanStream = await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:env.facing},width:{ideal:1920},height:{ideal:1080}},audio:false});
+    var _vc = env.isMobile
+      ? {facingMode:{ideal:env.facing},width:{ideal:1920},height:{ideal:1080}}
+      : {width:{ideal:1280},height:{ideal:720}};   // PC : pas de facingMode (évite OverconstrainedError)
+    _scanStream = await navigator.mediaDevices.getUserMedia({video:_vc,audio:false});
   }catch(e){
     try{
       _scanStream = await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:false});
     }catch(e2){
       try{ _scanStream = await navigator.mediaDevices.getUserMedia({video:true,audio:false}); }
-      catch(e3){ _scanSetStatus('Accès caméra refusé ou indisponible. Utilisez la saisie manuelle ou la recherche par nom.','warn'); return; }
+      catch(e3){
+        var reason = (e3 && e3.name) ? e3.name : 'inconnue';
+        var msg;
+        if(reason==='NotAllowedError'||reason==='SecurityError'){
+          msg='Accès caméra refusé. Vérifiez l\u0027autorisation caméra du site (icône dans la barre d\u0027adresse) et que la page est servie en HTTPS.';
+        }else if(reason==='NotReadableError'||reason==='TrackStartError'){
+          msg='La caméra est déjà utilisée par une autre application (Zoom, Teams, autre onglet…). Fermez-la puis réessayez.';
+        }else if(reason==='NotFoundError'||reason==='DevicesNotFoundError'){
+          msg='Aucune caméra détectée sur cet appareil. Utilisez la saisie manuelle ou la recherche par nom.';
+        }else if(reason==='OverconstrainedError'){
+          msg='Aucune caméra ne correspond aux contraintes demandées. Réessayez ou utilisez la saisie manuelle.';
+        }else{
+          msg='Accès caméra impossible ('+reason+'). Utilisez la saisie manuelle ou la recherche par nom.';
+        }
+        _scanSetStatus(msg,'warn');
+        return;
+      }
     }
   }
   try{

@@ -5102,22 +5102,68 @@ const MED_FULL_CACHE = new Map();
    Priorité : (1) entrée déjà présente dans la galerie (groupée ou légère),
    (2) hydratation directe par CIS via data/medicaments_full/<cis>.json.
    Utilisé par l'outil Scanner médicament (via postMessage). */
+// Index CIS → group_id (chargé une seule fois depuis data/cis_to_group.json).
+var CIS_TO_GROUP = null;
+async function _loadCisToGroup(){
+  if(CIS_TO_GROUP!==null) return CIS_TO_GROUP;
+  var paths=['data/cis_to_group.json','./data/cis_to_group.json','cis_to_group.json'];
+  for(var i=0;i<paths.length;i++){
+    try{
+      var r=await fetch(paths[i],{cache:'force-cache'});
+      if(r.ok){ CIS_TO_GROUP=await r.json(); return CIS_TO_GROUP; }
+    }catch(e){}
+  }
+  CIS_TO_GROUP={};   // marque l'échec (évite de refetch en boucle)
+  return CIS_TO_GROUP;
+}
+
 async function openMedByCis(cis, fallbackName, dci){
   if(!cis) return false;
   cis = String(cis);
-  // (1) Chercher dans la galerie déjà chargée.
+
+  // (1) Déjà dans la galerie chargée ? (rare, mais direct)
   var pool = (gallery && gallery['Médicaments']) ? gallery['Médicaments'] : [];
   var hit = pool.find(function(m){
     return String(m.med_cis||m._source_id||m.id||'')===cis
         || (Array.isArray(m._cis_list) && m._cis_list.indexOf(cis)>=0);
   });
   if(hit){
-    // S'assurer que la catégorie Médicaments est active pour la navigation.
     if(activeCat!=='Médicaments' && typeof selectCat==='function'){ try{ selectCat('Médicaments'); }catch(e){} }
     await openSheet(hit);
     return true;
   }
-  // (2) Hydratation directe par CIS : item léger, openSheet ira chercher la fiche complète.
+
+  // (2) Traduire CIS → group_id, puis ouvrir la fiche GROUPÉE (chemin réellement présent).
+  var map = await _loadCisToGroup();
+  var gid = map ? map[cis] : null;
+  if(gid){
+    // Chercher d'abord le groupe dans la galerie (fiche légère → hydratée au besoin).
+    var ghit = pool.find(function(m){ return (m.group_id||m.id)===gid; });
+    if(ghit){
+      if(activeCat!=='Médicaments' && typeof selectCat==='function'){ try{ selectCat('Médicaments'); }catch(e){} }
+      ghit._scan_target_cis = cis;   // pour surligner le bon produit dans la fiche
+      await openSheet(ghit);
+      return true;
+    }
+    // Sinon, stub groupé : hydrateMedicamentsItem ira chercher data/medicaments_groups/<gid>.json
+    var gstub = {
+      _id: (typeof _itemIdCounter!=='undefined' ? (_itemIdCounter++) : Date.now()),
+      _cat:'Médicaments', _grouped:true, _group_light:true,
+      group_id:gid, id:gid,
+      name: fallbackName || gid,
+      _scan_target_cis: cis
+    };
+    try{
+      var gh = await hydrateMedicamentsItem(gstub);
+      if(gh){
+        if(activeCat!=='Médicaments' && typeof selectCat==='function'){ try{ selectCat('Médicaments'); }catch(e){} }
+        await openSheet(gh);
+        return true;
+      }
+    }catch(e){}
+  }
+
+  // (3) Repli : ancien schéma par CIS (data/medicaments_full/<cis>.json), si jamais présent.
   var stub = {
     _id: (typeof _itemIdCounter!=='undefined' ? (_itemIdCounter++) : Date.now()),
     _cat:'Médicaments', _light:true, med_cis:cis,
@@ -5132,6 +5178,10 @@ async function openMedByCis(cis, fallbackName, dci){
       return true;
     }
   }catch(e){}
+
+  // Échec complet : informer l'utilisateur plutôt que rester silencieux.
+  if(typeof _scanNotifyParentFail==='function'){}
+  console.warn('openMedByCis : impossible d\u0027ouvrir le CIS', cis, '(group_id=', gid, ')');
   return false;
 }
 
@@ -5151,7 +5201,14 @@ window.addEventListener('message', function(ev){
     return;
   }
   if(d.type==='openMed' && d.cis){
-    openMedByCis(d.cis, d.nom, d.dci);
+    openMedByCis(d.cis, d.nom, d.dci).then(function(ok){
+      try{
+        ev.source && ev.source.postMessage({
+          source:'pharmatlas-host', type:'openMedResult',
+          cis:d.cis, ok:!!ok
+        }, '*');
+      }catch(e){}
+    });
   }
 });
 async function hydrateMedicamentsItem(m){

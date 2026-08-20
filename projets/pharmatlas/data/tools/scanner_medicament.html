@@ -144,6 +144,10 @@ window.addEventListener('message', function(ev){
     PARENT_BASE = d.base.replace(/\/[^\/]*$/,''); // dossier de index.html
     if(_parentBaseResolve){ _parentBaseResolve(true); _parentBaseResolve=null; }
   }
+  if(d && d.source==='pharmatlas-host' && d.type==='openMedResult'){
+    if(d.ok){ _scanSetStatus('✓ Fiche ouverte dans l\u0027atlas.','ok'); }
+    else{ _scanSetStatus('⚠ Ce médicament (CIS '+d.cis+') n\u0027a pas de fiche dans l\u0027atlas. Essayez un autre produit ou la recherche par nom.','warn'); }
+  }
 });
 // Demande la base au parent dès le chargement.
 if(_inIframe){

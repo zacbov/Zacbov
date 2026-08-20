@@ -5156,6 +5156,7 @@ async function openMedByCis(cis, fallbackName, dci){
     try{
       var gh = await hydrateMedicamentsItem(gstub);
       if(gh){
+        gh._scan_target_cis = cis;   // posé après hydratation (n'altère pas le cache)
         if(activeCat!=='Médicaments' && typeof selectCat==='function'){ try{ selectCat('Médicaments'); }catch(e){} }
         await openSheet(gh);
         return true;
@@ -9764,8 +9765,9 @@ else if(wt==='bootstrap_viz'){
           fH+='<table class="med-produits-table"><thead><tr><th>Laboratoire</th><th>Dosage</th><th>Statut</th><th>Liens</th></tr></thead><tbody>';
           f.produits.forEach(function(p){
             var dosages=(p.substances||[]).map(function(s){return s.dosage||'';}).filter(Boolean);
-            fH+='<tr>'
-              +'<td><div class="med-lab-name">'+escHtml(p.laboratoire||'—')+'</div>'
+            var _isScan = window._medScanTargetCis && String(p.cis||'')===String(window._medScanTargetCis);
+            fH+='<tr'+(_isScan?' style="background:rgba(58,176,158,.16);outline:2px solid var(--accent);outline-offset:-2px"':'')+'>'
+              +'<td><div class="med-lab-name">'+(_isScan?'📷 ':'')+escHtml(p.laboratoire||'—')+'</div>'
               +'<div class="med-prod-name">'+escHtml((p.name||'').replace(/,\s*/g,' · '))+'</div></td>'
               +'<td>'+(dosages.map(function(d){return'<span class="med-dosage-pill">'+escHtml(d)+'</span>';}).join(' ')||'—')+'</td>'
               +'<td>'+(p.generique?'<span class="med-generique-badge '+(p.generique==='Oui'?'oui':'non')+'">'+(p.generique==='Oui'?'🔄 Générique':'🏷️ Princeps')+'</span>':'—')+'</td>'
@@ -9778,10 +9780,20 @@ else if(wt==='bootstrap_viz'){
         document.getElementById('_medFormeContent').innerHTML=fH;
       }
       window._medRenderForme=_medRenderForme;
+      // Forme à ouvrir : celle contenant le CIS scanné, sinon la première.
+      var _scanCis = m._scan_target_cis ? String(m._scan_target_cis) : null;
+      var _targetForme = 0;
+      if(_scanCis){
+        for(var _fi=0; _fi<m.formes.length; _fi++){
+          var _fp=(m.formes[_fi].produits||[]);
+          if(_fp.some(function(p){return String(p.cis||'')===_scanCis;})){ _targetForme=_fi; break; }
+        }
+      }
+      window._medScanTargetCis = _scanCis;   // lu par _medRenderForme pour surligner la ligne
       var tabsH='<div class="form-tabs-wrap">';
       m.formes.forEach(function(f,i){
         var tVIcon=({'Voie Orale':'💊','Voie Cutanée':'✋','Voie Injectable':'💉','Voie Pulmonaire':'💨','Voie Rectale':'🔻','Voie Transdermique':'🩹','Voie Ophtalmique':'👁️','Voie Buccale':'👄'})[f.voie]||'💊';
-        tabsH+='<button class="form-tab'+(i===0?' active':'')+'" onclick="window._medRenderForme('+i+')">'+tVIcon+' '+escHtml(f.key)+'<span class="tab-count">'+f.produits.length+'</span></button>';
+        tabsH+='<button class="form-tab'+(i===_targetForme?' active':'')+'" onclick="window._medRenderForme('+i+')">'+tVIcon+' '+escHtml(f.key)+'<span class="tab-count">'+f.produits.length+'</span></button>';
       });
       tabsH+='</div>';
       var commonH='<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px">'
@@ -9805,8 +9817,8 @@ else if(wt==='bootstrap_viz'){
         _molBtn='<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">'          +'<div class="info-label" style="margin-bottom:6px">🔬 Molécule associée</div>'          +'<div class="nav-links-section">'+renderNavCard(_mli,_mlc)+'</div></div>';
       }
       info.innerHTML=commonH+tabsH+'<div id="_medFormeContent"></div>'+_molBtn;
-      _medLeftPanel(m.formes[0]);
-      _medRenderForme(0);
+      _medLeftPanel(m.formes[_targetForme]);
+      _medRenderForme(_targetForme);
       return;
     }
 

@@ -1986,6 +1986,8 @@ function normaliseItem(item,catId,base){
     traitements:                  item.traitements                  || null,
     types_angor:                  item.types_angor                  || null,
     complications_idm:            item.complications_idm            || null,
+    // ── Sections normalisées (gabarit générique — rétrocompatible) ─────
+    sections:                     item.sections                     || null,
     // ── Immunologie ────────────────────────────────────────────────────
     definition:                   item.definition                   || null,
     immu_category:                item.category                     || null,
@@ -2543,7 +2545,7 @@ function catIcon(id){return(CATS.find(c=>c.id===id)||{}).icon||'📦';}
 
 // Groupes de catégories pour l'affichage sidebar
 const CAT_GROUPS=[
-  {label:'OECV',                        ids:['Plantes','Champignons','Huiles_Essentielles']},
+  {label:'OECV',                        ids:['Plantes','Champignons','Huiles_Essentielles','Microscopiques']},
   {label:'Chimie',                      ids:['Chimie','ChimieTherapeutique','Chimie_Analytique','Chimie_Inorganique','Stéréochimie','Spectroscopie']},
   {label:'Sciences du Médicament',      ids:['Pharmacocinétique','Transporteurs','CYP450_Pharmacogénétique','Galénique','Biotransformations','Fonctions_Organiques','Oncologie','Médicaments']},
   {label:'Sciences fondamentales',      ids:['Biochimie','Pharmacologie','Organites','Génétique','Physiologie','Sémiologie','Immunologie','Hematologie','Minéraux','Métabolites_Secondaires','Toxicologie','Pharmacie_Clinique']},
@@ -2834,6 +2836,8 @@ const SUBFILTER_DEFS={
       {label:'👁️👂 ORL & Ophtalmique',      fn:function(m){return m.voie==='Voies Oto-Rhino-Laryngologiques (ORL)'||m.voie==='Voie Ophtalmique';}},
       {label:'🔴 Muqueuses (rect./vag.)',   fn:function(m){return m.voie==='Voie Rectale'||m.voie==='Voie Vaginale';}},
       {label:'🔬 Nanoformulations',         fn:function(m){return m.voie==='Nanoformulations';}},
+      {label:'🏭 Opérations pharmaceutiques',fn:function(m){return m.voie==='Opérations Pharmaceutiques';}},
+      {label:'⏳ Libération modifiée',       fn:function(m){return m.voie==='Libération Modifiée';}},
     ]
   },
   'Hematologie':{
@@ -5081,6 +5085,35 @@ function fieldLabel(key,label){
   var ic=FIELD_ICONS[key];
   return (ic?'<span class="field-ico" aria-hidden="true">'+ic+'</span> ':'')+label;
 }
+/* ── Renderer générique de sections[] (gabarit canonique rétrocompatible) ──
+   Chaque fiche migrée porte sections:[{key,titre,contenu}] où contenu est
+   soit une chaîne, soit un objet (sous-cartes). Réutilise sec() + surlignage
+   des médicaments. Utilisé par Immunologie & Physiologie ; inoffensif ailleurs. */
+function renderSectionsGeneric(m, opts){
+  opts = opts || {};
+  var drugHl = opts.drugHighlight || function(t){ return escHtml(String(t)); };
+  var html = '';
+  (m.sections||[]).forEach(function(s){
+    if(!s) return;
+    var val = s.contenu, label = s.titre || (s.key||'').replace(/_/g,' '), key = s.key || slugField(label);
+    if(val==null || (typeof val==='string' && val.trim()==='')) return;
+    if(typeof val==='object' && !Array.isArray(val)){
+      var sub='';
+      Object.keys(val).forEach(function(sk){
+        var sv=val[sk]; if(sv==null||sv==='') return;
+        var slabel=String(sk).replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});
+        sub+='<div style="margin-bottom:10px;padding:9px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px">'
+          +'<div style="font-size:9.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">'+escHtml(slabel)+'</div>'
+          +'<div style="font-size:12px;line-height:1.65;color:var(--text)">'+drugHl(String(sv))+'</div></div>';
+      });
+      html+='<div class="info-section" data-field="'+key+'"><div class="info-label">'+escHtml(label)+'</div>'+sub+'</div>';
+    } else {
+      var strVal = Array.isArray(val)? val.join(', ') : String(val);
+      html += sec(label, drugHl(strVal), key);
+    }
+  });
+  return html;
+}
 function sec(label,val,fk){
   if(!val&&val!==0)return'';
   const key=fk||slugField(label);
@@ -6003,6 +6036,19 @@ async function openSheet(m){
       +sec('Usage Historique',escHtml(m.historical||'—'));
 
   }else if(cat==='Physiologie'){
+    if(Array.isArray(m.sections)&&m.sections.length){
+      var _pcat=m.category||m.phys_category||'';
+      var _pcMap={'Cardiovasculaire':{bg:'#ffebee',color:'#c62828',icon:'🫀'},'Respiratoire':{bg:'#e3f2fd',color:'#0d47a1',icon:'🌬️'},'Rénal':{bg:'#e0f7fa',color:'#006064',icon:'🫘'},'Rénale':{bg:'#e0f7fa',color:'#006064',icon:'🫘'},'Neurosciences':{bg:'#f3e5f5',color:'#6a1b9a',icon:'🧠'},'Endocrinologie':{bg:'#fff8e1',color:'#f57f17',icon:'🔬'},'Concepts fondamentaux':{bg:'#e8f5e9',color:'#1b5e20',icon:'📖'}};
+      var _pc0=_pcMap[_pcat]||{bg:'rgba(58,176,158,.1)',color:'rgb(48,146,138)',icon:'❤️'};
+      var _pb0=_pcat?'<div style="display:inline-flex;align-items:center;gap:7px;background:'+_pc0.bg+';color:'+_pc0.color+';padding:5px 14px;border-radius:20px;font-weight:700;font-size:12px;margin-bottom:14px">'+_pc0.icon+' '+escHtml(_pcat)+'</div>':'';
+      var _pf0=m.formula?'<div class="info-section"><div class="info-label">📐 Formules &amp; Constantes</div><div style="background:#1a1a2e;border-radius:10px;padding:14px;font-family:\'Courier New\',monospace;color:#7ec8e3;font-size:12px;line-height:1.9;white-space:pre-wrap">'+escHtml(m.formula)+'</div></div>':'';
+      var _pp0=m.pharmacology?'<div class="info-section" style="background:#f1f8e9;border:1px solid #c5e1a5;border-radius:10px;padding:12px"><div class="info-label" style="color:#2e7d32">💊 Pharmacologie &amp; Cibles</div><div class="info-value">'+escHtml(m.pharmacology)+'</div></div>':'';
+      var _ppa0=m.pathology?'<div class="info-section" style="background:#fff5f5;border:1px solid #ffcdd2;border-radius:10px;padding:12px"><div class="info-label" style="color:#b71c1c">⚠️ Physiopathologie &amp; Clinique</div><div class="info-value">'+escHtml(m.pathology)+'</div></div>':'';
+      info.innerHTML=imgHtml+_pb0+(m.desc?sec('Description',escHtml(m.desc),'desc'):'')
+        +(m.definition?sec('📖 Définition',escHtml(m.definition),'definition'):'')
+        +renderSectionsGeneric(m,{})+_pf0+_pp0+_ppa0;
+      return;
+    }
     /* ── Couleurs par système ── */
     var physColors={
       'Cardiovasculaire':    {bg:'#ffebee',color:'#c62828',icon:'🫀'},
@@ -7343,6 +7389,21 @@ async function openSheet(m){
 
   }else if(cat==='Immunologie'){
     /* ── Renderer Immunologie ───────────────────────────────────────── */
+    var _imDrugHl=function(txt){
+      if(!txt)return'—';
+      return escHtml(txt).replace(
+        /([A-ZÁÉÈÀÂÊÎÔÛÙŒÇ][a-záàâéèêëîïôùûüçœ]*(®)?(?:\/[A-ZÁÉÈÀÂÊÎÔÛÙŒÇ][a-záàâéèêëîïôùûüçœ]*(®)?)*)/g,
+        '<strong>$1</strong>');
+    };
+    if(Array.isArray(m.sections)&&m.sections.length){
+      var _ic0={'Fondamentaux':{bg:'#e8eaf6',color:'#283593',icon:'🔬'},'Immunité innée':{bg:'#fff3e0',color:'#e65100',icon:'⚔️'},'Immunité adaptative':{bg:'#e8f5e9',color:'#1b5e20',icon:'🎯'},'Cellules immunitaires':{bg:'#e3f2fd',color:'#0d47a1',icon:'🦠'},'Immunoglobulines':{bg:'#f3e5f5',color:'#6a1b9a',icon:'🧬'},'Médiateurs solubles':{bg:'#e0f7fa',color:'#006064',icon:'💊'},'Immunothérapies':{bg:'#fce4ec',color:'#880e4f',icon:'💉'},'Immunopathologie':{bg:'#fff8e1',color:'#f57f17',icon:'⚠️'},'Immunologie clinique':{bg:'#f1f8e9',color:'#33691e',icon:'🏥'}}[m.immu_category]||{bg:'rgba(58,176,158,0.1)',color:'rgb(48,146,138)',icon:'🛡️'};
+      var _b0=m.immu_category?'<div style="display:inline-flex;align-items:center;gap:7px;background:'+_ic0.bg+';color:'+_ic0.color+';padding:5px 14px;border-radius:20px;font-weight:700;font-size:12px;margin-bottom:14px">'+_ic0.icon+' '+escHtml(m.immu_category)+'</div>':'';
+      var _f0=m.formula?'<div class="info-section"><div class="info-label">📐 Formules &amp; Données Clés</div><div style="background:#1a1a2e;border-radius:10px;padding:14px;font-family:\'Courier New\',monospace;color:#7ec8e3;font-size:12px;line-height:1.8;white-space:pre-wrap">'+escHtml(m.formula)+'</div></div>':'';
+      var _p0=m.pharmacology?'<div class="info-section" style="background:#f1f8e9;border:1px solid #c5e1a5;border-radius:10px;padding:12px"><div class="info-label" style="color:#2e7d32">💊 Pharmacologie &amp; Thérapeutiques</div><div class="info-value">'+_imDrugHl(m.pharmacology)+'</div></div>':'';
+      info.innerHTML=imgHtml+_b0+(m.desc?sec('Description',escHtml(m.desc),'desc'):'')
+        +renderSectionsGeneric(m,{drugHighlight:_imDrugHl})+_f0+_p0+_ctLinksFromText(m.pharmacology||'');
+      return;
+    }
     var _imCatColors={
       'Fondamentaux':          {bg:'#e8eaf6',color:'#283593',icon:'🔬'},
       'Immunité innée':        {bg:'#fff3e0',color:'#e65100',icon:'⚔️'},

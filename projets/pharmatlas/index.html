@@ -773,6 +773,9 @@ body.pa-mobile .pa-vtoggle:active{background:rgba(58,176,158,0.22)}
 body.pa-mobile .pa-vtoggle .vt-chev{font-size:11px;transition:transform .25s;font-family:'Montserrat',sans-serif}
 body.pa-mobile .pa-vtoggle.open .vt-chev{transform:rotate(180deg)}
 /* si aucun viewer utile pour cette fiche, on masque le bouton (classe posée en JS) */
+#detailSheet.pa-noviewer .sheet-viewer{display:none!important}
+#detailSheet.pa-noviewer .pa-vtoggle,#detailSheet.pa-noviewer .pa-viewer-toggle{display:none!important}
+#detailSheet.pa-noviewer .sheet-info{flex:1 1 100%!important;max-width:100%!important;width:100%!important}
 body.pa-mobile .pa-vtoggle.pa-vempty{display:none}
 body.pa-mobile .pa-vtoggle.pa-vempty + .sheet-viewer{display:none}
 
@@ -2546,10 +2549,10 @@ function catIcon(id){return(CATS.find(c=>c.id===id)||{}).icon||'📦';}
 
 // Groupes de catégories pour l'affichage sidebar
 const CAT_GROUPS=[
-  {label:'OECV',                        ids:['Plantes','Champignons','Huiles_Essentielles','Microscopiques']},
+  {label:'OECV',                        ids:['Plantes','Champignons','Huiles_Essentielles','Microscopiques','Métabolites_Secondaires','Phytotherapie']},
   {label:'Chimie',                      ids:['Chimie','ChimieTherapeutique','Chimie_Analytique','Chimie_Inorganique','Stéréochimie','Spectroscopie']},
   {label:'Sciences du Médicament',      ids:['Pharmacocinétique','Transporteurs','CYP450_Pharmacogénétique','Galénique','Biotransformations','Fonctions_Organiques','Oncologie','Médicaments']},
-  {label:'Sciences fondamentales',      ids:['Biochimie','Pharmacologie','Organites','Génétique','Physiologie','Sémiologie','Immunologie','Hematologie','Minéraux','Métabolites_Secondaires','Toxicologie','Pharmacie_Clinique']},
+  {label:'Sciences fondamentales',      ids:['Biochimie','Pharmacologie','Organites','Génétique','Physiologie','Sémiologie','Immunologie','Hematologie','Minéraux','Toxicologie','Pharmacie_Clinique']},
   {label:'Microbiologie',               ids:['Bacteries','Virus','Parasites','Microscopiques','Histologie']},
   {label:'Santé & Réglementation',      ids:['Sante_Publique','Vigilances','Thérapies_Complémentaires','Dispositifs_Medicaux']},
   {label:'Maths / Stats / Infos',       ids:['Math_Stats']},
@@ -15298,7 +15301,8 @@ var PA_CONCEPT_NAMES = {
               'Pneumopathies atypiques'],
  'Galénique':[],
  'Microscopiques':['Biologie animale','Helminthes —','Arthropodes —','Mycologie médicale'],
- 'Métabolites_Secondaires':[]
+ 'Métabolites_Secondaires':["Métabolites Secondaires — Vue d'ensemble",'Terpènes — Biosynthèse'],
+ 'Phytotherapie':[]
 };
 function paIsConcept(m){
   if(!m) return false;
@@ -15366,87 +15370,50 @@ function paSortConceptFirst(models){
   return models;
 }
 
-/* ── Viewer : rien à afficher pour une fiche-concept ────────────────────── */
-(function(){
-  function hideViewerForConcept(){
-    var m = (typeof activeModel!=='undefined') ? activeModel : null;
-    var sv = document.getElementById('sheetViewer');
-    if(!sv) return;
-    if(m && paIsConcept(m)){
-      // purge tout contenu visuel déjà injecté (3D, galeries, iNaturalist…)
-      while(sv.firstChild) sv.removeChild(sv.firstChild);
-      sv.setAttribute('data-concept','1');
-      sv.style.display='none';
-      var si=document.getElementById('sheetInfo');
-      if(si){ si.style.flex='1 1 100%'; si.style.maxWidth='100%'; }
-      var vt=document.querySelector('.pa-viewer-toggle'); if(vt) vt.style.display='none';
-    }else{
-      sv.removeAttribute('data-concept');
-      sv.style.display='';
-      var si2=document.getElementById('sheetInfo');
-      if(si2){ si2.style.flex=''; si2.style.maxWidth=''; }
-      var vt2=document.querySelector('.pa-viewer-toggle'); if(vt2) vt2.style.display='';
-    }
-  }
-  window.paHideViewerForConcept = hideViewerForConcept;
-  var _os = openSheet;
-  openSheet = async function(m){
-    var r = await _os.apply(this, arguments);
-    hideViewerForConcept();
-    // les galeries async (iNaturalist, GBIF) peuvent arriver après : on repurge
-    [120,400,900,1600].forEach(function(d){ setTimeout(hideViewerForConcept, d); });
-    return r;
-  };
-})();
-
 
 /* ══════════════════════════════════════════════════════════════════════════
-   PATCH VIEWER VIDE / MODÈLE 3D INTROUVABLE
-   Un viewer sans aucune ressource affichable restait ouvert et vide (fond noir).
-   On le masque, et si un .glb est déclaré mais introuvable on affiche un
-   message explicite au lieu d'un cadre vide.
+   PATCH VIEWER — décision UNIQUE, sans clignotement
+   Le masquage est décidé une seule fois, en SYNCHRONE, avant tout remplissage
+   asynchrone, et appliqué par une classe CSS (aucune bascule display répétée).
+   Un MutationObserver purge silencieusement ce qui serait injecté ensuite.
    ══════════════════════════════════════════════════════════════════════════ */
 (function(){
+  var _obs=null;
   function hasVisual(m){
     if(!m) return false;
     return !!(m.file || m.image || m.thumbnail || m.pdb_id || m.smiles || m.pubchem_cid
            || m.lame_idc || m.spectra_url || m.content_base64 || m.tool_mode
            || m.uniprot || m.icn3d_pdb || (m.photos&&m.photos.length)
-           || m.scientific || m.latin);
+           || (m.widget_def&&m.widget_def.html) || (m.ms_widget_def&&m.ms_widget_def.html));
   }
-  function tidyViewer(){
-    var sv=document.getElementById('sheetViewer'); if(!sv) return;
-    var m=(typeof activeModel!=='undefined')?activeModel:null;
-    if(sv.getAttribute('data-concept')==='1') return;   // déjà géré (fiche-concept)
-    var filled = sv.children.length>0 &&
-                 sv.querySelector('canvas,img,svg,iframe,.herbarium-viewer,.osd-container,.pa-viewer-msg');
-    if(filled) return;
-    if(!hasVisual(m)){
-      sv.style.display='none';
-      var si=document.getElementById('sheetInfo');
-      if(si){ si.style.flex='1 1 100%'; si.style.maxWidth='100%'; }
-      var vt=document.querySelector('.pa-viewer-toggle'); if(vt) vt.style.display='none';
-    }else if(m && m.file){
-      // ressource déclarée mais rien n'a pu être chargé → message explicite
-      sv.style.display='';
-      if(!sv.querySelector('.pa-viewer-msg')){
-        var d=document.createElement('div');
-        d.className='pa-viewer-msg';
-        d.style.cssText='display:flex;flex-direction:column;align-items:center;justify-content:center;'
-          +'height:100%;min-height:180px;gap:8px;color:#8b949e;font-size:13px;text-align:center;padding:20px';
-        d.innerHTML='<div style="font-size:30px;opacity:.5">🧊</div>'
-          +'<div>Modèle 3D indisponible</div>'
-          +'<div style="font-size:11px;opacity:.7">Fichier attendu : <code>'+String(m.file).replace(/[<>&]/g,'')+'</code></div>';
-        sv.appendChild(d);
-      }
+  function decideViewer(m){
+    var sheet=document.getElementById('detailSheet');
+    var sv=document.getElementById('sheetViewer');
+    if(!sheet||!sv) return;
+    if(_obs){ try{_obs.disconnect();}catch(e){} _obs=null; }
+    var concept = (typeof paIsConcept==='function') && paIsConcept(m);
+    var taxon   = !concept && !!(m && (m.scientific||m.latin));
+    var off     = concept || (!hasVisual(m) && !taxon);
+    sheet.classList.toggle('pa-noviewer', !!off);
+    sv.setAttribute('data-concept', off?'1':'0');
+    if(off){
+      while(sv.firstChild) sv.removeChild(sv.firstChild);
+      _obs=new MutationObserver(function(){
+        if(sv.getAttribute('data-concept')!=='1') return;
+        while(sv.firstChild) sv.removeChild(sv.firstChild);
+      });
+      _obs.observe(sv,{childList:true});
     }
   }
-  window.paTidyViewer = tidyViewer;
-  var _os2 = openSheet;
-  openSheet = async function(m){
-    var r = await _os2.apply(this, arguments);
-    [700,1500,2600].forEach(function(d){ setTimeout(tidyViewer, d); });
-    return r;
+  window.paDecideViewer = decideViewer;
+  var _os = openSheet;
+  openSheet = function(m){ decideViewer(m); return _os.apply(this, arguments); };
+  var _cs = closeSheet;
+  closeSheet = function(){
+    if(_obs){ try{_obs.disconnect();}catch(e){} _obs=null; }
+    var sh=document.getElementById('detailSheet'); if(sh) sh.classList.remove('pa-noviewer');
+    var sv=document.getElementById('sheetViewer'); if(sv) sv.removeAttribute('data-concept');
+    return _cs.apply(this, arguments);
   };
 })();
 
@@ -15730,7 +15697,9 @@ try{ window.PA_Search=PA_Search; window.PA_Graph=PA_Graph;
               : 'Afficher le modèle';
         if(!btn.classList.contains('open')) btn.querySelector('.vt-txt').textContent=t;
       }
-      if(++checks<6) setTimeout(check, 250);
+      var _ds=document.getElementById('detailSheet');
+      if(_ds && _ds.classList.contains('pa-noviewer')) return;
+      if(++checks<4) setTimeout(check, 300);
     }
     check();
     setNavActive('paBnList');

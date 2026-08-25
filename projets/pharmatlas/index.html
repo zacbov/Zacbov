@@ -1084,6 +1084,7 @@ const CATS_DEF=[
   {id:'Champignons',               icon:'🍄', label:'Mycologie'},
   {id:'Huiles_Essentielles',       icon:'🫧', label:'Huiles Essentielles'},
   {id:'Métabolites_Secondaires',   icon:'🌿', label:'Métabolites Secondaires'},
+  {id:'Phytotherapie',             icon:'🌱', label:'Phytothérapie', extraFilenames:['Phytotherapie','Phytothérapie','phytotherapie']},
   {id:'Musée',                     icon:'🏛️'},
   {id:'Chimie',                    icon:'⚗️'},
   {id:'ChimieTherapeutique',       icon:'💊', label:'Chimie Thérapeutique'},
@@ -2654,6 +2655,8 @@ function isSearchActive(){return searchQuery.trim().length>0;}
 
 function buildModelList(){
   const ml=document.getElementById('modelList'); if(!ml) return;
+  /* PATCH scroll : mémorise la position avant re-rendu et la restaure ensuite */
+  var _paKeepScroll = ml.scrollTop;
   let models;
   if(isSearchActive()){
     // Recherche indexée (fallback linéaire si l'index n'est pas prêt)
@@ -2667,6 +2670,8 @@ function buildModelList(){
   }else{
     models=(gallery[activeCat]||[]).map(m=>(m._cat?m:Object.assign({_cat:activeCat},m)));
     if(activeSubFilter&&_activeSubFn) models=models.filter(_activeSubFn);
+    /* PATCH : fiches-concept en tête de catégorie */
+    if(typeof paSortConceptFirst==='function') models=paSortConceptFirst(models);
   }
   if(!models.length){
     ml.innerHTML=`<div class="empty-cat"><div class="big">${isSearchActive()?'🔍':catIcon(activeCat)}</div>${isSearchActive()?'Aucun résultat':'Aucun modèle dans cette catégorie'}</div>`;
@@ -3574,7 +3579,7 @@ function renderNavCard(item, catId){
     'Galénique':'💊','Biotransformations':'🔄','Histologie':'🔬',
     'Génétique':'🧬','Physiologie':'❤️','Immunologie':'🛡️',
     'Hematologie':'🩸','Microscopiques':'🧫','Sante_Publique':'📊',
-    'Optique':'👁️','Toxicologie':'☠️'};
+    'Optique':'👁️','Toxicologie':'☠️','Phytotherapie':'🌱'};
   // ── Santé Publique : icône + étiquette par gabarit ──────────────────
   const SP_GABARITS={
     methode:    {icon:'🔬', label:'Méthode',    color:'#0d47a1'},
@@ -10236,6 +10241,22 @@ else if(wt==='bootstrap_viz'){
     } else { _collapseViewer(); }
     return;
 
+}else if(cat==='Phytotherapie'){
+    const badge=m.appareil?'<div style="display:inline-flex;align-items:center;gap:8px;background:#e8f5e9;border:1px solid #81c784;border-radius:20px;padding:5px 14px;font-weight:700;font-size:13px;margin-bottom:10px;color:#2e7d32">'+(m._icon||'\u{1F331}')+' '+escHtml(m.appareil)+'</div>':'';
+    info.innerHTML=imgHtml
+      +badge
+      +(m.desc?sec('Description',escHtml(m.desc),'desc'):'')
+      +sec('\u{1F4D6} D\u00E9finition et cadre',escHtml(m.definition||'\u2014'),'definition')
+      +sec('\u{1F3AF} Indications et plantes',escHtml(m.indications||'\u2014'),'indications')
+      +sec('\u2699\uFE0F M\u00E9canismes d\u0027action',escHtml(m.mecanismes||'\u2014'),'mecanismes')
+      +(m.securite?'<div class="info-section" style="border-left:3px solid #e53935"><div class="info-label" style="color:#c62828">\u26D4 S\u00E9curit\u00E9, contre-indications et interactions</div><div class="info-value resist-warn" style="white-space:pre-wrap">'+escHtml(m.securite)+'</div></div>':'')
+      +(m.conseils_officinaux?'<div class="info-section" style="background:#fff8e1;border-left:3px solid #ffa000"><div class="info-label" style="color:#e65100">\u{1F4A1} Conseils officinaux et signaux d\u0027alerte</div><div class="info-value" style="white-space:pre-wrap">'+escHtml(m.conseils_officinaux)+'</div></div>':'')
+      +(m.niveau_preuve?sec('\u{1F4CA} Niveau de preuve',escHtml(m.niveau_preuve),'niveau_preuve'):'')
+      +(m.reglementation?sec('\u2696\uFE0F R\u00E9glementation',escHtml(m.reglementation),'reglementation'):'');
+    info.innerHTML+=_phytoPlantLinks(m);
+    info.innerHTML+=renderExternalApis(m);
+    info.innerHTML+=_relatedCategoriesLinks(m);
+
 }else if(cat==='Toxicologie'){
   /* ── Toxicologie ── */
   var toxColors={
@@ -12982,6 +13003,43 @@ function _heNavLinks(m){
 /* ══ Cross-category CT drug links helper ══ */
 /* Liens vers d'autres catégories du PharmAtlas — affiché en bas des fiches pathogènes.
    Recherche le nom du pathogène + ses traitements/pathologies dans les autres catégories. */
+// ── Phytothérapie : liens vers les fiches Plantes citées ──────────────
+function _phytoPlantLinks(m){
+  if(!m || !Array.isArray(m.plantes_liees) || !m.plantes_liees.length) return '';
+  function nz(x){ return (x||'').toString().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,' ').trim(); }
+  var pools=[['Plantes','🌿 Plantes'],['Huiles_Essentielles','🫧 Huiles essentielles'],
+             ['Métabolites_Secondaires','🌿 Métabolites secondaires']];
+  var cards=[], seen={}, absents=[];
+  m.plantes_liees.forEach(function(raw){
+    var q=nz(String(raw).split('(')[0]), found=null, fcat=null;
+    for(var p=0;p<pools.length && !found;p++){
+      var list=(gallery[pools[p][0]]||[]);
+      for(var i=0;i<list.length;i++){
+        var n=nz(list[i].name);
+        if(!n) continue;
+        if(n===q || (q.length>4 && (n.indexOf(q)===0 || q.indexOf(n)===0))){
+          found=list[i]; fcat=pools[p][0]; break;
+        }
+      }
+    }
+    if(found){ var k=fcat+'|'+found.name; if(!seen[k]){ seen[k]=1; cards.push(renderNavCard(found,fcat)); } }
+    else absents.push(raw);
+  });
+  var out='';
+  if(cards.length){
+    out+='<div class="info-section"><div class="info-label">🌿 Plantes de la fiche'
+       +' <span style="font-size:10px;font-weight:400;opacity:.6">— '+cards.length+' fiche(s) PharmAtlas</span></div>'
+       +'<div class="nav-links-section">'+cards.join('')+'</div></div>';
+  }
+  if(absents.length){
+    out+='<div class="info-section"><div class="info-label" style="opacity:.7">🌱 Également citées</div>'
+       +'<div class="info-value" style="font-size:12px;opacity:.75">'+escHtml(absents.join(' · '))+'</div></div>';
+  }
+  return out;
+}
+
 function _relatedCategoriesLinks(m){
   if(!m) return '';
   var hay = ((m.name||'')+' '+(m.pathologies||'')+' '+(m.antibiotiques||'')+' '
@@ -15216,6 +15274,201 @@ function buildCard(m){
   }
   return card;
 }
+
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PATCH FICHES-CONCEPT & MISE EN PAGE
+   - tri : les fiches marquées "concept" remontent en tête de catégorie
+   - viewer : aucun visuel ni galerie iNaturalist sur une fiche-concept
+   - typographie : retour à la ligne sur chaque puce (•, ①, 1., ①..⑩, tirets)
+   - champs vides : les sections sans contenu réel ne sont plus affichées
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Une fiche est "concept" si elle le déclare, ou si son nom correspond à une
+   fiche transversale connue des catégories concernées. */
+var PA_CONCEPT_NAMES = {
+ 'Champignons':['Syndromes mycologiques','Mycotoxicoses','Détermination des macromycètes'],
+ 'Chimie_Inorganique':['Chimie Bioinorganique','Oligoéléments','Eau —','Tableau Périodique'],
+ 'Bacteries':['Taxonomie et génome','Structures bactériennes','Identification bactérienne',
+              'Mécanismes de résistance','Antibiotiques —','Infections urinaires','Infections cutanées',
+              'Infections gastro-intestinales','Infections ORL','Infections sexuellement',
+              'Infections materno','Infections opportunistes','Méningites bactériennes',
+              'Bactériémies et Sepsis','Endocardite infectieuse','Endocardites à hémocultures',
+              'Pneumopathies atypiques'],
+ 'Galénique':[],
+ 'Microscopiques':['Biologie animale','Helminthes —','Arthropodes —','Mycologie médicale'],
+ 'Métabolites_Secondaires':[]
+};
+function paIsConcept(m){
+  if(!m) return false;
+  if(m.concept===true || m._concept===true) return true;
+  if(m._cat==='Phytotherapie') return true;
+  if(m._cat==='Galénique' && (m.voie==='Opérations Pharmaceutiques'||m.voie==='Libération Modifiée')) return true;
+  var list = PA_CONCEPT_NAMES[m._cat]; if(!list) return false;
+  var n=(m.name||'');
+  for(var i=0;i<list.length;i++){ if(n.indexOf(list[i])===0 || n.indexOf(list[i])!==-1) return true; }
+  return false;
+}
+
+/* ── Typographie : une puce = une ligne ─────────────────────────────────── */
+function paBullets(v){
+  if(v==null) return v;
+  var t=String(v);
+  if(!t) return t;
+  // puces et numérotations encerclées : saut de ligne AVANT (sauf en tout début)
+  t = t.replace(/\s*(?=[•▪◦‣])/g, '\n');
+  t = t.replace(/\s*(?=[①②③④⑤⑥⑦⑧⑨⑩])/g, '\n');
+  // "1." / "2)" en début de segment
+  t = t.replace(/([.;:])\s+(?=\d{1,2}[.)]\s)/g, '$1\n');
+  // "■" et "▶" : titres de bloc → ligne à part
+  t = t.replace(/\s*(?=[■▶►])/g, '\n');
+  // NB : pas de règle sur les tirets — ils servent d'incise en français
+  //      ("Nombreuses espèces — Entolome livide"), les couper serait faux.
+  t = t.replace(/\n{3,}/g,'\n\n').replace(/^\n+/,'');
+  return t;
+}
+
+/* ── sec() : masque les sections vides et applique la mise en page ──────── */
+(function(){
+  var _origSec = sec;
+  window.sec = sec = function(label,val,fk){
+    if(val==null) return '';
+    var raw = String(val).replace(/<[^>]*>/g,'').replace(/[\s—–\-·:,;.]/g,'');
+    if(!raw) return '';                       // champ vide ou réduit à un tiret
+    var out = val;
+    if(typeof val==='string' && val.indexOf('<')===-1) out = paBullets(val);
+    var html = _origSec.call(this,label,out,fk);
+    // white-space:pre-wrap pour rendre visibles les retours à la ligne
+    return html.replace('<div class="info-value">','<div class="info-value" style="white-space:pre-wrap;line-height:1.7">');
+  };
+})();
+
+
+/* ── Tri : les fiches-concept en tête de catégorie ──────────────────────── */
+(function(){
+  var _b = buildModelList;
+  buildModelList = function(){
+    var r = _b.apply(this, arguments);
+    return r;
+  };
+})();
+function paSortConceptFirst(models){
+  if(!Array.isArray(models)) return models;
+  var idx=0;
+  models.forEach(function(m){ m.__ord=idx++; });
+  models.sort(function(a,b){
+    var ca=paIsConcept(a)?0:1, cb=paIsConcept(b)?0:1;
+    if(ca!==cb) return ca-cb;
+    return a.__ord-b.__ord;
+  });
+  models.forEach(function(m){ delete m.__ord; });
+  return models;
+}
+
+/* ── Viewer : rien à afficher pour une fiche-concept ────────────────────── */
+(function(){
+  function hideViewerForConcept(){
+    var m = (typeof activeModel!=='undefined') ? activeModel : null;
+    var sv = document.getElementById('sheetViewer');
+    if(!sv) return;
+    if(m && paIsConcept(m)){
+      // purge tout contenu visuel déjà injecté (3D, galeries, iNaturalist…)
+      while(sv.firstChild) sv.removeChild(sv.firstChild);
+      sv.setAttribute('data-concept','1');
+      sv.style.display='none';
+      var si=document.getElementById('sheetInfo');
+      if(si){ si.style.flex='1 1 100%'; si.style.maxWidth='100%'; }
+      var vt=document.querySelector('.pa-viewer-toggle'); if(vt) vt.style.display='none';
+    }else{
+      sv.removeAttribute('data-concept');
+      sv.style.display='';
+      var si2=document.getElementById('sheetInfo');
+      if(si2){ si2.style.flex=''; si2.style.maxWidth=''; }
+      var vt2=document.querySelector('.pa-viewer-toggle'); if(vt2) vt2.style.display='';
+    }
+  }
+  window.paHideViewerForConcept = hideViewerForConcept;
+  var _os = openSheet;
+  openSheet = async function(m){
+    var r = await _os.apply(this, arguments);
+    hideViewerForConcept();
+    // les galeries async (iNaturalist, GBIF) peuvent arriver après : on repurge
+    [120,400,900,1600].forEach(function(d){ setTimeout(hideViewerForConcept, d); });
+    return r;
+  };
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PATCH VIEWER VIDE / MODÈLE 3D INTROUVABLE
+   Un viewer sans aucune ressource affichable restait ouvert et vide (fond noir).
+   On le masque, et si un .glb est déclaré mais introuvable on affiche un
+   message explicite au lieu d'un cadre vide.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function(){
+  function hasVisual(m){
+    if(!m) return false;
+    return !!(m.file || m.image || m.thumbnail || m.pdb_id || m.smiles || m.pubchem_cid
+           || m.lame_idc || m.spectra_url || m.content_base64 || m.tool_mode
+           || m.uniprot || m.icn3d_pdb || (m.photos&&m.photos.length)
+           || m.scientific || m.latin);
+  }
+  function tidyViewer(){
+    var sv=document.getElementById('sheetViewer'); if(!sv) return;
+    var m=(typeof activeModel!=='undefined')?activeModel:null;
+    if(sv.getAttribute('data-concept')==='1') return;   // déjà géré (fiche-concept)
+    var filled = sv.children.length>0 &&
+                 sv.querySelector('canvas,img,svg,iframe,.herbarium-viewer,.osd-container,.pa-viewer-msg');
+    if(filled) return;
+    if(!hasVisual(m)){
+      sv.style.display='none';
+      var si=document.getElementById('sheetInfo');
+      if(si){ si.style.flex='1 1 100%'; si.style.maxWidth='100%'; }
+      var vt=document.querySelector('.pa-viewer-toggle'); if(vt) vt.style.display='none';
+    }else if(m && m.file){
+      // ressource déclarée mais rien n'a pu être chargé → message explicite
+      sv.style.display='';
+      if(!sv.querySelector('.pa-viewer-msg')){
+        var d=document.createElement('div');
+        d.className='pa-viewer-msg';
+        d.style.cssText='display:flex;flex-direction:column;align-items:center;justify-content:center;'
+          +'height:100%;min-height:180px;gap:8px;color:#8b949e;font-size:13px;text-align:center;padding:20px';
+        d.innerHTML='<div style="font-size:30px;opacity:.5">🧊</div>'
+          +'<div>Modèle 3D indisponible</div>'
+          +'<div style="font-size:11px;opacity:.7">Fichier attendu : <code>'+String(m.file).replace(/[<>&]/g,'')+'</code></div>';
+        sv.appendChild(d);
+      }
+    }
+  }
+  window.paTidyViewer = tidyViewer;
+  var _os2 = openSheet;
+  openSheet = async function(m){
+    var r = await _os2.apply(this, arguments);
+    [700,1500,2600].forEach(function(d){ setTimeout(tidyViewer, d); });
+    return r;
+  };
+})();
+
+/* PATCH scroll : restauration de la position de la liste après re-rendu ─────── */
+(function(){
+  var _origBuild = buildModelList;
+  var _paLastScroll = 0, _paLastCat = null, _paLastQuery = null;
+  buildModelList = function(){
+    var ml = document.getElementById('modelList');
+    var sameCtx = ml && _paLastCat===activeCat && _paLastQuery===(typeof searchQuery!=='undefined'?searchQuery:'');
+    if(ml && sameCtx) _paLastScroll = ml.scrollTop;
+    var r = _origBuild.apply(this, arguments);
+    _paLastCat = activeCat; _paLastQuery = (typeof searchQuery!=='undefined'?searchQuery:'');
+    if(ml){
+      if(sameCtx){
+        var restore = function(){ ml.scrollTop = _paLastScroll; };
+        restore(); requestAnimationFrame(restore); setTimeout(restore,60); setTimeout(restore,220);
+      }else{ _paLastScroll = 0; ml.scrollTop = 0; }
+    }
+    return r;
+  };
+})();
 
 /* Rendu progressif non bloquant : premier lot immédiat, reste en idle. */
 let _paRenderToken=0;

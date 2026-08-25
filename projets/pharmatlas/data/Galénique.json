@@ -1,12 +1,1035 @@
 {
  "Galénique": [
   {
+   "name": "Biopharmacie et Préformulation",
+   "desc": "Étude des propriétés physico-chimiques du principe actif préalable à la formulation : solubilité, stabilité, polymorphisme, et système de classification biopharmaceutique (BCS).",
+   "_icon": "🔬",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Concepts",
+   "description_voie": "La préformulation est l'étape préalable à toute formulation : elle caractérise le principe actif pour anticiper les difficultés de mise en forme. La biopharmacie étudie les relations entre la forme galénique, la libération du principe actif et son devenir dans l'organisme. La séquence LADME structure cette approche : Libération, Absorption, Distribution, Métabolisme, Excrétion. Seule la phase de libération dépend du galéniste, mais elle conditionne tout le reste. Le système de classification biopharmaceutique (BCS) croise solubilité et perméabilité en quatre classes qui orientent la stratégie de formulation.",
+   "avantages": [
+    "Anticipe les incompatibilités principe actif/excipients",
+    "Oriente le choix de la forme et du procédé",
+    "Réduit les échecs de développement en phase tardive"
+   ],
+   "exemples": [
+    "Ritonavir (polymorphisme)",
+    "Griséofulvine (micronisation)",
+    "Carbamazépine (hydrate)"
+   ],
+   "types": [
+    "Classe I — haute solubilité, haute perméabilité : formulation simple, libération immédiate",
+    "Classe II — faible solubilité, haute perméabilité : la dissolution est limitante, améliorer la solubilité",
+    "Classe III — haute solubilité, faible perméabilité : promoteurs d'absorption, la perméabilité est limitante",
+    "Classe IV — faible solubilité et faible perméabilité : les plus problématiques, vectorisation souvent nécessaire"
+   ],
+   "regles_critiques": [
+    "Un changement de forme polymorphe en cours de développement peut modifier radicalement la biodisponibilité — cas historique du ritonavir",
+    "L'équation de Noyes-Whitney relie la vitesse de dissolution à la surface spécifique : la micronisation est le premier levier pour un principe actif de classe II"
+   ],
+   "taille_particules": null,
+   "contraintes_formulaires": [
+    "Solubilité aqueuse et profil pH-solubilité",
+    "Coefficient de partage log P et pKa",
+    "Polymorphisme cristallin : formes cristallines, amorphe, solvates et hydrates, de solubilités et stabilités différentes",
+    "Stabilité thermique, photostabilité, sensibilité à l'hydrolyse et à l'oxydation",
+    "Granulométrie, surface spécifique, hygroscopicité",
+    "Compatibilité principe actif/excipients par étude en mélange binaire"
+   ],
+   "edqm": null,
+   "bcs_classes": "Les 4 classes du BCS constituent la grille de lecture centrale de la préformulation",
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Procédé Industriel et Production Pharmaceutique",
+   "desc": "Organisation de la production : zones à atmosphère contrôlée, Bonnes Pratiques de Fabrication, validation des procédés et notions de qualité par la conception (QbD).",
+   "_icon": "🏭",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Concepts",
+   "description_voie": "La production pharmaceutique industrielle est encadrée par les Bonnes Pratiques de Fabrication (BPF, ou GMP), opposables et contrôlées par l'ANSM. Le principe directeur est que la qualité ne se contrôle pas sur le produit fini, elle se construit tout au long du procédé — c'est la logique du Quality by Design (QbD, ICH Q8). Le procédé est décrit par ses paramètres critiques (CPP) et le produit par ses attributs qualité critiques (CQA), reliés dans un espace de conception (design space) validé.",
+   "avantages": [
+    "Reproductibilité lot à lot garantie",
+    "Traçabilité complète du dossier de lot",
+    "Maîtrise de la contamination croisée et microbiologique"
+   ],
+   "types": [
+    "Zones à atmosphère contrôlée classées A, B, C et D selon la concentration particulaire",
+    "Production en circuit fermé ou en confinement pour les substances cytotoxiques ou sensibilisantes",
+    "Fabrication continue (continuous manufacturing) vs fabrication par lots"
+   ],
+   "regles_critiques": [
+    "Toute déviation doit être documentée et investiguée avant libération du lot",
+    "Le pharmacien responsable engage sa responsabilité lors de la libération du lot"
+   ],
+   "taille_particules": null,
+   "contraintes_formulaires": [
+    "Marche en avant : séparation des flux de matières, de personnel et de déchets",
+    "Cascade de pressions et traitement d'air par filtres HEPA",
+    "Qualification des équipements : QI, QO, QP (installation, opérationnelle, performance)",
+    "Validation du nettoyage et prévention de la contamination croisée",
+    "Contrôle en cours de fabrication (in process control)"
+   ],
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "Le dossier de lot rassemble l'ensemble des contrôles ; la libération est prononcée au vu de la conformité aux spécifications du dossier d'AMM",
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Pesée",
+   "desc": "Opération de mesure des masses en production pharmaceutique : justesse, fidélité, incertitude, et règles de pesée des faibles quantités.",
+   "_icon": "⚖️",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Opérations Unitaires",
+   "description_voie": "La pesée est la première opération de toute fabrication et conditionne directement le dosage du produit fini. Elle repose sur la distinction entre justesse (proximité de la valeur vraie, liée à l'étalonnage) et fidélité (reproductibilité des mesures, liée à la dispersion). La portée maximale et la précision (échelon de lecture) définissent le domaine d'emploi d'une balance : une balance de précision ne convient pas au pesage de très faibles masses, pour lesquelles on recourt à la balance analytique ou à la technique de la dilution au trituré.",
+   "avantages": [
+    "Opération simple et directement contrôlable",
+    "Traçabilité par édition du ticket de pesée"
+   ],
+   "inconvenients": [
+    "Sensible aux vibrations, aux courants d'air, à l'électricité statique et aux variations de température",
+    "Erreur d'autant plus critique que la masse pesée est faible"
+   ],
+   "types": [
+    "Balance analytique (précision 0,1 mg) pour les faibles masses",
+    "Balance de précision pour les masses intermédiaires",
+    "Bascule et pont-bascule pour la production industrielle"
+   ],
+   "regles_critiques": [
+    "Vérification journalière avec masses étalons et étalonnage périodique par un organisme accrédité",
+    "Mise à niveau et attente de stabilisation avant lecture",
+    "Double pesée contradictoire pour les substances très actives",
+    "Ne jamais peser une masse inférieure à la charge minimale de la balance : recourir à la dilution au trituré (dilution du principe actif dans un diluant inerte)"
+   ],
+   "taille_particules": null,
+   "contraintes_formulaires": [
+    "Local à température et hygrométrie maîtrisées",
+    "Protection contre l'électricité statique pour les poudres fines",
+    "Confinement pour les substances de faible seuil d'exposition professionnelle"
+   ],
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "Ph. Eur. 2.1.7 Balances pour analyses ; contrôle de l'uniformité de masse sur le produit fini",
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Broyage et Pulvérisation",
+   "desc": "Réduction de la taille des particules solides : mécanismes de fracturation, appareillages, et conséquences sur la dissolution et la biodisponibilité.",
+   "_icon": "🌀",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Opérations Unitaires",
+   "description_voie": "Le broyage réduit la taille des particules pour augmenter la surface spécifique. L'objectif principal est pharmacocinétique : selon l'équation de Noyes-Whitney, la vitesse de dissolution est proportionnelle à la surface de contact avec le solvant. La micronisation est donc le levier de première intention pour les principes actifs peu solubles de classe BCS II. Le broyage sert aussi à homogénéiser la granulométrie avant mélange, condition d'un mélange stable.",
+   "avantages": [
+    "Augmentation de la vitesse de dissolution et de la biodisponibilité",
+    "Homogénéité granulométrique favorisant un mélange sans ségrégation",
+    "Meilleure uniformité de teneur pour les principes actifs faiblement dosés"
+   ],
+   "inconvenients": [
+    "Échauffement pouvant dégrader les substances thermosensibles ou provoquer une transition polymorphe",
+    "Charge électrostatique et perte de coulabilité des poudres très fines",
+    "Risque d'explosion de poussières et d'exposition professionnelle",
+    "Augmentation de la réactivité de surface et donc de la sensibilité à l'oxydation"
+   ],
+   "types": [
+    "Broyeur à marteaux — percussion, poudres grossières à moyennes",
+    "Broyeur à billes — attrition et percussion, broyage fin, possible en voie humide",
+    "Broyeur à cylindres — compression, produits fragiles",
+    "Broyeur à jet d'air (jet mill) — micronisation par collision interparticulaire, sans échauffement, taille inférieure à 10 µm",
+    "Homogénéisateur haute pression — nanosuspensions"
+   ],
+   "regles_critiques": [
+    "Contrôler la température pendant le broyage des principes actifs thermosensibles",
+    "Vérifier l'absence de transition polymorphe induite par l'énergie mécanique",
+    "Mise à la terre des équipements et inertage à l'azote pour prévenir l'explosion de poussières"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "Ph. Eur. 2.9.31 Granulométrie par diffraction laser ; Ph. Eur. 2.9.38 Estimation de la distribution granulométrique par tamisage",
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Poudres — Caractérisation",
+   "desc": "Granulométrie, forme des particules, surface spécifique, masses volumiques vrac et tassée : les paramètres qui décrivent une poudre pharmaceutique.",
+   "_icon": "📊",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Opérations Unitaires",
+   "description_voie": "Une poudre est un système divisé dont le comportement dépend autant des particules individuelles que des espaces interparticulaires. Sa caractérisation est le préalable indispensable au mélange, à la granulation et à la compression. La distribution granulométrique n'est jamais monodisperse : on la décrit par les percentiles d10, d50 (diamètre médian) et d90, et par l'étendue (span). La forme des particules — sphérique, aciculaire, lamellaire — influence autant l'écoulement que la taille elle-même.",
+   "avantages": [
+    "Prédit le comportement au mélange et à la compression",
+    "Détecte les lots de matière première non conformes avant fabrication"
+   ],
+   "types": [
+    "Granulométrie par tamisage — méthode de référence simple, adaptée aux particules supérieures à 75 µm",
+    "Diffraction laser — rapide, large gamme, mesure d'un diamètre équivalent sphérique",
+    "Microscopie et analyse d'image — donne la forme en plus de la taille",
+    "Surface spécifique par adsorption d'azote (méthode BET)"
+   ],
+   "regles_critiques": [
+    "Le diamètre mesuré dépend de la technique employée : tamisage, laser et microscopie ne donnent pas la même valeur et ne sont pas interchangeables",
+    "Un d50 identique peut masquer des distributions très différentes : toujours examiner l'étendue de la distribution"
+   ],
+   "taille_particules": null,
+   "contraintes_formulaires": [
+    "Masse volumique vrac (poudre non tassée) et masse volumique tassée (après tassement normalisé)",
+    "Porosité interparticulaire et intraparticulaire",
+    "Hygroscopicité et teneur en eau",
+    "Charge électrostatique de surface"
+   ],
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "Ph. Eur. 2.9.31, 2.9.38 (granulométrie) ; Ph. Eur. 2.9.34 Masse volumique vrac et masse volumique tassée",
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Poudres — Propriétés Fonctionnelles",
+   "desc": "Écoulement, indice de Carr, rapport de Hausner, angle de repos et compressibilité : les propriétés qui conditionnent la faisabilité industrielle.",
+   "_icon": "📐",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Opérations Unitaires",
+   "description_voie": "Les propriétés fonctionnelles décrivent le comportement collectif d'une poudre. L'ÉCOULEMENT est la propriété la plus critique : il conditionne le remplissage régulier des matrices de compression et des gélules, donc l'uniformité de masse et de teneur. Il est évalué par l'angle de repos, le débit à l'écoulement et surtout par deux indices dérivés des masses volumiques vrac et tassée : l'indice de compressibilité de Carr et le rapport de Hausner. Une poudre qui s'écoule mal ne peut pas être comprimée directement : elle devra être granulée.",
+   "avantages": [
+    "Diagnostic rapide et peu coûteux de la faisabilité d'une compression directe",
+    "Oriente le choix entre compression directe et granulation"
+   ],
+   "inconvenients": [
+    "Mesures sensibles aux conditions d'humidité et à l'opérateur",
+    "Ne prédisent pas à elles seules le comportement en machine à grande vitesse"
+   ],
+   "types": [
+    "Indice de Carr = 100 × (masse volumique tassée − vrac) / tassée. Inférieur à 15 % : excellent écoulement. De 16 à 25 % : passable. Supérieur à 25 % : mauvais, granulation nécessaire",
+    "Rapport de Hausner = masse volumique tassée / vrac. Inférieur à 1,25 : bon écoulement. Supérieur à 1,5 : écoulement médiocre",
+    "Angle de repos : inférieur à 30° excellent, de 31 à 40° acceptable, supérieur à 50° très mauvais",
+    "Cohésion, aptitude au tassement, mouillabilité"
+   ],
+   "regles_critiques": [
+    "Les poudres fines (inférieures à 100 µm) sont cohésives et s'écoulent mal : forces de van der Waals et électrostatiques prédominent sur la gravité",
+    "La ségrégation lors du transport ou du stockage annule le bénéfice d'un bon mélange : viser une granulométrie homogène entre principe actif et excipients",
+    "L'ajout de lubrifiants d'écoulement (silice colloïdale, talc) améliore la coulabilité sans granulation"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "Ph. Eur. 2.9.36 Écoulement des poudres ; Ph. Eur. 2.9.34 Masse volumique vrac et tassée",
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Excipients",
+   "desc": "Substances auxiliaires de formulation : diluants, liants, délitants, lubrifiants, et notion d'excipient à effet notoire.",
+   "_icon": "🧂",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Concepts",
+   "description_voie": "L'excipient est toute substance autre que le principe actif entrant dans la composition d'un médicament. Réputé inerte, il n'est jamais neutre : il conditionne la stabilité, la libération, la biodisponibilité et la tolérance. Les EXCIPIENTS À EFFET NOTOIRE font l'objet d'une liste réglementaire et d'un étiquetage obligatoire car ils peuvent provoquer des effets indésirables chez certains patients — c'est une notion centrale pour le conseil officinal.",
+   "avantages": [
+    "Permettent la mise en forme de principes actifs faiblement dosés",
+    "Modulent la vitesse de libération",
+    "Assurent la stabilité physico-chimique et microbiologique"
+   ],
+   "inconvenients": [
+    "Risque d'incompatibilité physico-chimique avec le principe actif",
+    "Effets indésirables propres chez certains patients",
+    "Peuvent modifier la biodisponibilité lors d'un changement de formulation (générique)"
+   ],
+   "exemples": [
+    "Lactose monohydraté",
+    "Cellulose microcristalline (Avicel®)",
+    "Stéarate de magnésium",
+    "Croscarmellose sodique",
+    "Povidone K30"
+   ],
+   "types": [
+    "Diluants — lactose, cellulose microcristalline, mannitol, phosphate dicalcique : assurent le volume",
+    "Liants — povidone, HPMC, amidon prégélatinisé : cohésion du granulé",
+    "Délitants — croscarmellose, crospovidone, amidon glycolate sodique : désagrégation par gonflement ou capillarité",
+    "Lubrifiants — stéarate de magnésium : réduit la friction à l'éjection ; agents antiadhérents (talc) ; agents d'écoulement (silice colloïdale)",
+    "Enrobants, colorants, édulcorants, conservateurs antimicrobiens, antioxydants"
+   ],
+   "regles_critiques": [
+    "Le stéarate de magnésium est hydrophobe : un surdosage ou un temps de mélange trop long ralentit la désagrégation et la dissolution — c'est l'incompatibilité classique à connaître",
+    "Le lactose est incompatible avec les amines primaires (réaction de Maillard)",
+    "Les excipients à effet notoire doivent être signalés au patient : lactose (intolérance), aspartam (phénylcétonurie), sorbitol et fructose, alcool benzylique (nouveau-né), sodium (régime hyposodé), gluten, huile d'arachide, sulfites"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Mélange",
+   "desc": "Homogénéisation des poudres : mécanismes de diffusion, convection et cisaillement, mélangeurs industriels, et prévention de la ségrégation.",
+   "_icon": "🔄",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Opérations Unitaires",
+   "description_voie": "Le mélange vise l'homogénéité de répartition du principe actif dans la masse, condition directe de l'uniformité de teneur. Trois mécanismes coexistent : la convection (déplacement de groupes de particules), le cisaillement (glissement de couches) et la diffusion (mouvement individuel des particules, seul mécanisme permettant l'homogénéité à l'échelle de la dose). Le mélange est un processus réversible : au-delà d'un temps optimal, la DÉMIXTION peut reprendre le dessus.",
+   "avantages": [
+    "Garantit l'uniformité de teneur, critère de libération du lot",
+    "Opération peu coûteuse et bien maîtrisée"
+   ],
+   "inconvenients": [
+    "Risque de ségrégation au déchargement, au transport et au stockage",
+    "Le surmélange avec le lubrifiant dégrade la dissolution",
+    "Difficulté pour les principes actifs très faiblement dosés"
+   ],
+   "types": [
+    "Mélangeurs à cuve mobile — mélangeur en V, à conteneur, bicônique : mécanisme convectif et diffusif, doux",
+    "Mélangeurs à cuve fixe et agitateur — mélangeur planétaire, à socs de charrue : cisaillement plus élevé",
+    "Mélangeurs à haut cisaillement — permettent la désagglomération simultanée"
+   ],
+   "regles_critiques": [
+    "Le lubrifiant hydrophobe (stéarate de magnésium) est toujours ajouté EN DERNIER et pour un temps court, typiquement 2 à 5 minutes",
+    "Mélange ordonné (ou interactif) : les fines particules de principe actif adhèrent aux grosses particules d'excipient porteur — stratégie de choix pour les très faibles dosages",
+    "La ségrégation est favorisée par des différences de taille, de densité ou de forme entre constituants : rapprocher les granulométries est la meilleure prévention",
+    "Le taux de remplissage de la cuve (50 à 70 %) conditionne l'efficacité"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "Prélèvements stratifiés en plusieurs points de la cuve et dosage ; Ph. Eur. 2.9.6 Uniformité de teneur et 2.9.40 Uniformité des préparations unidoses",
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Granulation Sèche",
+   "desc": "Agglomération des poudres sans liquide par compactage : compactage à rouleaux, briquetage, et indications pour les principes actifs thermosensibles ou hydrosensibles.",
+   "_icon": "🧱",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Opérations Unitaires",
+   "description_voie": "La granulation sèche agglomère les particules par pression mécanique, sans apport de liquide ni de chaleur. Elle est indiquée lorsque le principe actif est sensible à l'humidité ou à la chaleur, ce qui exclut la granulation humide, et lorsque la poudre s'écoule ou se comprime mal, ce qui exclut la compression directe. Le procédé consiste à densifier la poudre en un compact intermédiaire, puis à le broyer en granulés calibrés.",
+   "avantages": [
+    "Absence totale d'eau et de chaleur : idéale pour les principes actifs hydrolysables ou thermosensibles",
+    "Procédé continu, économique en énergie et en temps",
+    "Pas d'étape de séchage"
+   ],
+   "inconvenients": [
+    "Génère beaucoup de fines nécessitant un recyclage",
+    "Perte de compressibilité du matériau après le premier compactage (phénomène de durcissement ou work hardening) : le comprimé final est moins résistant",
+    "Poussiéreux, nécessite un confinement",
+    "Moins efficace pour l'homogénéisation que la granulation humide"
+   ],
+   "exemples": [
+    "Effervescents",
+    "Principes actifs hygroscopiques",
+    "Comprimés de metformine à forte dose"
+   ],
+   "types": [
+    "Compactage à rouleaux (roller compaction) — méthode industrielle de référence, deux rouleaux contrarotatifs produisent un ruban (flake) ensuite broyé et calibré",
+    "Briquetage (slugging) — compression en gros comprimés sur presse alternative, puis broyage ; méthode plus ancienne, discontinue"
+   ],
+   "regles_critiques": [
+    "Le work hardening impose de ne pas sur-compacter : la force aux rouleaux doit être optimisée, un compact trop dense donnant un comprimé final trop friable ou trop dur",
+    "Recyclage des fines à maîtriser car il modifie le temps de séjour et donc l'homogénéité",
+    "Un lubrifiant est souvent nécessaire pour limiter l'adhérence aux rouleaux"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "Contrôle de la granulométrie du granulé, de la masse volumique et de l'écoulement avant compression",
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Granulation Humide",
+   "desc": "Agglomération par liant liquide : granulation en mélangeur à faible ou haut cisaillement, en lit d'air fluidisé, mécanismes de croissance des grains.",
+   "_icon": "💧",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Opérations Unitaires",
+   "description_voie": "La granulation humide est le procédé le plus répandu en production de comprimés. Un liquide de mouillage contenant un liant est incorporé à la poudre : il crée des ponts liquides entre particules, qui deviennent des ponts solides après séchage. Elle améliore simultanément l'écoulement, la compressibilité, l'homogénéité et la mouillabilité, et supprime le risque de ségrégation puisque principe actif et excipients sont solidarisés dans le même grain.",
+   "avantages": [
+    "Améliore l'écoulement et la compressibilité",
+    "Supprime la ségrégation en solidarisant les constituants",
+    "Améliore la mouillabilité des principes actifs hydrophobes",
+    "Réduit l'empoussièrement et l'exposition professionnelle",
+    "Permet des dosages élevés en principe actif"
+   ],
+   "inconvenients": [
+    "Incompatible avec les principes actifs hydrolysables ou thermosensibles",
+    "Procédé long, multi-étapes, coûteux en énergie",
+    "Risque de transition polymorphe ou de formation d'hydrate",
+    "Validation plus complexe (nombreux paramètres critiques)"
+   ],
+   "types": [
+    "Mélangeur-granulateur à FAIBLE cisaillement (planétaire) — granulés peu denses, procédé lent",
+    "Mélangeur-granulateur à HAUT cisaillement — pale principale et émotteur, granulés denses et sphériques, procédé rapide et le plus utilisé",
+    "Granulation en LIT D'AIR FLUIDISÉ — pulvérisation du liant sur la poudre en suspension d'air, granulation et séchage dans le même appareil, granulés poreux à dissolution rapide",
+    "Extrusion-sphéronisation — production de pellets sphériques calibrés, base des formes multiparticulaires"
+   ],
+   "regles_critiques": [
+    "La quantité de liquide de mouillage est le paramètre le plus critique : trop peu donne des fines, trop conduit à une prise en masse irréversible",
+    "Le point de fin de granulation doit être détecté en temps réel, la fenêtre étant étroite en haut cisaillement",
+    "Vérifier l'absence de transition polymorphe induite par l'eau"
+   ],
+   "taille_particules": null,
+   "contraintes_formulaires": [
+    "Étapes de croissance des grains : nucléation, coalescence, consolidation, puis attrition si l'apport d'énergie se prolonge",
+    "Le point de fin de granulation est déterminé par la consommation de puissance du moteur ou le couple sur la pale"
+   ],
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "Perte à la dessiccation après séchage, granulométrie, masse volumique, écoulement, friabilité du granulé",
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Dessiccation",
+   "desc": "Élimination du solvant après granulation : mécanismes de séchage, courbe de séchage, étuve, lit d'air fluidisé et lyophilisation.",
+   "_icon": "🌡️",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Opérations Unitaires",
+   "description_voie": "La dessiccation élimine le liquide de mouillage pour transformer les ponts liquides en ponts solides et amener le granulé à sa teneur en eau résiduelle cible. Cette teneur est un compromis : trop élevée, elle compromet la stabilité chimique et microbiologique et fait coller le granulé à la compression ; trop basse, elle rend le comprimé friable car une eau résiduelle joue un rôle de plastifiant et de lubrifiant interne. La courbe de séchage comporte une phase à vitesse constante (évaporation de l'eau libre de surface) puis une phase à vitesse décroissante (diffusion de l'eau liée depuis le cœur du grain), plus lente et limitante.",
+   "avantages": [
+    "Stabilise le granulé et permet son stockage",
+    "Le lit d'air fluidisé combine granulation et séchage dans un appareil unique"
+   ],
+   "inconvenients": [
+    "Étape énergivore et souvent limitante en temps de cycle",
+    "Risque de migration du principe actif soluble vers la surface du grain pendant le séchage, source d'hétérogénéité de teneur",
+    "Dégradation possible des principes actifs thermosensibles"
+   ],
+   "types": [
+    "Étuve statique à plateaux — simple mais lente, séchage hétérogène, risque de croûtage",
+    "Lit d'air fluidisé — rapide et homogène, le plus utilisé, contrôle par la température de l'air sortant",
+    "Séchage sous vide — abaisse la température d'ébullition, adapté aux thermosensibles",
+    "Lyophilisation — congélation puis sublimation sous vide poussé, réservée aux produits très fragiles (protéines, vaccins, lyophilisats oraux)",
+    "Atomisation (spray drying) — séchage instantané d'une solution pulvérisée, produit des particules sphériques"
+   ],
+   "regles_critiques": [
+    "La température du produit, et non celle de l'air, est le paramètre à surveiller pour les thermosensibles",
+    "Un séchage trop rapide croûte la surface et bloque la diffusion de l'eau interne",
+    "La teneur en eau résiduelle doit être définie et validée pour chaque formule"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "Ph. Eur. 2.2.32 Perte à la dessiccation ; Ph. Eur. 2.5.12 Dosage de l'eau par la méthode semi-micro de Karl Fischer ; mesure de l'activité de l'eau (aw)",
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Compression",
+   "desc": "Transformation d'un granulé ou d'une poudre en comprimé : cycle de compression, machines alternatives et rotatives, défauts de compression et résolution.",
+   "_icon": "💊",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Opérations Unitaires",
+   "description_voie": "La compression transforme un solide divisé en comprimé cohérent par application d'une force entre deux poinçons dans une matrice. Le cycle comporte quatre phases : remplissage de la matrice, précompression (chasse l'air), compression principale (réarrangement, déformation élastique puis plastique et fragmentation, création de liaisons interparticulaires), et éjection. La cohésion résulte principalement de forces de van der Waals et de liaisons formées aux points de contact créés sous pression. La compression directe, quand elle est possible, évite granulation et séchage : c'est la voie la plus économique.",
+   "avantages": [
+    "Forme la plus produite au monde : dosage précis, stable, transportable, peu coûteuse",
+    "Permet la sécabilité, l'enrobage et la libération modifiée",
+    "Cadence industrielle très élevée sur presse rotative"
+   ],
+   "inconvenients": [
+    "Nécessite un granulé de bonnes propriétés d'écoulement et de compressibilité",
+    "Nombreux défauts possibles liés à la formulation ou au réglage",
+    "Inadaptée aux principes actifs à très forte dose ou huileux"
+   ],
+   "types": [
+    "Machine ALTERNATIVE (excentrique) — un jeu de poinçons, faible cadence, développement et petits lots",
+    "Machine ROTATIVE — tourelle à multiples jeux de poinçons, précompression et compression, cadence industrielle",
+    "Compression directe — mélange simple puis compression, sans granulation",
+    "Comprimés multicouches et comprimés noyau (comprimé dans comprimé)"
+   ],
+   "regles_critiques": [
+    "CLIVAGE et DÉCALOTTAGE (capping) : séparation de la partie supérieure, causée par l'air emprisonné et un retour élastique excessif — corriger en augmentant la précompression, en ralentissant la cadence ou en modifiant la formule",
+    "COLLAGE (sticking) et POINÇONNAGE (picking) : adhérence aux poinçons, liée à un excès d'humidité ou à un défaut de lubrification",
+    "GRIPPAGE : friction excessive à l'éjection, insuffisance de lubrifiant",
+    "Variation de masse : défaut d'écoulement du granulé ou ségrégation dans la trémie",
+    "La dureté n'est pas un critère de qualité en soi : c'est la désagrégation et la dissolution qui importent"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": "Comprimé à libération immédiate : Tmax typiquement de 30 minutes à 2 heures",
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "Ph. Eur. 2.9.1 Désagrégation ; 2.9.3 Dissolution ; 2.9.5 Uniformité de masse ; 2.9.6 Uniformité de teneur ; 2.9.7 Friabilité ; 2.9.8 Résistance à la rupture",
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Enrobage",
+   "desc": "Application d'une pellicule ou d'un dragéifiage sur un comprimé : enrobage pelliculaire, gastro-résistant, matériel et défauts.",
+   "_icon": "🎨",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Opérations Unitaires",
+   "description_voie": "L'enrobage dépose une couche continue à la surface d'une forme solide. Il répond à des objectifs variés : masquer un goût amer, protéger le principe actif de l'humidité, de la lumière ou de l'oxygène, faciliter la déglutition, identifier le produit par sa couleur, protéger le manipulateur pour les cytotoxiques, et surtout modifier le site ou la vitesse de libération. La technique dominante est aujourd'hui l'enrobage pelliculaire par pulvérisation en turbine perforée, qui a supplanté la dragéification, longue et consommatrice de sucre.",
+   "avantages": [
+    "Masque le goût et l'odeur",
+    "Protège le principe actif et le manipulateur",
+    "Permet la gastro-résistance et la libération modifiée",
+    "Améliore l'aspect, la déglutition et l'identification"
+   ],
+   "inconvenients": [
+    "Étape supplémentaire coûteuse",
+    "Peut retarder la désagrégation si le film est trop épais",
+    "Défauts d'aspect fréquents nécessitant une mise au point fine",
+    "Solvants organiques encore utilisés pour certains polymères (contraintes environnementales et sécurité)"
+   ],
+   "types": [
+    "Enrobage PELLICULAIRE (film coating) — film mince de 20 à 100 µm, gain de masse de 2 à 4 %, polymères hydrosolubles (HPMC, PVA)",
+    "Enrobage GASTRO-RÉSISTANT (entérique) — polymères insolubles en milieu acide et solubles au-delà de pH 5,5 à 7 : acétophtalate de cellulose, copolymères méthacryliques (Eudragit® L et S), HPMCP",
+    "Enrobage à libération PROLONGÉE — polymères insolubles et perméables : éthylcellulose, Eudragit® RS et RL",
+    "DRAGÉIFICATION — couches successives de sirop de saccharose en turbine, technique traditionnelle, gain de masse important"
+   ],
+   "regles_critiques": [
+    "Un comprimé gastro-résistant ou à libération prolongée ne doit JAMAIS être écrasé, broyé ou croqué : la rupture du film supprime la protection ou provoque un relargage massif (dose dumping)",
+    "Défauts classiques : peau d'orange (pulvérisation trop rapide), craquelure du film (retour élastique du noyau), collage et jumelage (séchage insuffisant), érosion des arêtes (surface trop friable), migration de colorant",
+    "Équilibre critique entre débit de pulvérisation, température et débit d'air de séchage"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "Ph. Eur. 2.9.1 Désagrégation, avec pour les formes gastro-résistantes un essai en milieu acide (2 h, HCl 0,1 M, absence de désagrégation) suivi d'un essai en tampon phosphate pH 6,8",
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Conditionnement",
+   "desc": "Articles de conditionnement primaire et secondaire : matériaux, fonctions de protection, étanchéité, sérialisation et information du patient.",
+   "_icon": "📦",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Concepts",
+   "description_voie": "Le conditionnement primaire est en contact direct avec le médicament ; le conditionnement secondaire est l'emballage extérieur. Le primaire fait partie intégrante du médicament : il assure la protection physique, chimique et microbiologique, garantit l'intégrité de la dose et conditionne la stabilité et donc la date de péremption. Le choix du matériau résulte d'études d'interaction contenant-contenu et d'études de stabilité en conditions réelles et accélérées selon les lignes directrices ICH.",
+   "avantages": [
+    "Protection contre l'humidité, l'oxygène, la lumière et les contaminations",
+    "Garantit la dose unitaire et l'observance (piluliers, blisters calendaires)",
+    "Support obligatoire de l'information et de la traçabilité"
+   ],
+   "inconvenients": [
+    "Risque d'interaction contenant-contenu : migration d'additifs plastiques, sorption du principe actif, alcalinité du verre",
+    "Impact environnemental et enjeux de recyclabilité",
+    "Coût pouvant dépasser celui du principe actif pour les génériques"
+   ],
+   "types": [
+    "VERRE — type I (borosilicaté, le plus inerte, injectables), type II (sodocalcique traité), type III (sodocalcique, formes non aqueuses)",
+    "PLASTIQUES — PE, PP, PVC, PET, PVDC ; le complexe PVC/PVDC améliore la barrière à l'humidité",
+    "ALUMINIUM — barrière absolue à la lumière, à l'oxygène et à l'humidité (blisters, tubes, opercules)",
+    "ÉLASTOMÈRES — bouchons de flacons injectables, souvent siliconés ou revêtus de fluoropolymère",
+    "Systèmes doseurs : compte-gouttes, cuillères-mesures, pipettes, seringues orales"
+   ],
+   "regles_critiques": [
+    "Un dessiccant ou un absorbeur d'oxygène peut être intégré pour les produits sensibles",
+    "La sérialisation (identifiant unique et dispositif antieffraction) est obligatoire depuis la directive européenne sur les médicaments falsifiés",
+    "La notice et l'étiquetage sont des éléments du dossier d'AMM, soumis à test de lisibilité auprès de patients",
+    "Les seringues orales graduées doivent être fournies pour les formes buvables pédiatriques afin d'éviter les erreurs de dose"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "Ph. Eur. 3.2 Récipients ; essais d'étanchéité, de perméabilité à la vapeur d'eau, essais de stabilité ICH Q1A",
+   "level": 2,
+   "concept": true
+  },
+  {
+   "name": "Formes à Libération Prolongée — Principes Généraux",
+   "desc": "Objectifs pharmacocinétiques de la libération prolongée, critères de sélection des principes actifs candidats, nomenclature LP, LM, LR et notion de dose dumping.",
+   "_icon": "⏳",
+   "voie": "Libération Modifiée",
+   "etat": "Concepts",
+   "description_voie": "Une forme à libération modifiée est une forme dont la vitesse ou le lieu de libération diffèrent de ceux d'une forme à libération immédiate. L'objectif principal est pharmacocinétique : lisser le profil plasmatique en supprimant les pics et les vallées, maintenir la concentration dans la fenêtre thérapeutique pendant une durée prolongée, réduire la fréquence d'administration et donc améliorer l'observance, et diminuer les effets indésirables liés aux pics. La forme LP est en général constituée d'une dose de charge à libération immédiate et d'une dose d'entretien libérée progressivement.",
+   "avantages": [
+    "Réduction du nombre de prises quotidiennes et meilleure observance",
+    "Suppression des pics plasmatiques et des effets indésirables associés",
+    "Concentration maintenue dans la zone thérapeutique, y compris la nuit",
+    "Réduction des fluctuations pour les principes actifs à index thérapeutique étroit"
+   ],
+   "inconvenients": [
+    "Risque de DOSE DUMPING : libération massive et brutale de la totalité de la dose en cas de rupture du système, d'écrasement ou d'interaction avec l'alcool",
+    "Coût de développement et de production supérieur",
+    "Variabilité interindividuelle du transit digestif",
+    "Adaptation posologique impossible (non sécable), retrait difficile en cas d'effet indésirable",
+    "Risque d'accumulation en cas d'insuffisance rénale ou hépatique"
+   ],
+   "types": [
+    "Libération PROLONGÉE (LP, extended release) — libération lente et continue",
+    "Libération RETARDÉE (LR, delayed release) — libération différée dans le temps ou l'espace, cas des formes gastro-résistantes",
+    "Libération SÉQUENTIELLE ou pulsatile — libérations successives séparées d'un intervalle",
+    "Libération ACCÉLÉRÉE — orodispersibles, formes à dissolution rapide"
+   ],
+   "regles_critiques": [
+    "Ne jamais écraser ni croquer une forme LP — vérifier systématiquement la liste des formes à ne pas écraser avant administration par sonde",
+    "La bioéquivalence d'un générique LP doit être démontrée à jeun ET après repas, du fait de l'effet alimentaire potentiel"
+   ],
+   "taille_particules": null,
+   "contraintes_formulaires": [
+    "Le principe actif candidat doit avoir une demi-vie courte à intermédiaire (2 à 8 h) : au-delà, la libération prolongée n'apporte rien",
+    "Dose unitaire modérée, sinon la forme devient trop volumineuse",
+    "Absorption tout au long du tube digestif : un principe actif à fenêtre d'absorption étroite proximale est un mauvais candidat",
+    "Index thérapeutique pas trop étroit compte tenu du risque de dose dumping",
+    "Pas de métabolisme présystémique saturable"
+   ],
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "level": 4,
+   "concept": true
+  },
+  {
+   "name": "Cinétique de Libération — Modèles et Corrélations IVIVC",
+   "desc": "Modélisation mathématique de la libération : ordre zéro, ordre un, modèle de Higuchi, équation de Korsmeyer-Peppas, et corrélations in vitro–in vivo.",
+   "_icon": "📈",
+   "voie": "Libération Modifiée",
+   "etat": "Concepts",
+   "description_voie": "L'étude de la cinétique de libération repose sur le test de dissolution in vitro, dont le profil est ajusté à des modèles mathématiques permettant d'identifier le mécanisme dominant. L'objectif idéal d'une forme LP est une libération d'ORDRE ZÉRO, à vitesse constante et indépendante de la quantité restante, qui seule permet un plateau plasmatique. Peu de systèmes l'atteignent réellement : les systèmes réservoirs et les pompes osmotiques s'en approchent le mieux.",
+   "avantages": [
+    "Permet de comprendre et de piloter le mécanisme de libération",
+    "Une corrélation in vitro–in vivo validée autorise le remplacement d'études cliniques par des tests de dissolution lors de modifications post-AMM"
+   ],
+   "types": [
+    "ORDRE ZÉRO — Q = k·t : vitesse constante, profil idéal, caractéristique des systèmes réservoirs et osmotiques",
+    "ORDRE UN — ln(Q0−Q) = ln Q0 − k·t : vitesse proportionnelle à la quantité restante, cas des formes à libération immédiate et de nombreuses matrices",
+    "HIGUCHI — Q = k·√t : diffusion à travers une matrice insoluble, la racine du temps traduit l'allongement progressif du trajet diffusionnel",
+    "KORSMEYER-PEPPAS — Q/Q∞ = k·t^n : l'exposant n identifie le mécanisme. Pour une forme cylindrique, n = 0,45 correspond à une diffusion fickienne, 0,45 < n < 0,89 à un transport anomal couplant diffusion et relaxation des chaînes, et n = 0,89 à un transport de cas II gouverné par l'érosion",
+    "HIXSON-CROWELL — érosion avec variation de surface"
+   ],
+   "regles_critiques": [
+    "Le test de dissolution d'une forme LP doit comporter au minimum trois points de prélèvement : un point précoce pour détecter un dose dumping, un point intermédiaire, et un point tardif vérifiant la libération complète",
+    "Les conditions du test (appareil, milieu, pH, agitation) doivent être discriminantes, c'est-à-dire capables de détecter une modification de formulation ou de procédé",
+    "Un test de dissolution en présence d'éthanol est requis pour évaluer le risque de dose dumping alcoolique"
+   ],
+   "taille_particules": null,
+   "contraintes_formulaires": [
+    "Corrélation in vitro–in vivo (IVIVC) de niveau A : relation point à point entre la fraction dissoute in vitro et la fraction absorbée in vivo obtenue par déconvolution — c'est le niveau le plus prédictif et le seul accepté comme substitut d'étude clinique",
+    "Niveau B : comparaison de paramètres moyens (temps moyen de dissolution et temps moyen de résidence)",
+    "Niveau C : relation ponctuelle entre un paramètre de dissolution et un paramètre pharmacocinétique"
+   ],
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "Ph. Eur. 2.9.3 Essai de dissolution des formes solides ; appareil 1 à panier, appareil 2 à palette, appareil 3 à cylindre alternatif, appareil 4 à cellule à flux continu",
+   "level": 4,
+   "concept": true
+  },
+  {
+   "name": "Systèmes Matriciels et Systèmes Réservoirs",
+   "desc": "Les deux grandes architectures de la libération prolongée : matrices hydrophiles, inertes et lipidiques d'une part, systèmes réservoirs à membrane d'autre part.",
+   "_icon": "🧩",
+   "voie": "Libération Modifiée",
+   "etat": "Concepts",
+   "description_voie": "Deux architectures fondamentales gouvernent la libération prolongée orale. Dans le système MATRICIEL, le principe actif est dispersé de façon homogène dans un réseau polymérique ; la libération suit typiquement une cinétique en racine du temps (Higuchi), donc décroissante. Dans le système RÉSERVOIR, un noyau de principe actif est entouré d'une membrane polymérique contrôlant le flux ; tant que le noyau maintient une saturation, le gradient est constant et la libération s'approche de l'ordre zéro — profil plus favorable mais avec un risque de dose dumping en cas de rupture de membrane.",
+   "avantages": [
+    "Matrices : fabrication simple par compression directe, faible coût, pas de risque de rupture de membrane et donc de dose dumping",
+    "Réservoirs : cinétique d'ordre zéro, contrôle précis par l'épaisseur et la composition de la membrane"
+   ],
+   "inconvenients": [
+    "Matrices : cinétique décroissante s'écartant de l'ordre zéro, effet de dose résiduelle en fin de libération",
+    "Réservoirs : risque de dose dumping si la membrane est rompue par écrasement, procédé d'enrobage plus complexe et plus coûteux"
+   ],
+   "exemples": [
+    "Comprimés matriciels HPMC de metformine LP",
+    "Microgranules de tamsulosine LP",
+    "Formes multiparticulaires de méthylphénidate"
+   ],
+   "types": [
+    "Matrice HYDROPHILE gonflante — HPMC, polyoxyde d'éthylène : au contact de l'eau, formation d'une couche de gel superficielle contrôlant la diffusion et l'érosion ; c'est le système le plus utilisé",
+    "Matrice INERTE insoluble — éthylcellulose, polyméthacrylates, polychlorure de vinyle : libération par diffusion dans un réseau poreux, le squelette (ghost) est éliminé intact dans les selles, ce qui doit être expliqué au patient",
+    "Matrice LIPIDIQUE — cires, glycérides, acides gras : libération par érosion et diffusion",
+    "Système réservoir MONOLITHIQUE — comprimé enrobé d'une membrane à libération contrôlée",
+    "Système réservoir MULTIPARTICULAIRE — microgranules ou pellets enrobés individuellement, répartis en gélule"
+   ],
+   "regles_critiques": [
+    "Les formes MULTIPARTICULAIRES sont plus sûres : la rupture accidentelle de quelques pellets ne libère qu'une fraction de la dose, et le transit gastrique est plus reproductible car indépendant de l'ouverture pylorique — plusieurs gélules multiparticulaires peuvent être ouvertes et le contenu dispersé sans être écrasé, ce qui autorise l'administration par sonde ou chez le patient dysphagique",
+    "Le squelette matriciel inerte retrouvé dans les selles est normal et ne signe pas un défaut d'absorption : information indispensable au patient pour éviter l'arrêt du traitement",
+    "Les polymères matriciels hydrophiles sont sensibles à la force ionique et au pH du milieu digestif"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "level": 4,
+   "concept": true
+  },
+  {
+   "name": "Pompes Osmotiques et Formes à Libération Retardée",
+   "desc": "Systèmes osmotiques élémentaires et push-pull, formes gastro-résistantes, systèmes chronopharmacologiques et ciblage colique.",
+   "_icon": "⚙️",
+   "voie": "Libération Modifiée",
+   "etat": "Concepts",
+   "description_voie": "La POMPE OSMOTIQUE exploite la pression osmotique comme moteur de libération. Un noyau contenant le principe actif et un agent osmotique est entouré d'une membrane semi-perméable percée au laser d'un orifice calibré. L'eau pénètre par osmose, dissout ou pousse le contenu qui est expulsé par l'orifice à débit constant. C'est le système qui se rapproche le plus parfaitement de l'ORDRE ZÉRO, et son principal atout est d'être indépendant du pH, de l'agitation et de la présence d'aliments — donc très reproductible.",
+   "avantages": [
+    "Cinétique d'ordre zéro sur une longue durée",
+    "Indépendance vis-à-vis du pH, du transit et de la prise alimentaire : faible variabilité inter et intra-individuelle",
+    "Permet de cibler le côlon pour un traitement local ou pour un principe actif dégradé en amont"
+   ],
+   "inconvenients": [
+    "Coût de fabrication élevé (perçage laser, membrane)",
+    "Risque théorique d'obstruction de l'orifice",
+    "Enveloppe non digestible éliminée intacte",
+    "Formes gastro-résistantes : variabilité du temps de vidange gastrique, donc du délai de libération"
+   ],
+   "exemples": [
+    "Oméprazole gastro-résistant",
+    "Méthylphénidate OROS®",
+    "Nifédipine osmotique",
+    "Mésalazine à ciblage colique"
+   ],
+   "types": [
+    "Pompe osmotique ÉLÉMENTAIRE (EOP) — un seul compartiment, adaptée aux principes actifs hydrosolubles",
+    "Système PUSH-PULL (OROS®) — deux couches : une couche active et une couche polymérique gonflante qui pousse la première ; permet les principes actifs peu solubles",
+    "Formes GASTRO-RÉSISTANTES — enrobage entérique protégeant le principe actif de l'acidité (oméprazole) ou l'estomac du principe actif (AINS, gastro-résistance de confort)",
+    "Systèmes CHRONOPHARMACOLOGIQUES — libération programmée après un temps de latence, pour aligner le pic plasmatique sur le pic symptomatique (crise d'asthme nocturne, raideur matinale de la polyarthrite)",
+    "Ciblage COLIQUE — polymères dégradés par les azoréductases de la flore colique ou polysaccharides fermentescibles ; utilisé dans les MICI (mésalazine)"
+   ],
+   "regles_critiques": [
+    "Les formes gastro-résistantes doivent être prises à distance des repas et à distance des antiacides et IPP, qui en élevant le pH gastrique peuvent provoquer une dissolution prématurée du film entérique",
+    "Prévenir le patient de l'élimination du squelette osmotique dans les selles",
+    "Une forme gastro-résistante ne se justifie que si le principe actif est acidolabile ou irritant : elle retarde toujours le Tmax"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "level": 4,
+   "concept": true
+  },
+  {
+   "name": "Systèmes Transdermiques — Formulation et Contrôle",
+   "desc": "Franchissement de la barrière cutanée, architecture matricielle ou réservoir des dispositifs transdermiques, promoteurs d'absorption et règles d'emploi.",
+   "_icon": "🩹",
+   "voie": "Libération Modifiée",
+   "etat": "Concepts",
+   "description_voie": "Le dispositif transdermique délivre un principe actif à travers la peau vers la circulation systémique, à débit contrôlé et prolongé. La barrière limitante est le STRATUM CORNEUM, dont la structure en briques et mortier (cornéocytes dans une matrice lipidique lamellaire) impose un franchissement essentiellement intercellulaire, tortueux et lent. Le flux obéit à la loi de Fick : il dépend du coefficient de partage, du coefficient de diffusion et du gradient de concentration. Le dispositif crée un réservoir cutané dans le stratum corneum, ce qui explique la persistance de l'effet après le retrait.",
+   "avantages": [
+    "Suppression totale de l'effet de premier passage hépatique et de la dégradation digestive",
+    "Profil plasmatique très stable sur 24 h à 7 jours",
+    "Excellente observance, une seule application par jour ou par semaine",
+    "Interruption immédiate possible par retrait du dispositif",
+    "Utile chez le patient nauséeux, dysphagique ou en fin de vie"
+   ],
+   "inconvenients": [
+    "Réservé aux principes actifs très puissants (dose journalière inférieure à environ 10 mg) et lipophiles de masse molaire modérée (inférieure à 500 Da)",
+    "Latence à l'installation de l'effet (plusieurs heures) et persistance après retrait",
+    "Réactions cutanées locales : irritation, allergie de contact",
+    "Variabilité selon le site, l'âge, l'hydratation et la température cutanée"
+   ],
+   "exemples": [
+    "Fentanyl",
+    "Buprénorphine",
+    "Nicotine",
+    "Estradiol",
+    "Rivastigmine",
+    "Rotigotine",
+    "Scopolamine"
+   ],
+   "types": [
+    "Système MATRICIEL (drug-in-adhesive) — principe actif dispersé dans la matrice adhésive, dispositif mince, souple et sécable pour certains produits, architecture aujourd'hui dominante",
+    "Système RÉSERVOIR — compartiment liquide ou gel séparé de la peau par une membrane limitant le débit ; ne doit JAMAIS être coupé sous peine de libération massive",
+    "Micro-aiguilles, iontophorèse et sonophorèse — technologies d'assistance au franchissement pour les molécules hydrophiles ou de haute masse molaire"
+   ],
+   "regles_critiques": [
+    "ROTATION SYSTÉMATIQUE des sites d'application pour prévenir irritation et sensibilisation",
+    "La CHALEUR (fièvre, sauna, bouillotte, exposition solaire, couverture chauffante) augmente le flux transdermique et peut provoquer un surdosage : contre-indication majeure pour le fentanyl transdermique",
+    "Ne jamais couper un dispositif réservoir ; certains dispositifs matriciels le tolèrent, à vérifier au cas par cas dans le RCP",
+    "Peau propre, sèche, saine, non irritée, non pileuse ; ne pas appliquer sur une zone lésée qui augmenterait massivement l'absorption",
+    "Élimination des dispositifs usagés en les repliant sur eux-mêmes : ils contiennent encore une fraction importante de la dose, risque majeur pour l'enfant et l'animal"
+   ],
+   "taille_particules": null,
+   "sites_application": [
+    "Thorax",
+    "Face externe du bras",
+    "Haut du dos",
+    "Abdomen",
+    "Hanche"
+   ],
+   "contraintes_formulaires": [
+    "Promoteurs d'absorption modifiant réversiblement l'organisation lipidique du stratum corneum : éthanol, propylène glycol, terpènes, acides gras insaturés, azone",
+    "Adhésifs sensibles à la pression : polyacrylates, polyisobutylènes, silicones",
+    "Contrôle du flux par la membrane ou par la charge en principe actif de la matrice"
+   ],
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "level": 4,
+   "concept": true
+  },
+  {
+   "name": "Formes Parentérales à Libération Prolongée",
+   "desc": "Suspensions huileuses et aqueuses, microsphères biodégradables, implants sous-cutanés et systèmes in situ pour une libération de plusieurs semaines à plusieurs mois.",
+   "_icon": "💉",
+   "voie": "Libération Modifiée",
+   "etat": "Concepts",
+   "description_voie": "Les formes parentérales à libération prolongée délivrent un principe actif sur des semaines ou des mois à partir d'une injection unique. Elles répondent à deux besoins majeurs : l'observance dans les pathologies chroniques à risque de rupture thérapeutique (schizophrénie, contraception, VIH), et la nécessité d'une exposition prolongée pour les peptides et protéines à demi-vie très courte. Le mécanisme repose sur la création d'un dépôt tissulaire dont la vitesse de résorption devient l'étape limitante : la cinétique observée est alors une cinétique de flip-flop, où la demi-vie apparente reflète la libération et non l'élimination.",
+   "avantages": [
+    "Observance garantie sur toute la durée d'action, avec traçabilité de l'administration",
+    "Suppression totale des variations liées à l'oubli de prise",
+    "Réduction du nombre d'actes et amélioration de la qualité de vie",
+    "Profil plasmatique lissé, sans pic"
+   ],
+   "inconvenients": [
+    "IRRÉVERSIBILITÉ : en cas d'effet indésirable, le dépôt ne peut être retiré (sauf implant explantable)",
+    "Nécessité d'une phase de titration préalable par voie orale pour vérifier la tolérance",
+    "Douleur au point d'injection, réactions locales, nodules",
+    "Aiguilles de gros calibre pour les suspensions",
+    "Coût élevé"
+   ],
+   "exemples": [
+    "Palmitate de palipéridone",
+    "Décanoate d'halopéridol",
+    "Leuproréline microsphères",
+    "Implant à l'étonogestrel",
+    "Cabotégravir/rilpivirine LA"
+   ],
+   "types": [
+    "SUSPENSIONS HUILEUSES — esters de principes actifs lipophiles dans une huile végétale ; la libération dépend de l'hydrolyse de l'ester et du partage huile/tissu (décanoate d'halopéridol, énanthate de testostérone)",
+    "SUSPENSIONS AQUEUSES de nanocristaux — libération contrôlée par la dissolution des cristaux (palmitate de palipéridone, cabotégravir et rilpivirine à action prolongée)",
+    "MICROSPHÈRES biodégradables de PLGA — le polymère s'hydrolyse progressivement en acide lactique et glycolique ; libération sur 1 à 6 mois (leuproréline, triptoréline, naltrexone)",
+    "IMPLANTS sous-cutanés — bâtonnets non biodégradables explantables (étonogestrel, 3 ans) ou biodégradables (goséréline)",
+    "Systèmes IN SITU FORMING — solution polymérique injectable qui précipite en gel au contact des fluides tissulaires"
+   ],
+   "regles_critiques": [
+    "EFFET BURST : libération initiale rapide de la fraction de principe actif située en surface des microsphères ; à anticiper dans le schéma d'initiation",
+    "Toujours vérifier la tolérance par une forme à libération immédiate avant de passer à la forme retard",
+    "Respecter strictement le site et la voie prescrits (intramusculaire deltoïdienne ou fessière, ou sous-cutanée) : la vitesse de résorption en dépend et les formes ne sont pas interchangeables",
+    "Resuspension complète avant injection pour les suspensions ; respecter le calibre d'aiguille fourni"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "level": 4,
+   "concept": true
+  },
+  {
+   "name": "Formes Muqueuses à Libération Prolongée et Bioadhésion",
+   "desc": "Bioadhésion et mucoadhésion, formes buccales, nasales, oculaires et vaginales à libération prolongée, et intérêt du contournement du premier passage hépatique.",
+   "_icon": "👄",
+   "voie": "Libération Modifiée",
+   "etat": "Concepts",
+   "description_voie": "Les muqueuses offrent une alternative à la voie orale : épithélium mince, forte vascularisation, et surtout drainage veineux systémique direct pour les muqueuses buccale, sublinguale, nasale et rectale basse — ce qui contourne le premier passage hépatique. Leur limite est le temps de séjour, très court en raison du renouvellement du mucus, de la déglutition et de la clairance mucociliaire. La BIOADHÉSION est la réponse formulatoire : des polymères hydrophiles se lient au mucus par interpénétration des chaînes, liaisons hydrogène et interactions électrostatiques, prolongeant le contact.",
+   "avantages": [
+    "Contournement partiel ou total du premier passage hépatique",
+    "Absorption rapide pour les formes sublinguales, utile en situation d'urgence",
+    "Alternative en cas de troubles de la déglutition, de nausées ou de vomissements",
+    "Possibilité de traitement local prolongé avec une exposition systémique minimale"
+   ],
+   "inconvenients": [
+    "Surface d'absorption réduite et temps de séjour naturellement court",
+    "Goût et sensation de corps étranger, tolérance locale limitante",
+    "Variabilité liée au flux salivaire, à la déglutition et à la clairance mucociliaire",
+    "Faible perméabilité aux molécules hydrophiles et de haute masse molaire"
+   ],
+   "exemples": [
+    "Buprénorphine sublinguale",
+    "Fentanyl transmuqueux",
+    "Anneau vaginal contraceptif",
+    "Inserts ophtalmiques de pilocarpine",
+    "Miconazole gel buccal bioadhésif"
+   ],
+   "types": [
+    "Comprimés et films BIOADHÉSIFS buccaux ou gingivaux — libération prolongée locale ou systémique",
+    "Gels et inserts VAGINAUX bioadhésifs — traitement local prolongé, contraception, progestérone",
+    "Systèmes NASAUX — gels bioadhésifs, microsphères ; voie explorée pour l'accès direct au SNC par transport olfactif",
+    "Inserts et gels OPHTALMIQUES — prolongent le temps de contact précornéen très bref des collyres",
+    "Systèmes intra-utérins et anneaux vaginaux à libération prolongée"
+   ],
+   "regles_critiques": [
+    "Les formes sublinguales et buccales ne doivent pas être avalées ni croquées : expliquer précisément la technique de prise, sans boire ni manger pendant la durée d'application",
+    "Éviter le rinçage buccal et l'alimentation immédiatement après la pose d'un comprimé bioadhésif",
+    "Pour les collyres, respecter un intervalle de 5 minutes entre deux instillations et occlure le point lacrymal pour limiter le passage systémique"
+   ],
+   "taille_particules": null,
+   "contraintes_formulaires": [
+    "Polymères mucoadhésifs : chitosane (cationique, également promoteur d'absorption par ouverture des jonctions serrées), carbomères, alginates, HPMC, acide hyaluronique",
+    "Promoteurs d'absorption : sels biliaires, chélateurs du calcium, tensioactifs — tolérance locale à évaluer",
+    "Systèmes in situ gélifiants sensibles au pH, à la température ou aux ions"
+   ],
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "level": 4,
+   "concept": true
+  },
+  {
+   "name": "Amélioration de la Biodisponibilité",
+   "desc": "Stratégies galéniques pour les principes actifs peu solubles ou peu perméables : micronisation, dispersions solides, cyclodextrines, sels, prodrogues et systèmes lipidiques.",
+   "_icon": "🚀",
+   "voie": "Libération Modifiée",
+   "etat": "Concepts",
+   "description_voie": "L'amélioration de la biodisponibilité est l'enjeu majeur du développement galénique moderne : une large part des molécules issues du criblage à haut débit sont de classe BCS II ou IV, donc limitées par leur solubilité. La stratégie découle directement de la classe BCS : pour la classe II, il faut augmenter la vitesse de dissolution ; pour la classe III, la perméabilité ; pour la classe IV, les deux, ce qui impose souvent une vectorisation.",
+   "avantages": [
+    "Permet le développement de molécules autrement inexploitables",
+    "Réduit la dose administrée et la variabilité interindividuelle",
+    "Diminue l'effet alimentaire pour certaines formulations lipidiques"
+   ],
+   "inconvenients": [
+    "Complexité de formulation et de fabrication",
+    "Stabilité physique parfois limitée (recristallisation des formes amorphes)",
+    "Coût et charge réglementaire accrus"
+   ],
+   "exemples": [
+    "Itraconazole en dispersion solide",
+    "Fénofibrate nanocristallin",
+    "Complexe piroxicam-bêta-cyclodextrine",
+    "Ciclosporine SMEDDS (Néoral®)",
+    "Ritonavir en extrusion à chaud"
+   ],
+   "types": [
+    "MICRONISATION et NANONISATION — augmentation de la surface spécifique selon Noyes-Whitney ; les nanocristaux abaissent aussi la taille sous le seuil où la solubilité elle-même augmente (effet Ostwald-Freundlich)",
+    "DISPERSIONS SOLIDES — le principe actif est dispersé à l'état amorphe ou moléculaire dans un polymère hydrophile (PVP, HPMC, Soluplus®) ; la forme amorphe, plus énergétique, est bien plus soluble que la forme cristalline. Obtenues par extrusion à chaud ou par atomisation",
+    "CYCLODEXTRINES — oligosaccharides cycliques à cavité hydrophobe formant des complexes d'inclusion ; augmentent la solubilité apparente, masquent le goût et stabilisent",
+    "FORMATION DE SELS et choix du polymorphe le plus soluble",
+    "PRODROGUES — modification chimique augmentant la solubilité ou la perméabilité, hydrolysée in vivo",
+    "SYSTÈMES LIPIDIQUES AUTO-ÉMULSIONNANTS (SEDDS et SMEDDS) — mélange d'huile, de tensioactif et de cosolvant s'émulsionnant spontanément dans le tube digestif ; maintiennent le principe actif en solution et favorisent l'absorption lymphatique",
+    "PROMOTEURS D'ABSORPTION et inhibiteurs de la P-glycoprotéine (TPGS, certains polysorbates)"
+   ],
+   "regles_critiques": [
+    "Une forme amorphe est thermodynamiquement instable : le risque majeur est la RECRISTALLISATION au cours de la conservation, qui annule le gain de solubilité — la stabilité physique doit être suivie sur toute la durée de péremption",
+    "L'absorption lymphatique par les systèmes lipidiques permet également de contourner le premier passage hépatique",
+    "Un effet alimentaire marqué doit être caractérisé et signalé au patient : certaines formulations lipidiques doivent impérativement être prises au cours d'un repas"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": "La stratégie d'amélioration est directement guidée par la classe BCS du principe actif",
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "level": 4,
+   "concept": true
+  },
+  {
+   "name": "Vectorisation — Principes et Ciblage",
+   "desc": "Objectifs de la vectorisation, ciblage passif et effet EPR, ciblage actif par ligands, furtivité par PEGylation et principales générations de vecteurs.",
+   "_icon": "🎯",
+   "voie": "Libération Modifiée",
+   "etat": "Concepts",
+   "description_voie": "La vectorisation vise à modifier la distribution d'un principe actif pour l'amener préférentiellement à sa cible, augmentant l'efficacité tout en réduisant la toxicité sur les tissus sains. Elle s'adresse aux molécules à index thérapeutique étroit — anticancéreux au premier chef — et aux molécules fragiles nécessitant une protection (acides nucléiques, protéines). Le vecteur agit sur la phase de distribution, alors que les formes à libération modifiée agissent sur la phase de libération : c'est une différence conceptuelle essentielle.",
+   "avantages": [
+    "Concentration du principe actif au site d'action et réduction de l'exposition des tissus sains",
+    "Protection des molécules fragiles contre la dégradation enzymatique",
+    "Franchissement de barrières biologiques autrement infranchissables",
+    "Modification favorable du profil de toxicité"
+   ],
+   "inconvenients": [
+    "Capture par le système des phagocytes mononucléés (foie, rate) limitant le temps de circulation",
+    "Coût de développement et de production très élevé, procédés complexes à transposer à l'échelle industrielle",
+    "Immunogénicité possible, y compris anticorps anti-PEG",
+    "Effet EPR très variable d'une tumeur à l'autre et chez l'homme, ce qui explique des résultats cliniques inférieurs aux attentes précliniques"
+   ],
+   "exemples": [
+    "Doxorubicine liposomale pégylée (Caelyx®)",
+    "Amphotéricine B liposomale (AmBisome®)",
+    "Paclitaxel lié à l'albumine (Abraxane®)",
+    "Nanoparticules lipidiques des vaccins à ARNm",
+    "Anticorps conjugués (ADC) comme le trastuzumab déruxtécan"
+   ],
+   "types": [
+    "CIBLAGE PASSIF — exploite l'effet EPR (Enhanced Permeability and Retention) : la néovascularisation tumorale est fenestrée et le drainage lymphatique déficient, ce qui permet l'accumulation préférentielle des nanoparticules de 10 à 200 nm dans la tumeur",
+    "CIBLAGE ACTIF — greffage de ligands reconnaissant un récepteur surexprimé par la cellule cible : anticorps ou fragments, peptides RGD, acide folique, transferrine, aptamères",
+    "CIBLAGE PHYSIQUE — nanoparticules magnétiques guidées par un champ externe, systèmes thermosensibles ou pH-sensibles activés localement",
+    "FURTIVITÉ — PEGylation de surface : la couronne hydrophile de polyéthylène glycol limite l'opsonisation et la capture par les macrophages, prolongeant fortement le temps de circulation"
+   ],
+   "regles_critiques": [
+    "Le changement de forme galénique modifie profondément la pharmacocinétique et la toxicité : la doxorubicine liposomale pégylée et la doxorubicine conventionnelle NE SONT PAS interchangeables, ni en dose ni en profil d'effets indésirables (érythrodysesthésie palmoplantaire spécifique de la forme liposomale)",
+    "La formation d'une couronne protéique (protein corona) à la surface du vecteur dans le sang modifie sa reconnaissance biologique et peut annuler le ciblage conçu in vitro",
+    "Les vecteurs à ARNm des vaccins reposent sur des LNP dont les lipides ionisables assurent l'échappement endosomal, étape limitante de l'efficacité"
+   ],
+   "taille_particules": null,
+   "contraintes_formulaires": [
+    "Générations de vecteurs : première génération, vecteurs conventionnels capturés par le foie et la rate ; deuxième génération, vecteurs furtifs PEGylés à circulation prolongée ; troisième génération, vecteurs furtifs et ciblés activement",
+    "Principales familles : liposomes, nanoparticules polymériques (PLGA), nanoparticules lipidiques solides, nanoémulsions, micelles polymériques, dendrimères, nanoparticules lipidiques ioniques (LNP) pour les ARNm",
+    "La taille, la charge de surface (potentiel zêta) et la nature de la couronne gouvernent la biodistribution et la clairance"
+   ],
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "level": 4,
+   "concept": true
+  },
+  {
+   "name": "Développement Durable et Écoconception en Galénique",
+   "desc": "Impact environnemental du médicament, écoconception des formes et des procédés, chimie verte, gestion des déchets et résidus médicamenteux.",
+   "_icon": "♻️",
+   "voie": "Opérations Pharmaceutiques",
+   "etat": "Concepts",
+   "description_voie": "Le cycle de vie d'un médicament — extraction des matières premières, synthèse, formulation, conditionnement, distribution, usage et élimination — a un impact environnemental significatif. Le secteur de la santé représente environ 8 % de l'empreinte carbone nationale, dont une part majeure liée au médicament et aux dispositifs. L'ÉCOCONCEPTION consiste à intégrer ces critères dès le développement, sans compromettre la qualité, la sécurité ni l'efficacité — contrainte forte qui distingue le médicament des autres produits industriels.",
+   "avantages": [
+    "Réduction de l'empreinte carbone et de la consommation de solvants et d'eau",
+    "Diminution des déchets de conditionnement et des médicaments non utilisés",
+    "Réduction des résidus médicamenteux dans les milieux aquatiques",
+    "Économies de matières premières et d'énergie"
+   ],
+   "inconvenients": [
+    "Toute modification de formulation ou de procédé impose une revalidation et parfois une variation d'AMM",
+    "Les contraintes de stérilité, de stabilité et de traçabilité limitent la réduction des emballages",
+    "Risque de conflit avec la sécurité du patient (conditionnement unitaire, inviolabilité, lisibilité)",
+    "Données d'analyse de cycle de vie encore rares et hétérogènes"
+   ],
+   "types": [
+    "ÉCOCONCEPTION DU PROCÉDÉ — les 12 principes de la CHIMIE VERTE : prévention des déchets plutôt que traitement, économie d'atomes, synthèses moins dangereuses, solvants plus sûrs (substitution des solvants chlorés et du diméthylformamide), catalyse plutôt que réactifs stœchiométriques, efficacité énergétique, matières premières renouvelables. Indicateur clé : le FACTEUR E (masse de déchets par kg de produit), historiquement très élevé en industrie pharmaceutique (25 à plus de 100).",
+    "ÉCOCONCEPTION DE LA FORME — granulation sèche ou compression directe plutôt que granulation humide (suppression de l'eau et du séchage, poste le plus énergivore) ; extrusion à chaud sans solvant ; procédés en voie aqueuse remplaçant les solvants organiques d'enrobage ; fabrication CONTINUE, qui réduit l'empreinte au sol, les temps morts et les rebuts par rapport à la production par lots.",
+    "CONDITIONNEMENT — allègement et réduction du suremballage, monomatériau facilitant le recyclage, suppression du PVC (dont l'incinération génère des dioxines) au profit du PP ou du PET, notices dématérialisées (en discussion au niveau européen), et surtout ADAPTATION DE LA TAILLE DES BOÎTES à la durée de traitement, qui réduit à la fois le gaspillage et le risque de mésusage.",
+    "USAGE — dispensation à l'unité, juste prescription, déprescription chez le sujet âgé polymédiqué : le médicament non consommé est le plus mauvais bilan environnemental possible, puisque tout l'impact de production est engagé sans aucun bénéfice pour le patient."
+   ],
+   "regles_critiques": [
+    "RÉSIDUS MÉDICAMENTEUX DANS L'ENVIRONNEMENT : les médicaments sont excrétés sous forme active ou de métabolites, mal éliminés par les stations d'épuration conventionnelles. Conséquences documentées — féminisation des poissons par l'éthinylestradiol, effondrement des populations de vautours en Asie du Sud par le diclofénac vétérinaire, et surtout SÉLECTION DE RÉSISTANCES par les antibiotiques résiduels, qui relie directement écologie et antibiorésistance.",
+    "GAZ ANESTHÉSIQUES et PROPULSEURS : le desflurane et le protoxyde d'azote ont un pouvoir de réchauffement global très élevé ; les inhalateurs-doseurs pressurisés contiennent des HFA à fort impact climatique, alors que les inhalateurs de poudre sèche en sont dépourvus — le choix du dispositif, à efficacité égale et si le débit inspiratoire du patient le permet, est un levier concret et documenté.",
+    "FILIÈRE CYCLAMED : les médicaments non utilisés et périmés doivent être rapportés à l'officine, SANS leur emballage carton et notice (qui vont au tri papier), pour être incinérés avec valorisation énergétique. Ils ne doivent JAMAIS être jetés à l'évier, aux toilettes ni à la poubelle ménagère. Le pharmacien est l'acteur central de cette filière et son message est déterminant.",
+    "Déchets d'activité de soins à risque infectieux (DASRI) : filière séparée, boîtes à aiguilles délivrées gratuitement à l'officine aux patients en auto-traitement."
+   ],
+   "contraintes_formulaires": [
+    "Analyse de cycle de vie (ACV) selon ISO 14040",
+    "Substitution des solvants selon les guides de sélection (CHEM21)",
+    "Évaluation du risque environnemental obligatoire dans le dossier d'AMM (ERA)",
+    "Compatibilité entre allègement du conditionnement et exigences de stabilité et de sécurité"
+   ],
+   "exemples": [
+    "Compression directe vs granulation humide",
+    "Enrobage en voie aqueuse",
+    "Inhalateurs de poudre sèche vs aérosols-doseurs pressurisés",
+    "Filière Cyclamed",
+    "Dispensation à l'unité des antibiotiques"
+   ],
+   "taille_particules": null,
+   "edqm": null,
+   "bcs_classes": null,
+   "tmax_typique": null,
+   "biodisponibilite_typique": null,
+   "controle_qualite_ph_eur": "L'écoconception ne doit jamais dégrader les critères de la Pharmacopée : uniformité de teneur, dissolution, stabilité et stérilité restent opposables et priment sur tout gain environnemental.",
+   "level": 3,
+   "concept": true
+  },
+  {
    "name": "Capsules molles",
    "desc": "Enveloppe souple en gélatine ou en matière végétale contenant une substance liquide, semi-liquide ou en suspension.",
    "_icon": "💊",
    "voie": "Voie Orale",
    "etat": "Formes Solides",
-   "description_voie": "",
    "avantages": [
     "Masque le goût et l'odeur du principe actif",
     "Bonne biodisponibilité pour les substances lipophiles",
@@ -29,15 +1052,7 @@
     "personnes_agees": "Généralement bien tolérées",
     "dysphagie": "Difficultés possibles en cas de troubles de la déglutition"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais percer, écraser ou mâcher",
@@ -79,7 +1094,6 @@
    "_icon": "💊",
    "voie": "Voie Orale",
    "etat": "Formes Solides",
-   "description_voie": "",
    "avantages": [
     "Masque le goût et l'odeur du principe actif",
     "Facilité d'ingestion",
@@ -102,15 +1116,7 @@
     "personnes_agees": "Bien tolérées ; vérifier la capacité de déglutition",
     "vegetariens_vegetaliens": "Préférer les gélules HPMC (végétales)"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais ouvrir une gélule LP ou gastro-résistante sans validation pharmaceutique",
@@ -153,7 +1159,6 @@
    "_icon": "💊",
    "voie": "Voie Orale",
    "etat": "Formes Solides",
-   "description_voie": "",
    "avantages": [
     "Forme la plus répandue et la moins coûteuse à produire",
     "Dosage précis",
@@ -205,14 +1210,7 @@
      "description": "Se place sous la langue pour une absorption rapide par la muqueuse buccale"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais écraser, couper ou mâcher un comprimé LP (libération prolongée)",
@@ -265,7 +1263,6 @@
    "_icon": "💊",
    "voie": "Voie Orale",
    "etat": "Formes Solides",
-   "description_voie": "",
    "avantages": [
     "Adapté aux enfants et aux personnes âgées",
     "Facilité d'ajustement de la dose (sachets dosés)",
@@ -312,14 +1309,7 @@
      "description": "Microgranules à ne pas écraser pour conserver leur effet prolongé"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais mélanger à des aliments chauds (>40 °C)",
@@ -384,15 +1374,7 @@
     "personnes_agees": "Possible si bonne tolérance buccale",
     "dysphagie": "Bonne alternative à la voie orale classique"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais avaler le comprimé entier",
@@ -458,15 +1440,7 @@
     "diabetiques": "Préférer les formulations sans sucre",
     "personnes_agees": "Bien tolérés"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais avaler entier ni croquer d'un bloc",
@@ -534,15 +1508,7 @@
     "personnes_agees": "Vérifier l'absence de sécheresse buccale (xérostomie)",
     "urgence": "Forme de choix pour les situations aiguës (angor, hypoglycémie)"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais avaler le comprimé sublingual",
@@ -613,15 +1579,7 @@
     "personnes_agees": "Forme de choix en cas de dysphagie ou de refus des comprimés",
     "dysphagie": "Excellente alternative, aucun risque de fausse route"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais tenter d'avaler le lyophilisat avec de l'eau avant dissolution complète",
@@ -688,15 +1646,7 @@
     "enfants": "Bien adapté avec application au doigt ou à l'applicateur",
     "personnes_agees": "Idéal pour les aphtes, prothèses dentaires, mucites"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais ingérer une quantité importante de gel buccal contenant un anesthésique local (lidocaïne)",
@@ -774,14 +1724,7 @@
      "description": "Projeté sous la langue pour une absorption systémique rapide via la muqueuse sublinguale"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais inhaler le spray (ne pas vaporiser vers les voies respiratoires)",
@@ -827,7 +1770,6 @@
    "_icon": "💊",
    "voie": "Voie Orale",
    "etat": "Formes Liquides",
-   "description_voie": "",
    "avantages": [
     "Absorption rapide (pas d'étape de dissolution)",
     "Facilité d'administration, notamment pour les enfants et les personnes âgées",
@@ -851,15 +1793,7 @@
     "personnes_agees": "Idéal en cas de dysphagie",
     "dysphagie": "Forme de choix"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais administrer une solution buvable concentrée non diluée si le RCP prescrit une dilution",
@@ -901,7 +1835,6 @@
    "_icon": "💊",
    "voie": "Voie Orale",
    "etat": "Formes Liquides",
-   "description_voie": "",
    "avantages": [
     "Permet de formuler des principes actifs insolubles ou instables en solution",
     "Facilité d'administration pour les enfants et les personnes âgées",
@@ -928,15 +1861,7 @@
     "personnes_agees": "Bien adapté ; veiller à l'agitation correcte",
     "dysphagie": "Très bonne alternative aux formes solides"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais administrer sans agitation préalable",
@@ -979,7 +1904,6 @@
    "_icon": "💊",
    "voie": "Voie Orale",
    "etat": "Formes Liquides",
-   "description_voie": "",
    "avantages": [
     "Très bonne palatabilité grâce à la saveur sucrée et aromatisée",
     "Facilité d'administration chez l'enfant",
@@ -1005,15 +1929,7 @@
     "diabetiques": "Préférer les versions sans sucre (sorbitol, maltitol)",
     "personnes_agees": "Bien adapté ; surveiller les interactions liées aux conservateurs"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais utiliser un sirop contenant du saccharose ou du glucose chez un patient en hypoglycémie sévère sans surveillance",
@@ -1056,7 +1972,6 @@
    "_icon": "💊",
    "voie": "Voie Orale",
    "etat": "Formes Liquides",
-   "description_voie": "",
    "avantages": [
     "Dosage très précis et facilement ajustable",
     "Volume administré très faible",
@@ -1081,15 +1996,7 @@
     "enfants": "Utiliser obligatoirement le compte-gouttes fourni",
     "personnes_agees": "Veiller à la dextérité manuelle pour le comptage des gouttes"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais administrer sans dispositif doseur calibré (pipette ou compte-gouttes gradué)",
@@ -1130,7 +2037,6 @@
    "_icon": "💊",
    "voie": "Voie Orale",
    "etat": "Formes Liquides",
-   "description_voie": "",
    "avantages": [
     "Meilleure stabilité avant reconstitution par rapport aux formes liquides prêtes à l'emploi",
     "Légèreté et facilité de transport avant préparation",
@@ -1158,15 +2064,7 @@
     "personnes_agees": "Bien adaptée en cas de dysphagie ; vérifier la bonne préparation",
     "dysphagie": "Excellente alternative aux formes solides une fois reconstituée"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais reconstituer avec un liquide autre que celui prescrit (eau, jus)",
@@ -1234,15 +2132,7 @@
     "personnes_agees": "Utile pour les plis cutanés et macérations",
     "zones_sensibles": "Éviter le contact avec les yeux et les muqueuses"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais inhaler ni appliquer près des voies respiratoires d'un nourrisson",
@@ -1306,15 +2196,7 @@
     "nourrissons": "Usage limité ; préférer des formulations spécifiquement validées",
     "personnes_agees": "Bien adapté ; vérifier la capacité à réaliser l'application"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais laisser en contact prolongé sans rinçage si le RCP ne le prévoit pas",
@@ -1395,14 +2277,7 @@
      "description": "Base aqueuse ou hydroalcoolique gélifiée ; non gras, séchage rapide, adapté aux zones pileuses et peaux grasses"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais appliquer un corticoïde topique puissant sur le visage, les plis ou sous occlusion sans prescription",
@@ -1487,14 +2362,7 @@
      "description": "Mélange eau-huile stabilisé, texture fluide. Combine les propriétés hydratantes et les principes actifs"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais appliquer près des yeux, des oreilles ou des muqueuses si non prévus pour ces voies",
@@ -1560,15 +2428,7 @@
     "personnes_agees": "Vérifier la capacité à actionner le flacon (dextérité)",
     "asthmatiques": "Utiliser avec précaution en espace confiné (propulseurs gazeux)"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais vaporiser directement sur le visage, les yeux ou les muqueuses",
@@ -1664,11 +2524,6 @@
      "description": "Structure combinant plusieurs couches actives, permettant des libérations complexes ou multi-principes actifs"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
    "sites_application": [
     "Thorax (poitrine, dos)",
@@ -1677,7 +2532,6 @@
     "Cuisse (face externe)",
     "Éviter : zones irradiées, peau lésée, irritée, poilue ou grasse"
    ],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais découper un patch transdermique (fentanyl, nitroglycérine, bupréno…)",
@@ -1773,10 +2627,6 @@
      "description": "Particules injectables à libération prolongée (LP injectable), administrées en IM ou SC (ex. : rispéridone LP)"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
    "voies_administration": [
     {
      "abrv": "IV",
@@ -1810,8 +2660,6 @@
     }
    ],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais tenter de retirer un implant sans formation chirurgicale adéquate",
@@ -1891,10 +2739,6 @@
      "description": "Utilisés en médecine esthétique ou reconstructrice pour combler des pertes de substance tissulaire"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
    "voies_administration": [
     {
      "abrv": "IV",
@@ -1928,8 +2772,6 @@
     }
    ],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais administrer un gel injectable par voie IV ou intra-artérielle",
@@ -2035,9 +2877,6 @@
     "Certaines solutions sont incompatibles entre elles (vérifier avant mélange ou perfusion en Y)",
     "Les préparations multidoses contiennent des conservateurs ; les monodoses sont sans conservateurs"
    ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
    "voies_administration": [
     {
      "abrv": "IV",
@@ -2071,8 +2910,6 @@
     }
    ],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais administrer une suspension par voie intraveineuse",
@@ -2163,8 +3000,6 @@
      "description": "Doses individuelles en blisters perforés à chaque activation (ex. : Diskus®, Nexthaler®)"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
    "technique_inhalation": [
     "Expirer lentement avant d'inhaler (pas dans l'inhalateur)",
     "Placer l'embout en bouche, lèvres bien fermées",
@@ -2172,8 +3007,6 @@
     "Retenir la respiration 5 à 10 secondes",
     "Rincer la bouche après les corticoïdes inhalés"
    ],
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": {
     "description": "La taille des particules inhalées détermine leur site de dépôt dans les voies respiratoires",
     "zones": [
@@ -2195,8 +3028,6 @@
      }
     ]
    },
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais avaler la poudre pour inhalation",
@@ -2283,11 +3114,6 @@
      "description": "Membrane perforée vibrante ; compact, silencieux, rapide (< 5 min), adapté aux suspensions et protéines"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": {
     "description": "La taille des particules inhalées détermine leur site de dépôt dans les voies respiratoires",
     "zones": [
@@ -2309,8 +3135,6 @@
      }
     ]
    },
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais nébuliser une solution non prévue pour cette voie (ex. solution IV non validée)",
@@ -2398,8 +3222,6 @@
      "description": "Génère un nuage de brume lente et prolongée sans gaz propulseur (ex. : Respimat®). Meilleure coordination possible, dépôt pulmonaire supérieur au pMDI"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
    "technique_inhalation": {
     "pMDI_sans_chambre": [
      "Agiter le flacon 3 à 5 fois",
@@ -2424,8 +3246,6 @@
      "Retenir la respiration 5 à 10 secondes"
     ]
    },
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": {
     "description": "La taille des particules inhalées détermine leur site de dépôt dans les voies respiratoires",
     "zones": [
@@ -2447,8 +3267,6 @@
      }
     ]
    },
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais percer, exposer à la chaleur ou incinérer un flacon pressurisé",
@@ -2516,10 +3334,6 @@
     "personnes_agees": "Application possible avec insufflateur adapté",
     "tympan_perfore": "Contre-indication formelle pour les poudres auriculaires contenant des substances ototoxiques"
    },
-   "types": [],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
    "sous_voies": [
     {
      "nom": "Voie auriculaire (oreille)",
@@ -2534,10 +3348,7 @@
      "description": "Administration au niveau du pharynx et du larynx par pulvérisation ou instillation pour un effet antiseptique, anesthésique ou anti-inflammatoire local"
     }
    ],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais insuffler une poudre ORL en cas de perforation tympanique (poudres auriculaires)",
@@ -2614,9 +3425,6 @@
      "description": "Emulsion appliquée autour ou dans le conduit auditif externe pour traiter eczéma ou infections"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
    "sous_voies": [
     {
      "nom": "Voie auriculaire (oreille)",
@@ -2631,10 +3439,7 @@
      "description": "Administration au niveau du pharynx et du larynx par pulvérisation ou instillation pour un effet antiseptique, anesthésique ou anti-inflammatoire local"
     }
    ],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais introduire une pommade ORL en profondeur dans le conduit auditif avec un coton-tige",
@@ -2743,8 +3548,6 @@
     "Réchauffer les solutions auriculaires à température ambiante avant instillation (risque de vertige)",
     "Maintenir la tête inclinée 2 à 3 minutes après instillation auriculaire"
    ],
-   "technique_administration": [],
-   "technique_inhalation": {},
    "sous_voies": [
     {
      "nom": "Voie auriculaire (oreille)",
@@ -2759,10 +3562,7 @@
      "description": "Administration au niveau du pharynx et du larynx par pulvérisation ou instillation pour un effet antiseptique, anesthésique ou anti-inflammatoire local"
     }
    ],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais instiller une solution auriculaire ototoxique (aminosides) en cas de perforation tympanique",
@@ -2848,7 +3648,6 @@
      "description": "Instillées dans les narines, tête en hyperextension ; décongestionnantes, antiseptiques ou hydratantes"
     }
    ],
-   "regles_critiques": [],
    "technique_administration": {
     "gouttes_auriculaires": [
      "Réchauffer le flacon entre les mains 1 à 2 minutes",
@@ -2866,7 +3665,6 @@
      "Ne pas renifler immédiatement"
     ]
    },
-   "technique_inhalation": {},
    "sous_voies": [
     {
      "nom": "Voie auriculaire (oreille)",
@@ -2881,10 +3679,7 @@
      "description": "Administration au niveau du pharynx et du larynx par pulvérisation ou instillation pour un effet antiseptique, anesthésique ou anti-inflammatoire local"
     }
    ],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais utiliser des gouttes auriculaires contenant des aminosides sur tympan perforé",
@@ -2972,13 +3767,7 @@
      "description": "Lentilles imprégnées de principe actif assurant une libération prolongée à la surface cornéenne"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
    "contraintes_formulaires": [
     "Stérilité absolue obligatoire",
     "Isotonie ajustée (équivalent NaCl 0,9%)",
@@ -3067,7 +3856,6 @@
      "description": "Base aqueuse gélifiée (carbomère, acide hyaluronique) ; moins visqueux que la pommade ; gêne visuelle modérée ; utilisable le jour"
     }
    ],
-   "regles_critiques": [],
    "technique_administration": [
     "Se laver les mains soigneusement",
     "Incliner la tête en arrière, tirer doucement la paupière inférieure vers le bas",
@@ -3076,11 +3864,7 @@
     "Ne pas toucher l'œil ou les cils avec l'embout du tube",
     "Jeter le tube après 4 semaines d'ouverture (risque de contamination)"
    ],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
    "contraintes_formulaires": [
     "Stérilité absolue obligatoire",
     "Isotonie ajustée (équivalent NaCl 0,9%)",
@@ -3218,11 +4002,7 @@
     "Attendre 5 minutes minimum avant un autre collyre",
     "Respecter l'ordre d'instillation : solution avant suspension, collyre avant gel ou pommade"
    ],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
    "contraintes_formulaires": [
     "Stérilité absolue obligatoire",
     "Isotonie ajustée (équivalent NaCl 0,9%)",
@@ -3319,7 +4099,6 @@
      "description": "Gélule à paroi rigide introduite dans le vagin ; dissolution progressive"
     }
    ],
-   "regles_critiques": [],
    "technique_administration": [
     "Se laver les mains",
     "S'allonger sur le dos, genoux fléchis ou s'accroupir",
@@ -3327,12 +4106,7 @@
     "Rester allongée 10 à 15 minutes après l'introduction pour favoriser la dissolution",
     "Préférer l'administration le soir au coucher pour limiter les fuites"
    ],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais avaler le comprimé ou la capsule vaginale",
@@ -3415,13 +4189,7 @@
     "Éviter les solutions trop chaudes ou trop concentrées (risque de brûlure muqueuse)",
     "Ne pas utiliser de douche vaginale pendant la grossesse sauf prescription médicale"
    ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais réaliser de douche vaginale pendant la grossesse sans prescription médicale",
@@ -3486,8 +4254,6 @@
     "post_menopause": "Muqueuse fragile : introduire avec délicatesse, lubrifier si nécessaire",
     "menstruations": "Éviter l'utilisation pendant les règles (efficacité réduite par dilution)"
    },
-   "types": [],
-   "regles_critiques": [],
    "technique_administration": [
     "Se laver les mains",
     "Retirer l'emballage et humidifier légèrement l'ovule si nécessaire",
@@ -3496,12 +4262,7 @@
     "Rester allongée au moins 15 à 30 minutes",
     "Porter une protection hygiénique pour éviter les taches liées à la fusion"
    ],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais utiliser avec des préservatifs ou diaphragmes en latex si l'excipient est lipidique",
@@ -3583,7 +4344,6 @@
      "description": "Application externe sur la vulve et le périnée ; effet émollient, anti-inflammatoire ou anti-infectieux"
     }
    ],
-   "regles_critiques": [],
    "technique_administration": [
     "Se laver les mains",
     "Remplir l'applicateur à la dose prescrite",
@@ -3593,12 +4353,7 @@
     "Retirer l'applicateur et rester allongée 10 à 15 minutes",
     "Nettoyer ou jeter l'applicateur selon le type (réutilisable ou usage unique)"
    ],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais utiliser simultanément avec des préservatifs ou diaphragmes si formulation à base de corps gras",
@@ -3668,7 +4423,6 @@
      "description": "Enveloppe en gélatine contenant une substance liquide ou semi-liquide ; se dissout à température corporelle dans le rectum"
     }
    ],
-   "regles_critiques": [],
    "technique_administration": [
     "Se laver les mains",
     "S'allonger sur le côté gauche, jambe inférieure tendue, jambe supérieure fléchie (position de Sims)",
@@ -3676,12 +4430,7 @@
     "Rester allongé au moins 10 à 15 minutes pour éviter l'expulsion",
     "Se laver les mains après l'administration"
    ],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais avaler les comprimés ou capsules prévus pour usage rectal",
@@ -3781,12 +4530,7 @@
     "Retirer la canule et rester allongé en retenant le contenu 5 à 15 minutes si possible avant la défécation",
     "Se laver les mains après l'administration"
    ],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais administrer en cas de suspicion d'occlusion intestinale ou de perforation digestive",
@@ -3860,8 +4604,6 @@
     "personnes_agees": "Utile en cas de dysphagie ou de vomissements ; vérifier l'absence de fissure anale ou de pathologie anoréctale",
     "grossesse": "Paracétamol suppositoire utilisable ; AINS déconseillés à partir du 2e trimestre"
    },
-   "types": [],
-   "regles_critiques": [],
    "technique_administration": [
     "Se laver les mains",
     "Sortir le suppositoire du réfrigérateur quelques minutes avant (pour les bases lipophiles très froides, les humidifier légèrement pour faciliter l'introduction)",
@@ -3871,12 +4613,7 @@
     "Pour les nourrissons : maintenir les fesses serrées quelques minutes après l'introduction",
     "Se laver les mains après l'administration"
    ],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais couper un suppositoire dans le sens de la longueur pour l'adapter",
@@ -3982,12 +4719,7 @@
     "Retirer l'applicateur et rester allongé au moins 30 minutes",
     "Se laver les mains après l'administration"
    ],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais administrer en cas de suspicion d'occlusion ou de perforation digestive",
@@ -4069,7 +4801,6 @@
      "description": "Base aqueuse gélifiée à texture non grasse ; bonne diffusion dans le canal anal ; utilisé comme lubrifiant, anti-inflammatoire ou anesthésique"
     }
    ],
-   "regles_critiques": [],
    "technique_administration": [
     "Se laver les mains",
     "Effectuer une toilette anale soigneuse avant l'application",
@@ -4079,12 +4810,7 @@
     "Pour l'application externe uniquement : appliquer directement avec le doigt sur la zone périanale",
     "Se laver les mains après l'administration"
    ],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais introduire profondément avec un applicateur en cas de pathologie anorectale aiguë non diagnostiquée",
@@ -4174,14 +4900,7 @@
      "description": "Liposomes fonctionnalisés par des anticorps ou fragments d'anticorps (Fab') permettant un ciblage actif de récepteurs surexprimés sur les cellules tumorales"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais administrer des liposomes à base de phospholipides d'œuf à un patient allergique à l'œuf sévère",
@@ -4266,14 +4985,7 @@
      "description": "Nanocristaux incorporés dans des formes orales solides (comprimés, gélules) pour exploitation de la dissolution rapide en milieu gastro-intestinal"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais substituer une forme nanocristal par la forme conventionnelle à dose identique sans recalcul",
@@ -4366,14 +5078,7 @@
      "description": "Polysaccharide cationique biodégradable et mucoadhésif ; adhérence aux muqueuses nasale, orale et intestinale ; application pour la délivrance orale et transnasale"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais administrer en IV sans filtre approprié si la taille des particules n'est pas certifiée",
@@ -4458,14 +5163,7 @@
      "description": "Surface fonctionnalisée par des sucres (mannose, galactose) permettant un ciblage actif des lectines exprimées sur les macrophages, cellules de Kupffer ou cellules tumorales"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais administrer des dendrimères cationiques à haute génération (G4+) sans encapsulation appropriée",
@@ -4549,14 +5247,7 @@
      "description": "Paroi sensible au pH (acide tumoral), à la température ou aux enzymes ; libération sélective du contenu dans le microenvironnement tumoral ou inflammatoire"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais administrer des nanocapsules à paroi en polymère non biodégradable par voie parentérale sans validation toxicologique complète",
@@ -4641,14 +5332,7 @@
      "description": "Stabilisées par des nanoparticules solides (silice, cellulose, amidon) plutôt que par des tensioactifs moléculaires ; réduction de la toxicité des tensioactifs"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais administrer une nanoémulsion huile-dans-eau par voie IV à un débit excessif",
@@ -4742,14 +5426,7 @@
      "description": "Copolymères dont l'auto-assemblage se dissocie en réponse au pH, à la température, au potentiel redox (glutathion intracellulaire) ou à la lumière (photo-réponse) ; libération déclenchée au site cible"
     }
    ],
-   "regles_critiques": [],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
    "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
    "contre_indications_absolues": [
     {
      "regle": "Ne jamais administrer des micelles de Cremophor® EL (polysorbate 80) à un débit trop rapide sans prémédication",
@@ -4785,1237 +5462,6 @@
     "Efficacité d'encapsulation",
     "Stabilité dilution"
    ]
-  },
-  {
-   "name": "Biopharmacie et Préformulation",
-   "desc": "Étude des propriétés physico-chimiques du principe actif préalable à la formulation : solubilité, stabilité, polymorphisme, et système de classification biopharmaceutique (BCS).",
-   "_icon": "🔬",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Concepts",
-   "description_voie": "La préformulation est l'étape préalable à toute formulation : elle caractérise le principe actif pour anticiper les difficultés de mise en forme. La biopharmacie étudie les relations entre la forme galénique, la libération du principe actif et son devenir dans l'organisme. La séquence LADME structure cette approche : Libération, Absorption, Distribution, Métabolisme, Excrétion. Seule la phase de libération dépend du galéniste, mais elle conditionne tout le reste. Le système de classification biopharmaceutique (BCS) croise solubilité et perméabilité en quatre classes qui orientent la stratégie de formulation.",
-   "avantages": [
-    "Anticipe les incompatibilités principe actif/excipients",
-    "Oriente le choix de la forme et du procédé",
-    "Réduit les échecs de développement en phase tardive"
-   ],
-   "inconvenients": [],
-   "conservation": "",
-   "exemples": [
-    "Ritonavir (polymorphisme)",
-    "Griséofulvine (micronisation)",
-    "Carbamazépine (hydrate)"
-   ],
-   "populations_particulieres": {},
-   "types": [
-    "Classe I — haute solubilité, haute perméabilité : formulation simple, libération immédiate",
-    "Classe II — faible solubilité, haute perméabilité : la dissolution est limitante, améliorer la solubilité",
-    "Classe III — haute solubilité, faible perméabilité : promoteurs d'absorption, la perméabilité est limitante",
-    "Classe IV — faible solubilité et faible perméabilité : les plus problématiques, vectorisation souvent nécessaire"
-   ],
-   "regles_critiques": [
-    "Un changement de forme polymorphe en cours de développement peut modifier radicalement la biodisponibilité — cas historique du ritonavir",
-    "L'équation de Noyes-Whitney relie la vitesse de dissolution à la surface spécifique : la micronisation est le premier levier pour un principe actif de classe II"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [
-    "Solubilité aqueuse et profil pH-solubilité",
-    "Coefficient de partage log P et pKa",
-    "Polymorphisme cristallin : formes cristallines, amorphe, solvates et hydrates, de solubilités et stabilités différentes",
-    "Stabilité thermique, photostabilité, sensibilité à l'hydrolyse et à l'oxydation",
-    "Granulométrie, surface spécifique, hygroscopicité",
-    "Compatibilité principe actif/excipients par étude en mélange binaire"
-   ],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": "Les 4 classes du BCS constituent la grille de lecture centrale de la préformulation",
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": null,
-   "level": 2
-  },
-  {
-   "name": "Procédé Industriel et Production Pharmaceutique",
-   "desc": "Organisation de la production : zones à atmosphère contrôlée, Bonnes Pratiques de Fabrication, validation des procédés et notions de qualité par la conception (QbD).",
-   "_icon": "🏭",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Concepts",
-   "description_voie": "La production pharmaceutique industrielle est encadrée par les Bonnes Pratiques de Fabrication (BPF, ou GMP), opposables et contrôlées par l'ANSM. Le principe directeur est que la qualité ne se contrôle pas sur le produit fini, elle se construit tout au long du procédé — c'est la logique du Quality by Design (QbD, ICH Q8). Le procédé est décrit par ses paramètres critiques (CPP) et le produit par ses attributs qualité critiques (CQA), reliés dans un espace de conception (design space) validé.",
-   "avantages": [
-    "Reproductibilité lot à lot garantie",
-    "Traçabilité complète du dossier de lot",
-    "Maîtrise de la contamination croisée et microbiologique"
-   ],
-   "inconvenients": [],
-   "conservation": "",
-   "exemples": [],
-   "populations_particulieres": {},
-   "types": [
-    "Zones à atmosphère contrôlée classées A, B, C et D selon la concentration particulaire",
-    "Production en circuit fermé ou en confinement pour les substances cytotoxiques ou sensibilisantes",
-    "Fabrication continue (continuous manufacturing) vs fabrication par lots"
-   ],
-   "regles_critiques": [
-    "Toute déviation doit être documentée et investiguée avant libération du lot",
-    "Le pharmacien responsable engage sa responsabilité lors de la libération du lot"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [
-    "Marche en avant : séparation des flux de matières, de personnel et de déchets",
-    "Cascade de pressions et traitement d'air par filtres HEPA",
-    "Qualification des équipements : QI, QO, QP (installation, opérationnelle, performance)",
-    "Validation du nettoyage et prévention de la contamination croisée",
-    "Contrôle en cours de fabrication (in process control)"
-   ],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "Le dossier de lot rassemble l'ensemble des contrôles ; la libération est prononcée au vu de la conformité aux spécifications du dossier d'AMM",
-   "level": 2
-  },
-  {
-   "name": "Pesée",
-   "desc": "Opération de mesure des masses en production pharmaceutique : justesse, fidélité, incertitude, et règles de pesée des faibles quantités.",
-   "_icon": "⚖️",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Opérations Unitaires",
-   "description_voie": "La pesée est la première opération de toute fabrication et conditionne directement le dosage du produit fini. Elle repose sur la distinction entre justesse (proximité de la valeur vraie, liée à l'étalonnage) et fidélité (reproductibilité des mesures, liée à la dispersion). La portée maximale et la précision (échelon de lecture) définissent le domaine d'emploi d'une balance : une balance de précision ne convient pas au pesage de très faibles masses, pour lesquelles on recourt à la balance analytique ou à la technique de la dilution au trituré.",
-   "avantages": [
-    "Opération simple et directement contrôlable",
-    "Traçabilité par édition du ticket de pesée"
-   ],
-   "inconvenients": [
-    "Sensible aux vibrations, aux courants d'air, à l'électricité statique et aux variations de température",
-    "Erreur d'autant plus critique que la masse pesée est faible"
-   ],
-   "conservation": "",
-   "exemples": [],
-   "populations_particulieres": {},
-   "types": [
-    "Balance analytique (précision 0,1 mg) pour les faibles masses",
-    "Balance de précision pour les masses intermédiaires",
-    "Bascule et pont-bascule pour la production industrielle"
-   ],
-   "regles_critiques": [
-    "Vérification journalière avec masses étalons et étalonnage périodique par un organisme accrédité",
-    "Mise à niveau et attente de stabilisation avant lecture",
-    "Double pesée contradictoire pour les substances très actives",
-    "Ne jamais peser une masse inférieure à la charge minimale de la balance : recourir à la dilution au trituré (dilution du principe actif dans un diluant inerte)"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [
-    "Local à température et hygrométrie maîtrisées",
-    "Protection contre l'électricité statique pour les poudres fines",
-    "Confinement pour les substances de faible seuil d'exposition professionnelle"
-   ],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "Ph. Eur. 2.1.7 Balances pour analyses ; contrôle de l'uniformité de masse sur le produit fini",
-   "level": 2
-  },
-  {
-   "name": "Broyage et Pulvérisation",
-   "desc": "Réduction de la taille des particules solides : mécanismes de fracturation, appareillages, et conséquences sur la dissolution et la biodisponibilité.",
-   "_icon": "🌀",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Opérations Unitaires",
-   "description_voie": "Le broyage réduit la taille des particules pour augmenter la surface spécifique. L'objectif principal est pharmacocinétique : selon l'équation de Noyes-Whitney, la vitesse de dissolution est proportionnelle à la surface de contact avec le solvant. La micronisation est donc le levier de première intention pour les principes actifs peu solubles de classe BCS II. Le broyage sert aussi à homogénéiser la granulométrie avant mélange, condition d'un mélange stable.",
-   "avantages": [
-    "Augmentation de la vitesse de dissolution et de la biodisponibilité",
-    "Homogénéité granulométrique favorisant un mélange sans ségrégation",
-    "Meilleure uniformité de teneur pour les principes actifs faiblement dosés"
-   ],
-   "inconvenients": [
-    "Échauffement pouvant dégrader les substances thermosensibles ou provoquer une transition polymorphe",
-    "Charge électrostatique et perte de coulabilité des poudres très fines",
-    "Risque d'explosion de poussières et d'exposition professionnelle",
-    "Augmentation de la réactivité de surface et donc de la sensibilité à l'oxydation"
-   ],
-   "conservation": "",
-   "exemples": [],
-   "populations_particulieres": {},
-   "types": [
-    "Broyeur à marteaux — percussion, poudres grossières à moyennes",
-    "Broyeur à billes — attrition et percussion, broyage fin, possible en voie humide",
-    "Broyeur à cylindres — compression, produits fragiles",
-    "Broyeur à jet d'air (jet mill) — micronisation par collision interparticulaire, sans échauffement, taille inférieure à 10 µm",
-    "Homogénéisateur haute pression — nanosuspensions"
-   ],
-   "regles_critiques": [
-    "Contrôler la température pendant le broyage des principes actifs thermosensibles",
-    "Vérifier l'absence de transition polymorphe induite par l'énergie mécanique",
-    "Mise à la terre des équipements et inertage à l'azote pour prévenir l'explosion de poussières"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "Ph. Eur. 2.9.31 Granulométrie par diffraction laser ; Ph. Eur. 2.9.38 Estimation de la distribution granulométrique par tamisage",
-   "level": 2
-  },
-  {
-   "name": "Poudres — Caractérisation",
-   "desc": "Granulométrie, forme des particules, surface spécifique, masses volumiques vrac et tassée : les paramètres qui décrivent une poudre pharmaceutique.",
-   "_icon": "📊",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Opérations Unitaires",
-   "description_voie": "Une poudre est un système divisé dont le comportement dépend autant des particules individuelles que des espaces interparticulaires. Sa caractérisation est le préalable indispensable au mélange, à la granulation et à la compression. La distribution granulométrique n'est jamais monodisperse : on la décrit par les percentiles d10, d50 (diamètre médian) et d90, et par l'étendue (span). La forme des particules — sphérique, aciculaire, lamellaire — influence autant l'écoulement que la taille elle-même.",
-   "avantages": [
-    "Prédit le comportement au mélange et à la compression",
-    "Détecte les lots de matière première non conformes avant fabrication"
-   ],
-   "inconvenients": [],
-   "conservation": "",
-   "exemples": [],
-   "populations_particulieres": {},
-   "types": [
-    "Granulométrie par tamisage — méthode de référence simple, adaptée aux particules supérieures à 75 µm",
-    "Diffraction laser — rapide, large gamme, mesure d'un diamètre équivalent sphérique",
-    "Microscopie et analyse d'image — donne la forme en plus de la taille",
-    "Surface spécifique par adsorption d'azote (méthode BET)"
-   ],
-   "regles_critiques": [
-    "Le diamètre mesuré dépend de la technique employée : tamisage, laser et microscopie ne donnent pas la même valeur et ne sont pas interchangeables",
-    "Un d50 identique peut masquer des distributions très différentes : toujours examiner l'étendue de la distribution"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [
-    "Masse volumique vrac (poudre non tassée) et masse volumique tassée (après tassement normalisé)",
-    "Porosité interparticulaire et intraparticulaire",
-    "Hygroscopicité et teneur en eau",
-    "Charge électrostatique de surface"
-   ],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "Ph. Eur. 2.9.31, 2.9.38 (granulométrie) ; Ph. Eur. 2.9.34 Masse volumique vrac et masse volumique tassée",
-   "level": 2
-  },
-  {
-   "name": "Poudres — Propriétés Fonctionnelles",
-   "desc": "Écoulement, indice de Carr, rapport de Hausner, angle de repos et compressibilité : les propriétés qui conditionnent la faisabilité industrielle.",
-   "_icon": "📐",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Opérations Unitaires",
-   "description_voie": "Les propriétés fonctionnelles décrivent le comportement collectif d'une poudre. L'ÉCOULEMENT est la propriété la plus critique : il conditionne le remplissage régulier des matrices de compression et des gélules, donc l'uniformité de masse et de teneur. Il est évalué par l'angle de repos, le débit à l'écoulement et surtout par deux indices dérivés des masses volumiques vrac et tassée : l'indice de compressibilité de Carr et le rapport de Hausner. Une poudre qui s'écoule mal ne peut pas être comprimée directement : elle devra être granulée.",
-   "avantages": [
-    "Diagnostic rapide et peu coûteux de la faisabilité d'une compression directe",
-    "Oriente le choix entre compression directe et granulation"
-   ],
-   "inconvenients": [
-    "Mesures sensibles aux conditions d'humidité et à l'opérateur",
-    "Ne prédisent pas à elles seules le comportement en machine à grande vitesse"
-   ],
-   "conservation": "",
-   "exemples": [],
-   "populations_particulieres": {},
-   "types": [
-    "Indice de Carr = 100 × (masse volumique tassée − vrac) / tassée. Inférieur à 15 % : excellent écoulement. De 16 à 25 % : passable. Supérieur à 25 % : mauvais, granulation nécessaire",
-    "Rapport de Hausner = masse volumique tassée / vrac. Inférieur à 1,25 : bon écoulement. Supérieur à 1,5 : écoulement médiocre",
-    "Angle de repos : inférieur à 30° excellent, de 31 à 40° acceptable, supérieur à 50° très mauvais",
-    "Cohésion, aptitude au tassement, mouillabilité"
-   ],
-   "regles_critiques": [
-    "Les poudres fines (inférieures à 100 µm) sont cohésives et s'écoulent mal : forces de van der Waals et électrostatiques prédominent sur la gravité",
-    "La ségrégation lors du transport ou du stockage annule le bénéfice d'un bon mélange : viser une granulométrie homogène entre principe actif et excipients",
-    "L'ajout de lubrifiants d'écoulement (silice colloïdale, talc) améliore la coulabilité sans granulation"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "Ph. Eur. 2.9.36 Écoulement des poudres ; Ph. Eur. 2.9.34 Masse volumique vrac et tassée",
-   "level": 2
-  },
-  {
-   "name": "Excipients",
-   "desc": "Substances auxiliaires de formulation : diluants, liants, délitants, lubrifiants, et notion d'excipient à effet notoire.",
-   "_icon": "🧂",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Concepts",
-   "description_voie": "L'excipient est toute substance autre que le principe actif entrant dans la composition d'un médicament. Réputé inerte, il n'est jamais neutre : il conditionne la stabilité, la libération, la biodisponibilité et la tolérance. Les EXCIPIENTS À EFFET NOTOIRE font l'objet d'une liste réglementaire et d'un étiquetage obligatoire car ils peuvent provoquer des effets indésirables chez certains patients — c'est une notion centrale pour le conseil officinal.",
-   "avantages": [
-    "Permettent la mise en forme de principes actifs faiblement dosés",
-    "Modulent la vitesse de libération",
-    "Assurent la stabilité physico-chimique et microbiologique"
-   ],
-   "inconvenients": [
-    "Risque d'incompatibilité physico-chimique avec le principe actif",
-    "Effets indésirables propres chez certains patients",
-    "Peuvent modifier la biodisponibilité lors d'un changement de formulation (générique)"
-   ],
-   "conservation": "",
-   "exemples": [
-    "Lactose monohydraté",
-    "Cellulose microcristalline (Avicel®)",
-    "Stéarate de magnésium",
-    "Croscarmellose sodique",
-    "Povidone K30"
-   ],
-   "populations_particulieres": {},
-   "types": [
-    "Diluants — lactose, cellulose microcristalline, mannitol, phosphate dicalcique : assurent le volume",
-    "Liants — povidone, HPMC, amidon prégélatinisé : cohésion du granulé",
-    "Délitants — croscarmellose, crospovidone, amidon glycolate sodique : désagrégation par gonflement ou capillarité",
-    "Lubrifiants — stéarate de magnésium : réduit la friction à l'éjection ; agents antiadhérents (talc) ; agents d'écoulement (silice colloïdale)",
-    "Enrobants, colorants, édulcorants, conservateurs antimicrobiens, antioxydants"
-   ],
-   "regles_critiques": [
-    "Le stéarate de magnésium est hydrophobe : un surdosage ou un temps de mélange trop long ralentit la désagrégation et la dissolution — c'est l'incompatibilité classique à connaître",
-    "Le lactose est incompatible avec les amines primaires (réaction de Maillard)",
-    "Les excipients à effet notoire doivent être signalés au patient : lactose (intolérance), aspartam (phénylcétonurie), sorbitol et fructose, alcool benzylique (nouveau-né), sodium (régime hyposodé), gluten, huile d'arachide, sulfites"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": null,
-   "level": 2
-  },
-  {
-   "name": "Mélange",
-   "desc": "Homogénéisation des poudres : mécanismes de diffusion, convection et cisaillement, mélangeurs industriels, et prévention de la ségrégation.",
-   "_icon": "🔄",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Opérations Unitaires",
-   "description_voie": "Le mélange vise l'homogénéité de répartition du principe actif dans la masse, condition directe de l'uniformité de teneur. Trois mécanismes coexistent : la convection (déplacement de groupes de particules), le cisaillement (glissement de couches) et la diffusion (mouvement individuel des particules, seul mécanisme permettant l'homogénéité à l'échelle de la dose). Le mélange est un processus réversible : au-delà d'un temps optimal, la DÉMIXTION peut reprendre le dessus.",
-   "avantages": [
-    "Garantit l'uniformité de teneur, critère de libération du lot",
-    "Opération peu coûteuse et bien maîtrisée"
-   ],
-   "inconvenients": [
-    "Risque de ségrégation au déchargement, au transport et au stockage",
-    "Le surmélange avec le lubrifiant dégrade la dissolution",
-    "Difficulté pour les principes actifs très faiblement dosés"
-   ],
-   "conservation": "",
-   "exemples": [],
-   "populations_particulieres": {},
-   "types": [
-    "Mélangeurs à cuve mobile — mélangeur en V, à conteneur, bicônique : mécanisme convectif et diffusif, doux",
-    "Mélangeurs à cuve fixe et agitateur — mélangeur planétaire, à socs de charrue : cisaillement plus élevé",
-    "Mélangeurs à haut cisaillement — permettent la désagglomération simultanée"
-   ],
-   "regles_critiques": [
-    "Le lubrifiant hydrophobe (stéarate de magnésium) est toujours ajouté EN DERNIER et pour un temps court, typiquement 2 à 5 minutes",
-    "Mélange ordonné (ou interactif) : les fines particules de principe actif adhèrent aux grosses particules d'excipient porteur — stratégie de choix pour les très faibles dosages",
-    "La ségrégation est favorisée par des différences de taille, de densité ou de forme entre constituants : rapprocher les granulométries est la meilleure prévention",
-    "Le taux de remplissage de la cuve (50 à 70 %) conditionne l'efficacité"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "Prélèvements stratifiés en plusieurs points de la cuve et dosage ; Ph. Eur. 2.9.6 Uniformité de teneur et 2.9.40 Uniformité des préparations unidoses",
-   "level": 2
-  },
-  {
-   "name": "Granulation Sèche",
-   "desc": "Agglomération des poudres sans liquide par compactage : compactage à rouleaux, briquetage, et indications pour les principes actifs thermosensibles ou hydrosensibles.",
-   "_icon": "🧱",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Opérations Unitaires",
-   "description_voie": "La granulation sèche agglomère les particules par pression mécanique, sans apport de liquide ni de chaleur. Elle est indiquée lorsque le principe actif est sensible à l'humidité ou à la chaleur, ce qui exclut la granulation humide, et lorsque la poudre s'écoule ou se comprime mal, ce qui exclut la compression directe. Le procédé consiste à densifier la poudre en un compact intermédiaire, puis à le broyer en granulés calibrés.",
-   "avantages": [
-    "Absence totale d'eau et de chaleur : idéale pour les principes actifs hydrolysables ou thermosensibles",
-    "Procédé continu, économique en énergie et en temps",
-    "Pas d'étape de séchage"
-   ],
-   "inconvenients": [
-    "Génère beaucoup de fines nécessitant un recyclage",
-    "Perte de compressibilité du matériau après le premier compactage (phénomène de durcissement ou work hardening) : le comprimé final est moins résistant",
-    "Poussiéreux, nécessite un confinement",
-    "Moins efficace pour l'homogénéisation que la granulation humide"
-   ],
-   "conservation": "",
-   "exemples": [
-    "Effervescents",
-    "Principes actifs hygroscopiques",
-    "Comprimés de metformine à forte dose"
-   ],
-   "populations_particulieres": {},
-   "types": [
-    "Compactage à rouleaux (roller compaction) — méthode industrielle de référence, deux rouleaux contrarotatifs produisent un ruban (flake) ensuite broyé et calibré",
-    "Briquetage (slugging) — compression en gros comprimés sur presse alternative, puis broyage ; méthode plus ancienne, discontinue"
-   ],
-   "regles_critiques": [
-    "Le work hardening impose de ne pas sur-compacter : la force aux rouleaux doit être optimisée, un compact trop dense donnant un comprimé final trop friable ou trop dur",
-    "Recyclage des fines à maîtriser car il modifie le temps de séjour et donc l'homogénéité",
-    "Un lubrifiant est souvent nécessaire pour limiter l'adhérence aux rouleaux"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "Contrôle de la granulométrie du granulé, de la masse volumique et de l'écoulement avant compression",
-   "level": 2
-  },
-  {
-   "name": "Granulation Humide",
-   "desc": "Agglomération par liant liquide : granulation en mélangeur à faible ou haut cisaillement, en lit d'air fluidisé, mécanismes de croissance des grains.",
-   "_icon": "💧",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Opérations Unitaires",
-   "description_voie": "La granulation humide est le procédé le plus répandu en production de comprimés. Un liquide de mouillage contenant un liant est incorporé à la poudre : il crée des ponts liquides entre particules, qui deviennent des ponts solides après séchage. Elle améliore simultanément l'écoulement, la compressibilité, l'homogénéité et la mouillabilité, et supprime le risque de ségrégation puisque principe actif et excipients sont solidarisés dans le même grain.",
-   "avantages": [
-    "Améliore l'écoulement et la compressibilité",
-    "Supprime la ségrégation en solidarisant les constituants",
-    "Améliore la mouillabilité des principes actifs hydrophobes",
-    "Réduit l'empoussièrement et l'exposition professionnelle",
-    "Permet des dosages élevés en principe actif"
-   ],
-   "inconvenients": [
-    "Incompatible avec les principes actifs hydrolysables ou thermosensibles",
-    "Procédé long, multi-étapes, coûteux en énergie",
-    "Risque de transition polymorphe ou de formation d'hydrate",
-    "Validation plus complexe (nombreux paramètres critiques)"
-   ],
-   "conservation": "",
-   "exemples": [],
-   "populations_particulieres": {},
-   "types": [
-    "Mélangeur-granulateur à FAIBLE cisaillement (planétaire) — granulés peu denses, procédé lent",
-    "Mélangeur-granulateur à HAUT cisaillement — pale principale et émotteur, granulés denses et sphériques, procédé rapide et le plus utilisé",
-    "Granulation en LIT D'AIR FLUIDISÉ — pulvérisation du liant sur la poudre en suspension d'air, granulation et séchage dans le même appareil, granulés poreux à dissolution rapide",
-    "Extrusion-sphéronisation — production de pellets sphériques calibrés, base des formes multiparticulaires"
-   ],
-   "regles_critiques": [
-    "La quantité de liquide de mouillage est le paramètre le plus critique : trop peu donne des fines, trop conduit à une prise en masse irréversible",
-    "Le point de fin de granulation doit être détecté en temps réel, la fenêtre étant étroite en haut cisaillement",
-    "Vérifier l'absence de transition polymorphe induite par l'eau"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [
-    "Étapes de croissance des grains : nucléation, coalescence, consolidation, puis attrition si l'apport d'énergie se prolonge",
-    "Le point de fin de granulation est déterminé par la consommation de puissance du moteur ou le couple sur la pale"
-   ],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "Perte à la dessiccation après séchage, granulométrie, masse volumique, écoulement, friabilité du granulé",
-   "level": 2
-  },
-  {
-   "name": "Dessiccation",
-   "desc": "Élimination du solvant après granulation : mécanismes de séchage, courbe de séchage, étuve, lit d'air fluidisé et lyophilisation.",
-   "_icon": "🌡️",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Opérations Unitaires",
-   "description_voie": "La dessiccation élimine le liquide de mouillage pour transformer les ponts liquides en ponts solides et amener le granulé à sa teneur en eau résiduelle cible. Cette teneur est un compromis : trop élevée, elle compromet la stabilité chimique et microbiologique et fait coller le granulé à la compression ; trop basse, elle rend le comprimé friable car une eau résiduelle joue un rôle de plastifiant et de lubrifiant interne. La courbe de séchage comporte une phase à vitesse constante (évaporation de l'eau libre de surface) puis une phase à vitesse décroissante (diffusion de l'eau liée depuis le cœur du grain), plus lente et limitante.",
-   "avantages": [
-    "Stabilise le granulé et permet son stockage",
-    "Le lit d'air fluidisé combine granulation et séchage dans un appareil unique"
-   ],
-   "inconvenients": [
-    "Étape énergivore et souvent limitante en temps de cycle",
-    "Risque de migration du principe actif soluble vers la surface du grain pendant le séchage, source d'hétérogénéité de teneur",
-    "Dégradation possible des principes actifs thermosensibles"
-   ],
-   "conservation": "",
-   "exemples": [],
-   "populations_particulieres": {},
-   "types": [
-    "Étuve statique à plateaux — simple mais lente, séchage hétérogène, risque de croûtage",
-    "Lit d'air fluidisé — rapide et homogène, le plus utilisé, contrôle par la température de l'air sortant",
-    "Séchage sous vide — abaisse la température d'ébullition, adapté aux thermosensibles",
-    "Lyophilisation — congélation puis sublimation sous vide poussé, réservée aux produits très fragiles (protéines, vaccins, lyophilisats oraux)",
-    "Atomisation (spray drying) — séchage instantané d'une solution pulvérisée, produit des particules sphériques"
-   ],
-   "regles_critiques": [
-    "La température du produit, et non celle de l'air, est le paramètre à surveiller pour les thermosensibles",
-    "Un séchage trop rapide croûte la surface et bloque la diffusion de l'eau interne",
-    "La teneur en eau résiduelle doit être définie et validée pour chaque formule"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "Ph. Eur. 2.2.32 Perte à la dessiccation ; Ph. Eur. 2.5.12 Dosage de l'eau par la méthode semi-micro de Karl Fischer ; mesure de l'activité de l'eau (aw)",
-   "level": 2
-  },
-  {
-   "name": "Compression",
-   "desc": "Transformation d'un granulé ou d'une poudre en comprimé : cycle de compression, machines alternatives et rotatives, défauts de compression et résolution.",
-   "_icon": "💊",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Opérations Unitaires",
-   "description_voie": "La compression transforme un solide divisé en comprimé cohérent par application d'une force entre deux poinçons dans une matrice. Le cycle comporte quatre phases : remplissage de la matrice, précompression (chasse l'air), compression principale (réarrangement, déformation élastique puis plastique et fragmentation, création de liaisons interparticulaires), et éjection. La cohésion résulte principalement de forces de van der Waals et de liaisons formées aux points de contact créés sous pression. La compression directe, quand elle est possible, évite granulation et séchage : c'est la voie la plus économique.",
-   "avantages": [
-    "Forme la plus produite au monde : dosage précis, stable, transportable, peu coûteuse",
-    "Permet la sécabilité, l'enrobage et la libération modifiée",
-    "Cadence industrielle très élevée sur presse rotative"
-   ],
-   "inconvenients": [
-    "Nécessite un granulé de bonnes propriétés d'écoulement et de compressibilité",
-    "Nombreux défauts possibles liés à la formulation ou au réglage",
-    "Inadaptée aux principes actifs à très forte dose ou huileux"
-   ],
-   "conservation": "",
-   "exemples": [],
-   "populations_particulieres": {},
-   "types": [
-    "Machine ALTERNATIVE (excentrique) — un jeu de poinçons, faible cadence, développement et petits lots",
-    "Machine ROTATIVE — tourelle à multiples jeux de poinçons, précompression et compression, cadence industrielle",
-    "Compression directe — mélange simple puis compression, sans granulation",
-    "Comprimés multicouches et comprimés noyau (comprimé dans comprimé)"
-   ],
-   "regles_critiques": [
-    "CLIVAGE et DÉCALOTTAGE (capping) : séparation de la partie supérieure, causée par l'air emprisonné et un retour élastique excessif — corriger en augmentant la précompression, en ralentissant la cadence ou en modifiant la formule",
-    "COLLAGE (sticking) et POINÇONNAGE (picking) : adhérence aux poinçons, liée à un excès d'humidité ou à un défaut de lubrification",
-    "GRIPPAGE : friction excessive à l'éjection, insuffisance de lubrifiant",
-    "Variation de masse : défaut d'écoulement du granulé ou ségrégation dans la trémie",
-    "La dureté n'est pas un critère de qualité en soi : c'est la désagrégation et la dissolution qui importent"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": "Comprimé à libération immédiate : Tmax typiquement de 30 minutes à 2 heures",
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "Ph. Eur. 2.9.1 Désagrégation ; 2.9.3 Dissolution ; 2.9.5 Uniformité de masse ; 2.9.6 Uniformité de teneur ; 2.9.7 Friabilité ; 2.9.8 Résistance à la rupture",
-   "level": 2
-  },
-  {
-   "name": "Enrobage",
-   "desc": "Application d'une pellicule ou d'un dragéifiage sur un comprimé : enrobage pelliculaire, gastro-résistant, matériel et défauts.",
-   "_icon": "🎨",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Opérations Unitaires",
-   "description_voie": "L'enrobage dépose une couche continue à la surface d'une forme solide. Il répond à des objectifs variés : masquer un goût amer, protéger le principe actif de l'humidité, de la lumière ou de l'oxygène, faciliter la déglutition, identifier le produit par sa couleur, protéger le manipulateur pour les cytotoxiques, et surtout modifier le site ou la vitesse de libération. La technique dominante est aujourd'hui l'enrobage pelliculaire par pulvérisation en turbine perforée, qui a supplanté la dragéification, longue et consommatrice de sucre.",
-   "avantages": [
-    "Masque le goût et l'odeur",
-    "Protège le principe actif et le manipulateur",
-    "Permet la gastro-résistance et la libération modifiée",
-    "Améliore l'aspect, la déglutition et l'identification"
-   ],
-   "inconvenients": [
-    "Étape supplémentaire coûteuse",
-    "Peut retarder la désagrégation si le film est trop épais",
-    "Défauts d'aspect fréquents nécessitant une mise au point fine",
-    "Solvants organiques encore utilisés pour certains polymères (contraintes environnementales et sécurité)"
-   ],
-   "conservation": "",
-   "exemples": [],
-   "populations_particulieres": {},
-   "types": [
-    "Enrobage PELLICULAIRE (film coating) — film mince de 20 à 100 µm, gain de masse de 2 à 4 %, polymères hydrosolubles (HPMC, PVA)",
-    "Enrobage GASTRO-RÉSISTANT (entérique) — polymères insolubles en milieu acide et solubles au-delà de pH 5,5 à 7 : acétophtalate de cellulose, copolymères méthacryliques (Eudragit® L et S), HPMCP",
-    "Enrobage à libération PROLONGÉE — polymères insolubles et perméables : éthylcellulose, Eudragit® RS et RL",
-    "DRAGÉIFICATION — couches successives de sirop de saccharose en turbine, technique traditionnelle, gain de masse important"
-   ],
-   "regles_critiques": [
-    "Un comprimé gastro-résistant ou à libération prolongée ne doit JAMAIS être écrasé, broyé ou croqué : la rupture du film supprime la protection ou provoque un relargage massif (dose dumping)",
-    "Défauts classiques : peau d'orange (pulvérisation trop rapide), craquelure du film (retour élastique du noyau), collage et jumelage (séchage insuffisant), érosion des arêtes (surface trop friable), migration de colorant",
-    "Équilibre critique entre débit de pulvérisation, température et débit d'air de séchage"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "Ph. Eur. 2.9.1 Désagrégation, avec pour les formes gastro-résistantes un essai en milieu acide (2 h, HCl 0,1 M, absence de désagrégation) suivi d'un essai en tampon phosphate pH 6,8",
-   "level": 2
-  },
-  {
-   "name": "Conditionnement",
-   "desc": "Articles de conditionnement primaire et secondaire : matériaux, fonctions de protection, étanchéité, sérialisation et information du patient.",
-   "_icon": "📦",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Concepts",
-   "description_voie": "Le conditionnement primaire est en contact direct avec le médicament ; le conditionnement secondaire est l'emballage extérieur. Le primaire fait partie intégrante du médicament : il assure la protection physique, chimique et microbiologique, garantit l'intégrité de la dose et conditionne la stabilité et donc la date de péremption. Le choix du matériau résulte d'études d'interaction contenant-contenu et d'études de stabilité en conditions réelles et accélérées selon les lignes directrices ICH.",
-   "avantages": [
-    "Protection contre l'humidité, l'oxygène, la lumière et les contaminations",
-    "Garantit la dose unitaire et l'observance (piluliers, blisters calendaires)",
-    "Support obligatoire de l'information et de la traçabilité"
-   ],
-   "inconvenients": [
-    "Risque d'interaction contenant-contenu : migration d'additifs plastiques, sorption du principe actif, alcalinité du verre",
-    "Impact environnemental et enjeux de recyclabilité",
-    "Coût pouvant dépasser celui du principe actif pour les génériques"
-   ],
-   "conservation": "",
-   "exemples": [],
-   "populations_particulieres": {},
-   "types": [
-    "VERRE — type I (borosilicaté, le plus inerte, injectables), type II (sodocalcique traité), type III (sodocalcique, formes non aqueuses)",
-    "PLASTIQUES — PE, PP, PVC, PET, PVDC ; le complexe PVC/PVDC améliore la barrière à l'humidité",
-    "ALUMINIUM — barrière absolue à la lumière, à l'oxygène et à l'humidité (blisters, tubes, opercules)",
-    "ÉLASTOMÈRES — bouchons de flacons injectables, souvent siliconés ou revêtus de fluoropolymère",
-    "Systèmes doseurs : compte-gouttes, cuillères-mesures, pipettes, seringues orales"
-   ],
-   "regles_critiques": [
-    "Un dessiccant ou un absorbeur d'oxygène peut être intégré pour les produits sensibles",
-    "La sérialisation (identifiant unique et dispositif antieffraction) est obligatoire depuis la directive européenne sur les médicaments falsifiés",
-    "La notice et l'étiquetage sont des éléments du dossier d'AMM, soumis à test de lisibilité auprès de patients",
-    "Les seringues orales graduées doivent être fournies pour les formes buvables pédiatriques afin d'éviter les erreurs de dose"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "Ph. Eur. 3.2 Récipients ; essais d'étanchéité, de perméabilité à la vapeur d'eau, essais de stabilité ICH Q1A",
-   "level": 2
-  },
-  {
-   "name": "Formes à Libération Prolongée — Principes Généraux",
-   "desc": "Objectifs pharmacocinétiques de la libération prolongée, critères de sélection des principes actifs candidats, nomenclature LP, LM, LR et notion de dose dumping.",
-   "_icon": "⏳",
-   "voie": "Libération Modifiée",
-   "etat": "Concepts",
-   "description_voie": "Une forme à libération modifiée est une forme dont la vitesse ou le lieu de libération diffèrent de ceux d'une forme à libération immédiate. L'objectif principal est pharmacocinétique : lisser le profil plasmatique en supprimant les pics et les vallées, maintenir la concentration dans la fenêtre thérapeutique pendant une durée prolongée, réduire la fréquence d'administration et donc améliorer l'observance, et diminuer les effets indésirables liés aux pics. La forme LP est en général constituée d'une dose de charge à libération immédiate et d'une dose d'entretien libérée progressivement.",
-   "avantages": [
-    "Réduction du nombre de prises quotidiennes et meilleure observance",
-    "Suppression des pics plasmatiques et des effets indésirables associés",
-    "Concentration maintenue dans la zone thérapeutique, y compris la nuit",
-    "Réduction des fluctuations pour les principes actifs à index thérapeutique étroit"
-   ],
-   "inconvenients": [
-    "Risque de DOSE DUMPING : libération massive et brutale de la totalité de la dose en cas de rupture du système, d'écrasement ou d'interaction avec l'alcool",
-    "Coût de développement et de production supérieur",
-    "Variabilité interindividuelle du transit digestif",
-    "Adaptation posologique impossible (non sécable), retrait difficile en cas d'effet indésirable",
-    "Risque d'accumulation en cas d'insuffisance rénale ou hépatique"
-   ],
-   "conservation": "",
-   "exemples": [],
-   "populations_particulieres": {},
-   "types": [
-    "Libération PROLONGÉE (LP, extended release) — libération lente et continue",
-    "Libération RETARDÉE (LR, delayed release) — libération différée dans le temps ou l'espace, cas des formes gastro-résistantes",
-    "Libération SÉQUENTIELLE ou pulsatile — libérations successives séparées d'un intervalle",
-    "Libération ACCÉLÉRÉE — orodispersibles, formes à dissolution rapide"
-   ],
-   "regles_critiques": [
-    "Ne jamais écraser ni croquer une forme LP — vérifier systématiquement la liste des formes à ne pas écraser avant administration par sonde",
-    "La bioéquivalence d'un générique LP doit être démontrée à jeun ET après repas, du fait de l'effet alimentaire potentiel"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [
-    "Le principe actif candidat doit avoir une demi-vie courte à intermédiaire (2 à 8 h) : au-delà, la libération prolongée n'apporte rien",
-    "Dose unitaire modérée, sinon la forme devient trop volumineuse",
-    "Absorption tout au long du tube digestif : un principe actif à fenêtre d'absorption étroite proximale est un mauvais candidat",
-    "Index thérapeutique pas trop étroit compte tenu du risque de dose dumping",
-    "Pas de métabolisme présystémique saturable"
-   ],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": null,
-   "level": 4
-  },
-  {
-   "name": "Cinétique de Libération — Modèles et Corrélations IVIVC",
-   "desc": "Modélisation mathématique de la libération : ordre zéro, ordre un, modèle de Higuchi, équation de Korsmeyer-Peppas, et corrélations in vitro–in vivo.",
-   "_icon": "📈",
-   "voie": "Libération Modifiée",
-   "etat": "Concepts",
-   "description_voie": "L'étude de la cinétique de libération repose sur le test de dissolution in vitro, dont le profil est ajusté à des modèles mathématiques permettant d'identifier le mécanisme dominant. L'objectif idéal d'une forme LP est une libération d'ORDRE ZÉRO, à vitesse constante et indépendante de la quantité restante, qui seule permet un plateau plasmatique. Peu de systèmes l'atteignent réellement : les systèmes réservoirs et les pompes osmotiques s'en approchent le mieux.",
-   "avantages": [
-    "Permet de comprendre et de piloter le mécanisme de libération",
-    "Une corrélation in vitro–in vivo validée autorise le remplacement d'études cliniques par des tests de dissolution lors de modifications post-AMM"
-   ],
-   "inconvenients": [],
-   "conservation": "",
-   "exemples": [],
-   "populations_particulieres": {},
-   "types": [
-    "ORDRE ZÉRO — Q = k·t : vitesse constante, profil idéal, caractéristique des systèmes réservoirs et osmotiques",
-    "ORDRE UN — ln(Q0−Q) = ln Q0 − k·t : vitesse proportionnelle à la quantité restante, cas des formes à libération immédiate et de nombreuses matrices",
-    "HIGUCHI — Q = k·√t : diffusion à travers une matrice insoluble, la racine du temps traduit l'allongement progressif du trajet diffusionnel",
-    "KORSMEYER-PEPPAS — Q/Q∞ = k·t^n : l'exposant n identifie le mécanisme. Pour une forme cylindrique, n = 0,45 correspond à une diffusion fickienne, 0,45 < n < 0,89 à un transport anomal couplant diffusion et relaxation des chaînes, et n = 0,89 à un transport de cas II gouverné par l'érosion",
-    "HIXSON-CROWELL — érosion avec variation de surface"
-   ],
-   "regles_critiques": [
-    "Le test de dissolution d'une forme LP doit comporter au minimum trois points de prélèvement : un point précoce pour détecter un dose dumping, un point intermédiaire, et un point tardif vérifiant la libération complète",
-    "Les conditions du test (appareil, milieu, pH, agitation) doivent être discriminantes, c'est-à-dire capables de détecter une modification de formulation ou de procédé",
-    "Un test de dissolution en présence d'éthanol est requis pour évaluer le risque de dose dumping alcoolique"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [
-    "Corrélation in vitro–in vivo (IVIVC) de niveau A : relation point à point entre la fraction dissoute in vitro et la fraction absorbée in vivo obtenue par déconvolution — c'est le niveau le plus prédictif et le seul accepté comme substitut d'étude clinique",
-    "Niveau B : comparaison de paramètres moyens (temps moyen de dissolution et temps moyen de résidence)",
-    "Niveau C : relation ponctuelle entre un paramètre de dissolution et un paramètre pharmacocinétique"
-   ],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "Ph. Eur. 2.9.3 Essai de dissolution des formes solides ; appareil 1 à panier, appareil 2 à palette, appareil 3 à cylindre alternatif, appareil 4 à cellule à flux continu",
-   "level": 4
-  },
-  {
-   "name": "Systèmes Matriciels et Systèmes Réservoirs",
-   "desc": "Les deux grandes architectures de la libération prolongée : matrices hydrophiles, inertes et lipidiques d'une part, systèmes réservoirs à membrane d'autre part.",
-   "_icon": "🧩",
-   "voie": "Libération Modifiée",
-   "etat": "Concepts",
-   "description_voie": "Deux architectures fondamentales gouvernent la libération prolongée orale. Dans le système MATRICIEL, le principe actif est dispersé de façon homogène dans un réseau polymérique ; la libération suit typiquement une cinétique en racine du temps (Higuchi), donc décroissante. Dans le système RÉSERVOIR, un noyau de principe actif est entouré d'une membrane polymérique contrôlant le flux ; tant que le noyau maintient une saturation, le gradient est constant et la libération s'approche de l'ordre zéro — profil plus favorable mais avec un risque de dose dumping en cas de rupture de membrane.",
-   "avantages": [
-    "Matrices : fabrication simple par compression directe, faible coût, pas de risque de rupture de membrane et donc de dose dumping",
-    "Réservoirs : cinétique d'ordre zéro, contrôle précis par l'épaisseur et la composition de la membrane"
-   ],
-   "inconvenients": [
-    "Matrices : cinétique décroissante s'écartant de l'ordre zéro, effet de dose résiduelle en fin de libération",
-    "Réservoirs : risque de dose dumping si la membrane est rompue par écrasement, procédé d'enrobage plus complexe et plus coûteux"
-   ],
-   "conservation": "",
-   "exemples": [
-    "Comprimés matriciels HPMC de metformine LP",
-    "Microgranules de tamsulosine LP",
-    "Formes multiparticulaires de méthylphénidate"
-   ],
-   "populations_particulieres": {},
-   "types": [
-    "Matrice HYDROPHILE gonflante — HPMC, polyoxyde d'éthylène : au contact de l'eau, formation d'une couche de gel superficielle contrôlant la diffusion et l'érosion ; c'est le système le plus utilisé",
-    "Matrice INERTE insoluble — éthylcellulose, polyméthacrylates, polychlorure de vinyle : libération par diffusion dans un réseau poreux, le squelette (ghost) est éliminé intact dans les selles, ce qui doit être expliqué au patient",
-    "Matrice LIPIDIQUE — cires, glycérides, acides gras : libération par érosion et diffusion",
-    "Système réservoir MONOLITHIQUE — comprimé enrobé d'une membrane à libération contrôlée",
-    "Système réservoir MULTIPARTICULAIRE — microgranules ou pellets enrobés individuellement, répartis en gélule"
-   ],
-   "regles_critiques": [
-    "Les formes MULTIPARTICULAIRES sont plus sûres : la rupture accidentelle de quelques pellets ne libère qu'une fraction de la dose, et le transit gastrique est plus reproductible car indépendant de l'ouverture pylorique — plusieurs gélules multiparticulaires peuvent être ouvertes et le contenu dispersé sans être écrasé, ce qui autorise l'administration par sonde ou chez le patient dysphagique",
-    "Le squelette matriciel inerte retrouvé dans les selles est normal et ne signe pas un défaut d'absorption : information indispensable au patient pour éviter l'arrêt du traitement",
-    "Les polymères matriciels hydrophiles sont sensibles à la force ionique et au pH du milieu digestif"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": null,
-   "level": 4
-  },
-  {
-   "name": "Pompes Osmotiques et Formes à Libération Retardée",
-   "desc": "Systèmes osmotiques élémentaires et push-pull, formes gastro-résistantes, systèmes chronopharmacologiques et ciblage colique.",
-   "_icon": "⚙️",
-   "voie": "Libération Modifiée",
-   "etat": "Concepts",
-   "description_voie": "La POMPE OSMOTIQUE exploite la pression osmotique comme moteur de libération. Un noyau contenant le principe actif et un agent osmotique est entouré d'une membrane semi-perméable percée au laser d'un orifice calibré. L'eau pénètre par osmose, dissout ou pousse le contenu qui est expulsé par l'orifice à débit constant. C'est le système qui se rapproche le plus parfaitement de l'ORDRE ZÉRO, et son principal atout est d'être indépendant du pH, de l'agitation et de la présence d'aliments — donc très reproductible.",
-   "avantages": [
-    "Cinétique d'ordre zéro sur une longue durée",
-    "Indépendance vis-à-vis du pH, du transit et de la prise alimentaire : faible variabilité inter et intra-individuelle",
-    "Permet de cibler le côlon pour un traitement local ou pour un principe actif dégradé en amont"
-   ],
-   "inconvenients": [
-    "Coût de fabrication élevé (perçage laser, membrane)",
-    "Risque théorique d'obstruction de l'orifice",
-    "Enveloppe non digestible éliminée intacte",
-    "Formes gastro-résistantes : variabilité du temps de vidange gastrique, donc du délai de libération"
-   ],
-   "conservation": "",
-   "exemples": [
-    "Oméprazole gastro-résistant",
-    "Méthylphénidate OROS®",
-    "Nifédipine osmotique",
-    "Mésalazine à ciblage colique"
-   ],
-   "populations_particulieres": {},
-   "types": [
-    "Pompe osmotique ÉLÉMENTAIRE (EOP) — un seul compartiment, adaptée aux principes actifs hydrosolubles",
-    "Système PUSH-PULL (OROS®) — deux couches : une couche active et une couche polymérique gonflante qui pousse la première ; permet les principes actifs peu solubles",
-    "Formes GASTRO-RÉSISTANTES — enrobage entérique protégeant le principe actif de l'acidité (oméprazole) ou l'estomac du principe actif (AINS, gastro-résistance de confort)",
-    "Systèmes CHRONOPHARMACOLOGIQUES — libération programmée après un temps de latence, pour aligner le pic plasmatique sur le pic symptomatique (crise d'asthme nocturne, raideur matinale de la polyarthrite)",
-    "Ciblage COLIQUE — polymères dégradés par les azoréductases de la flore colique ou polysaccharides fermentescibles ; utilisé dans les MICI (mésalazine)"
-   ],
-   "regles_critiques": [
-    "Les formes gastro-résistantes doivent être prises à distance des repas et à distance des antiacides et IPP, qui en élevant le pH gastrique peuvent provoquer une dissolution prématurée du film entérique",
-    "Prévenir le patient de l'élimination du squelette osmotique dans les selles",
-    "Une forme gastro-résistante ne se justifie que si le principe actif est acidolabile ou irritant : elle retarde toujours le Tmax"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": null,
-   "level": 4
-  },
-  {
-   "name": "Systèmes Transdermiques — Formulation et Contrôle",
-   "desc": "Franchissement de la barrière cutanée, architecture matricielle ou réservoir des dispositifs transdermiques, promoteurs d'absorption et règles d'emploi.",
-   "_icon": "🩹",
-   "voie": "Libération Modifiée",
-   "etat": "Concepts",
-   "description_voie": "Le dispositif transdermique délivre un principe actif à travers la peau vers la circulation systémique, à débit contrôlé et prolongé. La barrière limitante est le STRATUM CORNEUM, dont la structure en briques et mortier (cornéocytes dans une matrice lipidique lamellaire) impose un franchissement essentiellement intercellulaire, tortueux et lent. Le flux obéit à la loi de Fick : il dépend du coefficient de partage, du coefficient de diffusion et du gradient de concentration. Le dispositif crée un réservoir cutané dans le stratum corneum, ce qui explique la persistance de l'effet après le retrait.",
-   "avantages": [
-    "Suppression totale de l'effet de premier passage hépatique et de la dégradation digestive",
-    "Profil plasmatique très stable sur 24 h à 7 jours",
-    "Excellente observance, une seule application par jour ou par semaine",
-    "Interruption immédiate possible par retrait du dispositif",
-    "Utile chez le patient nauséeux, dysphagique ou en fin de vie"
-   ],
-   "inconvenients": [
-    "Réservé aux principes actifs très puissants (dose journalière inférieure à environ 10 mg) et lipophiles de masse molaire modérée (inférieure à 500 Da)",
-    "Latence à l'installation de l'effet (plusieurs heures) et persistance après retrait",
-    "Réactions cutanées locales : irritation, allergie de contact",
-    "Variabilité selon le site, l'âge, l'hydratation et la température cutanée"
-   ],
-   "conservation": "",
-   "exemples": [
-    "Fentanyl",
-    "Buprénorphine",
-    "Nicotine",
-    "Estradiol",
-    "Rivastigmine",
-    "Rotigotine",
-    "Scopolamine"
-   ],
-   "populations_particulieres": {},
-   "types": [
-    "Système MATRICIEL (drug-in-adhesive) — principe actif dispersé dans la matrice adhésive, dispositif mince, souple et sécable pour certains produits, architecture aujourd'hui dominante",
-    "Système RÉSERVOIR — compartiment liquide ou gel séparé de la peau par une membrane limitant le débit ; ne doit JAMAIS être coupé sous peine de libération massive",
-    "Micro-aiguilles, iontophorèse et sonophorèse — technologies d'assistance au franchissement pour les molécules hydrophiles ou de haute masse molaire"
-   ],
-   "regles_critiques": [
-    "ROTATION SYSTÉMATIQUE des sites d'application pour prévenir irritation et sensibilisation",
-    "La CHALEUR (fièvre, sauna, bouillotte, exposition solaire, couverture chauffante) augmente le flux transdermique et peut provoquer un surdosage : contre-indication majeure pour le fentanyl transdermique",
-    "Ne jamais couper un dispositif réservoir ; certains dispositifs matriciels le tolèrent, à vérifier au cas par cas dans le RCP",
-    "Peau propre, sèche, saine, non irritée, non pileuse ; ne pas appliquer sur une zone lésée qui augmenterait massivement l'absorption",
-    "Élimination des dispositifs usagés en les repliant sur eux-mêmes : ils contiennent encore une fraction importante de la dose, risque majeur pour l'enfant et l'animal"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [
-    "Thorax",
-    "Face externe du bras",
-    "Haut du dos",
-    "Abdomen",
-    "Hanche"
-   ],
-   "contraintes_formulaires": [
-    "Promoteurs d'absorption modifiant réversiblement l'organisation lipidique du stratum corneum : éthanol, propylène glycol, terpènes, acides gras insaturés, azone",
-    "Adhésifs sensibles à la pression : polyacrylates, polyisobutylènes, silicones",
-    "Contrôle du flux par la membrane ou par la charge en principe actif de la matrice"
-   ],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": null,
-   "level": 4
-  },
-  {
-   "name": "Formes Parentérales à Libération Prolongée",
-   "desc": "Suspensions huileuses et aqueuses, microsphères biodégradables, implants sous-cutanés et systèmes in situ pour une libération de plusieurs semaines à plusieurs mois.",
-   "_icon": "💉",
-   "voie": "Libération Modifiée",
-   "etat": "Concepts",
-   "description_voie": "Les formes parentérales à libération prolongée délivrent un principe actif sur des semaines ou des mois à partir d'une injection unique. Elles répondent à deux besoins majeurs : l'observance dans les pathologies chroniques à risque de rupture thérapeutique (schizophrénie, contraception, VIH), et la nécessité d'une exposition prolongée pour les peptides et protéines à demi-vie très courte. Le mécanisme repose sur la création d'un dépôt tissulaire dont la vitesse de résorption devient l'étape limitante : la cinétique observée est alors une cinétique de flip-flop, où la demi-vie apparente reflète la libération et non l'élimination.",
-   "avantages": [
-    "Observance garantie sur toute la durée d'action, avec traçabilité de l'administration",
-    "Suppression totale des variations liées à l'oubli de prise",
-    "Réduction du nombre d'actes et amélioration de la qualité de vie",
-    "Profil plasmatique lissé, sans pic"
-   ],
-   "inconvenients": [
-    "IRRÉVERSIBILITÉ : en cas d'effet indésirable, le dépôt ne peut être retiré (sauf implant explantable)",
-    "Nécessité d'une phase de titration préalable par voie orale pour vérifier la tolérance",
-    "Douleur au point d'injection, réactions locales, nodules",
-    "Aiguilles de gros calibre pour les suspensions",
-    "Coût élevé"
-   ],
-   "conservation": "",
-   "exemples": [
-    "Palmitate de palipéridone",
-    "Décanoate d'halopéridol",
-    "Leuproréline microsphères",
-    "Implant à l'étonogestrel",
-    "Cabotégravir/rilpivirine LA"
-   ],
-   "populations_particulieres": {},
-   "types": [
-    "SUSPENSIONS HUILEUSES — esters de principes actifs lipophiles dans une huile végétale ; la libération dépend de l'hydrolyse de l'ester et du partage huile/tissu (décanoate d'halopéridol, énanthate de testostérone)",
-    "SUSPENSIONS AQUEUSES de nanocristaux — libération contrôlée par la dissolution des cristaux (palmitate de palipéridone, cabotégravir et rilpivirine à action prolongée)",
-    "MICROSPHÈRES biodégradables de PLGA — le polymère s'hydrolyse progressivement en acide lactique et glycolique ; libération sur 1 à 6 mois (leuproréline, triptoréline, naltrexone)",
-    "IMPLANTS sous-cutanés — bâtonnets non biodégradables explantables (étonogestrel, 3 ans) ou biodégradables (goséréline)",
-    "Systèmes IN SITU FORMING — solution polymérique injectable qui précipite en gel au contact des fluides tissulaires"
-   ],
-   "regles_critiques": [
-    "EFFET BURST : libération initiale rapide de la fraction de principe actif située en surface des microsphères ; à anticiper dans le schéma d'initiation",
-    "Toujours vérifier la tolérance par une forme à libération immédiate avant de passer à la forme retard",
-    "Respecter strictement le site et la voie prescrits (intramusculaire deltoïdienne ou fessière, ou sous-cutanée) : la vitesse de résorption en dépend et les formes ne sont pas interchangeables",
-    "Resuspension complète avant injection pour les suspensions ; respecter le calibre d'aiguille fourni"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": null,
-   "level": 4
-  },
-  {
-   "name": "Formes Muqueuses à Libération Prolongée et Bioadhésion",
-   "desc": "Bioadhésion et mucoadhésion, formes buccales, nasales, oculaires et vaginales à libération prolongée, et intérêt du contournement du premier passage hépatique.",
-   "_icon": "👄",
-   "voie": "Libération Modifiée",
-   "etat": "Concepts",
-   "description_voie": "Les muqueuses offrent une alternative à la voie orale : épithélium mince, forte vascularisation, et surtout drainage veineux systémique direct pour les muqueuses buccale, sublinguale, nasale et rectale basse — ce qui contourne le premier passage hépatique. Leur limite est le temps de séjour, très court en raison du renouvellement du mucus, de la déglutition et de la clairance mucociliaire. La BIOADHÉSION est la réponse formulatoire : des polymères hydrophiles se lient au mucus par interpénétration des chaînes, liaisons hydrogène et interactions électrostatiques, prolongeant le contact.",
-   "avantages": [
-    "Contournement partiel ou total du premier passage hépatique",
-    "Absorption rapide pour les formes sublinguales, utile en situation d'urgence",
-    "Alternative en cas de troubles de la déglutition, de nausées ou de vomissements",
-    "Possibilité de traitement local prolongé avec une exposition systémique minimale"
-   ],
-   "inconvenients": [
-    "Surface d'absorption réduite et temps de séjour naturellement court",
-    "Goût et sensation de corps étranger, tolérance locale limitante",
-    "Variabilité liée au flux salivaire, à la déglutition et à la clairance mucociliaire",
-    "Faible perméabilité aux molécules hydrophiles et de haute masse molaire"
-   ],
-   "conservation": "",
-   "exemples": [
-    "Buprénorphine sublinguale",
-    "Fentanyl transmuqueux",
-    "Anneau vaginal contraceptif",
-    "Inserts ophtalmiques de pilocarpine",
-    "Miconazole gel buccal bioadhésif"
-   ],
-   "populations_particulieres": {},
-   "types": [
-    "Comprimés et films BIOADHÉSIFS buccaux ou gingivaux — libération prolongée locale ou systémique",
-    "Gels et inserts VAGINAUX bioadhésifs — traitement local prolongé, contraception, progestérone",
-    "Systèmes NASAUX — gels bioadhésifs, microsphères ; voie explorée pour l'accès direct au SNC par transport olfactif",
-    "Inserts et gels OPHTALMIQUES — prolongent le temps de contact précornéen très bref des collyres",
-    "Systèmes intra-utérins et anneaux vaginaux à libération prolongée"
-   ],
-   "regles_critiques": [
-    "Les formes sublinguales et buccales ne doivent pas être avalées ni croquées : expliquer précisément la technique de prise, sans boire ni manger pendant la durée d'application",
-    "Éviter le rinçage buccal et l'alimentation immédiatement après la pose d'un comprimé bioadhésif",
-    "Pour les collyres, respecter un intervalle de 5 minutes entre deux instillations et occlure le point lacrymal pour limiter le passage systémique"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [
-    "Polymères mucoadhésifs : chitosane (cationique, également promoteur d'absorption par ouverture des jonctions serrées), carbomères, alginates, HPMC, acide hyaluronique",
-    "Promoteurs d'absorption : sels biliaires, chélateurs du calcium, tensioactifs — tolérance locale à évaluer",
-    "Systèmes in situ gélifiants sensibles au pH, à la température ou aux ions"
-   ],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": null,
-   "level": 4
-  },
-  {
-   "name": "Amélioration de la Biodisponibilité",
-   "desc": "Stratégies galéniques pour les principes actifs peu solubles ou peu perméables : micronisation, dispersions solides, cyclodextrines, sels, prodrogues et systèmes lipidiques.",
-   "_icon": "🚀",
-   "voie": "Libération Modifiée",
-   "etat": "Concepts",
-   "description_voie": "L'amélioration de la biodisponibilité est l'enjeu majeur du développement galénique moderne : une large part des molécules issues du criblage à haut débit sont de classe BCS II ou IV, donc limitées par leur solubilité. La stratégie découle directement de la classe BCS : pour la classe II, il faut augmenter la vitesse de dissolution ; pour la classe III, la perméabilité ; pour la classe IV, les deux, ce qui impose souvent une vectorisation.",
-   "avantages": [
-    "Permet le développement de molécules autrement inexploitables",
-    "Réduit la dose administrée et la variabilité interindividuelle",
-    "Diminue l'effet alimentaire pour certaines formulations lipidiques"
-   ],
-   "inconvenients": [
-    "Complexité de formulation et de fabrication",
-    "Stabilité physique parfois limitée (recristallisation des formes amorphes)",
-    "Coût et charge réglementaire accrus"
-   ],
-   "conservation": "",
-   "exemples": [
-    "Itraconazole en dispersion solide",
-    "Fénofibrate nanocristallin",
-    "Complexe piroxicam-bêta-cyclodextrine",
-    "Ciclosporine SMEDDS (Néoral®)",
-    "Ritonavir en extrusion à chaud"
-   ],
-   "populations_particulieres": {},
-   "types": [
-    "MICRONISATION et NANONISATION — augmentation de la surface spécifique selon Noyes-Whitney ; les nanocristaux abaissent aussi la taille sous le seuil où la solubilité elle-même augmente (effet Ostwald-Freundlich)",
-    "DISPERSIONS SOLIDES — le principe actif est dispersé à l'état amorphe ou moléculaire dans un polymère hydrophile (PVP, HPMC, Soluplus®) ; la forme amorphe, plus énergétique, est bien plus soluble que la forme cristalline. Obtenues par extrusion à chaud ou par atomisation",
-    "CYCLODEXTRINES — oligosaccharides cycliques à cavité hydrophobe formant des complexes d'inclusion ; augmentent la solubilité apparente, masquent le goût et stabilisent",
-    "FORMATION DE SELS et choix du polymorphe le plus soluble",
-    "PRODROGUES — modification chimique augmentant la solubilité ou la perméabilité, hydrolysée in vivo",
-    "SYSTÈMES LIPIDIQUES AUTO-ÉMULSIONNANTS (SEDDS et SMEDDS) — mélange d'huile, de tensioactif et de cosolvant s'émulsionnant spontanément dans le tube digestif ; maintiennent le principe actif en solution et favorisent l'absorption lymphatique",
-    "PROMOTEURS D'ABSORPTION et inhibiteurs de la P-glycoprotéine (TPGS, certains polysorbates)"
-   ],
-   "regles_critiques": [
-    "Une forme amorphe est thermodynamiquement instable : le risque majeur est la RECRISTALLISATION au cours de la conservation, qui annule le gain de solubilité — la stabilité physique doit être suivie sur toute la durée de péremption",
-    "L'absorption lymphatique par les systèmes lipidiques permet également de contourner le premier passage hépatique",
-    "Un effet alimentaire marqué doit être caractérisé et signalé au patient : certaines formulations lipidiques doivent impérativement être prises au cours d'un repas"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": "La stratégie d'amélioration est directement guidée par la classe BCS du principe actif",
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": null,
-   "level": 4
-  },
-  {
-   "name": "Vectorisation — Principes et Ciblage",
-   "desc": "Objectifs de la vectorisation, ciblage passif et effet EPR, ciblage actif par ligands, furtivité par PEGylation et principales générations de vecteurs.",
-   "_icon": "🎯",
-   "voie": "Libération Modifiée",
-   "etat": "Concepts",
-   "description_voie": "La vectorisation vise à modifier la distribution d'un principe actif pour l'amener préférentiellement à sa cible, augmentant l'efficacité tout en réduisant la toxicité sur les tissus sains. Elle s'adresse aux molécules à index thérapeutique étroit — anticancéreux au premier chef — et aux molécules fragiles nécessitant une protection (acides nucléiques, protéines). Le vecteur agit sur la phase de distribution, alors que les formes à libération modifiée agissent sur la phase de libération : c'est une différence conceptuelle essentielle.",
-   "avantages": [
-    "Concentration du principe actif au site d'action et réduction de l'exposition des tissus sains",
-    "Protection des molécules fragiles contre la dégradation enzymatique",
-    "Franchissement de barrières biologiques autrement infranchissables",
-    "Modification favorable du profil de toxicité"
-   ],
-   "inconvenients": [
-    "Capture par le système des phagocytes mononucléés (foie, rate) limitant le temps de circulation",
-    "Coût de développement et de production très élevé, procédés complexes à transposer à l'échelle industrielle",
-    "Immunogénicité possible, y compris anticorps anti-PEG",
-    "Effet EPR très variable d'une tumeur à l'autre et chez l'homme, ce qui explique des résultats cliniques inférieurs aux attentes précliniques"
-   ],
-   "conservation": "",
-   "exemples": [
-    "Doxorubicine liposomale pégylée (Caelyx®)",
-    "Amphotéricine B liposomale (AmBisome®)",
-    "Paclitaxel lié à l'albumine (Abraxane®)",
-    "Nanoparticules lipidiques des vaccins à ARNm",
-    "Anticorps conjugués (ADC) comme le trastuzumab déruxtécan"
-   ],
-   "populations_particulieres": {},
-   "types": [
-    "CIBLAGE PASSIF — exploite l'effet EPR (Enhanced Permeability and Retention) : la néovascularisation tumorale est fenestrée et le drainage lymphatique déficient, ce qui permet l'accumulation préférentielle des nanoparticules de 10 à 200 nm dans la tumeur",
-    "CIBLAGE ACTIF — greffage de ligands reconnaissant un récepteur surexprimé par la cellule cible : anticorps ou fragments, peptides RGD, acide folique, transferrine, aptamères",
-    "CIBLAGE PHYSIQUE — nanoparticules magnétiques guidées par un champ externe, systèmes thermosensibles ou pH-sensibles activés localement",
-    "FURTIVITÉ — PEGylation de surface : la couronne hydrophile de polyéthylène glycol limite l'opsonisation et la capture par les macrophages, prolongeant fortement le temps de circulation"
-   ],
-   "regles_critiques": [
-    "Le changement de forme galénique modifie profondément la pharmacocinétique et la toxicité : la doxorubicine liposomale pégylée et la doxorubicine conventionnelle NE SONT PAS interchangeables, ni en dose ni en profil d'effets indésirables (érythrodysesthésie palmoplantaire spécifique de la forme liposomale)",
-    "La formation d'une couronne protéique (protein corona) à la surface du vecteur dans le sang modifie sa reconnaissance biologique et peut annuler le ciblage conçu in vitro",
-    "Les vecteurs à ARNm des vaccins reposent sur des LNP dont les lipides ionisables assurent l'échappement endosomal, étape limitante de l'efficacité"
-   ],
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contraintes_formulaires": [
-    "Générations de vecteurs : première génération, vecteurs conventionnels capturés par le foie et la rate ; deuxième génération, vecteurs furtifs PEGylés à circulation prolongée ; troisième génération, vecteurs furtifs et ciblés activement",
-    "Principales familles : liposomes, nanoparticules polymériques (PLGA), nanoparticules lipidiques solides, nanoémulsions, micelles polymériques, dendrimères, nanoparticules lipidiques ioniques (LNP) pour les ARNm",
-    "La taille, la charge de surface (potentiel zêta) et la nature de la couronne gouvernent la biodistribution et la clairance"
-   ],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": null,
-   "level": 4
-  },
-  {
-   "name": "Développement Durable et Écoconception en Galénique",
-   "desc": "Impact environnemental du médicament, écoconception des formes et des procédés, chimie verte, gestion des déchets et résidus médicamenteux.",
-   "_icon": "♻️",
-   "voie": "Opérations Pharmaceutiques",
-   "etat": "Concepts",
-   "description_voie": "Le cycle de vie d'un médicament — extraction des matières premières, synthèse, formulation, conditionnement, distribution, usage et élimination — a un impact environnemental significatif. Le secteur de la santé représente environ 8 % de l'empreinte carbone nationale, dont une part majeure liée au médicament et aux dispositifs. L'ÉCOCONCEPTION consiste à intégrer ces critères dès le développement, sans compromettre la qualité, la sécurité ni l'efficacité — contrainte forte qui distingue le médicament des autres produits industriels.",
-   "avantages": [
-    "Réduction de l'empreinte carbone et de la consommation de solvants et d'eau",
-    "Diminution des déchets de conditionnement et des médicaments non utilisés",
-    "Réduction des résidus médicamenteux dans les milieux aquatiques",
-    "Économies de matières premières et d'énergie"
-   ],
-   "inconvenients": [
-    "Toute modification de formulation ou de procédé impose une revalidation et parfois une variation d'AMM",
-    "Les contraintes de stérilité, de stabilité et de traçabilité limitent la réduction des emballages",
-    "Risque de conflit avec la sécurité du patient (conditionnement unitaire, inviolabilité, lisibilité)",
-    "Données d'analyse de cycle de vie encore rares et hétérogènes"
-   ],
-   "types": [
-    "ÉCOCONCEPTION DU PROCÉDÉ — les 12 principes de la CHIMIE VERTE : prévention des déchets plutôt que traitement, économie d'atomes, synthèses moins dangereuses, solvants plus sûrs (substitution des solvants chlorés et du diméthylformamide), catalyse plutôt que réactifs stœchiométriques, efficacité énergétique, matières premières renouvelables. Indicateur clé : le FACTEUR E (masse de déchets par kg de produit), historiquement très élevé en industrie pharmaceutique (25 à plus de 100).",
-    "ÉCOCONCEPTION DE LA FORME — granulation sèche ou compression directe plutôt que granulation humide (suppression de l'eau et du séchage, poste le plus énergivore) ; extrusion à chaud sans solvant ; procédés en voie aqueuse remplaçant les solvants organiques d'enrobage ; fabrication CONTINUE, qui réduit l'empreinte au sol, les temps morts et les rebuts par rapport à la production par lots.",
-    "CONDITIONNEMENT — allègement et réduction du suremballage, monomatériau facilitant le recyclage, suppression du PVC (dont l'incinération génère des dioxines) au profit du PP ou du PET, notices dématérialisées (en discussion au niveau européen), et surtout ADAPTATION DE LA TAILLE DES BOÎTES à la durée de traitement, qui réduit à la fois le gaspillage et le risque de mésusage.",
-    "USAGE — dispensation à l'unité, juste prescription, déprescription chez le sujet âgé polymédiqué : le médicament non consommé est le plus mauvais bilan environnemental possible, puisque tout l'impact de production est engagé sans aucun bénéfice pour le patient."
-   ],
-   "regles_critiques": [
-    "RÉSIDUS MÉDICAMENTEUX DANS L'ENVIRONNEMENT : les médicaments sont excrétés sous forme active ou de métabolites, mal éliminés par les stations d'épuration conventionnelles. Conséquences documentées — féminisation des poissons par l'éthinylestradiol, effondrement des populations de vautours en Asie du Sud par le diclofénac vétérinaire, et surtout SÉLECTION DE RÉSISTANCES par les antibiotiques résiduels, qui relie directement écologie et antibiorésistance.",
-    "GAZ ANESTHÉSIQUES et PROPULSEURS : le desflurane et le protoxyde d'azote ont un pouvoir de réchauffement global très élevé ; les inhalateurs-doseurs pressurisés contiennent des HFA à fort impact climatique, alors que les inhalateurs de poudre sèche en sont dépourvus — le choix du dispositif, à efficacité égale et si le débit inspiratoire du patient le permet, est un levier concret et documenté.",
-    "FILIÈRE CYCLAMED : les médicaments non utilisés et périmés doivent être rapportés à l'officine, SANS leur emballage carton et notice (qui vont au tri papier), pour être incinérés avec valorisation énergétique. Ils ne doivent JAMAIS être jetés à l'évier, aux toilettes ni à la poubelle ménagère. Le pharmacien est l'acteur central de cette filière et son message est déterminant.",
-    "Déchets d'activité de soins à risque infectieux (DASRI) : filière séparée, boîtes à aiguilles délivrées gratuitement à l'officine aux patients en auto-traitement."
-   ],
-   "contraintes_formulaires": [
-    "Analyse de cycle de vie (ACV) selon ISO 14040",
-    "Substitution des solvants selon les guides de sélection (CHEM21)",
-    "Évaluation du risque environnemental obligatoire dans le dossier d'AMM (ERA)",
-    "Compatibilité entre allègement du conditionnement et exigences de stabilité et de sécurité"
-   ],
-   "conservation": "",
-   "exemples": [
-    "Compression directe vs granulation humide",
-    "Enrobage en voie aqueuse",
-    "Inhalateurs de poudre sèche vs aérosols-doseurs pressurisés",
-    "Filière Cyclamed",
-    "Dispensation à l'unité des antibiotiques"
-   ],
-   "populations_particulieres": {},
-   "technique_administration": [],
-   "technique_inhalation": {},
-   "sous_voies": [],
-   "voies_administration": [],
-   "taille_particules": null,
-   "sites_application": [],
-   "contre_indications_absolues": [],
-   "edqm": null,
-   "bcs_classes": null,
-   "tmax_typique": null,
-   "biodisponibilite_typique": null,
-   "controle_qualite_ph_eur": "L'écoconception ne doit jamais dégrader les critères de la Pharmacopée : uniformité de teneur, dissolution, stabilité et stérilité restent opposables et priment sur tout gain environnemental.",
-   "level": 3
   }
  ]
 }

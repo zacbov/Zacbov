@@ -13046,6 +13046,8 @@ function _phytoPlantLinks(m){
 function _relatedCategoriesLinks(m){
   if(!m) return '';
   var ownCat = m._cat;
+  /* Catégories exclues : rendu spécifique (iframe d'outil) ou volume trop élevé */
+  if(ownCat==='Outils' || ownCat==='Médicaments' || m.tool_mode || m._outil_render) return '';
 
   /* ── 1. Corpus de la fiche : tous les champs textuels, pas seulement 6 ───── */
   var hay='';
@@ -13153,6 +13155,7 @@ function _relatedCategoriesLinks(m){
     if(total>=MAX_TOTAL || cat===ownCat) return;
     var list=(typeof gallery!=='undefined' && gallery[cat])||[];
     if(!list.length) return;
+    var allowReverse = list.length<=1500;   /* évite un scan coûteux sur Médicaments */
     var hits=[], seen={};
     var myName = norm(m.name||m.titre||'');
     var myOk   = (myName.length-2)>=MIN_LEN && !STOP[myName];
@@ -13181,7 +13184,7 @@ function _relatedCategoriesLinks(m){
       }
       /* sens RÉCIPROQUE : la fiche cible cite la fiche courante
          (indispensable pour Plantes→Phytothérapie, Sémiologie→Pharmacie clinique…) */
-      if(c.__hay===undefined){
+      if(allowReverse && c.__hay===undefined){
         var t='';
         try{
           Object.keys(c).forEach(function(k){
@@ -13194,7 +13197,7 @@ function _relatedCategoriesLinks(m){
         }catch(e){}
         c.__hay=norm(t).slice(0,20000);
       }
-      if(c.__hay){
+      if(allowReverse && c.__hay){
         for(var kk=0;kk<myKeys.length;kk++){
           if(c.__hay.indexOf(myKeys[kk])!==-1){
             seen[nm]=1; hits.push({c:c,len:myKeys[kk].length,r:1}); break;
@@ -13224,11 +13227,15 @@ function _relatedCategoriesLinks(m){
    On l'ajoute désormais systématiquement, une seule fois par ouverture.      */
 (function(){
   function appendRelated(){
-    var info=document.getElementById('sheetInfo'); if(!info) return;
-    var m=(typeof activeModel!=='undefined')?activeModel:null; if(!m) return;
-    if(info.querySelector('.pa-related')) return;      // déjà présent
-    var html=_relatedCategoriesLinks(m);
-    if(html) info.insertAdjacentHTML('beforeend', html);
+    try{
+      var info=document.getElementById('sheetInfo'); if(!info) return;
+      var m=(typeof activeModel!=='undefined')?activeModel:null; if(!m) return;
+      if(m._cat==='Outils' || m.tool_mode || m._outil_render) return;   // outils : jamais
+      if(info.querySelector('.pa-related')) return;                     // déjà présent
+      if(info.querySelector('iframe')) return;                          // rendu iframe en cours
+      var html=_relatedCategoriesLinks(m);
+      if(html) info.insertAdjacentHTML('beforeend', html);
+    }catch(e){ /* ne doit jamais bloquer l'ouverture de la fiche */ }
   }
   window.paAppendRelated=appendRelated;
   var _o=openSheet;
@@ -15498,6 +15505,7 @@ function paBullets(v){
 (function(){
   var _origSec = sec;
   window.sec = sec = function(label,val,fk){
+    try{
     if(val==null) return '';
     var raw = String(val).replace(/<[^>]*>/g,'').replace(/[\s—–\-·:,;.]/g,'');
     if(!raw) return '';                       // champ vide ou réduit à un tiret
@@ -15506,6 +15514,7 @@ function paBullets(v){
     var html = _origSec.call(this,label,out,fk);
     // white-space:pre-wrap pour rendre visibles les retours à la ligne
     return html.replace('<div class="info-value">','<div class="info-value" style="white-space:pre-wrap;line-height:1.7">');
+    }catch(e){ return _origSec.call(this,label,val,fk); }
   };
 })();
 
@@ -15551,6 +15560,12 @@ function paSortConceptFirst(models){
     var sheet=document.getElementById('detailSheet');
     var sv=document.getElementById('sheetViewer');
     if(!sheet||!sv) return;
+    /* Outils : rendu et dimensionnement gérés par leur propre bloc → ne pas toucher */
+    if(m && (m._cat==='Outils' || m.tool_mode || m._outil_render)){
+      sheet.classList.remove('pa-noviewer'); sv.removeAttribute('data-concept');
+      if(_obs){ try{_obs.disconnect();}catch(e){} _obs=null; }
+      return;
+    }
     if(_obs){ try{_obs.disconnect();}catch(e){} _obs=null; }
     var concept = (typeof paIsConcept==='function') && paIsConcept(m);
     var taxon   = !concept && !!(m && (m.scientific||m.latin));

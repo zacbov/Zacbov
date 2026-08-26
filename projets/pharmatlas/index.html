@@ -6512,7 +6512,7 @@ async function openSheet(m){
           </div>
         </div>`:'');
     info.innerHTML+=renderExternalApis(m);
-    info.innerHTML+=_relatedCategoriesLinks(m);
+    /* liens désormais injectés automatiquement en bas de fiche */
 
   }else if(cat==='Virus'){
     /* ── Couleurs Baltimore ── */
@@ -6605,7 +6605,7 @@ async function openSheet(m){
       +_renderAntiviraux(m.antiviraux)
       +traitHtml;
     info.innerHTML+=renderExternalApis(m);
-    info.innerHTML+=_relatedCategoriesLinks(m);
+    /* liens désormais injectés automatiquement en bas de fiche */
 
   }else if(cat==='Parasites'){
     const vecteurIcons={'Moustique':'\u{1F99F}','Tique':'\u{1F577}\uFE0F','Mouche tsé-tsé':'\u{1FAB0}','Triatome':'\u{1F41B}','Phlébotome':'\u{1FAB0}','Contact direct':'\u{1F91D}','Féco-oral':'\u{1F4A7}','Sol / Larves':'\u{1F331}','Eau douce / Cercaires':'\u{1F30A}','Alimentaire':'\u{1F356}','Aucun vecteur':'\u274C','Sangsue':'\u{1FA78}','Poussière / Aérosol':'\u{1F4A8}','Lentilles de contact / Eau':'\u{1F441}\uFE0F'};
@@ -6637,7 +6637,7 @@ async function openSheet(m){
         +"<div class=\"info-label\" style=\"color:#2e7d32\">\uD83D\uDCDA Points cl\u00E9s</div>"
         +"<div class=\"info-value\" style=\"white-space:pre-wrap\">"+escHtml(m.points_cles_cours)+"</div></div>":"");
     info.innerHTML+=renderExternalApis(m);
-    info.innerHTML+=_relatedCategoriesLinks(m);
+    /* liens désormais injectés automatiquement en bas de fiche */
 
  }else if(cat==='Minéraux'){
     // Badge de type minéral
@@ -10258,7 +10258,7 @@ else if(wt==='bootstrap_viz'){
       +(m.reglementation?sec('\u2696\uFE0F R\u00E9glementation',escHtml(m.reglementation),'reglementation'):'');
     info.innerHTML+=_phytoPlantLinks(m);
     info.innerHTML+=renderExternalApis(m);
-    info.innerHTML+=_relatedCategoriesLinks(m);
+    /* liens désormais injectés automatiquement en bas de fiche */
 
 }else if(cat==='Toxicologie'){
   /* ── Toxicologie ── */
@@ -13045,40 +13045,201 @@ function _phytoPlantLinks(m){
 
 function _relatedCategoriesLinks(m){
   if(!m) return '';
-  var hay = ((m.name||'')+' '+(m.pathologies||'')+' '+(m.antibiotiques||'')+' '
-            +(m.traitements||'')+' '+(m.virulence||'')+' '+(m.antiviraux||'')).toLowerCase();
   var ownCat = m._cat;
-  var groups = [
-    {cat:'ChimieTherapeutique', label:'💊 Molécules thérapeutiques', minLen:5},
-    {cat:'Pharmacologie',       label:'⚕️ Pharmacologie',           minLen:5},
-    {cat:'Biochimie',           label:'🔬 Biochimie',               minLen:4},
-    {cat:'Oncologie',           label:'🎗️ Oncologie',               minLen:6},
-    {cat:'Genetique',           label:'🧬 Génétique',               minLen:6},
-  ];
-  var out = [];
-  groups.forEach(function(grp){
-    var cat = (grp.cat==='Genetique') ? 'Génétique' : grp.cat;
-    if(cat===ownCat) return;
-    var list = (gallery[cat]||[]);
-    var seen={}, cards=[];
-    list.forEach(function(c){
-      var n=(c.name||'').toLowerCase().trim();
-      if(n.length<grp.minLen || seen[n]) return;
-      // match: le nom de l'entrée cible apparaît dans le texte de la fiche pathogène
-      if(hay.indexOf(n)!==-1){ seen[n]=1; cards.push(renderNavCard(c,cat)); }
+
+  /* ── 1. Corpus de la fiche : tous les champs textuels, pas seulement 6 ───── */
+  var hay='';
+  try{
+    var SKIP={_cat:1,_id:1,file:1,camera:1,ext_apis:1,widget_def:1,ms_widget_def:1,
+              content_base64:1,thumbnail:1,image:1,photos:1,smiles:1,_icon:1,level:1,concept:1};
+    Object.keys(m).forEach(function(k){
+      if(SKIP[k]) return;
+      var v=m[k];
+      if(typeof v==='string') hay+=' '+v;
+      else if(Array.isArray(v)) hay+=' '+v.map(function(e){
+        return (typeof e==='string')?e:(e&&(e.titre||e.contenu||e.nom||''));
+      }).join(' ');
+      else if(v&&typeof v==='object') hay+=' '+Object.keys(v).map(function(kk){
+        return (typeof v[kk]==='string')?v[kk]:'';
+      }).join(' ');
     });
-    if(cards.length){
-      out.push('<div class="info-section"><div class="info-label">'+grp.label
-        +' <span style="font-size:10px;font-weight:400;opacity:.6">— PharmAtlas</span></div>'
-        +'<div class="nav-links-section">'+cards.join('')+'</div></div>');
+  }catch(e){ hay=(m.name||''); }
+  hay=(' '+hay+' ').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^a-z0-9]+/g,' ');
+  if(hay.length>60000) hay=hay.slice(0,60000);
+
+  /* ── 2. Cibles pertinentes SELON la catégorie d'origine ──────────────────
+        Objectif : pouvoir naviguer pathologie → médicament → molécule,
+        sans noyer la fiche sous les liens.                                   */
+  var MAP={
+    /* Agents infectieux → prise en charge et molécules */
+    'Bacteries'      :['Pharmacie_Clinique','ChimieTherapeutique','Médicaments','Microscopiques'],
+    'Virus'          :['Pharmacie_Clinique','ChimieTherapeutique','Immunologie','Médicaments','Oncologie','Sante_Publique'],
+    'Parasites'      :['Pharmacie_Clinique','ChimieTherapeutique','Microscopiques','Plantes'],
+    'Champignons'    :['Toxicologie','Microscopiques','Plantes','Pharmacie_Clinique','Métabolites_Secondaires'],
+    'Microscopiques' :['Parasites','Bacteries','Champignons','Pharmacie_Clinique','Toxicologie','Plantes'],
+    /* Clinique → molécules, physiopathologie, biologie */
+    'Pharmacie_Clinique':['ChimieTherapeutique','Pharmacologie','Médicaments','Sémiologie','Physiologie'],
+    'Sémiologie'     :['Pharmacie_Clinique','Physiologie','Hematologie','Biochimie','ChimieTherapeutique'],
+    'Oncologie'      :['ChimieTherapeutique','Pharmacie_Clinique','Génétique','Immunologie'],
+    'Hematologie'    :['Pharmacie_Clinique','ChimieTherapeutique','Biochimie','Immunologie'],
+    'Immunologie'    :['Pharmacie_Clinique','ChimieTherapeutique','Oncologie','Bacteries'],
+    'Vigilances'     :['Pharmacie_Clinique','Toxicologie','Médicaments'],
+    /* Molécules → cible, usage clinique, toxicité */
+    'ChimieTherapeutique':['Pharmacologie','Pharmacie_Clinique','Biochimie','Toxicologie','Médicaments','Chimie'],
+    'Pharmacologie'  :['ChimieTherapeutique','Pharmacie_Clinique','Transporteurs','Physiologie'],
+    'Médicaments'    :['ChimieTherapeutique','Pharmacie_Clinique','Pharmacologie','Vigilances'],
+    'Toxicologie'    :['ChimieTherapeutique','Pharmacie_Clinique','Plantes','Champignons','Biochimie'],
+    'Pharmacocinétique':['CYP450_Pharmacogénétique','Transporteurs','Biotransformations','Pharmacologie','Math_Stats','Galénique'],
+    'Biotransformations':['CYP450_Pharmacogénétique','Pharmacocinétique','Transporteurs','Toxicologie'],
+    'CYP450_Pharmacogénétique':['Biotransformations','Pharmacocinétique','ChimieTherapeutique','Génétique'],
+    'Transporteurs'  :['Pharmacocinétique','Pharmacologie','Physiologie','Biotransformations'],
+    /* Pharmacognosie */
+    'Plantes'        :['Phytotherapie','Métabolites_Secondaires','Huiles_Essentielles','Toxicologie'],
+    'Phytotherapie'  :['Plantes','Métabolites_Secondaires','Huiles_Essentielles','Pharmacie_Clinique'],
+    'Métabolites_Secondaires':['Plantes','ChimieTherapeutique','Phytotherapie','Toxicologie'],
+    'Huiles_Essentielles':['Plantes','Phytotherapie','Métabolites_Secondaires','Toxicologie'],
+    /* Fondamentales */
+    'Biochimie'      :['Physiologie','Hematologie','Génétique','Biotransformations','Chimie','Pharmacie_Clinique'],
+    'Physiologie'    :['Sémiologie','Pharmacologie','Biochimie','Hematologie','Organites','Histologie'],
+    'Génétique'      :['Oncologie','Biochimie','CYP450_Pharmacogénétique','Hematologie','Physiologie','Immunologie'],
+    'Histologie'     :['Physiologie','Organites','Oncologie'],
+    'Organites'      :['Physiologie','Biochimie','Histologie'],
+    'Galénique'      :['Dispositifs_Medicaux','Pharmacocinétique','Médicaments','Chimie'],
+    'Chimie'         :['ChimieTherapeutique','Fonctions_Organiques','Biochimie','Toxicologie','Métabolites_Secondaires'],
+    'Chimie_Inorganique':['Minéraux','Toxicologie','Biochimie','Chimie','ChimieTherapeutique','Dispositifs_Medicaux'],
+    'Fonctions_Organiques':['Chimie','Stéréochimie','ChimieTherapeutique'],
+    'Chimie_Analytique':['Spectroscopie','Chimie','Math_Stats'],
+    'Spectroscopie'  :['Chimie_Analytique','Chimie','Physique'],
+    'Physique'       :['Optique','Galénique','Chimie_Analytique','Chimie','Spectroscopie','Physiologie'],
+    'Optique'        :['Physique','Dispositifs_Medicaux','Sémiologie','Pharmacie_Clinique','Chimie'],
+    'Sante_Publique' :['Math_Stats','Vigilances','Pharmacie_Clinique','Bacteries','Virus','Toxicologie'],
+    'Math_Stats'     :['Sante_Publique','Chimie_Analytique','Pharmacocinétique','Physique','Biochimie'],
+    'Minéraux'       :['Chimie_Inorganique','Toxicologie','Chimie','Dispositifs_Medicaux'],
+    'Dispositifs_Medicaux':['Galénique','Pharmacie_Clinique','Optique'],
+    'Thérapies_Complémentaires':['Phytotherapie','Plantes','Pharmacie_Clinique'],
+    'Stéréochimie'   :['Chimie','Fonctions_Organiques','ChimieTherapeutique']
+  };
+  var LABELS={
+    'ChimieTherapeutique':'💊 Molécules thérapeutiques','Pharmacologie':'⚕️ Pharmacologie',
+    'Biochimie':'🔬 Biochimie','Oncologie':'🎗️ Oncologie','Génétique':'🧬 Génétique',
+    'Pharmacie_Clinique':'🩺 Pharmacie clinique','Médicaments':'💉 Médicaments',
+    'Sémiologie':'🔎 Sémiologie','Physiologie':'🫀 Physiologie','Hematologie':'🩸 Hématologie',
+    'Immunologie':'🛡️ Immunologie','Toxicologie':'☠️ Toxicologie','Plantes':'🌿 Plantes',
+    'Phytotherapie':'🌱 Phytothérapie','Métabolites_Secondaires':'🌿 Métabolites secondaires',
+    'Huiles_Essentielles':'🫧 Huiles essentielles','Bacteries':'🦠 Bactéries','Virus':'🧫 Virus',
+    'Parasites':'🪱 Parasites','Champignons':'🍄 Champignons','Microscopiques':'🔬 Microscopiques',
+    'Transporteurs':'🚚 Transporteurs','Pharmacocinétique':'📈 Pharmacocinétique',
+    'Biotransformations':'🔄 Biotransformations','CYP450_Pharmacogénétique':'🧬 CYP450',
+    'Galénique':'💊 Galénique','Chimie':'⚗️ Chimie','Chimie_Inorganique':'🧪 Chimie inorganique',
+    'Fonctions_Organiques':'⚗️ Fonctions organiques','Chimie_Analytique':'📊 Chimie analytique',
+    'Spectroscopie':'📉 Spectroscopie','Physique':'🔭 Physique','Optique':'👁️ Optique',
+    'Sante_Publique':'🌍 Santé publique','Math_Stats':'📐 Maths & Stats','Minéraux':'💎 Minéraux',
+    'Dispositifs_Medicaux':'🩹 Dispositifs médicaux','Organites':'🧩 Organites',
+    'Histologie':'🔬 Histologie','Vigilances':'⚠️ Vigilances',
+    'Thérapies_Complémentaires':'🧘 Thérapies complémentaires','Stéréochimie':'🔀 Stéréochimie'
+  };
+  var targets = MAP[ownCat] || ['Pharmacie_Clinique','ChimieTherapeutique','Pharmacologie'];
+
+  /* ── 3. Appariement par MOT ENTIER + score de spécificité ────────────────── */
+  var MAX_PER_GROUP = 3, MAX_TOTAL = 8, MIN_LEN = 5;
+  var STOP = {' eau ':1,' fer ':1,' zinc ':1,' iode ':1,' huile ':1,' sang ':1,' acide ':1,
+              ' sodium ':1,' calcium ':1,' azote ':1,' sucre ':1,' base ':1,' gaz ':1};
+  function norm(x){ return (' '+String(x||'').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ')+' '); }
+  var total=0, out=[];
+  targets.forEach(function(cat){
+    if(total>=MAX_TOTAL || cat===ownCat) return;
+    var list=(typeof gallery!=='undefined' && gallery[cat])||[];
+    if(!list.length) return;
+    var hits=[], seen={};
+    var myName = norm(m.name||m.titre||'');
+    var myOk   = (myName.length-2)>=MIN_LEN && !STOP[myName];
+    /* clés secondaires : nom latin, et racine du nom (« Thym commun » → « thym »),
+       indispensable car les renvois explicites citent souvent la forme courte */
+    var myKeys=[];
+    if(myOk) myKeys.push(myName);
+    [m.scientific,m.latin].forEach(function(v){
+      var k=norm(v||''); if((k.length-2)>=MIN_LEN && !STOP[k]) myKeys.push(k);
+    });
+    (function(){
+      var w=myName.trim().split(' ');
+      if(w.length>1){
+        var r=' '+w.slice(0,2).join(' ')+' ';
+        if((r.length-2)>=MIN_LEN && !STOP[r]) myKeys.push(r);
+        var r1=' '+w[0]+' ';
+        if((r1.length-2)>=6 && !STOP[r1]) myKeys.push(r1);
+      }
+    })();
+    for(var i=0;i<list.length;i++){
+      var c=list[i], nm=norm(c.name||c.titre);
+      if(seen[nm]) continue;
+      /* sens DIRECT : le nom de la fiche cible apparaît dans le texte courant */
+      if(nm.length-2>=MIN_LEN && !STOP[nm] && hay.indexOf(nm)!==-1){
+        seen[nm]=1; hits.push({c:c,len:nm.length,r:0}); continue;
+      }
+      /* sens RÉCIPROQUE : la fiche cible cite la fiche courante
+         (indispensable pour Plantes→Phytothérapie, Sémiologie→Pharmacie clinique…) */
+      if(c.__hay===undefined){
+        var t='';
+        try{
+          Object.keys(c).forEach(function(k){
+            if(k.charAt(0)==='_'||k==='file'||k==='camera') return;
+            var v=c[k];
+            if(typeof v==='string') t+=' '+v;
+            else if(Array.isArray(v)) t+=' '+v.map(function(e){
+              return (typeof e==='string')?e:(e&&(e.titre||e.contenu||''))||''; }).join(' ');
+          });
+        }catch(e){}
+        c.__hay=norm(t).slice(0,20000);
+      }
+      if(c.__hay){
+        for(var kk=0;kk<myKeys.length;kk++){
+          if(c.__hay.indexOf(myKeys[kk])!==-1){
+            seen[nm]=1; hits.push({c:c,len:myKeys[kk].length,r:1}); break;
+          }
+        }
+      }
+      if(hits.length>40) break;
     }
+    if(!hits.length) return;
+    hits.sort(function(a,b){ return b.len-a.len; });      // le plus spécifique d'abord
+    hits=hits.slice(0, Math.min(MAX_PER_GROUP, MAX_TOTAL-total));
+    total+=hits.length;
+    out.push('<div class="info-section"><div class="info-label">'+(LABELS[cat]||cat)
+      +' <span style="font-size:10px;font-weight:400;opacity:.6">— '+hits.length+' fiche'
+      +(hits.length>1?'s':'')+'</span></div><div class="nav-links-section">'
+      +hits.map(function(h){ return renderNavCard(h.c,cat); }).join('')+'</div></div>');
   });
   if(!out.length) return '';
-  return '<div style="margin-top:6px;padding-top:10px;border-top:1px dashed var(--border,#ddd)">'
+  return '<div class="pa-related" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border,#ddd)">'
        + '<div style="font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--muted,#999);'
        + 'text-transform:uppercase;margin-bottom:8px">🔗 Voir aussi dans le PharmAtlas</div>'
        + out.join('') + '</div>';
 }
+
+/* ── Injection AUTOMATIQUE des liens en bas de TOUTE fiche ────────────────
+   Auparavant seules 5 catégories sur 45 appelaient _relatedCategoriesLinks().
+   On l'ajoute désormais systématiquement, une seule fois par ouverture.      */
+(function(){
+  function appendRelated(){
+    var info=document.getElementById('sheetInfo'); if(!info) return;
+    var m=(typeof activeModel!=='undefined')?activeModel:null; if(!m) return;
+    if(info.querySelector('.pa-related')) return;      // déjà présent
+    var html=_relatedCategoriesLinks(m);
+    if(html) info.insertAdjacentHTML('beforeend', html);
+  }
+  window.paAppendRelated=appendRelated;
+  var _o=openSheet;
+  openSheet=function(m){
+    var r=_o.apply(this,arguments);
+    if(r&&typeof r.then==='function') r.then(function(){ setTimeout(appendRelated,80); });
+    else setTimeout(appendRelated,80);
+    setTimeout(appendRelated,500);
+    return r;
+  };
+})();
 
 function _ctLinksFromText(text){
   if(!text) return '';

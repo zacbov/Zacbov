@@ -164,6 +164,27 @@ h1.gt{
 .slb{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.08em;color:var(--gold);}
 .sv{font-family:'Cinzel Decorative',serif;font-size:1.3rem;color:var(--gold-bright);text-align:center;}
 
+/* ── SANCTUAIRE ── */
+#sanctuary-screen{
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;padding:20px;
+}
+.sanct-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:6px 0;border-bottom:1px solid rgba(201,168,76,.08);
+  font-family:'Cinzel',serif;font-size:.7rem;color:var(--parchment);
+}
+.sanct-row span:last-child{color:var(--gold-bright);font-weight:600;}
+.btn-shop{
+  display:flex;justify-content:space-between;align-items:center;width:100%;
+  background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.22);
+  color:var(--parchment);font-family:'Cinzel',serif;font-size:.68rem;
+  padding:9px 12px;margin-bottom:6px;cursor:pointer;transition:all .18s;
+}
+.btn-shop:hover:not(:disabled){background:rgba(201,168,76,.15);border-color:var(--gold);}
+.btn-shop:disabled{opacity:.35;cursor:not-allowed;}
+.btn-shop .price{color:var(--gold-bright);font-size:.65rem;}
+
 /* ── BUTTONS ── */
 .btn{
   display:inline-block;padding:8px 18px;
@@ -210,6 +231,22 @@ h1.gt{
   animation:su .32s ease;
 }
 @keyframes su{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── DÉS 3D ── */
+#dice3d{
+  display:none;
+  position:absolute;
+  pointer-events:none;
+  z-index:60;
+}
+#dice3d canvas{width:100%;height:100%;display:block;}
+.dice-toggle{
+  background:rgba(7,4,1,.6);border:1px solid rgba(201,168,76,.25);
+  color:var(--parchment-dark);font-family:'Cinzel',serif;font-size:.55rem;
+  padding:2px 7px;cursor:pointer;letter-spacing:.05em;transition:all .15s;
+}
+.dice-toggle.sel{border-color:var(--gold);color:var(--gold-bright);background:rgba(201,168,76,.12);}
+.dice-toggle:hover{color:var(--gold-bright);}
 .chdr{
   font-family:'Cinzel Decorative',serif;color:#ff5050;font-size:.88rem;
   text-align:center;margin-bottom:10px;
@@ -333,7 +370,7 @@ h1.gt{
 }
 
 /* ── DEATH / VICTORY ── */
-#dscreen,#vscreen{
+#dscreen,#vscreen,#xscreen{
   position:absolute;inset:0;display:none;
   flex-direction:column;align-items:center;justify-content:center;
   padding:40px 20px;text-align:center;
@@ -529,7 +566,47 @@ h1.gt{
   <p style="color:var(--parchment-dark);font-size:.8rem;max-width:280px;font-style:italic;line-height:1.8;margin-bottom:26px;">
     Zagor, le nécromancien immortel, règne sur un labyrinthe de terreur. Serez-vous le héros qui mettra fin à sa malédiction ?
   </p>
-  <button class="btn" onclick="showSetup()">⚔ Commencer l'aventure</button>
+  <button class="btn" onclick="showSanctuary()">🏛 Entrer au Sanctuaire</button>
+</div>
+
+<!-- SANCTUAIRE (hub persistant entre les expéditions) -->
+<div id="sanctuary-screen" style="display:none;">
+  <div class="scard">
+    <h2 class="sh">🏛 Le Sanctuaire</h2>
+    <p class="ssub">Vos gains survivent ici, même si vous périssez dans le manoir.</p>
+
+    <div id="sanct-stats">
+      <div class="sanct-row"><span>💰 Or amassé</span><span id="sanct-gold">0</span></div>
+      <div class="sanct-row"><span>🔷 Matériaux</span><span id="sanct-mats">0</span></div>
+      <div class="sanct-row"><span>⚔ Habileté permanente</span><span id="sanct-b-skill">+0</span></div>
+      <div class="sanct-row"><span>❤ Endurance permanente</span><span id="sanct-b-end">+0</span></div>
+      <div class="sanct-row"><span>🍀 Chance permanente</span><span id="sanct-b-luck">+0</span></div>
+    </div>
+
+    <div id="sanct-shop">
+      <div class="invh" style="margin:14px 0 8px;">Améliorations permanentes</div>
+      <button class="btn-shop" id="buy-skill" onclick="buyUpgrade('skill')">
+        <span>⚔ +1 Habileté</span><span class="price" id="price-skill"></span>
+      </button>
+      <button class="btn-shop" id="buy-endurance" onclick="buyUpgrade('endurance')">
+        <span>❤ +1 Endurance</span><span class="price" id="price-endurance"></span>
+      </button>
+      <button class="btn-shop" id="buy-luck" onclick="buyUpgrade('luck')">
+        <span>🍀 +1 Chance</span><span class="price" id="price-luck"></span>
+      </button>
+      <button class="btn-shop" id="buy-tier" onclick="buySanctuaryTier()" style="border-color:rgba(93,168,232,.4);">
+        <span id="tier-label">🔷 Améliorer le Sanctuaire</span><span class="price" id="price-tier"></span>
+      </button>
+    </div>
+
+    <div id="sanct-quests" style="margin-top:14px;"></div>
+
+    <div id="sanct-runs" style="margin-top:14px;font-size:.65rem;color:var(--parchment-dark);text-align:center;">
+      <span id="sanct-run-summary"></span>
+    </div>
+
+    <button class="btn" style="margin-top:18px;" onclick="showSetup()">⚔ Partir en expédition</button>
+  </div>
 </div>
 
 <!-- SETUP -->
@@ -586,6 +663,7 @@ h1.gt{
       <input type="range" id="vol-slider" min="0" max="100" value="45" oninput="setMusicVol(this.value)">
     </div>
     <button id="music-btn" onclick="toggleMusic()"><span class="note">♪</span> Musique</button>
+    <button class="dice-toggle sel" id="dice3d-btn" onclick="toggleDice3d()" title="Basculer dés 2D/3D">🎲 3D</button>
   </div>
 </div>
 
@@ -666,7 +744,8 @@ h1.gt{
   <div style="font-size:3.5rem;" id="dicon">💀</div>
   <div class="dtitle" id="dtitle-txt">VOUS ÊTES MORT</div>
   <p class="endtxt" id="dmsg">Vos os rejoignent ceux des centaines d'aventuriers précédents...</p>
-  <button class="btn" onclick="location.reload()">↺ Recommencer</button>
+  <div id="dsummary" style="font-family:'Cinzel',serif;font-size:.7rem;color:var(--parchment-dark);margin:8px 0 18px;"></div>
+  <button class="btn" onclick="goToSanctuaryAfterRun()">🏛 Retour au Sanctuaire</button>
 </div>
 
 <!-- VICTORY -->
@@ -674,7 +753,16 @@ h1.gt{
   <div style="font-size:3.5rem;">🏆</div>
   <div class="vtitle">VICTOIRE !</div>
   <p class="endtxt" id="vmsg">Zagor s'effondre en poussière noire ! Sa malédiction se dissipe pour l'éternité. Votre nom sera chanté par les bardes à jamais !</p>
-  <button class="btn" onclick="location.reload()">↺ Jouer à nouveau</button>
+  <button class="btn" onclick="goToSanctuaryAfterRun()">🏛 Retour au Sanctuaire</button>
+</div>
+
+<!-- EXTRACTION RÉUSSIE -->
+<div id="xscreen">
+  <div style="font-size:3.5rem;">🚪</div>
+  <div class="vtitle" style="color:var(--gold-bright);">EXTRACTION RÉUSSIE</div>
+  <p class="endtxt" id="xmsg">Vous quittez le manoir avec votre butin, laissant ses horreurs derrière vous... pour l'instant.</p>
+  <div id="xsummary" style="font-family:'Cinzel',serif;font-size:.75rem;color:var(--gold-bright);margin:10px 0 18px;"></div>
+  <button class="btn" onclick="goToSanctuaryAfterRun()">🏛 Retour au Sanctuaire</button>
 </div>
 
 <div id="maptip"><div id="tip-loc"></div><div id="tip-hint" style="font-size:.55rem;color:var(--parchment-dark);font-style:italic;margin-top:1px;"></div></div>
@@ -773,6 +861,42 @@ function showIllus(roomId){
 /* ════════════════════════════════════════
    STATE
 ════════════════════════════════════════ */
+/* ════════════════════════════════════════
+   META — Progression persistante du Sanctuaire (localStorage)
+   Survit à la mort et à l'extraction. G = état d'une run, Meta = permanent.
+════════════════════════════════════════ */
+const META_KEY = 'labyrinthe_sanctuaire_v1';
+const Meta = loadMeta();
+
+function defaultMeta(){
+  return {
+    bankedGold: 0,                 // or extrait, dépensable au sanctuaire
+    materials: 0,                  // matériaux de sanctuaire extraits
+    permBonus: { skill:0, endurance:0, luck:0 }, // bonus permanents achetés
+    sanctuaryTier: 0,              // niveau du sanctuaire (débloque plus de slots/lore)
+    runsCompleted: 0,
+    runsExtracted: 0,
+    runsDied: 0,
+    bestGoldRun: 0,
+    questProgress: {},             // ex: {arianna_delivered:true}
+    unlockedUpgrades: {},          // ids des améliorations sanctuaire achetées
+    zagorLoreStacks: 0,            // nombre de secrets sur Zagor livrés au Sanctuaire (affaiblit Zagor durablement)
+  };
+}
+
+function loadMeta(){
+  try{
+    const raw = localStorage.getItem(META_KEY);
+    if(!raw) return defaultMeta();
+    const parsed = JSON.parse(raw);
+    return Object.assign(defaultMeta(), parsed);
+  } catch(e){ return defaultMeta(); }
+}
+
+function saveMeta(){
+  try{ localStorage.setItem(META_KEY, JSON.stringify(Meta)); } catch(e){ /* stockage indisponible, tant pis */ }
+}
+
 const G = {
   skill:0, maxSkill:0,
   endurance:0, maxEndurance:0,
@@ -785,7 +909,8 @@ const G = {
   pathHistory:[],
   inCombat:false, combat:null,
   potion:null, provisions:0,
-  setup:{skill:false,endurance:false,luck:false,potion:false}
+  setup:{skill:false,endurance:false,luck:false,potion:false},
+  extracted:false,          // true si la run s'est terminée par une extraction réussie
 };
 
 let mapOpen = false;
@@ -807,6 +932,370 @@ function enemyEmoji(name){
 }
 
 const roll2d6 = ()=>d6()+d6();
+
+/* ════════════════════════════════════════
+   BUTIN — Raretés, catalogue d'objets, ennemis génériques
+════════════════════════════════════════ */
+const RARITY = {
+  commun:    { label:'Commun',    color:'#b8b0a0', glow:'rgba(184,176,160,.5)' },
+  rare:      { label:'Rare',      color:'#5da8e8', glow:'rgba(93,168,232,.6)' },
+  epique:    { label:'Épique',    color:'#b06ee8', glow:'rgba(176,110,232,.7)' },
+  legendaire:{ label:'Légendaire',color:'#f0c060', glow:'rgba(240,192,96,.8)' },
+};
+
+// Catalogue d'objets génériques du butin (hors objets de quête uniques, qui restent gérés séparément)
+const LOOT_ITEMS = {
+  // ── CONSOMMABLES (usage unique, utilisables en jeu) ──
+  fiole_soin_c:  { name:'Petite Fiole de Soin', rarity:'commun', cat:'consommable', heal:2 },
+  fiole_soin_r:  { name:'Fiole de Soin',        rarity:'rare',   cat:'consommable', heal:5 },
+  fiole_soin_e:  { name:'Grande Fiole de Vie',  rarity:'epique', cat:'consommable', heal:10 },
+  sel_beni:      { name:'Pincée de Sel Béni',   rarity:'commun', cat:'consommable', luckBoost:1 },
+  elixir_prec:   { name:'Elixir de Précision',  rarity:'rare',   cat:'consommable', skillBoost:2 },
+  philtre_fureur:{ name:'Philtre de Fureur',    rarity:'epique', cat:'consommable', skillBoost:3 },
+
+  // ── AMÉLIORATIONS DE COMPÉTENCE (permanentes, à consommer au Sanctuaire) ──
+  eclat_volonte: { name:'Éclat de Volonté',   rarity:'commun',    cat:'stat_upgrade', stat:'endurance', amount:1 },
+  cristal_force: { name:'Cristal de Force',   rarity:'rare',      cat:'stat_upgrade', stat:'skill',     amount:1 },
+  gemme_fortune: { name:'Gemme de Fortune',   rarity:'epique',    cat:'stat_upgrade', stat:'luck',      amount:1 },
+  coeur_manoir:  { name:'Cœur du Manoir',     rarity:'legendaire',cat:'stat_upgrade', stat:'all',       amount:1 },
+
+  // ── MATÉRIAUX DE SANCTUAIRE (monnaie d'amélioration du hub) ──
+  pierre_brisee: { name:'Pierre Runique Brisée', rarity:'commun',    cat:'materiau', value:1 },
+  fragment_autel:{ name:"Fragment d'Autel",      rarity:'rare',      cat:'materiau', value:3 },
+  essence_occ:   { name:'Essence Occulte',       rarity:'epique',    cat:'materiau', value:6 },
+  noyau_zagor:   { name:'Noyau de Ténèbres',     rarity:'legendaire',cat:'materiau', value:15 },
+};
+
+// Tables de butin pondérées par rareté — utilisées pour les tirages génériques
+const LOOT_POOL = {
+  commun:     ['fiole_soin_c','sel_beni','eclat_volonte','pierre_brisee'],
+  rare:       ['fiole_soin_r','elixir_prec','cristal_force','fragment_autel'],
+  epique:     ['fiole_soin_e','philtre_fureur','gemme_fortune','essence_occ'],
+  legendaire: ['coeur_manoir','noyau_zagor'],
+};
+
+function rollLootItem(rarity){
+  const pool = LOOT_POOL[rarity] || LOOT_POOL.commun;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+// ── OBJETS DE QUÊTE — remise au Sanctuaire ──
+// Ramener ces objets uniques (extraction ou victoire) les consomme définitivement et
+// débloque une récompense permanente + un jalon narratif consulté par les PNJ lors des runs suivantes.
+const QUEST_TURNINS = {
+  "Médaillon d'Arianna": {
+    flag: 'arianna_delivered',
+    reward: ()=>{ Meta.permBonus.luck += 1; },
+    rewardLabel: '+1 Chance permanente',
+    msg: "Vous déposez le médaillon sur l'autel du Sanctuaire. Un écho de harpe résonne un instant — Arianna vous bénit à travers les âges.",
+  },
+  'Parchemin de Zagor': {
+    flag: 'zagor_lore1',
+    reward: ()=>{ Meta.zagorLoreStacks = (Meta.zagorLoreStacks||0) + 1; },
+    rewardLabel: 'Zagor légèrement affaibli lors des prochaines expéditions',
+    msg: "Le parchemin rejoint la bibliothèque du Sanctuaire. Chaque secret arraché à Zagor l'affaiblit un peu plus, expédition après expédition.",
+  },
+  'Portrait de Zagor Jeune': {
+    flag: 'zagor_portrait_delivered',
+    reward: ()=>{ Meta.permBonus.skill += 1; },
+    rewardLabel: '+1 Habileté permanente',
+    msg: "Le portrait trouve sa place au Sanctuaire. Comprendre l'homme derrière le monstre vous rend plus résolu au combat.",
+  },
+};
+
+// Ennemis génériques rencontrés au hasard dans les salles "sauvages" — force scalée au jet d'entrée
+const RANDOM_ENEMIES = {
+  faible: [
+    {name:'Rat Géant',emoji:'🐀',skill:4,endurance:4,gold:1},
+    {name:'Chauve-souris Vampire',emoji:'🦇',skill:5,endurance:4,gold:1},
+    {name:'Vermine Rampante',emoji:'🐛',skill:4,endurance:5,gold:2},
+  ],
+  moyen: [
+    {name:'Pillard Mort-Vivant',emoji:'🧟',skill:6,endurance:7,gold:3},
+    {name:'Araignée Sentinelle',emoji:'🕷️',skill:6,endurance:8,gold:3},
+    {name:'Ombre Errante',emoji:'👤',skill:7,endurance:6,gold:2},
+  ],
+  fort: [
+    {name:'Garde Spectral',emoji:'👻',skill:8,endurance:11,gold:5},
+    {name:'Golem de Pierre',emoji:'🗿',skill:8,endurance:13,gold:6},
+    {name:'Chasseur Maudit',emoji:'🏹',skill:9,endurance:10,gold:5},
+  ],
+};
+
+function rollRandomEnemy(tier){
+  const pool = RANDOM_ENEMIES[tier] || RANDOM_ENEMIES.faible;
+  const base = pool[Math.floor(Math.random()*pool.length)];
+  return {...base, canFlee:true};
+}
+
+// Message de butin avec couleur de rareté (distinct de showMsg qui reste en texte brut)
+function showLootMsg(html){
+  const b=$('msgbox'); b.innerHTML=html; b.style.display='block';
+  setTimeout(()=>b.style.display='none',4000);
+}
+
+// Ajoute un objet du catalogue LOOT_ITEMS à l'inventaire de run (G.inventory), avec message formaté
+function grantLootItem(key){
+  const it = LOOT_ITEMS[key];
+  if(!it) return;
+  const r = RARITY[it.rarity];
+  G.inventory.push(key);
+  updInv();
+  showLootMsg(`<span style="color:${r.color}">✦ ${r.label}</span> — ${it.name} obtenu !`);
+}
+
+// Consomme un objet du catalogue (soin ou boost temporaire de combat)
+function useLootConsumable(key){
+  const idx = G.inventory.indexOf(key);
+  if(idx<0) return;
+  const it = LOOT_ITEMS[key];
+  if(!it) return;
+  G.inventory.splice(idx,1);
+  if(it.heal){
+    const h = Math.min(it.heal, G.maxEndurance-G.endurance);
+    G.endurance += h; updateStats();
+    showMsg(`${it.name} bue. (+${h} Endurance)`);
+  } else if(it.luckBoost){
+    G.luck = Math.min(G.maxLuck+it.luckBoost, G.luck+it.luckBoost); updateStats();
+    showMsg(`${it.name} utilisé. (+${it.luckBoost} Chance)`);
+  } else if(it.skillBoost){
+    G.skill = Math.min(G.maxSkill+it.skillBoost, G.skill+it.skillBoost); updateStats();
+    showMsg(`${it.name} utilisé. (+${it.skillBoost} Habileté au prochain combat)`);
+  }
+  updInv();
+}
+
+// Salle "sauvage" — jet automatique à la première entrée : ennemi aléatoire, rien, ou butin.
+// Les visites suivantes (backtrack) sautent directement à renderChoices normal.
+function enterWildRoom(id){
+  G.flags['wild_done_'+id] = true;
+  const r = roll2d6();
+  const R = ROOMS[id];
+  const finish = ()=> renderChoices(typeof R.choices==='function'?R.choices():R.choices);
+
+  if(r<=4){
+    showLootMsg('<span class="hit">⚠ Un danger surgit de l\'ombre !</span>');
+    setTimeout(()=>{
+      startCombat(rollRandomEnemy('fort'), {room:id});
+    }, 600);
+  } else if(r<=6){
+    showLootMsg('<span class="hit">Quelque chose vous a repéré...</span>');
+    setTimeout(()=>{
+      startCombat(rollRandomEnemy('faible'), {room:id});
+    }, 600);
+  } else if(r<=8){
+    finish();
+  } else if(r<=10){
+    grantLootItem(rollLootItem('commun'));
+    finish();
+  } else if(r===11){
+    grantLootItem(rollLootItem(Math.random()<0.25?'epique':'rare'));
+    finish();
+  } else {
+    // Double-six naturel (1/36) — le meilleur jet possible mérite le meilleur butin
+    grantLootItem(rollLootItem('legendaire'));
+    finish();
+  }
+}
+
+// Action "Fouiller les environs" — jet plus sûr que l'entrée (pas de risque de combat), une fois par salle
+async function searchWildRoom(id){
+  if(G.rolling) return;
+  G.rolling=true;
+  G.flags['wild_searched_'+id] = true;
+  const R = ROOMS[id];
+  const r = d6();
+  await rollDiceAnimated([{v:r,style:0}]);
+  G.rolling=false;
+  if(r===1){
+    showMsg("Vous fouillez en vain. Rien à trouver ici.");
+  } else if(r<=3){
+    const g = 1+Math.floor(Math.random()*3);
+    G.gold += g; updateStats();
+    showMsg(`Vous trouvez ${g} pièce${g>1?'s':''} d'or éparpillée${g>1?'s':''}. (+${g} or)`);
+  } else if(r<=5){
+    grantLootItem(rollLootItem('commun'));
+  } else {
+    grantLootItem(rollLootItem('rare'));
+  }
+  renderChoices(typeof R.choices==='function'?R.choices():R.choices);
+}
+
+
+/* ════════════════════════════════════════
+   DÉS 3D — Three.js chargé à la demande, repli 2D automatique
+════════════════════════════════════════ */
+const D3 = { ok:null, loading:null, inited:false, scene:null, cam:null, renderer:null, mats:null, dice:[], shadowTex:null, wrap:null };
+G.dice3d = true; // préférence joueur — activé par défaut, repli auto si THREE indisponible
+G.rolling = false; // verrou anti double-clic pendant l'animation
+
+function toggleDice3d(){
+  G.dice3d = !G.dice3d;
+  const btn=$('dice3d-btn');
+  if(btn){
+    btn.classList.toggle('sel', G.dice3d);
+    btn.textContent = G.dice3d ? '🎲 3D' : '🎲 2D';
+  }
+}
+
+function setCombatBtnsDisabled(v){
+  ['atkbtn','lckbtn'].forEach(id=>{
+    const b=$(id); if(b) b.disabled=v;
+  });
+}
+
+function ensureThree(){
+  return new Promise(res=>{
+    if(typeof THREE!=='undefined'){ D3.ok=true; res(true); return; }
+    if(D3.ok===false){ res(false); return; }
+    if(D3.loading){ D3.loading.push(res); return; }
+    D3.loading=[res];
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    s.onload=()=>{ D3.ok=true; D3.loading.forEach(f=>f(true)); D3.loading=null; };
+    s.onerror=()=>{ D3.ok=false; D3.loading.forEach(f=>f(false)); D3.loading=null; };
+    document.head.appendChild(s);
+  });
+}
+
+function pip3dTexture(n, style){
+  const c=document.createElement('canvas'); c.width=c.height=128;
+  const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,128,128);
+  g.addColorStop(0,style.bg0); g.addColorStop(1,style.bg1);
+  x.fillStyle=g; x.fillRect(0,0,128,128);
+  x.strokeStyle='rgba(0,0,0,.35)'; x.lineWidth=6; x.strokeRect(3,3,122,122);
+  const P={1:[[64,64]],2:[[38,38],[90,90]],3:[[36,36],[64,64],[92,92]],
+    4:[[38,38],[90,38],[38,90],[90,90]],5:[[36,36],[92,36],[64,64],[36,92],[92,92]],
+    6:[[38,32],[90,32],[38,64],[90,64],[38,96],[90,96]]}[n];
+  x.fillStyle=style.pip;
+  P.forEach(p=>{x.beginPath();x.arc(p[0],p[1],11,0,Math.PI*2);x.fill();});
+  return new THREE.CanvasTexture(c);
+}
+
+function faceQuat3(v){
+  const e=new THREE.Euler();
+  if(v===1) e.set(0,0,0); else if(v===6) e.set(Math.PI,0,0);
+  else if(v===2) e.set(-Math.PI/2,0,0); else if(v===5) e.set(Math.PI/2,0,0);
+  else if(v===3) e.set(0,0,Math.PI/2); else e.set(0,0,-Math.PI/2);
+  const q=new THREE.Quaternion(); q.setFromEuler(e); return q;
+}
+
+function d3init(){
+  if(D3.inited) return;
+  D3.inited=true;
+  const wrap=document.createElement('div'); wrap.id='dice3d';
+  document.getElementById('main').appendChild(wrap);
+  const cv=document.createElement('canvas'); wrap.appendChild(cv);
+  D3.wrap=wrap;
+  D3.renderer=new THREE.WebGLRenderer({canvas:cv,alpha:true,antialias:true});
+  D3.renderer.setClearColor(0x000000,0);
+  D3.scene=new THREE.Scene();
+  D3.cam=new THREE.PerspectiveCamera(45,1,0.1,50);
+  D3.cam.position.set(0,7,0); D3.cam.up.set(0,0,-1); D3.cam.lookAt(0,0,0);
+  D3.scene.add(new THREE.AmbientLight(0xffffff,0.9));
+  const dl=new THREE.DirectionalLight(0xfff2d0,0.6); dl.position.set(2,6,3); D3.scene.add(dl);
+  // Style 0 = joueur (ivoire, points sang) — Style 1 = adversaire (sombre, points ivoire)
+  const styles=[
+    {bg0:'#f6eed6',bg1:'#c9b686',pip:'#7a1010'},
+    {bg0:'#3a1410',bg1:'#160805',pip:'#e8dcae'},
+  ];
+  D3.mats=styles.map(st=>[3,4,1,6,2,5].map(v=>new THREE.MeshBasicMaterial({map:pip3dTexture(v,st)})));
+  const sc=document.createElement('canvas'); sc.width=sc.height=128;
+  const sx=sc.getContext('2d');
+  const sg=sx.createRadialGradient(64,64,4,64,64,60);
+  sg.addColorStop(0,'rgba(0,0,0,0.5)'); sg.addColorStop(1,'rgba(0,0,0,0)');
+  sx.fillStyle=sg; sx.fillRect(0,0,128,128);
+  D3.shadowTex=new THREE.CanvasTexture(sc);
+}
+
+// jobs: [{v: valeur finale 1-6, style: 0=joueur|1=adversaire}, ...]
+function roll3D(jobs){
+  return new Promise(res=>{
+    d3init();
+    const container=$('gpanel');
+    const mr=$('main').getBoundingClientRect(), gr=container.getBoundingClientRect();
+    const w=Math.max(2,Math.round(gr.width)), h=Math.max(2,Math.min(gr.height,200));
+    const wrap=D3.wrap;
+    wrap.style.left=(gr.left-mr.left)+'px';
+    wrap.style.top=(gr.top-mr.top)+'px';
+    wrap.style.width=w+'px'; wrap.style.height=h+'px';
+    wrap.style.display='block';
+    D3.renderer.setSize(w,h,false);
+    D3.cam.aspect=w/h; D3.cam.updateProjectionMatrix();
+    const camY=7, worldH=2*camY*Math.tan(Math.PI/8), worldW=worldH*w/h;
+
+    while(D3.dice.length<jobs.length){
+      const m=new THREE.Mesh(new THREE.BoxGeometry(1,1,1), D3.mats[0]);
+      const sh=new THREE.Sprite(new THREE.SpriteMaterial({map:D3.shadowTex,transparent:true,depthWrite:false}));
+      D3.scene.add(m); D3.scene.add(sh);
+      D3.dice.push({m,sh});
+    }
+    D3.dice.forEach(d=>{d.m.visible=false; d.sh.visible=false;});
+
+    const S=0.4, Hh=S/2;
+    const states=jobs.map((j,i)=>{
+      const d=D3.dice[i];
+      d.m.visible=true; d.sh.visible=true;
+      d.m.scale.set(S,S,S);
+      d.m.material=D3.mats[j.style]||D3.mats[0];
+      const spread=jobs.length>1 ? (i/(jobs.length-1)-0.5)*worldW*0.55 : 0;
+      d.m.position.set(spread+(Math.random()-.5)*.15, 1.7+Math.random()*0.4, worldH*0.28);
+      d.m.rotation.set(Math.random()*6,Math.random()*6,Math.random()*6);
+      return {
+        d, v:new THREE.Vector3((Math.random()-.5)*0.6,0.1,-(1.1+Math.random()*0.5)),
+        w:new THREE.Vector3((Math.random()-.5)*13,(Math.random()-.5)*13,(Math.random()-.5)*13),
+        tq:faceQuat3(j.v), phase:'fly', bounces:0, st:0
+      };
+    });
+
+    let last=performance.now(), rafId;
+    function frame(now){
+      rafId=requestAnimationFrame(frame);
+      const dt=Math.min((now-last)/1000,0.033); last=now;
+      let allDone=true;
+      states.forEach(s=>{
+        const m=s.d.m, sh=s.d.sh;
+        if(s.phase==='fly'){
+          allDone=false;
+          s.v.y-=12.5*dt;
+          m.position.addScaledVector(s.v,dt);
+          m.rotation.x+=s.w.x*dt; m.rotation.y+=s.w.y*dt; m.rotation.z+=s.w.z*dt;
+          if(m.position.y<Hh){
+            m.position.y=Hh;
+            s.v.y=-s.v.y*0.38; s.v.x*=0.7; s.v.z*=0.7; s.w.multiplyScalar(0.5); s.bounces++;
+            if(s.bounces>=2||Math.abs(s.v.y)<1.0){
+              s.phase='settle'; s.q0=m.quaternion.clone(); s.p0=m.position.clone(); s.st=0;
+            }
+          }
+        } else if(s.phase==='settle'){
+          allDone=false;
+          s.st+=dt/0.30; const k=Math.min(1,s.st), e=1-Math.pow(1-k,3);
+          m.quaternion.copy(s.q0).slerp(s.tq,e);
+          m.position.y=Hh+(s.p0.y-Hh)*(1-e);
+          if(k>=1) s.phase='done';
+        }
+        sh.position.set(m.position.x,0.01,m.position.z);
+        sh.scale.set(S*1.3,S*1.3,1);
+      });
+      D3.renderer.render(D3.scene,D3.cam);
+      if(allDone){
+        cancelAnimationFrame(rafId);
+        setTimeout(()=>{ wrap.style.display='none'; res(jobs.map(j=>j.v)); },260);
+      }
+    }
+    frame(performance.now());
+  });
+}
+
+// Dispatcher : anime en 3D si possible, sinon résout instantanément (les valeurs sont déjà tirées)
+async function rollDiceAnimated(jobs){
+  if(G.dice3d){
+    const ok=await ensureThree();
+    if(ok){ try{ return await roll3D(jobs); }catch(e){ /* repli silencieux */ } }
+  }
+  return jobs.map(j=>j.v);
+}
 
 /* ════════════════════════════════════════
    MAP LAYOUT — Top-down, portrait-friendly
@@ -907,6 +1396,7 @@ On dit que Zagor, le nécromancien immortel, cache des trésors sans nom dans le
       {text:'Fouiller les environs avant d\'entrer',action:'inspect'},
       {text:'Explorer le flanc du manoir',room:42},
       {text:'Contourner par derrière → Écuries',room:43},
+      {text:'🚪 Rebrousser chemin (Extraire le butin)',action:'extract_run'},
     ]
   },
   1:{
@@ -919,6 +1409,7 @@ Deux couloirs s'ouvrent et un escalier monte vers les étages. Sur une table, un
       {text:'Couloir droit → La Bibliothèque',room:3},
       {text:'Monter l\'escalier → 1er étage',room:33},
       {text:'Porte dérobée → Auberge du Pendu',room:19},
+      {text:'🚪 Repartir vers la sortie (Extraire le butin)',action:'extract_run'},
     ]
   },
   2:{
@@ -1571,6 +2062,25 @@ Un coffre verrouillé repose contre le mur. Une main squelettique dépasse d'une
   },
 };
 
+// ── Marquage des salles "sauvages" (butin extraction-looter) ──
+// Ces 24 micro-nœuds narratifs (vagues 1-3 de densification) sont vides de tout
+// contenu nommé unique : ils deviennent des points de rencontre aléatoire.
+// Toutes les salles à PNJ/ennemi nommé/objet unique restent totalement inchangées.
+const WILD_ROOM_IDS = [33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56];
+WILD_ROOM_IDS.forEach(id=>{
+  const r = ROOMS[id];
+  if(!r) return;
+  r.wildLoot = true;
+  const origChoices = r.choices;
+  r.choices = function(){
+    const base = typeof origChoices==='function' ? origChoices() : origChoices.slice();
+    if(!G.flags['wild_searched_'+id]){
+      return [...base, {text:'🔍 Fouiller les environs',action:'search_wild:'+id}];
+    }
+    return base;
+  };
+});
+
 /* ════════════════════════════════════════
    SETUP
 ════════════════════════════════════════ */
@@ -1592,15 +2102,124 @@ function checkReady(){
   if(G.setup.skill&&G.setup.endurance&&G.setup.luck&&G.setup.potion) $('startbtn').disabled=false;
 }
 function rollAll(){rollStat('skill');rollStat('endurance');rollStat('luck');}
+// Réinitialise l'état de run (G) avant une nouvelle expédition — les acquis du Sanctuaire (Meta) persistent.
+function resetRunState(){
+  G.skill=0; G.maxSkill=0;
+  G.endurance=0; G.maxEndurance=0;
+  G.luck=0; G.maxLuck=0;
+  G.gold=5; G.room=null;
+  G.inventory=[]; G.flags={};
+  G.visited=new Set();
+  G.defeatedRooms=new Set();
+  G.usedPassages=new Set();
+  G.pathHistory=[];
+  G.inCombat=false; G.combat=null;
+  G.potion=null; G.provisions=0;
+  G.setup={skill:false,endurance:false,luck:false,potion:false};
+  G.extracted=false;
+  G.rolling=false;
+  ['sv-skill','sv-end','sv-luck'].forEach(id=>{const el=$(id); if(el) el.textContent='—';});
+  const sb=$('startbtn'); if(sb) sb.disabled=true;
+  document.querySelectorAll('.potion-btn').forEach(b=>b.classList.remove('sel'));
+}
+
 function showSetup(){
+  resetRunState();
   $('title-screen').style.display='none';
+  $('sanctuary-screen').style.display='none';
   $('setup-screen').style.display='flex';
 }
+
+// Coût d'achat d'un bonus permanent — augmente avec le niveau déjà acquis
+function upgradeCost(stat){
+  const base = {skill:15, endurance:10, luck:12}[stat];
+  const step = {skill:8, endurance:5, luck:6}[stat];
+  return base + step*Meta.permBonus[stat];
+}
+
+function showSanctuary(){
+  $('title-screen').style.display='none';
+  $('setup-screen').style.display='none';
+  $('sanctuary-screen').style.display='flex';
+  renderSanctuary();
+}
+
+function renderSanctuary(){
+  $('sanct-gold').textContent = Meta.bankedGold;
+  $('sanct-mats').textContent = Meta.materials;
+  $('sanct-b-skill').textContent = '+'+Meta.permBonus.skill;
+  $('sanct-b-end').textContent = '+'+Meta.permBonus.endurance;
+  $('sanct-b-luck').textContent = '+'+Meta.permBonus.luck;
+
+  ['skill','endurance','luck'].forEach(stat=>{
+    const cost = upgradeCost(stat);
+    const priceEl = $('price-'+stat), btnEl = $('buy-'+stat);
+    priceEl.textContent = cost+' or';
+    btnEl.disabled = Meta.bankedGold < cost;
+  });
+
+  const tierCost = sanctuaryTierCost();
+  $('tier-label').textContent = `🔷 Sanctuaire — Niveau ${Meta.sanctuaryTier} → ${Meta.sanctuaryTier+1}`;
+  $('price-tier').textContent = tierCost+' matériaux';
+  $('buy-tier').disabled = Meta.materials < tierCost;
+
+  const qEl = $('sanct-quests');
+  const delivered = Object.entries(QUEST_TURNINS).filter(([k,v])=>Meta.questProgress[v.flag]);
+  let qHtml = '';
+  if(delivered.length){
+    qHtml += `<div class="invh">Grimoire du Sanctuaire</div>`;
+    delivered.forEach(([name,v])=>{
+      qHtml += `<div class="sanct-row"><span>📜 ${name}</span><span style="color:var(--gold-bright);">livré</span></div>`;
+    });
+  }
+  if(Meta.zagorLoreStacks>0){
+    qHtml += `<div class="sanct-row"><span>🩸 Zagor affaibli</span><span>−${Math.min(5,Meta.zagorLoreStacks)} End (cumulatif)</span></div>`;
+  }
+  qEl.innerHTML = qHtml;
+
+  const summary = $('sanct-run-summary');
+  if(Meta.runsCompleted===0){
+    summary.textContent = "Aucune expédition menée pour l'instant.";
+  } else {
+    summary.textContent = `${Meta.runsCompleted} expédition${Meta.runsCompleted>1?'s':''} — ${Meta.runsExtracted} extraction${Meta.runsExtracted>1?'s':''} réussie${Meta.runsExtracted>1?'s':''}, ${Meta.runsDied} chute${Meta.runsDied>1?'s':''}. Meilleur butin : ${Meta.bestGoldRun} or.`;
+  }
+}
+
+function buyUpgrade(stat){
+  const cost = upgradeCost(stat);
+  if(Meta.bankedGold < cost) return;
+  Meta.bankedGold -= cost;
+  Meta.permBonus[stat] += 1;
+  saveMeta();
+  renderSanctuary();
+}
+
+// Coût en matériaux du prochain niveau de Sanctuaire — croît à chaque palier
+function sanctuaryTierCost(){
+  return 5 + 5*Meta.sanctuaryTier;
+}
+
+// Chaque niveau de Sanctuaire accorde +1 pièce d'or de départ à chaque expédition —
+// un débouché tangible pour les matériaux, jusqu'alors accumulés sans jamais être dépensés.
+function buySanctuaryTier(){
+  const cost = sanctuaryTierCost();
+  if(Meta.materials < cost) return;
+  Meta.materials -= cost;
+  Meta.sanctuaryTier += 1;
+  saveMeta();
+  renderSanctuary();
+}
+
 function startGame(){
   $('setup-screen').style.display='none';
   show('header','flex');
   show('gpanel');
   show('mpanel');
+  // Applique les bonus permanents achetés au Sanctuaire, par-dessus les stats tirées aux dés
+  G.skill += Meta.permBonus.skill; G.maxSkill += Meta.permBonus.skill;
+  G.endurance += Meta.permBonus.endurance; G.maxEndurance += Meta.permBonus.endurance;
+  G.luck += Meta.permBonus.luck; G.maxLuck += Meta.permBonus.luck;
+  G.gold += Meta.sanctuaryTier; // chaque niveau de Sanctuaire offre une pièce d'or de départ supplémentaire
   G.provisions=4;
   updateStats();
   startMapAnim();
@@ -1644,6 +2263,8 @@ function goRoom(id){
     // Room already cleared — show fallback text/choices instead of re-fighting
     st.textContent += "\n\n(Cette salle a déjà été nettoyée. Plus rien ne bouge ici.)";
     renderChoices(R.clearedChoices || [{text:'Continuer',room:(R.onWin&&R.onWin.room!=='WIN')?R.onWin.room:1}]);
+  } else if(R.wildLoot && !G.flags['wild_done_'+id]){
+    enterWildRoom(id);
   } else if(R.choices){
     renderChoices(typeof R.choices==='function'?R.choices():R.choices);
   }
@@ -1732,6 +2353,11 @@ function startCombat(enemyOrQueue, onWin){
   const processed = rawQueue.map(enemy=>{
     let e = {...enemy};
     if(e.isFinal){
+      if(Meta.zagorLoreStacks>0){
+        const loreReduc = Math.min(5, Meta.zagorLoreStacks);
+        e.endurance -= loreReduc;
+        showMsg(`Les secrets livrés au Sanctuaire au fil des expéditions pèsent sur Zagor. (−${loreReduc} Endurance, cumulatif)`);
+      }
       if(G.flags.weakness||G.flags.aldric){ e.endurance-=4; e.skill=Math.max(6,e.skill-1); showMsg("Le cœur de liche fissure l'immortalité de Zagor ! Il est affaibli !"); }
       if(G.flags.flame||G.inventory.includes('Flamme Ancestrale')){ e.endurance-=3; showMsg("La Flamme Ancestrale consume ses ténèbres !"); }
       if(G.flags.herbier||G.inventory.includes('Herbier Alchimique')){ e.skill=Math.max(5,e.skill-2); showMsg("Le poison nécrotique ralentit sa puissance magique !"); }
@@ -1780,11 +2406,16 @@ function loadQueuedEnemy(){
 }
 
 
-function attack(){
-  if(!G.inCombat||!G.combat) return;
+async function attack(){
+  if(!G.inCombat||!G.combat||G.rolling) return;
+  G.rolling=true;
+  setCombatBtnsDisabled(true);
   const {enemy}=G.combat;
   const p1=d6(),p2=d6(); const pS=p1+p2+G.skill;
   const e1=d6(),e2=d6(); const eS=e1+e2+enemy.skill;
+  await rollDiceAnimated([{v:p1,style:0},{v:p2,style:0},{v:e1,style:1},{v:e2,style:1}]);
+  G.rolling=false;
+  setCombatBtnsDisabled(false);
   const pd=`🎲${p1}+${p2}`, ed=`🎲${e1}+${e2}`;
   let log='';
   if(pS>eS){
@@ -1804,10 +2435,14 @@ function attack(){
   cLog(log); updCombat();
 }
 
-function luckCombat(){
-  if(!G.inCombat) return;
+async function luckCombat(){
+  if(!G.inCombat||G.rolling) return;
   if(G.luck<=0){cLog('<span class="hit">Chance épuisée !</span>');return;}
-  const lucky=testLuck();
+  G.rolling=true;
+  setCombatBtnsDisabled(true);
+  const lucky=await testLuck();
+  G.rolling=false;
+  setCombatBtnsDisabled(false);
   if(lucky){
     G.combat.enemy.hp=Math.max(0,G.combat.enemy.hp-2);
     cLog(`<span class="ok">🍀 Chance ! Coup critique !</span> ${G.combat.enemy.name} perd 2 End sup.`);
@@ -1828,7 +2463,12 @@ function flee(){
   G.inCombat=false; hideCombat(); updateStats();
   showMsg("Vous fuyez ! (−3 Endurance)");
   if(G.endurance<=0) return die("Mort en fuyant.");
-  renderChoices([{text:'Retourner au Hall',room:1}]);
+  const R=ROOMS[G.room];
+  if(R && (R.choices||R.wildLoot)){
+    renderChoices(typeof R.choices==='function'?R.choices():(R.choices||[{text:'Retourner au Hall',room:1}]));
+  } else {
+    renderChoices([{text:'Retourner au Hall',room:1}]);
+  }
 }
 
 function winCombat(){
@@ -1878,7 +2518,26 @@ function updCombat(){
 /* ════════════════════════════════════════
    ACTIONS
 ════════════════════════════════════════ */
-function doAction(a){
+async function doAction(a){
+  if(a.startsWith('use_loot:')){
+    const key = a.slice('use_loot:'.length);
+    useLootConsumable(key);
+    return;
+  }
+  if(a.startsWith('search_wild:')){
+    const id = parseInt(a.slice('search_wild:'.length),10);
+    await searchWildRoom(id);
+    return;
+  }
+  if(a==='extract_run'){
+    ['gpanel','mpanel','header','room-illus'].forEach(hide);
+    stopFx();
+    Meta.runsCompleted++; Meta.runsExtracted++;
+    const summary = bankRunLoot();
+    $('xsummary').textContent = 'Butin ramené au Sanctuaire : ' + summary;
+    $('xscreen').style.display='flex';
+    return;
+  }
   switch(a){
     case 'inspect':
       showMsg("+1 Or trouvé dans les buissons !"); G.gold++; updateStats();
@@ -1887,7 +2546,7 @@ function doAction(a){
     // ── MICRO-NŒUDS ──
 
     case 'stair_catch':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Vous vous rattrapez de justesse à la rampe. Le cœur battant, vous reprenez votre ascension.");
       } else {
         G.endurance-=2; updateStats();
@@ -1897,7 +2556,7 @@ function doAction(a){
       renderChoices([{text:'Continuer vers le palier',room:4}]); break;
 
     case 'corridor_search':
-      if(testLuck()){
+      if(await testLuck()){
         G.gold+=2; updateStats();
         showMsg("Une pièce d'or oubliée dans une fissure du mur ! (+2 or)");
       } else {
@@ -1906,7 +2565,7 @@ function doAction(a){
       renderChoices([{text:'Continuer vers le palier des tours',room:14}]); break;
 
     case 'bones_search':
-      if(testLuck()){
+      if(await testLuck()){
         G.gold+=2; updateStats();
         showMsg("Une pièce d'or coincée entre deux côtes ! (+2 or)");
       } else {
@@ -1915,7 +2574,7 @@ function doAction(a){
       renderChoices([{text:'Continuer',room:29}]); break;
 
     case 'final_focus':
-      if(testLuck()){
+      if(await testLuck()){
         G.luck=Math.min(G.maxLuck+1,G.luck+1); updateStats();
         showMsg("Vous fermez les yeux un instant, rassemblez votre courage. (+1 Chance)");
       } else {
@@ -1924,7 +2583,7 @@ function doAction(a){
       renderChoices([{text:'Entrer → Sanctuaire de Zagor',room:11}]); break;
 
     case 'creak_sneak':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Vous progressez en silence, chaque pas soigneusement posé.");
       } else {
         G.endurance-=1; updateStats();
@@ -1934,7 +2593,7 @@ function doAction(a){
       renderChoices([{text:'Continuer vers la chapelle',room:20}]); break;
 
     case 'vapor_grope':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Vous suivez le mur sans encombre à travers la vapeur.");
       } else {
         G.endurance-=1; updateStats();
@@ -1949,7 +2608,7 @@ function doAction(a){
         renderChoices([{text:'Repartir vers les écuries',room:24}]); break;
       }
       G.flags.stallbox_opened=true;
-      if(testLuck()){
+      if(await testLuck()){
         addItem('Pierre Runique'); G.gold+=6; updateStats();
         showMsg("Le coffret s'ouvre sur une Pierre Runique et 6 pièces d'or !");
       } else {
@@ -1962,7 +2621,7 @@ function doAction(a){
     // ── MICRO-NŒUDS — VAGUE 2 ──
 
     case 'path_trace':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Les traces mènent à un renfoncement où quelqu'un a caché une petite bourse. (+2 or)");
         G.gold+=2; updateStats();
       } else {
@@ -1971,7 +2630,7 @@ function doAction(a){
       renderChoices([{text:'Continuer vers le jardin',room:12}]); break;
 
     case 'stomp_ground':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Le sol résonne creux à cet endroit précis — une cache ! Vous en tirez une pièce ancienne. (+1 or)");
         G.gold+=1; updateStats();
       } else {
@@ -1982,7 +2641,7 @@ function doAction(a){
       renderChoices([{text:'Continuer vers les écuries',room:24}]); break;
 
     case 'melody_trance':
-      if(testLuck()){
+      if(await testLuck()){
         G.luck=Math.min(G.maxLuck+1,G.luck+1); updateStats();
         showMsg("La mélodie vous apaise profondément. Une chaleur étrange vous traverse. (+1 Chance)");
       } else {
@@ -1993,7 +2652,7 @@ function doAction(a){
       renderChoices([{text:'Pousser la porte',room:6}]); break;
 
     case 'door_inspect':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Vous repérez un interstice sous la porte — la fumée est plus dense qu'il n'y paraît. Vous entrez avec prudence, sur vos gardes.");
       } else {
         showMsg("Rien de plus à observer. Autant entrer.");
@@ -2001,7 +2660,7 @@ function doAction(a){
       renderChoices([{text:'Entrer chez la sorcière',room:7}]); break;
 
     case 'reflection_look':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Votre reflet vous imite parfaitement, avec un léger temps de retard troublant — mais rien de plus. Vous détournez le regard, rassuré.");
       } else {
         G.endurance-=1; updateStats();
@@ -2011,7 +2670,7 @@ function doAction(a){
       renderChoices([{text:'Entrer dans le couloir',room:21}]); break;
 
     case 'listen_garden':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Vous entendez un bruissement rythmique — des plantes qui respirent, presque. Vous entrez en connaissant le danger.");
         G.flags.garden_warned=true;
       } else {
@@ -2020,7 +2679,7 @@ function doAction(a){
       renderChoices([{text:'Entrer dans le jardin intérieur',room:18}]); break;
 
     case 'murmur_brace':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Vous vous préparez mentalement. Le murmure semble s'apaiser à votre passage.");
       } else {
         G.endurance-=1; updateStats();
@@ -2030,7 +2689,7 @@ function doAction(a){
       renderChoices([{text:'Continuer vers le puits',room:22}]); break;
 
     case 'footprints_follow':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Les empreintes mènent tout droit à un renfoncement où gît une petite pièce d'or oubliée. (+1 or)");
         G.gold+=1; updateStats();
       } else {
@@ -2041,7 +2700,7 @@ function doAction(a){
     // ── MICRO-NŒUDS — VAGUE 3 ──
 
     case 'frost_touch':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Le givre fond instantanément sous vos doigts, révélant une gravure ancienne : un nom de famille effacé par le temps. Un détail troublant, mais sans conséquence immédiate.");
       } else {
         G.endurance-=1; updateStats();
@@ -2051,7 +2710,7 @@ function doAction(a){
       renderChoices([{text:'Continuer vers la crypte',room:16}]); break;
 
     case 'stardust_gather':
-      if(testLuck()){
+      if(await testLuck()){
         G.luck=Math.min(G.maxLuck+1,G.luck+1); updateStats();
         showMsg("La poussière scintille entre vos doigts avant de se dissiper. Une sensation de clairvoyance vous traverse. (+1 Chance)");
       } else {
@@ -2060,7 +2719,7 @@ function doAction(a){
       renderChoices([{text:'Descendre vers l\'observatoire',room:30}]); break;
 
     case 'peek_remise':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Vous repérez la caisse piégée avant même d'entrer — un avantage pour plus tard.");
         G.flags.crate_warned=true;
       } else {
@@ -2069,7 +2728,7 @@ function doAction(a){
       renderChoices([{text:'Entrer dans la remise',room:25}]); break;
 
     case 'faces_examine':
-      if(testLuck()){
+      if(await testLuck()){
         G.gold+=1; updateStats();
         showMsg("L'un des visages sculptés a la bouche entrouverte — une pièce y était coincée depuis des lustres. (+1 or)");
       } else {
@@ -2078,7 +2737,7 @@ function doAction(a){
       renderChoices([{text:'Continuer vers les trophées',room:26}]); break;
 
     case 'banquet_listen':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Vous entendez distinctement des couverts qui s'entrechoquent, seuls, sans main pour les tenir. Vous entrez préparé à l'étrange.");
       } else {
         showMsg("Silence total derrière la porte. Vous poussez, un peu inquiet malgré tout.");
@@ -2086,7 +2745,7 @@ function doAction(a){
       renderChoices([{text:'Entrer dans la salle du banquet',room:31}]); break;
 
     case 'trapdoor_careful':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Vous descendez sans un bruit, marche après marche, attentif au moindre craquement.");
       } else {
         G.endurance-=1; updateStats();
@@ -2096,7 +2755,7 @@ function doAction(a){
       renderChoices([{text:'Continuer vers le passage',room:32}]); break;
 
     case 'announce_prisoner':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("\"N'ayez crainte, je ne vous veux aucun mal\", dites-vous doucement. La respiration se calme aussitôt derrière la pierre.");
         G.flags.prisoner_calmed=true;
       } else {
@@ -2108,7 +2767,7 @@ function doAction(a){
 
     case 'lantern_crack':
       G.flags.lantern_crack_seen=true;
-      if(testLuck()){
+      if(await testLuck()){
         G.gold+=4; updateStats();
         showMsg("La lanterne révèle une fissure dissimulant une petite cache. 4 pièces d'or oubliées là depuis des années ! (+4 or)");
       } else {
@@ -2125,7 +2784,7 @@ function doAction(a){
 
     case 'pick_library_drawer':
       G.flags.drawer_picked=true;
-      if(testLuck()){
+      if(await testLuck()){
         addItem('Parchemin de Zagor');
         showMsg("Le tiroir s'ouvre sans résistance. À l'intérieur, un parchemin oublié portant le sceau de Zagor !");
       } else {
@@ -2163,7 +2822,7 @@ function doAction(a){
       renderChoices([{text:'Suivre ses indications → Catacombes',room:8}]); break;
 
     case 'force_left':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("La porte cède ! Vous trouvez 8 pièces d'or !"); G.gold+=8; updateStats();
       } else if(d6()===1){
         showMsg("La porte résiste... puis cède d'un coup ! Vous basculez en avant, tête la première contre le mur de pierre.");
@@ -2237,7 +2896,7 @@ function doAction(a){
         renderChoices([{text:'Avancer → Couloir des Illusions',room:10}]); break;
       }
       G.flags.troll_resolved=true;
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Vous foncez et passez entre ses jambes !");
         renderChoices([{text:'Continuer en courant → Couloir des Illusions',room:10}]);
       } else if(d6()===1){
@@ -2309,6 +2968,9 @@ function doAction(a){
         showMsg("Le médaillon brille d'une lumière blanche ! La porte gronde et s'ouvre. (+5 Endurance)");
         G.endurance=Math.min(G.maxEndurance,G.endurance+5); updateStats();
         renderChoices([{text:'S\'approcher du sanctuaire',room:36}]);
+      } else if(Meta.questProgress.arianna_delivered){
+        showMsg("Vous n'avez pas le médaillon sur vous cette fois — mais la bénédiction d'Arianna, jadis livrée au Sanctuaire, résonne encore en vous. La porte s'ouvre sans résistance.");
+        renderChoices([{text:'S\'approcher du sanctuaire',room:36}]);
       } else {
         showMsg("Vous n'avez pas le médaillon...");
         renderChoices([{text:'Forcer la porte (−3 Endurance)',action:'force_fin'},{text:'Chercher un mécanisme caché',action:'search_mec'}]);
@@ -2358,7 +3020,7 @@ function doAction(a){
         showMsg("Les statues sont brisées. Il ne reste que des débris.");
         renderChoices([{text:'Entrer dans le manoir',room:1},{text:'Rebrousser vers la grille',room:0}]); break;
       }
-      if(testLuck()){
+      if(await testLuck()){
         G.flags.statues_resolved=true;
         showMsg("Vos doigts agiles saisissent le parchemin avant que les statues ne réagissent !");
         addItem('Parchemin des Anciens');
@@ -2435,7 +3097,7 @@ function doAction(a){
       renderChoices([{text:'Traverser le jardin → Catacombes (Chance)',action:'cross_garden'},{text:'Repartir vers la bibliothèque',room:3}]); break;
 
     case 'cross_garden':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Vous slalomez entre les plantes carnivores sans une égratignure !");
         renderChoices([{text:'Continuer vers les catacombes',room:8}]);
       } else if(d6()===1){
@@ -2480,7 +3142,7 @@ function doAction(a){
 
     // ── CHAPELLE PROFANÉE (room 20) ──
     case 'pray_chapel':
-      if(testLuck()){
+      if(await testLuck()){
         G.endurance=Math.min(G.maxEndurance,G.endurance+4);
         G.luck=Math.min(G.maxLuck,G.luck+1); updateStats();
         showMsg("Une chaleur apaisante vous enveloppe. (+4 Endurance, +1 Chance) La grâce n'a pas totalement abandonné ce lieu.");
@@ -2525,7 +3187,7 @@ function doAction(a){
     case 'cross_mirrors':
       if(G.flags.mirror_warning){
         // Warning known = slight advantage
-        if(testLuck()||testLuck()){
+        if(await testLuck()||await testLuck()){
           showMsg("Yeux fermés, vous traversez en comptant vos pas. Rien ne vous touche.");
           renderChoices([{text:'Déboucher vers la Salle du Gardien',room:9}]);
         } else {
@@ -2534,7 +3196,7 @@ function doAction(a){
           setTimeout(()=>die("Votre âme aspirée par votre propre reflet dans la salle des miroirs."),1500);
         }
       } else {
-        if(testLuck()){
+        if(await testLuck()){
           showMsg("Un instinct vous guide. Vous traversez sans regarder vos reflets.");
           renderChoices([{text:'Déboucher vers la Salle du Gardien',room:9}]);
         } else {
@@ -2561,7 +3223,7 @@ function doAction(a){
     case 'coin_well':
       if(G.gold<1){showMsg("Vous n'avez pas de pièces !");renderChoices([{text:'Repartir',room:9}]);break;}
       G.gold-=1; updateStats();
-      if(testLuck()){
+      if(await testLuck()){
         G.luck+=2; updateStats();
         showMsg("La pièce tombe à l'infini. Un murmure : \"Ta chance te sourit.\" (+2 Chance)");
         renderChoices([{text:'Repartir',room:9}]);
@@ -2576,7 +3238,7 @@ function doAction(a){
 
     // ── ÉCURIES MAUDITES (room 24) ──
     case 'approach_horses':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Les chevaux vous reniflent et s'apaisent. Le plus grand vous offre sa tête — bénédiction de voyage. (+2 Chance)");
         G.luck=Math.min(G.maxLuck+2,G.luck+2); updateStats();
         if(d6()>=6){
@@ -2654,7 +3316,7 @@ function doAction(a){
     case 'inspect_trophies':
       if(G.flags.trophies_checked){showMsg("Rien de plus à trouver ici.");renderChoices([{text:'Repartir',room:1}]);break;}
       G.flags.trophies_checked=true;
-      if(testLuck()){
+      if(await testLuck()){
         G.luck+=1; updateStats(); addItem('Pierre Runique');
         showMsg("Derrière une tête de cerf : un coffret avec une pierre runique ! (+1 Chance)");
       } else if(d6()===1){
@@ -2677,7 +3339,7 @@ function doAction(a){
     case 'wine_cellar':
       if(G.flags.wine_done){showMsg("Vous avez déjà fouillé la cave à vin.");renderChoices([{text:'Repartir',room:27}]);break;}
       G.flags.wine_done=true;
-      if(testLuck()){
+      if(await testLuck()){
         G.gold+=8; addItem("Fiole d'Eau Bénite"); G.flags.holy_water=true; updateStats();
         showMsg("Une cache ! 8 pièces d'or et une Fiole d'Eau Bénite (−4 End à Zagor) !");
       } else {
@@ -2697,7 +3359,7 @@ function doAction(a){
     case 'steal_scroll':
       if(G.flags.scroll_stolen){showMsg("Vous avez déjà pris un parchemin.");renderChoices([{text:'Repartir',room:3}]);break;}
       G.flags.scroll_stolen=true;
-      if(testLuck()){
+      if(await testLuck()){
         addItem('Parchemin de Zagor');
         showMsg("Un parchemin portant le sceau de Zagor glisse dans votre sac. Les scribes ne réagissent pas.");
       } else {
@@ -2848,7 +3510,7 @@ function doAction(a){
     }
 
     case 'force_shade':
-      if(testLuck()){
+      if(await testLuck()){
         showMsg("Vous foncez à travers le spectre. Un froid glacial vous transperce mais vous passez !");
         G.endurance-=2; updateStats();
         if(G.endurance<=0){die("Le spectre vous a absorbé dans le Passage des Ombres.");return;}
@@ -2891,7 +3553,7 @@ function doAction(a){
         G.gold+=12; addItem('Elixir de Vaillance'); updateStats();
         showMsg("La Clé de la Réserve s'ajuste parfaitement à la serrure ! Le coffre s'ouvre sans piège. 12 pièces d'or et un Elixir de Vaillance !");
         G.flags.elixir=true;
-      } else if(testLuck()){
+      } else if(await testLuck()){
         G.gold+=12; addItem('Elixir de Vaillance'); updateStats();
         showMsg("Le coffre s'ouvre ! 12 pièces d'or et un Elixir de Vaillance ! (+4 End, +1 Hab au combat)");
         G.flags.elixir=true;
@@ -2920,8 +3582,9 @@ function doAction(a){
 /* ════════════════════════════════════════
    LUCK
 ════════════════════════════════════════ */
-function testLuck(){
-  const r=roll2d6(), lucky=(r<=G.luck);
+async function testLuck(){
+  const r1=d6(), r2=d6(), r=r1+r2, lucky=(r<=G.luck);
+  await rollDiceAnimated([{v:r1,style:0},{v:r2,style:0}]);
   G.luck=Math.max(0,G.luck-1); updateStats(); return lucky;
 }
 
@@ -2942,6 +3605,17 @@ function updInv(){
     `<span class="invitem invuse" title="Cliquer pour utiliser" onclick="doAction('${v.act}')">${v.label} ✦</span>`
   ).join('');
   const invHtml=G.inventory.map(i=>{
+    // Objet du catalogue de butin (clé technique) → affichage coloré par rareté
+    const loot = LOOT_ITEMS[i];
+    if(loot){
+      const r = RARITY[loot.rarity];
+      const style = `border-color:${r.color};color:${r.color};`;
+      if(loot.cat==='consommable'){
+        return `<span class="invitem invuse" style="${style}" title="Cliquer pour utiliser" onclick="doAction('use_loot:${i}')">${loot.name} ✦</span>`;
+      }
+      return `<span class="invitem" style="${style}" title="${r.label} — rapportez au Sanctuaire">${loot.name}</span>`;
+    }
+    // Objet de quête nommé (système existant, inchangé)
     const act=usable[i];
     if(act) return `<span class="invitem invuse" title="Cliquer pour utiliser" onclick="doAction('${act}')">${i} ✦</span>`;
     return `<span class="invitem">${i}</span>`;
@@ -3301,32 +3975,91 @@ function classifyDeath(reason){
   return DEATH_TYPES.find(d=>d.match(reason))||DEATH_TYPES[DEATH_TYPES.length-1];
 }
 
+// Convertit le butin de la run courante (or + objets du catalogue) en progression permanente du Sanctuaire.
+// Les consommables non utilisés sont perdus (encourage à les utiliser pendant la run).
+// Retourne un résumé textuel de ce qui a été banqué.
+function bankRunLoot(){
+  let gold = G.gold, mats = 0, statGains = [], questTurnins = [];
+  G.inventory.forEach(key=>{
+    const it = LOOT_ITEMS[key];
+    if(it){
+      if(it.cat==='materiau'){
+        mats += it.value;
+      } else if(it.cat==='stat_upgrade'){
+        if(it.stat==='all'){
+          Meta.permBonus.skill+=it.amount; Meta.permBonus.endurance+=it.amount; Meta.permBonus.luck+=it.amount;
+          statGains.push('+1 à toutes les caractéristiques');
+        } else {
+          Meta.permBonus[it.stat]+=it.amount;
+          statGains.push(`+${it.amount} ${it.stat}`);
+        }
+      }
+      return;
+    }
+    // Objet de quête nommé — remise unique au Sanctuaire si pas déjà livré
+    const turnin = QUEST_TURNINS[key];
+    if(turnin && !Meta.questProgress[turnin.flag]){
+      Meta.questProgress[turnin.flag] = true;
+      turnin.reward();
+      questTurnins.push({name:key, label:turnin.rewardLabel, msg:turnin.msg});
+    }
+  });
+  Meta.bankedGold += gold;
+  Meta.materials += mats;
+  Meta.bestGoldRun = Math.max(Meta.bestGoldRun, gold);
+  saveMeta();
+  const parts=[];
+  if(gold>0) parts.push(`${gold} or`);
+  if(mats>0) parts.push(`${mats} matériaux`);
+  if(statGains.length) parts.push(statGains.join(', '));
+  questTurnins.forEach(q=> parts.push(`📜 ${q.name} remis (${q.label})`));
+  return parts.length ? parts.join(' · ') : 'Aucun butin cette fois-ci.';
+}
+
+function goToSanctuaryAfterRun(){
+  ['dscreen','vscreen','xscreen'].forEach(hide);
+  showSanctuary();
+}
+
 function die(reason=''){
   ['gpanel','mpanel','header','room-illus'].forEach(hide);
   stopFx();
+  Meta.runsCompleted++; Meta.runsDied++;
+  saveMeta();
   const dt=classifyDeath(reason);
   $('dicon').textContent=dt.icon;
   $('dtitle-txt').textContent=dt.title;
   $('dmsg').textContent=(reason?reason+' ':'')+dt.flavor;
+  $('dsummary').textContent = `Butin perdu dans le manoir : ${G.gold} or et ${G.inventory.length} objet(s) non extraits.`;
   $('dscreen').style.display='flex';
 }
+
 function doVictory(){
   ['gpanel','mpanel','header','room-illus'].forEach(hide);
   stopFx();
   applyVictoryMood();
   let epilogue;
   if(G.flags.zagor_human){
-    epilogue = "Zagor s'effondre en poussière noire — mais avant de disparaître, son visage redevient humain, presque paisible. Vous n'avez pas tué un monstre. Vous avez libéré un homme. Sa malédiction se dissipe pour l'éternité.";
+    epilogue = "Zagor s'effondre en poussière noire — mais avant de disparaître, son visage redevient humain, presque paisible. Vous n'avez pas tué un monstre. Vous avez libéré un homme.";
   } else if(G.flags.aldric){
-    epilogue = "Zagor s'effondre en poussière noire. Quelque part dans le manoir, Aldric pousse un soupir de soulagement — son ancien élève est enfin en paix. Votre nom sera chanté par les bardes à jamais.";
+    epilogue = "Zagor s'effondre en poussière noire. Quelque part dans le manoir, Aldric pousse un soupir de soulagement — son ancien élève est enfin en paix.";
   } else if(G.inventory.includes("Médaillon d'Arianna")||G.flags.quest){
-    epilogue = "Zagor s'effondre en poussière noire ! Un murmure de harpe résonne un instant dans les couloirs — Arianna, enfin libre, vous remercie silencieusement avant de s'évanouir en lumière bleue.";
+    epilogue = "Zagor s'effondre en poussière noire ! Un murmure de harpe résonne un instant — Arianna, enfin libre, vous remercie silencieusement.";
   } else {
-    epilogue = "Zagor s'effondre en poussière noire ! Sa malédiction se dissipe pour l'éternité. Votre nom sera chanté par les bardes à jamais !";
+    epilogue = "Zagor s'effondre en poussière noire ! Sa malédiction se dissipe, pour cette fois...";
   }
+  // Vaincre Zagor octroie un noyau de ténèbres légendaire en prime avant le banking
+  grantLootItem('noyau_zagor');
+  Meta.runsCompleted++; Meta.runsExtracted++;
+  const summary = bankRunLoot();
   $('vmsg').textContent = epilogue;
   $('vscreen').style.display='flex';
+  const el=document.createElement('div');
+  el.style.cssText="font-family:'Cinzel',serif;font-size:.75rem;color:var(--gold-bright);margin:8px 0;";
+  el.textContent = 'Butin ramené au Sanctuaire : ' + summary;
+  $('vscreen').insertBefore(el, $('vscreen').querySelector('button'));
 }
+
 function $(id){return document.getElementById(id);}
 function show(id,d='block'){const el=$(id);if(el)el.style.display=d;}
 function hide(id){const el=$(id);if(el)el.style.display='none';}

@@ -439,11 +439,11 @@ greffon:{n:"Greffon",g:"🫁",z:{tete:28,torse:74},garde:13,dmg:[7,14],init:3,ar
   tr:["horde","saigne"],d:"Trois hommes cousus dans un seul manteau de cire. Ils ne sont pas d'accord."},
 chevalier_fondu:{n:"Chevalier fondu",g:"🛡",z:{tete:36,torse:96},garde:15,dmg:[9,17],init:2,arm:5,cen:[70,120],
   tr:["brise"],d:"L'armure et l'homme ont coulé ensemble. On ne sait plus lequel tient l'autre debout."},
-jardinier_cire:{n:"Le Jardinier",g:"🌿",z:{tete:48,torse:128},garde:16,dmg:[10,18],init:3,arm:5,cen:[120,200],
+jardinier_cire:{n:"Le Jardinier",g:"🌿",z:{tete:50,torse:134},garde:16,dmg:[11,19],init:3,arm:5,cen:[120,200],
   tr:["saigne","horde"],el:1,d:"Il taille les cierges. Il taille tout ce qui pousse trop droit."},
-garde_braise:{n:"Garde-Braise",g:"🔥",z:{tete:42,torse:112},garde:16,dmg:[10,19],init:3,arm:6,cen:[110,190],
+garde_braise:{n:"Garde-Braise",g:"🔥",z:{tete:46,torse:122},garde:17,dmg:[11,20],init:3,arm:6,cen:[110,190],
   tr:["braise","brise"],el:1,d:"Le dernier ordre donné leur ordonnait de rester. Ils sont restés."},
-roi_cendre:{n:"ALDRICH, LE ROI DE CENDRE",g:"👑",z:{tete:56,torse:168},garde:17,dmg:[12,21],init:4,arm:6,
+roi_cendre:{n:"ALDRICH, LE ROI DE CENDRE",g:"👑",z:{tete:64,torse:192},garde:18,dmg:[13,22],init:4,arm:7,
   cen:[400,600],tr:["braise","brise","saigne","malediction"],boss:1,
   d:"Il a mis le Feu en cage il y a mille ans. Il est resté pour tenir la clé. Il n'a plus de mains."}
 };
@@ -454,7 +454,7 @@ const NEWMETA=()=>({
   pacteLvl:0, upg:{},
   roster:[], active:null,
   quests:{}, prog:{kills:{},extracts:{},deliver:0}, corpses:[],
-  raids:0, morts:0, best:0, tue:0, boss:0, deepest:1, dice3d:false
+  raids:0, morts:0, best:0, tue:0, boss:0, deepest:1, dice3d:false, sound:true
 });
 /* ---- porteurs ---- */
 const PRENOMS=["Aubry","Maline","Corvin","Sedge","Ysolde","Barnabé","Wren","Orval","Lisenne","Thibaut",
@@ -500,6 +500,49 @@ async function load(){
   try{ const raw=await STORE.get('cendrelame_v1'); if(raw){ META=Object.assign(NEWMETA(),JSON.parse(raw)) } }catch(e){}
 }
 
+/* ---------------- SON PROCÉDURAL ---------------- */
+let AC=null;
+function ac(){ if(!META.sound)return null;
+  try{ if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended')AC.resume(); return AC }
+  catch(e){ META.sound=false; return null } }
+function tone({f=220,f2,t='sine',d=.18,v=.14,dl=0}){
+  const c=ac();if(!c)return;
+  const o=c.createOscillator(),g=c.createGain(),t0=c.currentTime+dl;
+  o.type=t;o.frequency.setValueAtTime(f,t0);
+  if(f2)o.frequency.exponentialRampToValueAtTime(Math.max(20,f2),t0+d);
+  g.gain.setValueAtTime(0,t0);
+  g.gain.linearRampToValueAtTime(v,t0+.008);
+  g.gain.exponentialRampToValueAtTime(.0001,t0+d);
+  o.connect(g).connect(c.destination);o.start(t0);o.stop(t0+d+.05);
+}
+function noise({d=.2,v=.12,lp=1200,dl=0}){
+  const c=ac();if(!c)return;
+  const n=Math.floor(c.sampleRate*d), b=c.createBuffer(1,n,c.sampleRate), a=b.getChannelData(0);
+  for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);
+  const src=c.createBufferSource();src.buffer=b;
+  const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=lp;
+  const g=c.createGain();g.gain.setValueAtTime(v,c.currentTime+dl);
+  g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+dl+d);
+  src.connect(f).connect(g).connect(c.destination);src.start(c.currentTime+dl);
+}
+const SFX={
+  tap:()=>tone({f:180,f2:120,t:'triangle',d:.06,v:.06}),
+  roll:()=>{for(let i=0;i<7;i++)noise({d:.05,v:.05,lp:2600,dl:i*.10})},
+  land:()=>{tone({f:90,f2:50,t:'sine',d:.3,v:.16});noise({d:.16,v:.09,lp:900})},
+  hit:()=>{noise({d:.14,v:.16,lp:2000});tone({f:150,f2:70,t:'square',d:.1,v:.07})},
+  crit:()=>{noise({d:.22,v:.2,lp:3400});tone({f:320,f2:90,t:'sawtooth',d:.28,v:.11});tone({f:640,f2:180,t:'triangle',d:.2,v:.06,dl:.03})},
+  miss:()=>noise({d:.12,v:.07,lp:5200}),
+  hurt:()=>{tone({f:120,f2:48,t:'sawtooth',d:.26,v:.15});noise({d:.2,v:.12,lp:700})},
+  parry:()=>{tone({f:1400,f2:700,t:'triangle',d:.16,v:.10});tone({f:2100,f2:1100,t:'sine',d:.12,v:.05,dl:.02})},
+  charge:()=>{tone({f:70,f2:150,t:'sawtooth',d:.55,v:.09})},
+  heal:()=>{tone({f:300,f2:520,t:'sine',d:.35,v:.10});tone({f:450,f2:780,t:'sine',d:.3,v:.05,dl:.06})},
+  loot:()=>{tone({f:520,f2:700,t:'triangle',d:.14,v:.09});tone({f:780,f2:1040,t:'triangle',d:.18,v:.06,dl:.07})},
+  death:()=>{tone({f:110,f2:28,t:'sawtooth',d:1.5,v:.18});noise({d:1.1,v:.12,lp:420})},
+  win:()=>{tone({f:180,f2:240,t:'sine',d:.5,v:.10});tone({f:270,f2:360,t:'sine',d:.6,v:.07,dl:.10})},
+  door:()=>{tone({f:60,f2:40,t:'sine',d:.9,v:.14});noise({d:.7,v:.08,lp:500})}
+};
+const sfx=k=>{try{SFX[k]&&SFX[k]()}catch(e){}};
+
 /* ---------------- CANVAS : SCÈNE PROCÉDURALE ---------------- */
 const fx=$('#fx'), fctx=fx.getContext('2d');
 let SCENE={pal:'eau',t:0,parts:[],raf:0,seed:1};
@@ -515,7 +558,7 @@ function rnd(s){SCENE.seed=(SCENE.seed*16807)%2147483647;return SCENE.seed/21474
 function sizeFX(){const r=fx.getBoundingClientRect();const d=Math.min(devicePixelRatio||1,2);
   fx.width=r.width*d;fx.height=r.height*d;fctx.setTransform(d,0,0,d,0,0);SCENE.w=r.width;SCENE.h=r.height}
 function setScene(pal,seed,kind,mob){
-  SCENE.pal=pal;SCENE.seed=(seed||R(1,99999))+1;SCENE.kind=kind||'salle';SCENE.mob=mob||null;SCENE.t=0;
+  SCENE.pal=pal;SCENE.seed=(seed||R(1,99999))+1;SCENE.kind=kind||'salle';SCENE.mob=mob||null;SCENE.t=0;SCENE.pops=[];
   sizeFX();buildScene();
 }
 function buildScene(){
@@ -708,6 +751,31 @@ function drawProp(kind,x,y,h,rim){
     }
   }
 }
+function pop(txt,who,col){
+  SCENE.pops=SCENE.pops||[];
+  SCENE.pops.push({txt,who,col:col||'#e8dcc6',t:0,dx:(Math.random()-.5)*14});
+  if(SCENE.pops.length>8)SCENE.pops.shift();
+}
+function drawPops(){
+  if(!SCENE.pops||!SCENE.pops.length)return;
+  const w=SCENE.w,h=SCENE.h,ground=h*.94;
+  SCENE.pops=SCENE.pops.filter(p=>{
+    p.t+=0.022;
+    if(p.t>=1)return false;
+    const x=(p.who==='e'?w*.70:w*.24)+p.dx;
+    const y=ground-h*(p.who==='e'?.62:.56)-p.t*h*.30;
+    const a=p.t<.14?p.t/.14:1-Math.max(0,(p.t-.55)/.45);
+    fctx.save();
+    fctx.globalAlpha=Math.max(0,a);
+    fctx.font='600 '+(h*0.115*(1+(1-p.t)*0.25)).toFixed(0)+'px ui-monospace,monospace';
+    fctx.textAlign='center';fctx.textBaseline='middle';
+    fctx.shadowColor='#000';fctx.shadowBlur=8;
+    fctx.fillStyle='rgba(0,0,0,.8)';fctx.fillText(p.txt,x+1,y+1);
+    fctx.fillStyle=p.col;fctx.fillText(p.txt,x,y);
+    fctx.restore();
+    return true;
+  });
+}
 function drawActors(){
   const w=SCENE.w,h=SCENE.h,p=PAL[SCENE.pal],rim=p.ember;
   const ground=h*.94;
@@ -729,6 +797,7 @@ function drawActors(){
   fctx.beginPath();fctx.ellipse(w*.24,ground+1,h*.10,h*.018,0,0,6.3);fctx.fill();
   if(k==='combat'||k==='boss'){fctx.beginPath();fctx.ellipse(w*.70,ground+1,h*.13,h*.022,0,0,6.3);fctx.fill()}
   fctx.globalAlpha=1;
+  drawPops();
 }
 function drawScene(){
   const w=SCENE.w,h=SCENE.h,p=PAL[SCENE.pal],t=SCENE.t;
@@ -853,7 +922,7 @@ function mkAct(c){
   b.className='act '+(c.cls||'');
   b.innerHTML=`${c.t}${c.s?`<small>${c.s}</small>`:''}`;
   if(c.off)b.disabled=true;
-  b.onclick=()=>{if(BUSY)return;c.f&&c.f()};
+  b.onclick=()=>{if(BUSY)return;sfx('tap');c.f&&c.f()};
   return b;
 }
 
@@ -971,7 +1040,7 @@ async function roll3D(faces,label,val){
   let d;
   try{ d=await init3D() }catch(e){ D3fail=true; return null }
   $('#dLbl').textContent=label||'';$('#dRes').textContent='';$('#dRes').className='';
-  $('#dice').classList.add('on','d3');
+  $('#dice').classList.add('on','d3');sfx('roll');
   const S=document.getElementById('dcv3').clientWidth||230;
   d.rd.setSize(S,S,false);d.cam.aspect=1;d.cam.updateProjectionMatrix();
   const target=new THREE.Quaternion().setFromUnitVectors(d.normals[(val-1)%d.normals.length],new THREE.Vector3(0,0,1));
@@ -996,7 +1065,7 @@ async function roll3D(faces,label,val){
 function rollDie2D(faces,label,v){
   return new Promise(res=>{
     $('#dLbl').textContent=label||'';$('#dRes').textContent='';$('#dRes').className='';
-    $('#dice').classList.add('on');sizeDie();
+    $('#dice').classList.add('on');sizeDie();sfx('roll');
     const t0=Date.now(),dur=880;
     (function anim(){
       const e=(Date.now()-t0)/dur;
@@ -1004,7 +1073,7 @@ function rollDie2D(faces,label,v){
         const ease=1-Math.pow(1-e,3);
         drawDie(e<.82?R(1,faces):v,ease*Math.PI*7,Math.min(1,e*1.6));
         requestAnimationFrame(anim);
-      } else { drawDie(v,Math.PI*7,1); res(v) }
+      } else { drawDie(v,Math.PI*7,1); sfx('land'); res(v) }
     })();
   });
 }
@@ -1077,7 +1146,7 @@ function pactMax(){return META.pactMax+META.pacteLvl+P.mod.pact}
 
 /* dégâts sur zones vitales */
 function hurt(dmg){P.hp=Math.max(0,P.hp-dmg)}
-function heal(amt){P.hp=Math.min(maxPV(),P.hp+amt)}
+function heal(amt){const b=P.hp;P.hp=Math.min(maxPV(),P.hp+amt);if(P.hp>b&&SCENE.kind==='combat')0;}
 const dead=()=>{if(P.hp<=0&&P.second){P.second=0;P.hp=40;P.st=P.st.filter(x=>x.n!=='VIN NOIR');
     toast('Le vin noir te relève.');flash('#8c1c22',.4);return false}return P.hp<=0};
 
@@ -1124,7 +1193,8 @@ function eBar(){
 }
 function drawFight(){
   const l=C.log.map(e=>e.c==='p'?`<p class="txt">${e.t}</p>`:`<div class="sysline ${e.c||''}">${e.t}</div>`).join('');
-  $('#body').innerHTML=eBar()+(winded()?'<div class="sysline bad">Tu es à bout de souffle — Garde −3, dégâts −25 %. Il faut souffler.</div>':'')+l;
+  const tg=C.charge?`<div class="sysline gold">${C.m.n} prépare un coup lourd. Parer maintenant vaut +4 ; esquiver vaut +9.</div>`:'';
+  $('#body').innerHTML=eBar()+tg+(winded()?'<div class="sysline bad">Tu es à bout de souffle — Garde −3, dégâts −25 %. Il faut souffler.</div>':'')+l;
   $('#body').scrollTop=$('#body').scrollHeight;
   $('#loc').textContent='COMBAT';
   const w=P.arme?ITEMS[P.arme]:null;
@@ -1132,12 +1202,13 @@ function drawFight(){
   const acts=[
    {row:[
      {t:'Frapper',s:`${w?w.n:'Mains nues'} · ${cost} END`,f:()=>act('atk')},
-     {t:'Parer',s:'2 END · jet opposé',f:()=>act('parry')}
+     {t:'Charger',s:`${cost+2} END · −2 au jet, ×1.8`,off:P.end<cost+2,f:()=>act('heavy')}
    ]},
    {row:[
-     {t:'Esquiver',s:'2 END · +5 Garde',f:()=>act('dodge')},
-     {t:'Souffler',s:'+8 END · reprend la garde',f:()=>act('rest')}
+     {t:'Parer',s:C.charge?'2 END · +4 · le moment est venu':'2 END · jet opposé',cls:C.charge?'gold':'',f:()=>act('parry')},
+     {t:'Esquiver',s:C.charge?'2 END · +9 Garde':'2 END · +5 Garde',cls:C.charge?'gold':'',f:()=>act('dodge')}
    ]},
+   {t:'Souffler',s:'+8 END · reprend la garde',cls:'sub',f:()=>act('rest')},
   ];
   if(winded())C.warn=1;
   if(P.foc>0)acts.push({t:'Invoquer',s:`Focus ${P.foc}/${focMax()}`,cls:'gold',f:()=>focusMenu()});
@@ -1153,10 +1224,11 @@ async function act(a){
   C.log=[];P.dodge=0;P.parry=0;
   try{
     if(a==='rest'){P.end=Math.min(endMax(),P.end+8);P.dodge=1;clog('Tu recules d\'un pas, arme haute, et reprends ton souffle. <b>+8 END</b>, garde reformée.','good')}
-    if(a==='dodge'){if(P.end<2){clog('Plus assez de souffle pour esquiver.','bad')}else{P.end-=2;P.dodge=1;clog('Tu te places de biais, poids sur la jambe arrière. <b>+5 Garde</b>','good')}}
+    if(a==='dodge'){if(P.end<2){clog('Plus assez de souffle pour esquiver.','bad')}else{P.end-=2;P.dodge=C.charge?9:5;
+      clog(C.charge?'Tu le laisses armer et tu roules sur le côté. <b>+9 Garde</b>':'Tu te places de biais, poids sur la jambe arrière. <b>+5 Garde</b>','good')}}
     if(a==='parry'){if(P.end<2){clog('Tes bras tremblent trop pour parer.','bad')}else{P.end-=2;P.parry=1;clog('Lame haute, coude bas. Tu guettes le fer.','good')}}
     if(a==='flee'){await tryFlee();if(!C)return}
-    if(a==='atk'){await playerAttack();if(eDead()){await victory();return}}
+    if(a==='atk'||a==='heavy'){await playerAttack(a==='heavy');if(eDead()){await victory();return}}
     if(!C)return;
     await enemyTurn();
     if(!C)return;
@@ -1167,20 +1239,22 @@ async function act(a){
   } finally { BUSY=false }
 }
 
-async function playerAttack(){
+async function playerAttack(heavy){
   const w=P.arme?ITEMS[P.arme]:{n:'Mains nues',dmg:[2,5],end:1,sc:'FOR',tr:[]};
   const tr=w.tr||[];
-  if(P.end<w.end){
+  const cost=w.end+(heavy?2:0);
+  if(P.end<cost){
     clog('Tu frappes à bout de souffle — le coup part mou.','bad');
     var weak=true;P.end=0;
-  } else { P.end-=w.end }
-  const b=bonus(w.sc)+(tr.includes('preste')?2:0)+(tr.includes('lourde')?-1:0)+(tr.includes('allonge')?1:0);
+  } else { P.end-=cost }
+  if(heavy&&!weak)clog('Tu prends le temps d\'armer. C\'est long, et il te voit venir.','gold');
+  const b=bonus(w.sc)+(tr.includes('preste')?2:0)+(tr.includes('lourde')?-1:0)+(tr.includes('allonge')?1:0)+(heavy?-2:0);
   const v=await rollDie(20,`ATTAQUE — ${w.sc} · Garde ${C.m.garde}`);
   const tot=v+b;
   const crit=v===20, hit=crit||(v!==1&&tot>=C.m.garde);
   dieResult(`${v} ${b>=0?'+':''}${b} = ${tot} · ${crit?'COUP FATAL':hit?'TOUCHÉ':'MANQUÉ'}`,crit?'crit':hit?'hit':'miss');
   await sleep(820);hideDie();
-  if(!hit){clog(`${v===1?'Ta lame ripe sur la pierre. Tu perds l\'équilibre.':'Il se dérobe. Ton coup fend l\'air.'}`,'bad');
+  if(!hit){sfx('miss');pop('manqué','e','#8f8377');clog(`${v===1?'Ta lame ripe sur la pierre. Tu perds l\'équilibre.':'Il se dérobe. Ton coup fend l\'air.'}`,'bad');
     if(v===1){P.end=Math.max(0,P.end-3);clog('- Déséquilibre : −3 END')}return}
   // dégâts
   let d=R(w.dmg[0],w.dmg[1])+Math.floor(P.s[w.sc]/2)+P.mod.dmg+P.sharp+(P.rage?5:0)+(P.oil?4:0)+((META.upg&&P.arme&&META.upg[P.arme])||0)*2;
@@ -1189,9 +1263,11 @@ async function playerAttack(){
   if(tr.includes('brise'))arm=Math.floor(arm/2);
   if(tr.includes('perce'))arm=Math.max(0,arm-3);
   d=Math.max(1,d-arm);
-  const ouv=!crit&&tot>=C.m.garde+6;
+  if(heavy)d=Math.round(d*1.8);
+  const ouv=!crit&&!heavy&&tot>=C.m.garde+6;
   if(crit)d=Math.round(d*2.1);else if(ouv)d=Math.round(d*1.5);
   C.hp-=d;
+  sfx(crit?'crit':'hit');pop('−'+d,'e',crit?'#f0c04a':'#e8dcc6');
   flash('#c9a227',crit?.3:.16);shake(crit?7:4);
   clog(crit?`Il s'ouvre entièrement. Tu frappes à fond — <b>${d}</b> dégâts.`:ouv?`Une ouverture. Tu t'y engouffres — <b>${d}</b> dégâts.`:`Tu ouvres la chair — <b>${d}</b> dégâts.`,'good');
   if(tr.includes('saigne')&&R(1,100)<=45){C.st.push({n:'SAIGNE',c:'saign',t:3});clog('* La plaie ne se referme pas.','gold')}
@@ -1205,12 +1281,18 @@ async function enemyTurn(){
   const m=C.m,tr=m.tr||[];
   C.st=C.st.filter(s=>{s.t--;return s.t>0});
   if(C.stunned>0){C.stunned--;clog(`${m.n} chancelle et perd son tour.`,'good');return}
-  const swings=(tr.includes('horde')&&R(1,100)<=35)?2:1;
+  if(!C.charge&&!C.stunned&&R(1,100)<=(m.boss?28:m.el?32:24)&&!eDead()){
+    C.charge=1;sfx('charge');
+    clog(`<b>${m.n}</b> ${pick(['recule d\'un pas et arme son coup','prend appui, épaules basses','lève son arme au-dessus de la tête','ramasse son poids sur la jambe arrière'])}. Le prochain coup sera lourd.`,'gold');
+    return;
+  }
+  const charged=C.charge;C.charge=0;
+  const swings=(!charged&&tr.includes('horde')&&R(1,100)<=35)?2:1;
   if(swings===2)clog(`${m.n} enchaîne deux attaques.`,'bad');
   for(let i=0;i<swings;i++){
     if(dead())return;
-    const g=gardeVal()+(P.dodge?5:0);
-    const v=await rollDie(20,`${m.n.toUpperCase()} ATTAQUE — ta Garde ${g}`);
+    const g=gardeVal()+(P.dodge||0);
+    const v=await rollDie(20,`${m.n.toUpperCase()} ${charged?'FRAPPE LOURDEMENT':'ATTAQUE'} — ta Garde ${g}`);
     const tot=v+Math.floor(m.init/2)+2;
     const crit=v===20,hit=crit||(v!==1&&tot>=g);
     dieResult(`${v} + ${Math.floor(m.init/2)+2} = ${tot} · ${hit?(crit?'COUP FATAL':'TOUCHÉ'):'ESQUIVÉ'}`,hit?(crit?'miss':'miss'):'hit');
@@ -1219,7 +1301,7 @@ async function enemyTurn(){
     if(P.parry){
       P.parry=0;
       const pv=await rollDie(20,`PARADE — DEX · son jet : ${tot}`);
-      const pb=bonus('DEX')+(P.mod.par||0)+(winded()?-2:0);
+      const pb=bonus('DEX')+(P.mod.par||0)+(winded()?-2:0)+(charged?4:0);
       const ptot=pv+pb;
       const win=pv===20||(pv!==1&&ptot>=tot);
       dieResult(`${pv} ${pb>=0?'+':''}${pb} = ${ptot} contre ${tot} · ${win?'PARADE':'DÉBORDÉ'}`,win?'crit':'miss');
@@ -1229,6 +1311,7 @@ async function enemyTurn(){
         const parfait=pv===20||ptot>=tot+5;
         const rd=Math.round((R(w2.dmg[0],w2.dmg[1])+Math.floor(P.s[w2.sc]/2)+P.mod.dmg+P.sharp)*(parfait?1.6:1.1));
         C.hp-=rd;if(parfait)C.stunned=1;
+        sfx('parry');pop('−'+rd,'e','#c9a227');
         flash('#c9a227',parfait?.32:.18);shake(parfait?7:4);
         clog(parfait?`Tu prends sa lame sur la tienne et la fais glisser. <b>Riposte parfaite : ${rd} dégâts</b> — il est déséquilibré.`
                     :`Tu dévies le coup et places la pointe. <b>Riposte : ${rd} dégâts.</b>`,'good');
@@ -1236,15 +1319,17 @@ async function enemyTurn(){
         continue;
       } else { punish=true; clog('Ta parade part trop tôt. Il passe au travers.','bad') }
     }
-    if(!hit&&!punish){clog('Le coup passe à côté.','good');continue}
+    if(!hit&&!punish){sfx('miss');pop('esquivé','p','#9fc46a');clog('Le coup passe à côté.','good');continue}
     let d=R(m.dmg[0],m.dmg[1]);
+    if(charged)d=Math.round(d*1.8);
     if(punish)d=Math.round(d*1.45);
     if(crit)d=Math.round(d*1.8);else if(tot>=g+6)d=Math.round(d*1.35);
     let arm=armorVal();
     if(tr.includes('brise'))arm=Math.floor(arm/2);
     d=Math.max(1,d-arm);
     hurt(d);
-    flash('#c62f2a',.3);shake(7);
+    sfx('hurt');pop('−'+d,'p','#e2585c');
+    flash('#c62f2a',charged?.42:.3);shake(charged?11:7);
     clog(`${m.n} ${crit?'te cueille en pleine ouverture':'te frappe'} — <b>−${d} PV</b>.`,'bad');
     if(tr.includes('saigne')&&R(1,100)<=40){addSt('SAIGNEMENT','saign',3);clog('- Tu saignes.','bad')}
     if(tr.includes('poison')&&R(1,100)<=40){addSt('VENIN','poison',3);clog('- Le venin entre.','bad')}
@@ -1277,6 +1362,7 @@ async function tryFlee(){
 
 async function victory(){
   const m=C.m;
+  sfx('win');
   const cen=R(m.cen[0],m.cen[1]);
   RUN.cendres+=cen;META.tue++;
   const drops=[];
@@ -1315,11 +1401,11 @@ function focusMenu(){
 async function castSpell(s){
   if(BUSY)return;BUSY=true;C.log=[];
   try{
-    if(s==='etin'){P.foc--;const d=R(12,22)+P.s.FOI;C.hp-=d;
+    if(s==='etin'){P.foc--;const d=R(12,22)+P.s.FOI;C.hp-=d;sfx('crit');pop('−'+d,'e','#e0641a');
       clog(`Tu ouvres la main. Une étincelle part, sans bruit. <b>${d}</b> dégâts.`,'gold');
       flash('#e0641a',.24);shake(5);
       if(eDead()){await victory();return}}
-    if(s==='voeu'){P.foc-=2;heal(35);clog('Ta peau se recoud en tirant. Ça fait mal, mais dans le bon sens. <b>+35 PV</b>','good')}
+    if(s==='voeu'){P.foc-=2;heal(35);sfx('heal');pop('+35','p','#9fc46a');clog('Ta peau se recoud en tirant. Ça fait mal, mais dans le bon sens. <b>+35 PV</b>','good')}
     if(s==='cendre'){P.foc--;P.ward=6;addSt('CENDRE','buff',3);clog('Une poussière chaude tourne autour de toi. <b>+6 Garde</b>','good')}
     await enemyTurn();if(!C)return;
     tickSt(t=>clog(t,'bad'));
@@ -1685,7 +1771,7 @@ function nodeTresor(){
         if(R(1,100)<=55)got.push(pick(D.mats));
         if(R(1,100)<=25)got.push(pick(D.mats));
         const cen=R(D.cendres[0],D.cendres[1]);
-        got.forEach(id=>RUN.sac.push(id));RUN.cendres+=cen;
+        got.forEach(id=>RUN.sac.push(id));RUN.cendres+=cen;sfx('loot');
         let piege=null;
         if(r.fumble){piege=R(8,18);hurt(piege);flash('#c62f2a',.3);shake(6)}
         render({loc:'TROUVAILLE',depth:hdr(),title:r.crit?'Le fond du coffre':'Tu prends ce qu\'il y a',
@@ -1958,7 +2044,7 @@ async function extract(){
   render({loc:'SEUIL',depth:hdr(),title:'Remonter',
     text:['Tu poses la main dans l\'empreinte. La pierre est tiède.','Il reste toujours quelque chose entre toi et la sortie.'],
     choices:[]});
-  await sleep(700);
+  sfx('door');await sleep(700);
   const r=await check('CHA',9,'PASSAGE DU SEUIL');
   BUSY=false;
   if(!r.ok){
@@ -1992,7 +2078,7 @@ function finishExtract(){
 /* ---- MORT ---- */
 async function death(){
   BUSY=true;C=null;closeMap();
-  flash('#8c1c22',.55);shake(10);
+  sfx('death');flash('#8c1c22',.55);shake(10);
   setScene('mort',R(1,9999));
   await sleep(500);
   const perdu=RUN?RUN.sac.length:0, cen=RUN?RUN.cendres:0;
@@ -2369,9 +2455,18 @@ function openOpts(){
      <div class="vl">${!META.dice3d?'✓':''}</div></div>
    <div class="sect">Aperçu</div>
    <button class="btn" onclick="testDie()">Lancer un dé</button>
+   <div class="sect">Le son</div>
+   <p class="desc">Aucun fichier audio : tout est synthétisé à la volée. Coups, parades, dés, braises.</p>
+   <div class="it ${META.sound?'eq':''}" onclick="setSound(true)"><div class="gl">🔊</div>
+     <div class="nm"><b>Son actif</b><small>Retours sonores sur les jets et les coups.</small></div>
+     <div class="vl">${META.sound?'✓':''}</div></div>
+   <div class="it ${!META.sound?'eq':''}" onclick="setSound(false)"><div class="gl">🔇</div>
+     <div class="nm"><b>Silence</b><small>Les Fosses n'ont jamais fait de bruit, de toute façon.</small></div>
+     <div class="vl">${!META.sound?'✓':''}</div></div>
   </div>`;
   ov.classList.add('on');
 }
+function setSound(v){META.sound=v;save();openOpts();if(v)sfx('land')}
 function setDice(v){META.dice3d=v;D3fail=false;save();openOpts();toast(v?'Dé 3D activé':'Dé gravé activé')}
 async function testDie(){
   if(BUSY)return;BUSY=true;

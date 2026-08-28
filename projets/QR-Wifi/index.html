@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Générateur QR — Wifi DESCARTES</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@600;700&family=Pacifico&family=Bebas+Neue&family=Dancing+Script:wght@700&family=Montserrat:wght@700;800&family=Cormorant+Garamond:wght@600&family=Righteous&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root {
@@ -22,7 +25,18 @@
   }
   .wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
   h1 { font-size: 1.5rem; margin: 0 0 4px; color: var(--bleu); }
-  .sub { color: var(--gris); margin: 0 0 24px; font-size: 0.95rem; }
+  .sub { color: var(--gris); margin: 0 0 20px; font-size: 0.95rem; }
+
+  /* Onglets */
+  .tabs { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid var(--bord); }
+  .tab-btn {
+    appearance: none; border: none; background: none; cursor: pointer;
+    padding: 10px 16px; font-size: 0.92rem; font-weight: 600; color: var(--gris);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tab-btn.active { color: var(--bleu); border-bottom-color: var(--bleu); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
 
   .panel {
     background: #fff;
@@ -35,16 +49,29 @@
 
   label { display: block; font-weight: 600; font-size: 0.9rem; margin: 14px 0 6px; }
   label:first-of-type { margin-top: 0; }
-  input, select {
+  input, select, textarea {
     width: 100%;
     padding: 10px 12px;
     font-size: 1rem;
     border: 1px solid var(--bord);
     border-radius: 8px;
     background: #fff;
+    font-family: inherit;
   }
-  input:focus, select:focus { outline: 2px solid var(--bleu); border-color: var(--bleu); }
+  input[type="range"] { padding: 0; }
+  input[type="color"] { padding: 3px; height: 42px; cursor: pointer; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--bleu); border-color: var(--bleu); }
   .hint { font-size: 0.8rem; color: var(--gris); margin-top: 5px; }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 560px) { .row2, .row3 { grid-template-columns: 1fr; } }
+
+  .checkline { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  .checkline input { width: auto; }
+  .checkline label { margin: 0; font-weight: 600; font-size: 0.9rem; }
+
+  .range-val { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--gris); margin-top: 4px; }
 
   .btn {
     display: inline-block; margin-top: 18px; width: 100%;
@@ -56,7 +83,7 @@
   .btn-sec { background: #fff; color: var(--bleu); border: 1px solid var(--bleu); margin-top: 10px; }
   .btn-sec:hover { background: var(--bleu-clair); }
 
-  /* La fiche imprimable */
+  /* La fiche imprimable (wifi) */
   #fiche { display: none; }
   #fiche.show { display: block; }
   .ticket {
@@ -79,72 +106,247 @@
     font-size: 0.82rem; background: #fff7e6; border: 1px solid #f0d48a;
     border-radius: 8px; padding: 10px 12px; margin-top: 16px; color: #7a5b00;
   }
-
-  @media print {
-    body { background: #fff; }
-    .wrap > h1, .wrap > .sub, .panel, .actions { display: none !important; }
-    #fiche { display: block !important; }
-    .ticket { border-color: #000; }
+  .info {
+    font-size: 0.82rem; background: var(--bleu-clair); border: 1px solid #c3d9ec;
+    border-radius: 8px; padding: 10px 12px; margin-top: 16px; color: var(--bleu);
   }
+
+  /* Mode artistique */
+  .drop {
+    border: 2px dashed var(--bord); border-radius: 10px; padding: 22px;
+    text-align: center; color: var(--gris); font-size: 0.9rem; cursor: pointer;
+    background: #fafbfc; transition: border-color .15s, background .15s;
+  }
+  .drop.hover { border-color: var(--bleu); background: var(--bleu-clair); }
+  .drop img { max-width: 100%; max-height: 140px; border-radius: 6px; margin-top: 10px; display:block; margin-left:auto; margin-right:auto; }
+  .art-stage { display: flex; justify-content: center; padding: 10px 0; }
+  .art-stage canvas { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); background:#fff; }
+  .modcount { text-align: center; font-size: 0.8rem; color: var(--gris); margin-top: 6px; }
+  .swatch-label { display:flex; align-items:center; gap:10px; }
+  .swatch-label span { font-weight:600; font-size:0.9rem; }
+  .risk-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.82rem; font-weight: 700; padding: 6px 12px;
+    border-radius: 999px; margin: 10px auto 0; width: fit-content;
+  }
+  .risk-low { background: #e6f7ee; color: #157347; }
+  .risk-mid { background: #fff7e6; color: #7a5b00; }
+  .risk-high { background: #fdeaea; color: #b02a2a; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Générateur QR — Wifi DESCARTES</h1>
-  <p class="sub">Saisissez les identifiants du ticket fourni par le service informatique. L'outil produit un QR code à scanner, avec les identifiants rappelés en dessous.</p>
+  <h1>Générateur QR — DESCARTES</h1>
+  <p class="sub">Ticket wifi standard, ou QR code artistique avec une photo intégrée.</p>
 
-  <div class="panel">
-    <h2>Identifiants du ticket</h2>
-
-    <label for="ssid">Nom du réseau (SSID)</label>
-    <input id="ssid" type="text" value="DESCARTES" autocomplete="off">
-
-    <label for="login">Identifiant / login</label>
-    <input id="login" type="text" placeholder="ex. invite-4821" autocomplete="off">
-
-    <label for="pass">Mot de passe</label>
-    <input id="pass" type="text" placeholder="le mot de passe du ticket" autocomplete="off">
-    <div class="hint">Affiché en clair volontairement : c'est un ticket temporaire destiné à être distribué.</div>
-
-    <label for="type">Type de sécurité du réseau</label>
-    <select id="type">
-      <option value="WPA">WPA/WPA2 — mot de passe partagé (scan direct)</option>
-      <option value="WPA2-EAP">WPA2-Enterprise — login + mot de passe individuel</option>
-      <option value="nopass">Réseau ouvert (sans mot de passe)</option>
-    </select>
-    <div class="hint">En cas de doute, demandez au service info. S'il y a un <em>login</em> ET un mot de passe, c'est en général « Enterprise ».</div>
-
-    <label for="validite">Validité (optionnel, affiché sous le QR)</label>
-    <input id="validite" type="text" placeholder="ex. valable 24 h — jusqu'au 12/06 18 h" autocomplete="off">
-
-    <button class="btn" onclick="generer()">Générer le QR code</button>
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-btn-wifi" onclick="switchTab('wifi')">Ticket Wifi</button>
+    <button class="tab-btn" id="tab-btn-art" onclick="switchTab('art')">QR artistique (photo)</button>
   </div>
 
-  <div id="fiche" class="panel">
-    <div class="ticket">
-      <p class="net" id="f-ssid">DESCARTES <small>Réseau wifi — Université Paris Cité</small></p>
-      <div id="qrbox"></div>
-      <div class="creds">
-        <div class="row"><span class="k">Réseau</span><span class="v" id="f-net">DESCARTES</span></div>
-        <div class="row" id="r-login"><span class="k">Identifiant</span><span class="v" id="f-login"></span></div>
-        <div class="row"><span class="k">Mot de passe</span><span class="v" id="f-pass"></span></div>
-        <div class="row" id="r-valid" style="display:none"><span class="k">Validité</span><span class="v" id="f-valid"></span></div>
+  <!-- ================= ONGLET WIFI (inchangé) ================= -->
+  <div class="tab-panel active" id="tab-wifi">
+    <div class="panel">
+      <h2>Identifiants du ticket</h2>
+
+      <label for="ssid">Nom du réseau (SSID)</label>
+      <input id="ssid" type="text" value="DESCARTES" autocomplete="off">
+
+      <label for="login">Identifiant / login</label>
+      <input id="login" type="text" placeholder="ex. invite-4821" autocomplete="off">
+
+      <label for="pass">Mot de passe</label>
+      <input id="pass" type="text" placeholder="le mot de passe du ticket" autocomplete="off">
+      <div class="hint">Affiché en clair volontairement : c'est un ticket temporaire destiné à être distribué.</div>
+
+      <label for="type">Type de sécurité du réseau</label>
+      <select id="type">
+        <option value="WPA">WPA/WPA2 — mot de passe partagé (scan direct)</option>
+        <option value="WPA2-EAP">WPA2-Enterprise — login + mot de passe individuel</option>
+        <option value="nopass">Réseau ouvert (sans mot de passe)</option>
+      </select>
+      <div class="hint">En cas de doute, demandez au service info. S'il y a un <em>login</em> ET un mot de passe, c'est en général « Enterprise ».</div>
+
+      <label for="validite">Validité (optionnel, affiché sous le QR)</label>
+      <input id="validite" type="text" placeholder="ex. valable 24 h — jusqu'au 12/06 18 h" autocomplete="off">
+
+      <button class="btn" onclick="generer()">Générer le QR code</button>
+    </div>
+
+    <div id="fiche" class="panel">
+      <div class="ticket">
+        <p class="net" id="f-ssid">DESCARTES <small>Réseau wifi — Université Paris Cité</small></p>
+        <div id="qrbox"></div>
+        <div class="creds">
+          <div class="row"><span class="k">Réseau</span><span class="v" id="f-net">DESCARTES</span></div>
+          <div class="row" id="r-login"><span class="k">Identifiant</span><span class="v" id="f-login"></span></div>
+          <div class="row"><span class="k">Mot de passe</span><span class="v" id="f-pass"></span></div>
+          <div class="row" id="r-valid" style="display:none"><span class="k">Validité</span><span class="v" id="f-valid"></span></div>
+        </div>
+        <p class="note" id="f-note">Scannez le QR code avec l'appareil photo, puis confirmez la connexion.</p>
       </div>
-      <p class="note" id="f-note">Scannez le QR code avec l'appareil photo, puis confirmez la connexion.</p>
+      <div class="warn" id="f-warn" style="display:none">
+        ⚠️ Réseau de type Enterprise : le scan direct n'est pas pris en charge par tous les téléphones.
+        Si la connexion automatique échoue, saisissez manuellement l'identifiant et le mot de passe ci-dessus.
+      </div>
     </div>
-    <div class="warn" id="f-warn" style="display:none">
-      ⚠️ Réseau de type Enterprise : le scan direct n'est pas pris en charge par tous les téléphones.
-      Si la connexion automatique échoue, saisissez manuellement l'identifiant et le mot de passe ci-dessus.
+
+    <div class="actions" id="actions" style="display:none">
+      <button class="btn" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+      <button class="btn btn-sec" onclick="reset()">Nouveau ticket</button>
     </div>
   </div>
 
-  <div class="actions" id="actions" style="display:none">
-    <button class="btn" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
-    <button class="btn btn-sec" onclick="reset()">Nouveau ticket</button>
+  <!-- ================= ONGLET ARTISTIQUE ================= -->
+  <div class="tab-panel" id="tab-art">
+    <div class="panel">
+      <h2>Contenu du QR code</h2>
+      <label for="art-content">Texte ou URL à encoder</label>
+      <textarea id="art-content" rows="2" placeholder="https://exemple.fr ou tout autre texte">https://exemple.fr</textarea>
+
+      <label for="art-photo-input">Photo à intégrer</label>
+      <div class="drop" id="art-drop" onclick="document.getElementById('art-photo-input').click()">
+        📷 Cliquez ou déposez une image ici
+        <img id="art-preview" style="display:none">
+      </div>
+      <input id="art-photo-input" type="file" accept="image/*" style="display:none">
+      <div class="hint">La photo module la taille des points du QR (effet « halftone »). Les carrés de repérage (coins) et le contour restent toujours intacts : c'est ce qui garantit que le QR reste scannable.</div>
+    </div>
+
+    <div class="panel">
+      <h2>Densité &amp; fiabilité</h2>
+      <label for="art-density">Densité du QR (nombre de points)</label>
+      <input id="art-density" type="range" min="0" max="700" value="0" step="10">
+      <div class="range-val"><span>Standard</span><span id="art-modcount">— modules</span><span>Très dense</span></div>
+      <div class="hint">Plus de modules = plus de détail possible pour la photo, et une image finale plus fine. Le contenu réellement encodé/scanné n'est pas modifié (padding invisible).</div>
+
+      <label for="art-ec">Niveau de correction d'erreur</label>
+      <select id="art-ec">
+        <option value="L">L — faible (déconseillé avec une photo)</option>
+        <option value="M">M — moyen</option>
+        <option value="Q">Q — élevé</option>
+        <option value="H" selected>H — maximal (recommandé, 30% de tolérance)</option>
+      </select>
+      <div class="hint">Un niveau élevé laisse plus de marge pour que l'effet photo n'empêche pas le scan.</div>
+    </div>
+
+    <div class="panel">
+      <h2>Style du rendu</h2>
+
+      <label>Préréglages</label>
+      <div class="row3">
+        <button type="button" class="btn btn-sec" style="margin-top:0" onclick="applyPreset('discret')">🛡️ Discret</button>
+        <button type="button" class="btn btn-sec" style="margin-top:0" onclick="applyPreset('equilibre')">⚖️ Équilibré</button>
+        <button type="button" class="btn btn-sec" style="margin-top:0" onclick="applyPreset('maximal')">🎨 Maximal</button>
+      </div>
+      <div class="hint">Règle d'un coup la densité, l'intensité de l'effet et la correction d'erreur.</div>
+
+      <div class="row3">
+        <div>
+          <label for="art-shape">Forme des points</label>
+          <select id="art-shape">
+            <option value="circle">Ronds</option>
+            <option value="rounded">Carrés arrondis</option>
+            <option value="square">Carrés</option>
+          </select>
+        </div>
+        <div>
+          <label for="art-fg" class="swatch-label"><span>Couleur points</span></label>
+          <input id="art-fg" type="color" value="#00457c">
+        </div>
+        <div>
+          <label for="art-bg" class="swatch-label"><span>Couleur fond</span></label>
+          <input id="art-bg" type="color" value="#ffffff">
+        </div>
+      </div>
+
+      <div class="checkline">
+        <input id="art-usecolor" type="checkbox">
+        <label for="art-usecolor">Garder les couleurs d'origine de la photo (au lieu d'une couleur unique)</label>
+      </div>
+      <div class="hint" id="art-usecolor-hint" style="display:none">Les couleurs sont automatiquement assombries là où nécessaire pour que les points sombres restent assez contrastés pour le scan.</div>
+
+      <label for="art-mindot">Intensité de l'effet photo</label>
+      <input id="art-mindot" type="range" min="20" max="60" value="38">
+      <div class="range-val"><span>Discret (QR très fiable)</span><span>Marqué (photo plus lisible)</span></div>
+
+      <div class="checkline">
+        <input id="art-lightdetail" type="checkbox" checked>
+        <label for="art-lightdetail">Faire apparaître la photo aussi dans les zones claires</label>
+      </div>
+
+      <button class="btn" onclick="renderArt()">Actualiser le rendu</button>
+      <div class="hint">L'aperçu se met aussi à jour automatiquement quand vous changez un réglage.</div>
+    </div>
+
+    <div class="panel">
+      <h2>Texte (optionnel)</h2>
+      <label for="art-text">Texte à afficher</label>
+      <input id="art-text" type="text" placeholder="ex. Scannez-moi !">
+
+      <div class="row2">
+        <div>
+          <label for="art-font">Police</label>
+          <select id="art-font">
+            <option value="Poppins" style="font-family:Poppins">Poppins</option>
+            <option value="Playfair Display" style="font-family:'Playfair Display'">Playfair Display</option>
+            <option value="Montserrat" style="font-family:Montserrat">Montserrat</option>
+            <option value="Pacifico" style="font-family:Pacifico">Pacifico</option>
+            <option value="Dancing Script" style="font-family:'Dancing Script'">Dancing Script</option>
+            <option value="Bebas Neue" style="font-family:'Bebas Neue'">Bebas Neue</option>
+            <option value="Cormorant Garamond" style="font-family:'Cormorant Garamond'">Cormorant Garamond</option>
+            <option value="Righteous" style="font-family:Righteous">Righteous</option>
+          </select>
+        </div>
+        <div>
+          <label for="art-text-position">Position</label>
+          <select id="art-text-position">
+            <option value="bottom">Sous le QR</option>
+            <option value="top">Au-dessus du QR</option>
+            <option value="both">Au-dessus et en dessous</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div>
+          <label for="art-text-color" class="swatch-label"><span>Couleur du texte</span></label>
+          <input id="art-text-color" type="color" value="#00457c">
+        </div>
+        <div>
+          <label for="art-text-size">Taille du texte</label>
+          <input id="art-text-size" type="range" min="16" max="64" value="32">
+        </div>
+      </div>
+      <div class="hint">Le texte est intégré directement dans l'image téléchargée (pas juste affiché à l'écran).</div>
+    </div>
+
+    <div class="panel" id="art-result" style="display:none">
+      <h2>Résultat</h2>
+      <div class="art-stage"><canvas id="art-canvas"></canvas></div>
+      <div class="modcount" id="art-modcount2"></div>
+      <div id="art-risk"></div>
+      <div class="info">Testez toujours le scan avec 2-3 téléphones différents avant impression ou diffusion. Si le scan échoue : réduisez l'intensité de l'effet, augmentez la correction d'erreur en H, ou choisissez une photo plus contrastée.</div>
+      <button class="btn" onclick="downloadArt()">Télécharger en PNG (haute résolution)</button>
+    </div>
   </div>
+
 </div>
 
 <script>
+/* ============== ONGLETS ============== */
+function switchTab(name){
+  document.getElementById('tab-wifi').classList.toggle('active', name==='wifi');
+  document.getElementById('tab-art').classList.toggle('active', name==='art');
+  document.getElementById('tab-btn-wifi').classList.toggle('active', name==='wifi');
+  document.getElementById('tab-btn-art').classList.toggle('active', name==='art');
+  if(name === 'art' && !window._artRenderedOnce){
+    window._artRenderedOnce = true;
+    scheduleAutoRender();
+  }
+}
+
+/* ============== ONGLET WIFI (inchangé) ============== */
 function esc(s){ return String(s).replace(/([\\;,":])/g, "\\$1"); }
 
 function generer(){
@@ -157,23 +359,19 @@ function generer(){
   if(!ssid){ alert("Indiquez le nom du réseau (SSID)."); return; }
   if(type !== 'nopass' && !pass){ alert("Indiquez le mot de passe."); return; }
 
-  // Construction de la chaîne QR wifi standard
   var payload;
   if(type === 'nopass'){
     payload = "WIFI:S:" + esc(ssid) + ";T:nopass;;";
   } else if(type === 'WPA2-EAP'){
-    // Format Enterprise : inclut l'identité. Support variable selon l'OS.
     payload = "WIFI:S:" + esc(ssid) + ";T:WPA2-EAP;I:" + esc(login) + ";P:" + esc(pass) + ";;";
   } else {
     payload = "WIFI:S:" + esc(ssid) + ";T:WPA;P:" + esc(pass) + ";;";
   }
 
-  // Rendu du QR
   var box = document.getElementById('qrbox');
   box.innerHTML = "";
   new QRCode(box, { text: payload, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
 
-  // Remplissage de la fiche
   document.getElementById('f-ssid').firstChild.textContent = ssid + " ";
   document.getElementById('f-net').textContent = ssid;
   document.getElementById('f-pass').textContent = pass || "(aucun)";
@@ -200,6 +398,335 @@ function reset(){
   document.getElementById('fiche').classList.remove('show');
   document.getElementById('actions').style.display = "none";
   window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* ============== ONGLET ARTISTIQUE ============== */
+var artImage = null; // Image() chargée
+var artCanvasEl = document.getElementById('art-canvas');
+var artHiddenBox = document.createElement('div'); // pour instancier QRCode hors écran
+artHiddenBox.style.display = 'none';
+document.body.appendChild(artHiddenBox);
+
+// --- Import photo (clic + drag&drop) ---
+var dropZone = document.getElementById('art-drop');
+var photoInput = document.getElementById('art-photo-input');
+photoInput.addEventListener('change', function(e){
+  if(e.target.files && e.target.files[0]) loadPhoto(e.target.files[0]);
+});
+['dragenter','dragover'].forEach(function(ev){
+  dropZone.addEventListener(ev, function(e){ e.preventDefault(); dropZone.classList.add('hover'); });
+});
+['dragleave','drop'].forEach(function(ev){
+  dropZone.addEventListener(ev, function(e){ e.preventDefault(); dropZone.classList.remove('hover'); });
+});
+dropZone.addEventListener('drop', function(e){
+  if(e.dataTransfer.files && e.dataTransfer.files[0]) loadPhoto(e.dataTransfer.files[0]);
+});
+
+function loadPhoto(file){
+  if(!file.type.startsWith('image/')){ alert('Merci de choisir un fichier image.'); return; }
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    var img = new Image();
+    img.onload = function(){
+      artImage = img;
+      var prev = document.getElementById('art-preview');
+      prev.src = ev.target.result;
+      prev.style.display = 'block';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// --- Estimation en direct du nombre de modules ---
+function buildEncodedText(){
+  var base = document.getElementById('art-content').value || '';
+  var density = parseInt(document.getElementById('art-density').value, 10) || 0;
+  // padding invisible (zero-width space) : augmente la version QR sans changer le contenu visible
+  var pad = '\u200B'.repeat(density);
+  return base + pad;
+}
+
+function getEcLevel(){
+  var v = document.getElementById('art-ec').value;
+  return QRCode.CorrectLevel[v];
+}
+
+function computeMatrix(text, ecLevel){
+  artHiddenBox.innerHTML = '';
+  var tmp = new QRCode(artHiddenBox, { text: text, correctLevel: ecLevel, width: 1, height: 1 });
+  var model = tmp._oQRCode;
+  var count = model.getModuleCount();
+  var isDark = function(r, c){ return model.isDark(r, c); };
+  artHiddenBox.innerHTML = '';
+  return { count: count, isDark: isDark };
+}
+
+function updateModCountPreview(){
+  try {
+    var text = buildEncodedText();
+    if(!text){ document.getElementById('art-modcount').textContent = '— modules'; return; }
+    var m = computeMatrix(text, getEcLevel());
+    document.getElementById('art-modcount').textContent = m.count + ' × ' + m.count + ' modules';
+  } catch(e){
+    document.getElementById('art-modcount').textContent = '— modules';
+  }
+}
+document.getElementById('art-usecolor').addEventListener('change', function(e){
+  document.getElementById('art-usecolor-hint').style.display = e.target.checked ? 'block' : 'none';
+  document.getElementById('art-fg').disabled = e.target.checked;
+  document.getElementById('art-fg').style.opacity = e.target.checked ? 0.4 : 1;
+});
+
+document.getElementById('art-density').addEventListener('input', updateModCountPreview);
+
+/* --- Préréglages --- */
+function applyPreset(name){
+  var presets = {
+    discret:   { density: 0,   mindot: 50, ec: 'H', lightdetail: false },
+    equilibre: { density: 200, mindot: 38, ec: 'H', lightdetail: true },
+    maximal:   { density: 450, mindot: 24, ec: 'H', lightdetail: true }
+  };
+  var p = presets[name];
+  if(!p) return;
+  document.getElementById('art-density').value = p.density;
+  document.getElementById('art-mindot').value = p.mindot;
+  document.getElementById('art-ec').value = p.ec;
+  document.getElementById('art-lightdetail').checked = p.lightdetail;
+  updateModCountPreview();
+  scheduleAutoRender();
+}
+
+/* --- Aperçu automatique (débounce) --- */
+var autoRenderTimer = null;
+function scheduleAutoRender(){
+  if(autoRenderTimer) clearTimeout(autoRenderTimer);
+  autoRenderTimer = setTimeout(function(){
+    var content = document.getElementById('art-content').value.trim();
+    if(content) renderArt();
+  }, 350);
+}
+[
+  'art-content','art-density','art-ec','art-shape','art-fg','art-bg',
+  'art-usecolor','art-mindot','art-lightdetail','art-text','art-font',
+  'art-text-position','art-text-color','art-text-size'
+].forEach(function(id){
+  var el = document.getElementById(id);
+  if(!el) return;
+  var evt = (el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'color') ? 'change' : 'input';
+  el.addEventListener(evt, scheduleAutoRender);
+});
+photoInput.addEventListener('change', function(){ setTimeout(scheduleAutoRender, 150); });
+document.getElementById('art-content').addEventListener('input', updateModCountPreview);
+document.getElementById('art-ec').addEventListener('change', updateModCountPreview);
+updateModCountPreview();
+
+// --- Zones protégées : motifs de repérage (coins) + séparateur, jamais transformés ---
+function isProtectedZone(r, c, n){
+  var z = 8; // 7 modules du motif + 1 de séparateur
+  var topLeft = (r < z && c < z);
+  var topRight = (r < z && c >= n - z);
+  var bottomLeft = (r >= n - z && c < z);
+  return topLeft || topRight || bottomLeft;
+}
+
+// --- Rendu principal ---
+async function renderArt(){
+  var encodedText = buildEncodedText();
+  if(!encodedText.trim()){ alert('Indiquez un texte ou une URL à encoder.'); return; }
+
+  var ecLevel = getEcLevel();
+  var matrix = computeMatrix(encodedText, ecLevel);
+  var n = matrix.count;
+
+  var quiet = 4; // zone blanche de sécurité (norme QR)
+  var cell = 18; // px par module, haute résolution
+  var qrSize = (n + quiet * 2) * cell;
+
+  // Réserver de la place pour le texte
+  var text = document.getElementById('art-text').value.trim();
+  var textPos = document.getElementById('art-text-position').value;
+  var textFont = document.getElementById('art-font').value;
+  var textColor = document.getElementById('art-text-color').value;
+  var textSize = parseInt(document.getElementById('art-text-size').value, 10);
+  var textBandH = text ? Math.round(textSize * 1.9) : 0;
+  var hasTop = text && (textPos === 'top' || textPos === 'both');
+  var hasBottom = text && (textPos === 'bottom' || textPos === 'both');
+  var topPad = hasTop ? textBandH : 0;
+  var bottomPad = hasBottom ? textBandH : 0;
+
+  var canvas = document.getElementById('art-canvas');
+  canvas.width = qrSize;
+  canvas.height = qrSize + topPad + bottomPad;
+  var ctx = canvas.getContext('2d');
+
+  var bg = document.getElementById('art-bg').value;
+  var fg = document.getElementById('art-fg').value;
+  var shape = document.getElementById('art-shape').value;
+  var minDotPct = parseInt(document.getElementById('art-mindot').value, 10) / 100; // 0.20 à 0.60
+  var lightDetail = document.getElementById('art-lightdetail').checked;
+
+  // Fond (toute la zone, y compris les bandes de texte)
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Précharge la police choisie avant de dessiner le texte
+  if(text){
+    try { await document.fonts.load(textSize + 'px "' + textFont + '"'); } catch(e){}
+    try { await document.fonts.ready; } catch(e){}
+  }
+
+  ctx.save();
+  ctx.translate(0, topPad); // tout le rendu QR ci-dessous est dessiné décalé pour laisser place au texte du haut
+
+  // Échantillonnage de la photo sur une grille N x N (mode "cover")
+  var lumGrid = null;
+  var colGrid = null; // [r,g,b] par module, 0-255
+  var useColor = document.getElementById('art-usecolor').checked;
+  if(artImage){
+    var off = document.createElement('canvas');
+    off.width = n; off.height = n;
+    var octx = off.getContext('2d');
+    var iw = artImage.width, ih = artImage.height;
+    var scale = Math.max(n / iw, n / ih);
+    var dw = iw * scale, dh = ih * scale;
+    var dx = (n - dw) / 2, dy = (n - dh) / 2;
+    octx.drawImage(artImage, dx, dy, dw, dh);
+    var data = octx.getImageData(0, 0, n, n).data;
+    lumGrid = new Float32Array(n * n);
+    colGrid = new Array(n * n);
+    for(var i = 0; i < n * n; i++){
+      var r0 = data[i*4], g0 = data[i*4+1], b0 = data[i*4+2];
+      lumGrid[i] = (0.299*r0 + 0.587*g0 + 0.114*b0) / 255; // 0 = noir, 1 = blanc
+      colGrid[i] = [r0, g0, b0];
+    }
+  }
+
+  // Assombrit une couleur pour garantir un contraste suffisant sur un point "sombre"
+  function darkenForContrast(rgb, maxLum){
+    var lum = (0.299*rgb[0] + 0.587*rgb[1] + 0.114*rgb[2]) / 255;
+    if(lum <= maxLum) return rgb;
+    var factor = maxLum / lum;
+    return [rgb[0]*factor, rgb[1]*factor, rgb[2]*factor];
+  }
+  function rgbToCss(rgb, alpha){
+    return 'rgba(' + Math.round(rgb[0]) + ',' + Math.round(rgb[1]) + ',' + Math.round(rgb[2]) + ',' + (alpha===undefined?1:alpha) + ')';
+  }
+
+  var minR = cell * 0.5 * minDotPct;   // rayon minimal (couvre toujours le centre du module)
+  var maxR = cell * 0.5 * 0.98;        // rayon quasi plein
+
+  function drawDot(cx, cy, radius, color){
+    ctx.fillStyle = color;
+    if(shape === 'circle'){
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fill();
+    } else if(shape === 'rounded'){
+      var s = radius * 1.7;
+      roundRect(ctx, cx - s/2, cy - s/2, s, s, s*0.35);
+      ctx.fill();
+    } else {
+      var s2 = radius * 1.8;
+      ctx.fillRect(cx - s2/2, cy - s2/2, s2, s2);
+    }
+  }
+
+  function roundRect(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  for(var r = 0; r < n; r++){
+    for(var c = 0; c < n; c++){
+      var cx = (quiet + c + 0.5) * cell;
+      var cy = (quiet + r + 0.5) * cell;
+      var dark = matrix.isDark(r, c);
+      var protectedZone = isProtectedZone(r, c, n);
+
+      if(protectedZone){
+        // Motifs de repérage : toujours pleins et en couleur unique, jamais modulés par la photo
+        if(dark) drawDot(cx, cy, maxR, fg);
+        continue;
+      }
+
+      var lum = lumGrid ? lumGrid[r*n+c] : 0.5;
+
+      if(dark){
+        var radius = minR + (maxR - minR) * (1 - lum); // pixel sombre -> point plus grand
+        var color = fg;
+        if(useColor && colGrid){
+          // Couleur d'origine, assombrie si besoin pour rester assez contrastée pour le scan
+          var darkened = darkenForContrast(colGrid[r*n+c], 0.5);
+          color = rgbToCss(darkened, 1);
+        }
+        drawDot(cx, cy, radius, color);
+      } else if(lightDetail && lumGrid){
+        // Détail léger dans les zones claires, toujours nettement plus clair que les points sombres
+        if(lum < 0.55){
+          var alpha = Math.min(0.22, (0.55 - lum) * 0.5);
+          var sradius = cell * 0.32;
+          var lcolor = fg;
+          if(useColor && colGrid) lcolor = rgbToCss(colGrid[r*n+c], 1);
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          drawDot(cx, cy, sradius, lcolor);
+          ctx.restore();
+        }
+      }
+    }
+  }
+
+  ctx.restore(); // fin du décalage utilisé pour le dessin du QR
+
+  if(text){
+    ctx.fillStyle = textColor;
+    ctx.font = '600 ' + textSize + 'px "' + textFont + '"';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if(hasTop) ctx.fillText(text, qrSize / 2, topPad / 2);
+    if(hasBottom) ctx.fillText(text, qrSize / 2, topPad + qrSize + bottomPad / 2);
+  }
+
+  document.getElementById('art-modcount2').textContent = n + ' × ' + n + ' modules — niveau de correction ' + document.getElementById('art-ec').value;
+  renderRiskBadge(ecLevel, minDotPct, useColor, document.getElementById('art-ec').value);
+  document.getElementById('art-result').style.display = 'block';
+  document.getElementById('art-result').scrollIntoView({behavior:'smooth'});
+}
+
+function renderRiskBadge(ecLevel, minDotPct, useColor, ecLabel){
+  var score = 0;
+  if(ecLabel === 'L') score += 2;
+  else if(ecLabel === 'M') score += 1;
+  else if(ecLabel === 'Q') score += 0.5;
+
+  if(minDotPct < 0.30) score += 2;
+  else if(minDotPct < 0.40) score += 1;
+
+  if(useColor) score += 0.5;
+  if(!artImage) score = Math.min(score, 0.5); // pas de photo = QR classique, très fiable
+
+  var cls, label;
+  if(score <= 0.5){ cls = 'risk-low'; label = '✓ Fiabilité de scan : élevée'; }
+  else if(score <= 2){ cls = 'risk-mid'; label = '⚠ Fiabilité de scan : moyenne — testez avant diffusion'; }
+  else { cls = 'risk-high'; label = '⚠ Fiabilité de scan : à risque — augmentez la correction d\'erreur ou l\'intensité minimale'; }
+
+  document.getElementById('art-risk').innerHTML = '<div class="risk-badge ' + cls + '">' + label + '</div>';
+}
+
+function downloadArt(){
+  var canvas = document.getElementById('art-canvas');
+  if(!canvas.width){ alert('Générez d\'abord le rendu.'); return; }
+  var link = document.createElement('a');
+  link.download = 'qr-artistique.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
 }
 </script>
 </body>

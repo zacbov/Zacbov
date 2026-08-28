@@ -1945,7 +1945,7 @@ function Board3D({ players }) {
 }
 
 /* ── MENU ─────────────────────────────────────────────────── */
-function MenuScreen({ diff, setDiff, onStart, onOnline, soundOn, setSoundOn }) {
+function MenuScreen({ diff, setDiff, onStart, soundOn, setSoundOn }) {
   var [rules, setRules] = useState(false);
   return (
     <div style={{ minHeight:"100vh", background:"radial-gradient(ellipse at 60% 20%,#120a1f,#0a0e1a 60%)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
@@ -1972,7 +1972,6 @@ function MenuScreen({ diff, setDiff, onStart, onOnline, soundOn, setSoundOn }) {
           <button onClick={function(){ setSoundOn(function(s){ return !s; }); }} style={{ background:soundOn?"rgba(34,197,94,.13)":"rgba(255,255,255,.04)", border:"1px solid "+(soundOn?"rgba(34,197,94,.28)":"rgba(255,255,255,.09)"), borderRadius:7, padding:"5px 12px", color:soundOn?"#86efac":"#334155", cursor:"pointer", fontSize:13, fontWeight:600 }}>{soundOn?"🔊 ON":"🔇 OFF"}</button>
         </div>
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          <button onClick={onOnline} style={{ padding:"14px", borderRadius:12, border:"1px solid rgba(167,139,250,.3)", background:"linear-gradient(135deg,#4c1d95,#6d28d9)", color:"#fff", fontWeight:800, fontSize:15, cursor:"pointer", marginBottom:8 }}>🌐 1 vs 1 en ligne</button>
           <button onClick={onStart} style={{ padding:"14px", borderRadius:12, border:"1px solid rgba(167,139,250,.3)", background:"linear-gradient(135deg,#7c3aed,#4f46e5)", color:"white", fontWeight:800, fontSize:16, letterSpacing:1, textTransform:"uppercase", cursor:"pointer", boxShadow:"0 8px 26px rgba(124,58,237,.4)" }}>COMMENCER</button>
           <button onClick={function(){ setRules(function(r){ return !r; }); }} style={{ padding:"10px", borderRadius:12, border:"1px solid rgba(255,255,255,.06)", background:"rgba(255,255,255,.03)", color:"#475569", fontWeight:600, fontSize:12, cursor:"pointer" }}>📖 {rules?"Fermer":"Comment jouer"}</button>
           {rules && (
@@ -2013,177 +2012,6 @@ function VictoryScreen({ wi, players, onReplay }) {
   );
 }
 
-function OnlineLobby(props){
-  var useState=React.useState;
-  var st=useState("home"); var view=st[0], setView=st[1];
-  var cd=useState(""); var code=cd[0], setCode=cd[1];
-  var er=useState(""); var err=er[0], setErr=er[1];
-  var mk=useState(""); var mycode=mk[0], setMycode=mk[1];
-  function fail(e){ setErr(e&&e.message||"Erreur réseau"); }
-  async function quick(){ setView("wait"); setErr("");
-    try{ await pvNetInit(); var r=await pvQuickMatch(); if(r.role==="host"){ setMycode(r.code); } props.onBound(); }
-    catch(e){ setView("home"); fail(e); } }
-  async function create(){ setView("wait"); setErr("");
-    try{ await pvNetInit(); var c=await pvCreateRoom(); setMycode(c); props.onBound(); }
-    catch(e){ setView("home"); fail(e); } }
-  async function join(){ if(code.trim().length!==6){ setErr("Code à 6 caractères."); return; }
-    setView("wait"); setErr("");
-    try{ await pvNetInit(); await pvJoinByCode(code.trim()); props.onBound(); }
-    catch(e){ setView("home"); fail(e); } }
-  var box={maxWidth:460,width:"100%",textAlign:"center"};
-  var btn={padding:"14px",borderRadius:12,border:"1px solid rgba(167,139,250,.3)",
-    background:"linear-gradient(135deg,#4c1d95,#6d28d9)",color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer",width:"100%",marginBottom:10};
-  var sub={padding:"10px",borderRadius:10,border:"1px solid rgba(255,255,255,.1)",background:"transparent",color:"#94a3b8",cursor:"pointer",width:"100%"};
-  return React.createElement("div",{style:{minHeight:"100vh",background:"radial-gradient(ellipse at 60% 20%,#120a1f,#0a0e1a 70%)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}},
-    React.createElement("div",{style:box},
-      React.createElement("div",{style:{fontSize:34,fontWeight:900,letterSpacing:3,color:"#c4b5fd",marginBottom:20}},"1 vs 1 en ligne"),
-      view==="wait"
-        ? React.createElement("div",null,
-            React.createElement("div",{style:{width:40,height:40,margin:"0 auto 16px",borderRadius:"50%",border:"3px solid rgba(167,139,250,.2)",borderTopColor:"#a78bfa",animation:"spin 1s linear infinite"}}),
-            React.createElement("div",{style:{color:"#cbd5e1",marginBottom:14}}, mycode? "En attente d'un adversaire…" : "Connexion…"),
-            mycode? React.createElement("div",{style:{fontSize:30,fontWeight:800,letterSpacing:8,color:"#a78bfa",padding:"10px 18px",border:"2px dashed rgba(167,139,250,.4)",borderRadius:12,display:"inline-block",marginBottom:10}}, mycode):null,
-            mycode? React.createElement("div",{style:{fontSize:12,color:"#64748b",marginBottom:16}},"Communique ce code à ton adversaire"):null,
-            React.createElement("button",{style:sub,onClick:function(){ pvLeave(); props.onCancel(); }},"Annuler")
-          )
-        : React.createElement("div",null,
-            React.createElement("button",{style:btn,onClick:quick},"⚡ Partie rapide"),
-            React.createElement("button",{style:btn,onClick:create},"➕ Créer une salle"),
-            React.createElement("div",{style:{display:"flex",gap:8,marginBottom:10}},
-              React.createElement("input",{value:code,maxLength:6,placeholder:"CODE",onChange:function(e){ setCode(e.target.value.toUpperCase()); },
-                style:{flex:1,padding:"12px",borderRadius:10,border:"1px solid rgba(255,255,255,.12)",background:"rgba(17,24,39,.8)",color:"#fff",fontSize:18,letterSpacing:6,textAlign:"center",textTransform:"uppercase"}}),
-              React.createElement("button",{style:{padding:"0 18px",borderRadius:10,border:"1px solid rgba(167,139,250,.3)",background:"rgba(76,29,149,.6)",color:"#fff",cursor:"pointer"},onClick:join},"OK")
-            ),
-            err? React.createElement("div",{style:{color:"#fca5a5",fontSize:12,marginBottom:10}},err):null,
-            React.createElement("button",{style:sub,onClick:props.onCancel},"← Retour")
-          )
-    )
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════
-   PHARMAVILLE MULTIJOUEUR — Firebase Firestore, autorité hôte
-   ═══════════════════════════════════════════════════════════ */
-var PVNET = {
-  db:null, auth:null, uid:null, ready:false,
-  room:null, role:null, unsub:null,
-  seq:0, appliedState:-1, appliedIntent:0, fs:null
-};
-
-async function pvNetInit(){
-  if(PVNET.ready) return true;
-  var app_ = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
-  var auth_ = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js");
-  var fs_ = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
-  var cfg = {
-    apiKey:"AIzaSyBttLHNpd8HTjo6HKOfwYod6Kjbph1xOMw",
-    authDomain:"pharmaville-84640.firebaseapp.com",
-    projectId:"pharmaville-84640",
-    storageBucket:"pharmaville-84640.firebasestorage.app",
-    messagingSenderId:"1069826523336",
-    appId:"1:1069826523336:web:f685ea913ced655747a5fd"
-  };
-  var app = app_.initializeApp(cfg);
-  PVNET.auth = auth_.getAuth(app);
-  PVNET.db = fs_.getFirestore(app);
-  PVNET.fs = fs_;
-  await new Promise(function(res,rej){
-    auth_.onAuthStateChanged(PVNET.auth, function(u){ if(u){ PVNET.uid=u.uid; res(); } });
-    auth_.signInAnonymously(PVNET.auth).catch(rej);
-  });
-  PVNET.ready = true;
-  return true;
-}
-
-function pvRoomRef(id){ return PVNET.fs.doc(PVNET.db, "rooms", id||PVNET.room); }
-function pvCode6(){ var A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789", s=""; for(var i=0;i<6;i++) s+=A[Math.random()*A.length|0]; return s; }
-
-async function pvCreateRoom(){
-  await pvNetInit();
-  var ref = PVNET.fs.doc(PVNET.fs.collection(PVNET.db,"rooms"));
-  var code = pvCode6();
-  await PVNET.fs.setDoc(ref, { code:code, status:"waiting", host:PVNET.uid, guest:null,
-    state:null, intent:null, seq:0, createdAt:PVNET.fs.serverTimestamp() });
-  PVNET.room = ref.id; PVNET.role = "host";
-  return code;
-}
-
-async function pvJoinByCode(code){
-  await pvNetInit();
-  var q = PVNET.fs.query(PVNET.fs.collection(PVNET.db,"rooms"),
-    PVNET.fs.where("code","==",code.toUpperCase()), PVNET.fs.where("status","==","waiting"));
-  var snap = await PVNET.fs.getDocs(q);
-  if(snap.empty) throw new Error("Aucune salle avec ce code.");
-  var d = snap.docs[0];
-  await PVNET.fs.updateDoc(PVNET.fs.doc(PVNET.db,"rooms",d.id), { guest:PVNET.uid, status:"ready" });
-  PVNET.room = d.id; PVNET.role = "guest";
-  return d.id;
-}
-
-async function pvQuickMatch(){
-  await pvNetInit();
-  var q = PVNET.fs.query(PVNET.fs.collection(PVNET.db,"rooms"), PVNET.fs.where("status","==","waiting"));
-  var snap = await PVNET.fs.getDocs(q);
-  var open = snap.docs.filter(function(d){ return d.data().host !== PVNET.uid; });
-  if(open.length){
-    var target = open[0];
-    try{
-      await PVNET.fs.runTransaction(PVNET.db, async function(tx){
-        var ref = PVNET.fs.doc(PVNET.db,"rooms",target.id);
-        var cur = await tx.get(ref);
-        if(!cur.exists() || cur.data().status!=="waiting" || cur.data().guest) throw new Error("prise");
-        tx.update(ref, { guest:PVNET.uid, status:"ready" });
-      });
-      PVNET.room = target.id; PVNET.role = "guest";
-      return { role:"guest", code:target.data().code };
-    }catch(e){ /* prise → on crée */ }
-  }
-  var code = await pvCreateRoom();
-  return { role:"host", code:code };
-}
-
-function pvListen(onChange){
-  if(PVNET.unsub) PVNET.unsub();
-  PVNET.unsub = PVNET.fs.onSnapshot(pvRoomRef(), function(snap){
-    if(!snap.exists()){ onChange({ gone:true }); return; }
-    onChange(snap.data());
-  });
-}
-
-/* HÔTE : pousser l'état de jeu */
-async function pvPushState(gameState){
-  if(PVNET.role !== "host") return;
-  PVNET.seq++;
-  var clean = pvStripUndef({ state:gameState, seq:PVNET.seq,
-    status: gameState.over ? "over" : "playing" });
-  await PVNET.fs.updateDoc(pvRoomRef(), clean);
-}
-
-/* INVITÉ : envoyer une intention */
-async function pvSendIntent(kind, data){
-  if(PVNET.role !== "guest") return;
-  PVNET._lastIntent = (PVNET._lastIntent||0) + 1;
-  await PVNET.fs.updateDoc(pvRoomRef(),
-    { intent: pvStripUndef({ kind:kind, data:data||null, seq:PVNET._lastIntent, by:PVNET.uid }) });
-}
-
-async function pvLeave(){
-  try{
-    if(PVNET.unsub) PVNET.unsub();
-    if(PVNET.role==="host" && PVNET.room) await PVNET.fs.deleteDoc(pvRoomRef());
-  }catch(e){}
-  PVNET.room=null; PVNET.role=null; PVNET.unsub=null; PVNET.seq=0; PVNET.appliedState=-1; PVNET.appliedIntent=0;
-}
-
-/* Firestore refuse undefined — nettoyage récursif */
-function pvStripUndef(v){
-  if(Array.isArray(v)) return v.map(pvStripUndef);
-  if(v && typeof v==="object"){
-    var o={}; for(var k in v){ if(v[k]!==undefined) o[k]=pvStripUndef(v[k]); } return o;
-  }
-  return v;
-}
-
-
 /* ── MAIN GAME ────────────────────────────────────────────── */
 function PharmaVille() {
   var [screen,  setScreen]  = useState("menu");
@@ -2200,11 +2028,6 @@ function PharmaVille() {
   var [rolling, setRolling] = useState(false);
   var [aiThink, setAiThink] = useState(false);
   var [toasts,  setToasts]  = useState([]);
-  var [mode,    setMode]    = useState("ai");
-  var [myIdx,   setMyIdx]   = useState(0);
-  var [netMsg,  setNetMsg]  = useState("");
-  var [roomCode,setRoomCode]= useState("");
-  var netApplying = useRef(false);
   var [evs,     setEvs]     = useState([]);
   var [turnNum, setTurnNum] = useState(1);
   var [winIdx,  setWinIdx]  = useState(null);
@@ -2250,61 +2073,6 @@ function PharmaVille() {
     if (wi !== -1) setTimeout(function(){ setWinIdx(wi); setScreen("victory"); sfx(function(){ SFX.victory(); }); }, 300);
   }, [players, screen]);
 
-
-  /* ═══════ RÉSEAU (online) ═══════ */
-  function pvSerializeNow(pls, cpIdx, shp, stk, dice, rl, bt, rr, over){
-    return { players: pls.map(function(p){ return { id:p.id, money:p.money,
-              cards:{...p.cards}, monuments:[...p.monuments], diceCount:p.diceCount, isAI:false }; }),
-      cp:cpIdx, shop:[...shp], stock:{...stk}, diceRes:dice||null,
-      rolled:!!rl, bought:bt||0, reroll:!!rr, over:!!over };
-  }
-  function pvApply(gs){
-    netApplying.current = true;
-    setPlayers(gs.players.map(function(p){ return {...p, cards:{...p.cards}, monuments:[...p.monuments]}; }));
-    setCp(gs.cp); setShop([...gs.shop]); setStock({...gs.stock});
-    setDiceRes(gs.diceRes||null); setRolled(!!gs.rolled);
-    setBought(gs.bought||0); setReroll(!!gs.reroll);
-    setTimeout(function(){ netApplying.current=false; },0);
-  }
-  function onlineStartHost(){
-    var sh=initShop();
-    var pls=[{id:0,money:3,cards:{pharmacie_base:1,labo_base:1},monuments:[],diceCount:1,isAI:false},
-             {id:1,money:3,cards:{pharmacie_base:1,labo_base:1},monuments:[],diceCount:1,isAI:false}];
-    setPlayers(pls); setCp(0); setShop(sh); setStock(stockFor(sh));
-    setRolled(false); setBought(0); setReroll(false); setDiceRes(null);
-    setMode("online"); setMyIdx(0); setScreen("playing");
-    setTimeout(function(){ pvPushState(pvSerializeNow(pls,0,sh,stockFor(sh),null,false,0,false,false)); },70);
-  }
-  function onlineStartGuest(){ setMode("online"); setMyIdx(1); setScreen("playing"); setNetMsg("En attente de l'hôte…"); }
-  function onlineBind(){
-    PVNET.appliedState=-1; PVNET.appliedIntent=0; var started=false;
-    pvListen(function(data){
-      if(data.gone){ setNetMsg("Salle fermée."); setScreen("menu"); return; }
-      if(!started && data.status!=="waiting"){ started=true; if(PVNET.role==="host") onlineStartHost(); else onlineStartGuest(); }
-      if(data.state && (data.seq||0)!==PVNET.appliedState){ PVNET.appliedState=(data.seq||0); pvApply(data.state);
-        if(data.state.over){ setTimeout(function(){ setScreen("victory"); },300); } }
-      if(PVNET.role==="host" && data.intent && data.intent.seq>PVNET.appliedIntent){ PVNET.appliedIntent=data.intent.seq; onGuestIntent(data.intent); }
-    });
-  }
-  function myTurn(){ return mode!=="online" ? true : (cp===myIdx); }
-  function onGuestIntent(intent){
-    if(cp!==1) return;
-    if(intent.kind==="roll"||intent.kind==="reroll") handleRoll();
-    else if(intent.kind==="buyCard") handleBuyCard(intent.data.id);
-    else if(intent.kind==="buyMon") handleBuyMon(intent.data.id);
-    else if(intent.kind==="endTurn") handleEndTurn();
-  }
-
-
-  // HÔTE : pousse l'état à chaque changement (sauf pendant l'application réseau)
-  useEffect(function(){
-    if(mode!=="online" || PVNET.role!=="host") return;
-    if(netApplying.current) return;
-    if(screen!=="playing") return;
-    var over = players.some(function(p){ return p && p.monuments && p.monuments.length===MONS.length; });
-    pvPushState(pvSerializeNow(players,cp,shop,stock,diceRes,rolled,bought,reroll,over));
-  }, [players,cp,shop,stock,diceRes,rolled,bought,reroll,mode,screen]);
-
   function performRoll(pls, cpIdx, isReroll) {
     var nd = pls[cpIdx].diceCount, d1=d6(), d2=nd===2?d6():null, total=d1+(d2||0);
     setRolling(true); sfx(function(){ SFX.dice(); }); setTimeout(function(){ setRolling(false); }, 370);
@@ -2321,7 +2089,6 @@ function PharmaVille() {
   }
 
   function handleRoll() {
-    if (mode==="online" && PVNET.role==="guest"){ if(myTurn()) pvSendIntent(reroll?"reroll":"roll"); return; }
     if (rolled && !reroll) return;
     setRolled(true); setLit([]); sumRef.current=[];
     if (reroll) setReroll(false);
@@ -2332,7 +2099,6 @@ function PharmaVille() {
   // en facile, et en moyen/difficile uniquement si le lancer ne lui a rien
   // rapporte (ou si le total est faible, en difficile).
   useEffect(function() {
-    if (mode==="online") return;
     if (!reroll || !players[cp] || !players[cp].isAI) return;
     var t = setTimeout(function() {
       var p = players[cp];
@@ -2356,7 +2122,6 @@ function PharmaVille() {
   }
 
   function handleEndTurn() {
-    if (mode==="online" && PVNET.role==="guest"){ if(myTurn()) pvSendIntent("endTurn"); return; }
     if (!players[cp] || !players[cp].isAI) {
       if (diceRes) { setModal({ turn:turnRef.current, roll:diceRes.total, evs:sumRef.current }); return; }
     }
@@ -2385,7 +2150,6 @@ function PharmaVille() {
   }
 
   function handleBuyCard(cid) {
-    if (mode==="online" && PVNET.role==="guest"){ if(myTurn()) pvSendIntent("buyCard",{id:cid}); return; }
     var card = CD[cid]; if (!card) return;
     var lim = getLim(players, cp); if (bought >= lim) return;
     if ((stock[cid]||0) <= 0) return;
@@ -2410,7 +2174,6 @@ function PharmaVille() {
   }
 
   function handleBuyMon(mid) {
-    if (mode==="online" && PVNET.role==="guest"){ if(myTurn()) pvSendIntent("buyMon",{id:mid}); return; }
     var mon = MONS.find(function(m){ return m.id===mid; }); if (!mon) return;
     var lim = getLim(players, cp); if (bought >= lim) return;
     var ok = false;
@@ -2434,7 +2197,6 @@ function PharmaVille() {
 
   useEffect(function() {
     if (screen!=="playing" || players.length===0) return;
-    if (mode==="online") return;
     if (!players[cp] || !players[cp].isAI || rolled) return;
     setAiThink(true);
     var t = setTimeout(function() { sumRef.current=[]; performRoll(players,cp,false); setRolled(true); }, 1200);
@@ -2443,7 +2205,6 @@ function PharmaVille() {
 
   useEffect(function() {
     if (screen!=="playing" || players.length===0) return;
-    if (mode==="online") return;
     if (!players[cp] || !players[cp].isAI || !rolled || reroll) return;
     var p = players[cp], lim = getLim(players, cp);
     if (bought >= lim) { var t=setTimeout(function(){ setAiThink(false); doEndTurn(); },900); return function(){ clearTimeout(t); }; }
@@ -2505,11 +2266,7 @@ function PharmaVille() {
     return function() { clearTimeout(t); };
   }, [cp, rolled, bought, screen, players, diff, shop, stock, reroll]);
 
-  if (screen === "lobby") return React.createElement(OnlineLobby, {
-    onBound: function(){ onlineBind(); },
-    onCancel: function(){ pvLeave(); setScreen("menu"); }
-  });
-  if (screen === "menu") return <MenuScreen diff={diff} setDiff={setDiff} onStart={startGame} onOnline={function(){ setMode("online"); setScreen("lobby"); }} soundOn={soundOn} setSoundOn={setSoundOn}/>;
+  if (screen === "menu") return <MenuScreen diff={diff} setDiff={setDiff} onStart={startGame} soundOn={soundOn} setSoundOn={setSoundOn}/>;
   if (screen === "victory") return <VictoryScreen wi={winIdx} players={players} onReplay={function(){ setScreen("menu"); setPlayers([]); }}/>;
   if (!players[cp]) return null;
 

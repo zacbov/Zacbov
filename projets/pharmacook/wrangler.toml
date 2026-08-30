@@ -1,0 +1,15 @@
+name = "pharma-cook"
+main = "worker.js"
+compatibility_date = "2024-09-01"
+
+# Les deux pages sont servies par Cloudflare Pages (ou n'importe quel
+# hébergeur statique). Le Worker ne fait que le relais /ws.
+# Si tu préfères tout servir depuis le Worker, ajoute un binding [site].
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["Room"]

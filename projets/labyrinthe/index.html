@@ -2494,10 +2494,43 @@ function winCombat(){
   if(onWin?.item) addItem(onWin.item);
   if(onWin?.goldBonus) G.gold+=onWin.goldBonus;
   updateStats(); hideCombat();
-  if(onWin?.room!=='WIN') setTimeout(()=>applyRoomMood(onWin?.room||G.room),1500);
   showMsg(onWin?.msg||`${enemy.name} est vaincu !`);
-  if(onWin?.room==='WIN'){setTimeout(doVictory,1500);return;}
-  if(onWin?.room!==undefined) setTimeout(()=>goRoom(onWin.room),1600);
+  _pendingOnWin = onWin;
+  _pendingEnemy = enemy;
+  renderChoices([
+    {text:'🔍 Fouiller le corps',action:'search_corpse'},
+    {text:'Continuer sans fouiller',action:'skip_corpse_search'},
+  ]);
+}
+
+let _pendingOnWin = null;   // suite de navigation après la fouille du corps (room cible ou 'WIN')
+let _pendingEnemy = null;   // dernier ennemi vaincu — sa difficulté influence la qualité du butin
+
+async function searchCorpseLoot(){
+  if(G.rolling) return;
+  G.rolling=true;
+  const r = d6();
+  await rollDiceAnimated([{v:r,style:0}]);
+  G.rolling=false;
+  const isBoss = _pendingEnemy && _pendingEnemy.isFinal;
+  if(isBoss){
+    // Le corps de Zagor recèle toujours quelque chose de précieux
+    const rarity = r<=2 ? 'rare' : r<=4 ? 'epique' : 'legendaire';
+    grantLootItem(rollLootItem(rarity));
+  } else if(r===1){
+    showMsg("Le corps ne portait rien d'utile.");
+  } else {
+    const rarity = r<=3 ? 'commun' : r<=5 ? 'rare' : 'epique';
+    grantLootItem(rollLootItem(rarity));
+  }
+}
+
+function proceedAfterCorpse(){
+  const onWin = _pendingOnWin;
+  _pendingOnWin = null; _pendingEnemy = null;
+  if(onWin?.room==='WIN'){ doVictory(); return; }
+  if(onWin?.room!==undefined){ goRoom(onWin.room); return; }
+  goRoom(1);
 }
 
 function updCombat(){
@@ -2536,6 +2569,15 @@ async function doAction(a){
     const summary = bankRunLoot();
     $('xsummary').textContent = 'Butin ramené au Sanctuaire : ' + summary;
     $('xscreen').style.display='flex';
+    return;
+  }
+  if(a==='search_corpse'){
+    await searchCorpseLoot();
+    proceedAfterCorpse();
+    return;
+  }
+  if(a==='skip_corpse_search'){
+    proceedAfterCorpse();
     return;
   }
   switch(a){

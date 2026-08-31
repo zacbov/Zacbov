@@ -45,15 +45,15 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0}
 <div id="app">
   <div id="topbar">
     <h1>Gaussian Splat <em>Studio</em></h1>
-    <span class="sub">Visualiser un .ply/.splat/.ksplat et le compresser en .ksplat — via mkkellogg/GaussianSplats3D</span>
+    <span class="sub">Visualiser un .ply/.splat/.ksplat/.spz et le compresser en .ksplat — via mkkellogg/GaussianSplats3D (+ Spark pour le .spz)</span>
     <button class="btn primary" id="loadBtn" style="margin-left:auto">Charger un splat</button>
-    <input type="file" id="fileinput" accept=".ply,.splat,.ksplat">
+    <input type="file" id="fileinput" accept=".ply,.splat,.ksplat,.spz">
   </div>
   <div id="workspace">
     <div id="viewer-wrap">
       <div id="viewer-container"></div>
       <div id="empty-hint">
-        <div>Charge un fichier <code>.ply</code>, <code>.splat</code> ou <code>.ksplat</code><br>pour le visualiser en 3D</div>
+        <div>Charge un fichier <code>.ply</code>, <code>.splat</code>, <code>.ksplat</code> ou <code>.spz</code><br>pour le visualiser en 3D</div>
         <div class="note">Molette = zoom · Glisser = orbiter</div>
       </div>
     </div>
@@ -96,8 +96,8 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0}
 
       <hr>
       <div class="note">
-        Bibliotheque : mkkellogg/GaussianSplats3D (communautaire, plus en developpement actif mais fonctionnelle).
-        Pour des besoins plus avances (multi-splats, fusion avec des meshes, streaming) l'alternative activement maintenue est <b>Spark</b> (sparkjs.dev) — dis-le moi si tu veux basculer dessus plus tard.
+        Bibliotheque : mkkellogg/GaussianSplats3D (communautaire, plus en developpement actif mais fonctionnelle) pour .ply/.splat/.ksplat, visualisation et compression.
+        Le format <b>.spz</b> n'est pas supporte par cette bibliotheque : sa visualisation passe par <b>Spark</b> (sparkjs.dev, activement maintenue), chargee dans une instance Three.js isolee pour eviter tout conflit de version. La conversion vers .ksplat reste limitee aux fichiers .ply/.splat.
       </div>
     </div>
   </div>
@@ -109,7 +109,14 @@ hr{border:none;border-top:1px solid var(--border);margin:14px 0}
   "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-    "GaussianSplats3D": "https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js"
+    "GaussianSplats3D": "https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js",
+    "@sparkjsdev/spark": "https://sparkjs.dev/releases/spark/2.1.0/spark.module.js"
+  },
+  "scopes": {
+    "https://sparkjs.dev/releases/spark/2.1.0/": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+    }
   }
 }
 </script>
@@ -132,6 +139,7 @@ window.addEventListener('unhandledrejection', function(e){
 var currentFile = null;
 var currentObjectUrl = null;
 var viewer = null;
+var sparkState = null; // { renderer, controls, animId, resizeHandler } — active only while a .spz scene is shown
 
 function showToast(msg){
   var t = document.getElementById('status');
@@ -176,6 +184,9 @@ document.getElementById('fileinput').addEventListener('change', function(e){
   if(/\.ksplat$/i.test(file.name)){
     logMsg('Ce fichier est deja au format .ksplat — rien a compresser.');
   }
+  if(/\.spz$/i.test(file.name)){
+    logMsg('Format .spz detecte — visualisation via Spark (bibliotheque separee). Pas de conversion .ksplat pour ce format.');
+  }
   document.getElementById('origSize').textContent = fmtBytes(file.size);
   logMsg('Fichier selectionne : ' + file.name);
 });
@@ -204,7 +215,13 @@ function loadIntoViewer(url, filename){
   var myToken = ++loadToken;
   var wrap = document.getElementById('viewer-wrap');
   var oldViewer = viewer;
+  var oldSparkState = sparkState;
   var oldContainer = document.getElementById('viewer-container');
+
+  if(/\.spz$/i.test(filename)){
+    loadSpzIntoViewer(url, myToken, wrap, oldViewer, oldSparkState, oldContainer);
+    return;
+  }
 
   try{
     // IMPORTANT: don't reuse/clear the same container the previous viewer was
@@ -247,10 +264,12 @@ function loadIntoViewer(url, filename){
       viewer.start();
       logMsg('Splat charge et affiche.', false, true);
       showToast('Splat affiche');
-      // Now that the new viewer is confirmed working, retire the old one.
+      // Now that the new viewer is confirmed working, retire the old one
+      // (either a previous GaussianSplats3D viewer or a Spark instance).
       if(oldViewer && typeof oldViewer.dispose === 'function'){
         try{ oldViewer.dispose(); }catch(e){}
       }
+      disposeSparkState(oldSparkState);
       if(oldContainer && oldContainer !== newContainer && oldContainer.parentNode === wrap){
         wrap.removeChild(oldContainer);
       }
@@ -260,10 +279,123 @@ function loadIntoViewer(url, filename){
       showToast('Erreur de chargement — voir le journal');
       if(newContainer.parentNode === wrap) wrap.removeChild(newContainer);
       viewer = oldViewer;
+      sparkState = oldSparkState;
     });
   }catch(err){
     console.error(err);
     logMsg('Erreur a l\'initialisation du viewer : ' + err.message, true);
+  }
+}
+
+// Disposes a specific (possibly stale/superseded) Spark instance, without
+// touching whatever is currently active in the module-level `sparkState`.
+function disposeSparkState(state){
+  if(!state) return;
+  try{ cancelAnimationFrame(state.animId); }catch(e){}
+  try{ window.removeEventListener('resize', state.resizeHandler); }catch(e){}
+  try{ state.controls && state.controls.dispose(); }catch(e){}
+  try{ state.renderer && state.renderer.dispose(); }catch(e){}
+}
+
+/* ---------------- .spz viewing via Spark (isolated Three.js r180 instance) ---------------- */
+function loadSpzIntoViewer(url, myToken, wrap, oldViewer, oldSparkState, oldContainer){
+  try{
+    var newContainer = document.createElement('div');
+    newContainer.id = 'viewer-container';
+    newContainer.style.position = 'absolute';
+    newContainer.style.inset = '0';
+    wrap.appendChild(newContainer);
+
+    Promise.all([
+      import('https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js'),
+      import('https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js'),
+      import('@sparkjsdev/spark')
+    ]).then(function(mods){
+      if(myToken !== loadToken){
+        if(newContainer.parentNode === wrap) wrap.removeChild(newContainer);
+        return;
+      }
+      var THREE180 = mods[0];
+      var OrbitControls180 = mods[1].OrbitControls;
+      var Spark = mods[2];
+
+      var width = newContainer.clientWidth || wrap.clientWidth;
+      var height = newContainer.clientHeight || wrap.clientHeight;
+
+      var scene = new THREE180.Scene();
+      var camera = new THREE180.PerspectiveCamera(60, width / height, 0.01, 1000);
+      camera.position.set(0, 0, 5);
+
+      var renderer = new THREE180.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(width, height);
+      newContainer.appendChild(renderer.domElement);
+
+      var spark = new Spark.SparkRenderer({ renderer: renderer });
+      scene.add(spark);
+
+      var splatMesh = new Spark.SplatMesh({ url: url });
+      scene.add(splatMesh);
+
+      var controls = new OrbitControls180(camera, renderer.domElement);
+      controls.enableDamping = true;
+
+      splatMesh.initialized.then(function(){
+        if(myToken !== loadToken) return;
+        // Frame the loaded scene reasonably: center on its bounding box.
+        try{
+          var box = new THREE180.Box3().setFromObject(splatMesh);
+          var center = box.getCenter(new THREE180.Vector3());
+          var size = box.getSize(new THREE180.Vector3()).length() || 5;
+          controls.target.copy(center);
+          camera.position.copy(center).add(new THREE180.Vector3(0, 0, size * 0.9));
+          camera.near = Math.max(size / 100, 0.01);
+          camera.far = size * 10;
+          camera.updateProjectionMatrix();
+        }catch(e){ /* non-fatal framing failure */ }
+      });
+
+      function onResize(){
+        var w = newContainer.clientWidth || wrap.clientWidth;
+        var h = newContainer.clientHeight || wrap.clientHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      }
+      window.addEventListener('resize', onResize);
+
+      var state = { renderer: renderer, controls: controls, resizeHandler: onResize, animId: 0 };
+
+      function animate(){
+        state.animId = requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      sparkState = state;
+      viewer = null;
+      logMsg('Splat .spz charge et affiche via Spark.', false, true);
+      showToast('Splat affiche (Spark)');
+
+      if(oldViewer && typeof oldViewer.dispose === 'function'){
+        try{ oldViewer.dispose(); }catch(e){}
+      }
+      disposeSparkState(oldSparkState);
+      if(oldContainer && oldContainer !== newContainer && oldContainer.parentNode === wrap){
+        wrap.removeChild(oldContainer);
+      }
+    }).catch(function(err){
+      console.error(err);
+      logMsg('Echec du chargement .spz via Spark : ' + (err && err.message || err), true);
+      showToast('Erreur de chargement — voir le journal');
+      if(newContainer.parentNode === wrap) wrap.removeChild(newContainer);
+      viewer = oldViewer;
+      sparkState = oldSparkState;
+    });
+  }catch(err){
+    console.error(err);
+    logMsg('Erreur a l\'initialisation du viewer Spark : ' + err.message, true);
   }
 }
 

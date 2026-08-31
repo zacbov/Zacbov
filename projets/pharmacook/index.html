@@ -1,0 +1,2864 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pharma-Cook — Écran</title>
+<style>
+  :root{
+    --fond:#0b1310; --panneau:rgba(9,18,15,.82); --trait:#1e2f27;
+    --creme:#e8f0ea; --gris:#7d8f86; --vert:#3fbf8f; --ambre:#f0b429; --rouge:#e0523c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--fond)}
+  body{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;color:var(--creme)}
+  canvas{display:block}
+
+  .hud{position:fixed;pointer-events:none;z-index:5}
+
+  /* Bandeau haut */
+  #barre{
+    top:0;left:0;right:0;display:flex;align-items:center;gap:26px;
+    padding:14px 22px;background:linear-gradient(#0b1310e0,#0b131000);
+  }
+  #chrono{font-size:34px;font-weight:700;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+  #chrono.urgent{color:var(--rouge)}
+  #score{font-size:26px;font-weight:700;color:var(--ambre);font-variant-numeric:tabular-nums}
+  .etiq{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--gris);display:block;margin-bottom:3px}
+  #equipe{display:flex;gap:14px;margin-left:auto;align-items:center}
+  .jeton{display:flex;align-items:center;gap:7px;font-size:12px}
+  .jeton.absent{opacity:.35}
+  .puce{width:10px;height:10px;border-radius:50%}
+  #combo{font-size:22px;font-weight:700;color:var(--vert);opacity:0;transition:opacity .2s}
+  #combo.on{opacity:1}
+  #objectif{min-width:190px}
+  #barreObj{height:8px;background:#1a2a23;border-radius:4px;overflow:hidden;margin-top:6px;position:relative}
+  #barreObj i{display:block;height:100%;background:var(--ambre);transition:width .3s}
+  .cran{position:absolute;top:0;bottom:0;width:2px;background:#0b1310}
+
+  /* Bandeau d'annonce des événements */
+  #annonce{
+    top:96px;left:50%;transform:translateX(-50%) translateY(-14px);
+    font-size:26px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+    opacity:0;transition:opacity .25s,transform .25s;
+    text-shadow:0 2px 24px rgba(0,0,0,.9);
+  }
+  #annonce.visible{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* Podium de fin */
+  #podium{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+  .fiche{
+    background:#101c17;border:1px solid var(--trait);border-top:4px solid var(--vert);
+    border-radius:10px;padding:16px 20px;min-width:180px;text-align:left;
+  }
+  .fiche .tete{display:flex;align-items:center;gap:11px;margin-bottom:12px;font-size:16px;font-weight:700}
+  .fiche .stat{font-size:13px;color:var(--gris);line-height:1.9;display:flex;justify-content:space-between}
+  .fiche .stat b{color:var(--creme);font-weight:700}
+  #medaille{font-size:15px;letter-spacing:.3em;text-transform:uppercase;font-weight:700}
+
+  /* Commandes */
+  #commandes{
+    top:78px;right:20px;width:310px;display:flex;flex-direction:column;gap:11px;
+  }
+  .cmd{
+    background:var(--panneau);border:1px solid var(--trait);border-left-width:6px;
+    border-radius:9px;padding:14px 16px;
+  }
+  .cmd .nom{font-size:20px;font-weight:700;margin-bottom:8px;letter-spacing:.01em}
+  .cmd .ing{font-size:14px;color:var(--creme);opacity:.72;letter-spacing:.02em;margin-bottom:11px;line-height:1.4}
+  .jauge{height:7px;background:#1a2a23;border-radius:4px;overflow:hidden}
+  .jauge i{display:block;height:100%;background:var(--vert);transition:width .12s linear}
+  .jauge.chaud i{background:var(--rouge)}
+
+  /* Légende des postes */
+  #legende{
+    bottom:16px;left:18px;background:var(--panneau);border:1px solid var(--trait);
+    border-radius:8px;padding:12px 14px;font-size:11px;line-height:1.85;color:var(--gris);
+    max-width:290px;
+  }
+  #legende b{color:var(--creme);font-weight:700}
+
+  /* Écrans plein cadre */
+  #voile{
+    position:fixed;inset:0;z-index:10;background:rgba(6,12,10,.94);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+    text-align:center;padding:40px;
+  }
+  #voile h1{font-size:15px;letter-spacing:.42em;text-transform:uppercase;color:var(--vert);font-weight:500}
+  #rejoindre{display:flex;align-items:center;gap:38px}
+  #cadreQR{background:#f4f7f4;padding:16px;border-radius:14px;line-height:0}
+  #qr{width:250px;height:250px;image-rendering:pixelated}
+  #colDroite{text-align:left}
+  #code{font-size:76px;letter-spacing:.28em;font-weight:700;line-height:1;margin-bottom:14px}
+  #lien{font-size:12px;color:var(--gris);letter-spacing:.03em;word-break:break-all;max-width:330px;line-height:1.6}
+  #lien b{color:var(--creme)}
+  #liste{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;min-height:34px}
+  .carteJ{
+    display:flex;align-items:center;gap:11px;background:#101c17;border:1px solid var(--trait);
+    border-radius:10px;padding:9px 16px 9px 9px;font-size:15px;
+  }
+  .avatar{
+    width:38px;height:38px;border-radius:50%;object-fit:cover;
+    border:2px solid var(--trait);background:#1b2b24;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;
+  }
+  .jeton .avatar{width:26px;height:26px;font-size:12px;border-width:2px}
+  #consigne{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--gris)}
+  #consigne.pret{color:var(--ambre)}
+  #bilan{font-size:64px;font-weight:700;color:var(--ambre)}
+  #mention{font-size:14px;color:var(--gris);letter-spacing:.1em}
+  #reseau{position:fixed;bottom:14px;right:18px;font-size:10px;letter-spacing:.14em;color:#3d4b45;z-index:6}
+  #reseau.ko{color:var(--rouge)}
+</style>
+</head>
+<body>
+
+<div id="barre" class="hud">
+  <div><span class="etiq">Service</span><span id="chrono">4:00</span></div>
+  <div><span class="etiq">Recette du jour</span><span id="score">0</span></div>
+  <div id="combo">série x1</div>
+  <div id="objectif">
+    <span class="etiq">Objectif <b id="prochainObj">Bronze 420</b></span>
+    <div id="barreObj"><i style="width:0%"></i></div>
+  </div>
+  <div id="equipe"></div>
+</div>
+
+<div id="annonce" class="hud"></div>
+
+<div id="commandes" class="hud"></div>
+
+<div id="legende" class="hud">
+  <b>A</b> prendre / poser · <b>B</b> maintenir pour utiliser<br>
+  <b>Étagères</b> cueillir une plante → <b>Mortier</b> broyer →
+  <b>Alambic</b> mélanger 2-3 poudres → <b>Étuve</b> cuire (ne pas laisser brûler) →
+  <b>Passe-plat</b> déposer sur le tapis → <b>Table</b> récupérer → <b>Comptoir</b> servir.
+</div>
+
+<div id="voile">
+  <h1>Pharma-Cook</h1>
+  <div id="rejoindre">
+    <div id="cadreQR"><canvas id="qr"></canvas></div>
+    <div id="colDroite">
+      <span class="etiq">Code du salon</span>
+      <div id="code">····</div>
+      <div id="lien"></div>
+    </div>
+  </div>
+  <div id="liste"></div>
+  <div id="consigne">En attente des manettes</div>
+</div>
+
+<div id="reseau">relais…</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =======================================================================
+   Encodeur QR minimal — mode octet, correction d'erreur L, versions 1→10.
+   Suffisant pour une URL de manette (271 caractères au maximum).
+   Aucune dépendance : tout est calculé, y compris les codes BCH.
+   ======================================================================= */
+function qrEncoder() {
+
+  /* --- Corps de Galois GF(256), polynôme générateur 0x11d --- */
+  const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+  (function () {
+    let x = 1;
+    for (let i = 0; i < 255; i++) {
+      EXP[i] = x; LOG[x] = i;
+      x <<= 1;
+      if (x & 0x100) x ^= 0x11d;
+    }
+    for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+  })();
+  const mul = (a, b) => (a === 0 || b === 0) ? 0 : EXP[LOG[a] + LOG[b]];
+
+  /* Polynôme générateur de Reed-Solomon de degré n */
+  function genPoly(n) {
+    let p = [1];
+    for (let i = 0; i < n; i++) {
+      const q = new Array(p.length + 1).fill(0);
+      for (let j = 0; j < p.length; j++) {
+        q[j] ^= p[j];
+        q[j + 1] ^= mul(p[j], EXP[i]);
+      }
+      p = q;
+    }
+    return p;
+  }
+
+  function reedSolomon(data, nEc) {
+    const gen = genPoly(nEc);
+    const res = new Array(nEc).fill(0);
+    for (const d of data) {
+      const facteur = d ^ res[0];
+      res.shift();
+      res.push(0);
+      for (let i = 0; i < nEc; i++) res[i] ^= mul(gen[i + 1], facteur);
+    }
+    return res;
+  }
+
+  /* --- Tables des versions, niveau L uniquement ---
+     [codewords de correction par bloc, blocs groupe1, données/bloc g1,
+      blocs groupe2, données/bloc g2] */
+  const BLOCS = {
+    1:  [7,  1, 19,  0, 0],
+    2:  [10, 1, 34,  0, 0],
+    3:  [15, 1, 55,  0, 0],
+    4:  [20, 1, 80,  0, 0],
+    5:  [26, 1, 108, 0, 0],
+    6:  [18, 2, 68,  0, 0],
+    7:  [20, 2, 78,  0, 0],
+    8:  [24, 2, 97,  0, 0],
+    9:  [30, 2, 116, 0, 0],
+    10: [18, 2, 68,  2, 69]
+  };
+  const ALIGNEMENTS = {
+    1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30],
+    6: [6, 34], 7: [6, 22, 38], 8: [6, 24, 42], 9: [6, 26, 46], 10: [6, 28, 50]
+  };
+
+  const donneesTotales = (v) => {
+    const b = BLOCS[v];
+    return b[1] * b[2] + b[3] * b[4];
+  };
+  const capaciteOctets = (v) => donneesTotales(v) - (v >= 10 ? 3 : 2);
+
+  /* --- Codes BCH pour les informations de format et de version --- */
+  function bch(valeur, poly, bits) {
+    let d = valeur << bits;
+    const degre = poly.toString(2).length - 1;
+    while (d.toString(2).length - 1 >= degre) {
+      d ^= poly << (d.toString(2).length - 1 - degre);
+    }
+    return d;
+  }
+  // Niveau L = 01 sur deux bits
+  const infoFormat = (masque) => (((0b01 << 3 | masque) << 10) | bch(0b01 << 3 | masque, 0x537, 10)) ^ 0x5412;
+  const infoVersion = (v) => (v << 12) | bch(v, 0x1f25, 12);
+
+  /* --- Encodage principal --- */
+  function encoder(texte) {
+    const octets = [];
+    for (const car of unescape(encodeURIComponent(texte))) octets.push(car.charCodeAt(0));
+
+    let version = 0;
+    for (let v = 1; v <= 10; v++) {
+      if (octets.length <= capaciteOctets(v)) { version = v; break; }
+    }
+    if (!version) throw new Error('Texte trop long pour un QR version 10 niveau L');
+
+    const taille = version * 4 + 17;
+    const bitsCompte = version >= 10 ? 16 : 8;
+
+    /* Flux binaire */
+    const bits = [];
+    const pousser = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push((val >> i) & 1); };
+    pousser(0b0100, 4);                 // mode octet
+    pousser(octets.length, bitsCompte);
+    octets.forEach(o => pousser(o, 8));
+
+    const capaciteBits = donneesTotales(version) * 8;
+    for (let i = 0; i < 4 && bits.length < capaciteBits; i++) bits.push(0);
+    while (bits.length % 8) bits.push(0);
+
+    const motsDonnees = [];
+    for (let i = 0; i < bits.length; i += 8) {
+      let o = 0;
+      for (let j = 0; j < 8; j++) o = (o << 1) | bits[i + j];
+      motsDonnees.push(o);
+    }
+    const remplissage = [0xec, 0x11];
+    let k = 0;
+    while (motsDonnees.length < donneesTotales(version)) motsDonnees.push(remplissage[k++ % 2]);
+
+    /* Découpage en blocs + correction d'erreur */
+    const [nEc, b1, d1, b2, d2] = BLOCS[version];
+    const blocsD = [], blocsE = [];
+    let pos = 0;
+    for (let i = 0; i < b1; i++) { blocsD.push(motsDonnees.slice(pos, pos + d1)); pos += d1; }
+    for (let i = 0; i < b2; i++) { blocsD.push(motsDonnees.slice(pos, pos + d2)); pos += d2; }
+    blocsD.forEach(b => blocsE.push(reedSolomon(b, nEc)));
+
+    /* Entrelacement */
+    const flux = [];
+    const maxD = Math.max(d1, d2 || 0);
+    for (let i = 0; i < maxD; i++) {
+      for (const b of blocsD) if (i < b.length) flux.push(b[i]);
+    }
+    for (let i = 0; i < nEc; i++) {
+      for (const b of blocsE) flux.push(b[i]);
+    }
+
+    /* --- Matrice --- */
+    const mod = [], reserve = [];
+    for (let i = 0; i < taille; i++) {
+      mod.push(new Array(taille).fill(0));
+      reserve.push(new Array(taille).fill(false));
+    }
+    const set = (x, y, v) => { mod[y][x] = v ? 1 : 0; reserve[y][x] = true; };
+
+    // Motifs de repérage + séparateurs
+    const reperage = (cx, cy) => {
+      for (let dy = -1; dy <= 7; dy++) {
+        for (let dx = -1; dx <= 7; dx++) {
+          const x = cx + dx, y = cy + dy;
+          if (x < 0 || y < 0 || x >= taille || y >= taille) continue;
+          const bord = (dx >= 0 && dx <= 6 && (dy === 0 || dy === 6)) ||
+                       (dy >= 0 && dy <= 6 && (dx === 0 || dx === 6));
+          const coeur = dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4;
+          set(x, y, bord || coeur);
+        }
+      }
+    };
+    reperage(0, 0); reperage(taille - 7, 0); reperage(0, taille - 7);
+
+    // Motifs d'alignement
+    const al = ALIGNEMENTS[version];
+    for (const cy of al) {
+      for (const cx of al) {
+        if ((cx === 6 && cy === 6) || (cx === 6 && cy === taille - 7) ||
+            (cx === taille - 7 && cy === 6)) continue;
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const m = Math.max(Math.abs(dx), Math.abs(dy));
+            set(cx + dx, cy + dy, m !== 1);
+          }
+        }
+      }
+    }
+
+    // Motifs de synchronisation
+    for (let i = 8; i < taille - 8; i++) {
+      if (!reserve[6][i]) set(i, 6, i % 2 === 0);
+      if (!reserve[i][6]) set(6, i, i % 2 === 0);
+    }
+
+    // Module sombre obligatoire
+    set(8, taille - 8, 1);
+
+    // Réservation des zones d'information de format
+    for (let i = 0; i < 9; i++) {
+      if (!reserve[8][i]) { reserve[8][i] = true; mod[8][i] = 0; }
+      if (!reserve[i][8]) { reserve[i][8] = true; mod[i][8] = 0; }
+    }
+    for (let i = 0; i < 8; i++) {
+      reserve[8][taille - 1 - i] = true;
+      reserve[taille - 1 - i][8] = true;
+    }
+    // Réservation des informations de version
+    if (version >= 7) {
+      for (let i = 0; i < 6; i++) {
+        for (let j = 0; j < 3; j++) {
+          reserve[i][taille - 11 + j] = true;
+          reserve[taille - 11 + j][i] = true;
+        }
+      }
+    }
+
+    /* Placement des données en zigzag depuis le coin bas droit */
+    let bitIndex = 0;
+    const totalBits = flux.length * 8;
+    const bitAt = (i) => i < totalBits ? (flux[i >> 3] >> (7 - (i & 7))) & 1 : 0;
+    let montant = true;
+    for (let col = taille - 1; col > 0; col -= 2) {
+      if (col === 6) col--;                        // on saute la colonne de synchro
+      for (let n = 0; n < taille; n++) {
+        const y = montant ? taille - 1 - n : n;
+        for (let d = 0; d < 2; d++) {
+          const x = col - d;
+          if (reserve[y][x]) continue;
+          mod[y][x] = bitAt(bitIndex++);
+        }
+      }
+      montant = !montant;
+    }
+
+    /* Masquage : on essaie les huit et on garde le moins pénalisé */
+    const regleMasque = (m, x, y) => {
+      switch (m) {
+        case 0: return (y + x) % 2 === 0;
+        case 1: return y % 2 === 0;
+        case 2: return x % 3 === 0;
+        case 3: return (y + x) % 3 === 0;
+        case 4: return (Math.floor(y / 2) + Math.floor(x / 3)) % 2 === 0;
+        case 5: return ((y * x) % 2) + ((y * x) % 3) === 0;
+        case 6: return (((y * x) % 2) + ((y * x) % 3)) % 2 === 0;
+        case 7: return (((y + x) % 2) + ((y * x) % 3)) % 2 === 0;
+      }
+    };
+
+    let meilleur = null, meilleurScore = Infinity;
+    for (let m = 0; m < 8; m++) {
+      const g = mod.map(l => l.slice());
+      for (let y = 0; y < taille; y++) {
+        for (let x = 0; x < taille; x++) {
+          if (!reserve[y][x] && regleMasque(m, x, y)) g[y][x] ^= 1;
+        }
+      }
+      // Informations de format
+      const f = infoFormat(m);
+      for (let i = 0; i < 15; i++) {
+        const b = (f >> i) & 1;
+        if (i < 6) { g[i][8] = b; }
+        else if (i === 6) { g[7][8] = b; }
+        else if (i === 7) { g[8][8] = b; }
+        else if (i === 8) { g[8][7] = b; }
+        else { g[8][14 - i] = b; }
+        if (i < 8) { g[8][taille - 1 - i] = b; }
+        else { g[taille - 15 + i][8] = b; }
+      }
+      g[taille - 8][8] = 1;
+      // Informations de version
+      if (version >= 7) {
+        const vi = infoVersion(version);
+        for (let i = 0; i < 18; i++) {
+          const b = (vi >> i) & 1;
+          g[Math.floor(i / 3)][taille - 11 + (i % 3)] = b;
+          g[taille - 11 + (i % 3)][Math.floor(i / 3)] = b;
+        }
+      }
+      const s = penalite(g, taille);
+      if (s < meilleurScore) { meilleurScore = s; meilleur = g; }
+    }
+
+    return { taille: taille, version: version, modules: meilleur };
+  }
+
+  /* Pénalités standard, pour choisir le masque */
+  function penalite(g, n) {
+    let score = 0;
+    // Règle 1 : suites de 5 modules identiques ou plus
+    for (let i = 0; i < n; i++) {
+      for (const ligne of [true, false]) {
+        let compte = 1, prec = ligne ? g[i][0] : g[0][i];
+        for (let j = 1; j < n; j++) {
+          const v = ligne ? g[i][j] : g[j][i];
+          if (v === prec) compte++;
+          else { if (compte >= 5) score += compte - 2; compte = 1; prec = v; }
+        }
+        if (compte >= 5) score += compte - 2;
+      }
+    }
+    // Règle 2 : blocs 2x2 uniformes
+    for (let y = 0; y < n - 1; y++) {
+      for (let x = 0; x < n - 1; x++) {
+        const v = g[y][x];
+        if (v === g[y][x + 1] && v === g[y + 1][x] && v === g[y + 1][x + 1]) score += 3;
+      }
+    }
+    // Règle 3 : motif 1:1:3:1:1 accompagné de quatre modules clairs
+    const motifs = [[1,0,1,1,1,0,1,0,0,0,0], [0,0,0,0,1,0,1,1,1,0,1]];
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j <= n - 11; j++) {
+        for (const p of motifs) {
+          let okL = true, okC = true;
+          for (let k = 0; k < 11; k++) {
+            if (g[i][j + k] !== p[k]) okL = false;
+            if (g[j + k][i] !== p[k]) okC = false;
+          }
+          if (okL) score += 40;
+          if (okC) score += 40;
+        }
+      }
+    }
+    // Règle 4 : écart au 50 % de modules sombres
+    let sombres = 0;
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) sombres += g[y][x];
+    const pct = sombres * 100 / (n * n);
+    score += Math.floor(Math.abs(pct - 50) / 5) * 10;
+    return score;
+  }
+
+  return encoder;
+}
+</script>
+<script>
+'use strict';
+
+/* =======================================================================
+   PHARMA-COOK — Écran de jeu (autoritatif)
+   Les téléphones n'envoient que des entrées ; toute la simulation
+   tourne ici. Aucune prédiction, aucune réconciliation nécessaire.
+   ======================================================================= */
+
+/* ----------------------------- Réglages ----------------------------- */
+const REGL = {
+  duree: 240,            // durée d'un service, en secondes
+  vitesse: 4.3,          // vitesse des personnages (cases/s)
+  rayonJoueur: 0.30,
+  porteeAction: 1.35,
+  tapisVitesse: 2.7,     // cases/s — il faut suivre le rythme
+  poussetapis: 0.8,      // le tapis pousse aussi les joueurs qui marchent dessus
+  broyage: 1.5,          // secondes de maintien B au mortier
+  melange: 2.0,          // secondes de maintien B à l'alambic
+  cuisson: 6.0,          // secondes avant "prêt"
+  fenetrePrete: 5.0,     // secondes avant que ça brûle
+  clientsMax: 3,
+  patienceMin: 46,
+  patienceMax: 64,
+  pileTable: 2,          // boîtes empilables en bout de tapis
+  penaliteChute: 40,     // boîte tombée en bout de tapis
+  // Lancer
+  seuilLancer: 0.32,     // maintien de A au-delà duquel on charge un lancer
+  chargeMax: 0.9,        // maintien pour une portée maximale
+  porteeMin: 2.2,
+  porteeMax: 5.8,
+  // Événements de service
+  premierEvenement: 45,
+  ecartEvenement: 34,
+  dureePanne: 11,
+  dureeRush: 24,
+  // Combos
+  comboMax: 4
+};
+
+/* Seuils de médaille, annoncés dès le lobby : sans repère, un score
+   ne veut rien dire et on ne relance pas de partie. */
+const OBJECTIFS = [
+  { n: 'Bronze', s: 420,  c: '#c98a4b' },
+  { n: 'Argent', s: 760,  c: '#b9c6cc' },
+  { n: 'Or',     s: 1150, c: '#f0b429' }
+];
+
+const PLANTES = [
+  { n: 'Camomille',  c: 0xf0c419 },
+  { n: 'Digitale',   c: 0x9b59d0 },
+  { n: 'Eucalyptus', c: 0x37c98a }
+];
+
+const RECETTES = [
+  { n: 'Sirop apaisant',    ing: [0, 1],    c: 0xff8a4c, pts: 90 },
+  { n: 'Pommade verte',     ing: [1, 2],    c: 0x5fd36a, pts: 90 },
+  { n: 'Gélules toniques',  ing: [0, 2],    c: 0x4bb4ff, pts: 90 },
+  { n: 'Élixir complet',    ing: [0, 1, 2], c: 0xe05fd0, pts: 160, tardif: true }
+];
+const CLE_RECETTE = {};
+RECETTES.forEach((r, i) => { CLE_RECETTE[r.ing.slice().sort().join('-')] = i; });
+
+const COULEURS_J = ['#3fbf8f', '#f0b429', '#4bb4ff', '#e0523c'];
+
+/* ------------------------------- Plan -------------------------------
+   #  mur       .  sol           >  tapis roulant
+   1/2/3 étagère de plante       M  mortier      A  alambic
+   E  étuve     X  poubelle      I  passe-plat   B  tableau des ordonnances
+   O  table de sortie            K  comptoir
+--------------------------------------------------------------------- */
+const PLAN = [
+  '###############',
+  '#111.222.333.B#',
+  '#.............#',
+  '#..M.M...A.A..#',
+  '#.............#',
+  '#..E.E.....X..#',
+  '#.............#',
+  '####I####.#####',
+  '#>>>>>>>>>>>O.#',
+  '#.............#',
+  '#..K..K..K....#',
+  '###############'
+];
+const LARG = PLAN[0].length, HAUT = PLAN.length;
+const SOLIDE = new Set(['#', '1', '2', '3', 'M', 'A', 'E', 'X', 'I', 'O', 'K', 'B']);
+const caseA = (gx, gz) => (gx < 0 || gz < 0 || gx >= LARG || gz >= HAUT) ? '#' : PLAN[gz][gx];
+const estSolide = (gx, gz) => SOLIDE.has(caseA(gx, gz));
+
+const SPAWNS = [[2.5, 2.5], [5.5, 2.5], [3.5, 9.5], [6.5, 9.5]];
+
+/* --------------------------- État de la partie --------------------- */
+const Jeu = {
+  phase: 'lobby',        // lobby | jeu | fin
+  temps: REGL.duree,
+  score: 0,
+  servis: 0,
+  rates: 0,
+  joueurs: new Map(),    // padId -> joueur
+  parJeton: new Map(),   // jeton de session -> joueur, pour la reconnexion
+  postes: [],
+  tapis: [],             // { objet, x }
+  projectiles: [],       // objets en vol
+  ausol: [],             // objets tombés, ramassables
+  obstacles: [],         // cartons de livraison qui bloquent le passage
+  clients: [],
+  prochainClient: 3,
+  combo: 0,
+  dernierServi: -1,
+  prochainEvenement: 0,
+  rushReste: 0,
+  dernierTic: -1,
+  salon: ''
+};
+
+/* ------------------------------ Objets ------------------------------
+   { k:'plante'|'poudre'|'mixture'|'ratee'|'boite'|'brulee', p:plante, r:recette }
+--------------------------------------------------------------------- */
+function nomObjet(o) {
+  if (!o) return '';
+  switch (o.k) {
+    case 'plante':  return PLANTES[o.p].n;
+    case 'poudre':  return 'Poudre de ' + PLANTES[o.p].n.toLowerCase();
+    case 'mixture': return 'Mixture — ' + RECETTES[o.r].n;
+    case 'ratee':   return 'Mixture ratée';
+    case 'brulee':  return 'Lot carbonisé';
+    case 'boite':   return 'Boîte — ' + RECETTES[o.r].n;
+    case 'ticket':  return 'Ordonnance';
+  }
+  return '';
+}
+function couleurObjet(o) {
+  if (!o) return 0xffffff;
+  if (o.k === 'plante' || o.k === 'poudre') return PLANTES[o.p].c;
+  if (o.k === 'ratee') return 0x6b7a72;
+  if (o.k === 'brulee') return 0x2b2b2b;
+  if (o.k === 'ticket') return 0xf2ead8;
+  return RECETTES[o.r].c;
+}
+
+/* ============================== AUDIO ==============================
+   Tout est synthétisé : aucun fichier à charger, aucune latence de
+   téléchargement. Sans retour sonore, une étuve peut brûler sans que
+   personne ne s'en aperçoive — c'est le sens de toute cette section.
+=================================================================== */
+const Son = (function () {
+  let ctx = null, maitre = null, actif = true;
+
+  function init() {
+    if (ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { actif = false; return; }
+    ctx = new AC();
+    maitre = ctx.createGain();
+    maitre.gain.value = 0.32;
+    maitre.connect(ctx.destination);
+  }
+  function reprendre() {
+    init();
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+  }
+
+  /* Note synthétisée avec enveloppe et glissando optionnel */
+  function ton(freq, duree, o) {
+    if (!actif) return;
+    init();
+    if (!ctx) return;
+    o = o || {};
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = o.type || 'triangle';
+    osc.frequency.setValueAtTime(freq, t);
+    if (o.vers) osc.frequency.exponentialRampToValueAtTime(Math.max(20, o.vers), t + duree);
+    const vol = (o.vol === undefined ? 0.5 : o.vol);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.02, duree * 0.25));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + duree);
+    osc.connect(g); g.connect(maitre);
+    osc.start(t); osc.stop(t + duree + 0.02);
+  }
+
+  /* Bruit filtré, pour les matières : poudre, carton, chute */
+  function bruit(duree, o) {
+    if (!actif) return;
+    init();
+    if (!ctx) return;
+    o = o || {};
+    const t = ctx.currentTime;
+    const n = Math.floor(ctx.sampleRate * duree);
+    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const f = ctx.createBiquadFilter();
+    f.type = o.type || 'bandpass';
+    f.frequency.value = o.freq || 900;
+    f.Q.value = o.q || 1.1;
+    const g = ctx.createGain();
+    g.gain.value = o.vol === undefined ? 0.35 : o.vol;
+    src.connect(f); f.connect(g); g.connect(maitre);
+    src.start(t); src.stop(t + duree);
+  }
+
+  const apres = (ms, f) => setTimeout(f, ms);
+
+  return {
+    reprendre: reprendre,
+    muet: (v) => { actif = !v; if (maitre) maitre.gain.value = v ? 0 : 0.32; },
+    estMuet: () => !actif,
+
+    prendre:  () => ton(620, 0.07, { type: 'square', vol: 0.22 }),
+    poser:    () => ton(330, 0.09, { type: 'square', vol: 0.2, vers: 260 }),
+    refus:    () => ton(150, 0.12, { type: 'sawtooth', vol: 0.18, vers: 110 }),
+    pilon:    () => bruit(0.07, { freq: 420, q: 0.8, vol: 0.22 }),
+    bulle:    () => ton(240 + Math.random() * 120, 0.06, { type: 'sine', vol: 0.16, vers: 400 }),
+    ticket:   () => bruit(0.12, { freq: 2600, q: 0.9, vol: 0.2 }),
+
+    pret: () => { ton(880, 0.1, { vol: 0.4 }); apres(105, () => ton(1320, 0.16, { vol: 0.4 })); },
+    brule: () => {
+      bruit(0.5, { freq: 380, q: 0.5, vol: 0.4 });
+      ton(190, 0.4, { type: 'sawtooth', vol: 0.25, vers: 80 });
+    },
+    servi: (combo) => {
+      const base = 660 * Math.pow(1.06, combo || 0);
+      [0, 90, 180].forEach((d, i) => apres(d, () => ton(base * [1, 1.26, 1.5][i], 0.15, { vol: 0.36 })));
+    },
+    rate: () => { ton(300, 0.18, { type: 'sawtooth', vol: 0.3, vers: 120 }); apres(120, () => ton(180, 0.24, { type: 'sawtooth', vol: 0.26, vers: 90 })); },
+    chute: () => { bruit(0.22, { freq: 260, q: 0.7, vol: 0.42 }); ton(120, 0.2, { type: 'square', vol: 0.2, vers: 60 }); },
+    lancer: () => ton(300, 0.16, { type: 'sine', vol: 0.26, vers: 780 }),
+    atterrit: () => bruit(0.1, { freq: 700, q: 1.2, vol: 0.24 }),
+    charge: () => ton(520, 0.05, { type: 'sine', vol: 0.12 }),
+
+    client:  () => { ton(520, 0.09, { vol: 0.22 }); apres(95, () => ton(700, 0.12, { vol: 0.22 })); },
+    impatient: () => ton(400, 0.1, { type: 'square', vol: 0.16, vers: 300 }),
+    annonce: () => { ton(440, 0.12, { type: 'square', vol: 0.3 }); apres(130, () => ton(587, 0.2, { type: 'square', vol: 0.3 })); },
+    panne:   () => { ton(240, 0.3, { type: 'sawtooth', vol: 0.28, vers: 120 }); bruit(0.3, { freq: 300, q: 0.6, vol: 0.2 }); },
+
+    tic:     () => ton(1000, 0.06, { vol: 0.3 }),
+    depart:  () => [0, 140, 280, 460].forEach((d, i) => apres(d, () => ton([440, 554, 659, 880][i], i === 3 ? 0.45 : 0.13, { vol: 0.36 }))),
+    fin:     () => [0, 160, 320, 520].forEach((d, i) => apres(d, () => ton([880, 740, 587, 440][i], i === 3 ? 0.7 : 0.16, { vol: 0.34 })))
+  };
+})();
+
+/* Le navigateur exige un geste avant de laisser sortir du son */
+['pointerdown', 'keydown', 'touchstart'].forEach(e =>
+  addEventListener(e, () => Son.reprendre(), { once: false }));
+
+/* ============================== RENDU ============================== */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b1310);
+scene.fog = new THREE.Fog(0x0b1310, 34, 68);
+
+const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 160);
+
+/* Vue nettement plus plongeante (≈68° depuis l'horizontale) et cadrage
+   calculé pour que la pharmacie remplisse l'écran quel que soit le format. */
+const PITCH = 1.19;
+const CENTRE = new THREE.Vector3(LARG / 2, 0, HAUT / 2 + 0.2);
+
+function ajusterCamera() {
+  camera.aspect = innerWidth / innerHeight;
+  const marge = 1.03;
+  const fov = camera.fov * Math.PI / 180;
+  // Emprise projetée du plan une fois incliné, plus la hauteur des décors.
+  const demiH = (HAUT * Math.sin(PITCH) + 2.6) / 2 * marge;
+  const demiL = (LARG / 2) * marge;
+  const distV = demiH / Math.tan(fov / 2);
+  const distH = demiL / Math.tan(fov / 2) / camera.aspect;
+  const d = Math.max(distV, distH);
+  camera.position.set(CENTRE.x, Math.sin(PITCH) * d, CENTRE.z + Math.cos(PITCH) * d);
+  camera.lookAt(CENTRE);
+  camera.updateProjectionMatrix();
+}
+ajusterCamera();
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+addEventListener('resize', () => {
+  ajusterCamera();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+scene.add(new THREE.AmbientLight(0x9fc4b4, 0.62));
+const soleil = new THREE.DirectionalLight(0xfff2dc, 0.95);
+soleil.position.set(-9, 17, 7);
+soleil.castShadow = true;
+soleil.shadow.mapSize.set(2048, 2048);
+const dc = soleil.shadow.camera;
+dc.left = -16; dc.right = 16; dc.top = 16; dc.bottom = -16; dc.near = 1; dc.far = 45;
+scene.add(soleil);
+const appoint = new THREE.DirectionalLight(0x6fd0ff, 0.3);
+appoint.position.set(10, 8, -6);
+scene.add(appoint);
+
+const boite = (w, h, d, c, brillance) => new THREE.Mesh(
+  new THREE.BoxGeometry(w, h, d),
+  new THREE.MeshStandardMaterial({ color: c, roughness: brillance === undefined ? 0.85 : brillance, metalness: 0.05 })
+);
+
+/* Étiquette texte flottante (sprite : toujours face caméra) */
+function etiquette(texte, couleur, echelle) {
+  const cv = document.createElement('canvas');
+  cv.width = 256; cv.height = 64;
+  const g = cv.getContext('2d');
+  g.fillStyle = 'rgba(8,16,13,.78)';
+  g.beginPath();
+  if (g.roundRect) { g.roundRect(4, 12, 248, 40, 10); } else { g.rect(4, 12, 248, 40); }
+  g.fill();
+  g.font = '600 25px ui-monospace, Menlo, monospace';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = couleur || '#e8f0ea';
+  g.fillText(texte, 128, 33);
+  const tex = new THREE.CanvasTexture(cv);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  const e = echelle || 1;
+  sp.scale.set(2.0 * e, 0.5 * e, 1);
+  sp.renderOrder = 30;
+  return sp;
+}
+
+/* Barre de progression : dessinée sur un canvas, portée par un sprite.
+   Un sprite fait toujours face à la caméra et se dessine par-dessus le
+   décor, ce qui règle les problèmes de recouvrement. */
+function coinsArrondis(g, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  g.beginPath();
+  g.moveTo(x + rr, y);
+  g.lineTo(x + w - rr, y);
+  g.quadraticCurveTo(x + w, y, x + w, y + rr);
+  g.lineTo(x + w, y + h - rr);
+  g.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+  g.lineTo(x + rr, y + h);
+  g.quadraticCurveTo(x, y + h, x, y + h - rr);
+  g.lineTo(x, y + rr);
+  g.quadraticCurveTo(x, y, x + rr, y);
+  g.closePath();
+}
+
+const JAUGE_L = 320, JAUGE_H = 56;
+
+function jauge3d(largeur, couleur) {
+  const cv = document.createElement('canvas');
+  cv.width = JAUGE_L; cv.height = JAUGE_H;
+  const tex = new THREE.CanvasTexture(cv);
+  tex.minFilter = THREE.LinearFilter;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: tex, transparent: true, depthTest: false, depthWrite: false
+  }));
+  sp.scale.set(largeur, largeur * JAUGE_H / JAUGE_L, 1);
+  sp.renderOrder = 40;
+  sp.userData = { cv: cv, ctx: cv.getContext('2d'), tex: tex, val: -1, col: -1 };
+  sp.visible = false;
+  majJauge(sp, 0, couleur);
+  return sp;
+}
+
+function majJauge(sp, ratio, couleur) {
+  const u = sp.userData;
+  const r = Math.max(0, Math.min(1, ratio));
+  const c = couleur === undefined ? u.col : couleur;
+  // On ne redessine que si ça a bougé de façon visible
+  if (Math.abs(r - u.val) < 0.004 && c === u.col) return;
+  u.val = r; u.col = c;
+
+  const g = u.ctx;
+  const hex = '#' + (c < 0 ? 0x3fbf8f : c).toString(16).padStart(6, '0');
+  const pad = 5, h = JAUGE_H - pad * 2, w = JAUGE_L - pad * 2, ray = h / 2;
+
+  g.clearRect(0, 0, JAUGE_L, JAUGE_H);
+
+  // Contour sombre, pour détacher la barre de n'importe quel fond
+  coinsArrondis(g, 1, 1, JAUGE_L - 2, JAUGE_H - 2, (JAUGE_H - 2) / 2);
+  g.fillStyle = 'rgba(6,13,11,.92)';
+  g.fill();
+  g.lineWidth = 2.5;
+  g.strokeStyle = 'rgba(232,240,234,.28)';
+  g.stroke();
+
+  // Rail
+  coinsArrondis(g, pad, pad, w, h, ray);
+  g.fillStyle = '#16241f';
+  g.fill();
+
+  // Remplissage, avec une capsule pleinement arrondie même à faible valeur
+  if (r > 0.001) {
+    const lw = Math.max(h, w * r);
+    g.save();
+    coinsArrondis(g, pad, pad, w, h, ray);
+    g.clip();
+    coinsArrondis(g, pad, pad, lw, h, ray);
+    const grad = g.createLinearGradient(0, pad, 0, pad + h);
+    grad.addColorStop(0, hex);
+    grad.addColorStop(1, ombrer(hex, 0.62));
+    g.fillStyle = grad;
+    g.fill();
+    // Reflet supérieur
+    coinsArrondis(g, pad + 3, pad + 3, Math.max(0, lw - 6), h * 0.32, h * 0.16);
+    g.fillStyle = 'rgba(255,255,255,.22)';
+    g.fill();
+    g.restore();
+  }
+
+  u.tex.needsUpdate = true;
+}
+
+function ombrer(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round(((n >> 16) & 255) * f);
+  const v = Math.round(((n >> 8) & 255) * f);
+  const b = Math.round((n & 255) * f);
+  return 'rgb(' + r + ',' + v + ',' + b + ')';
+}
+
+/* ========================= HUMANOÏDE ARTICULÉ =========================
+   Un squelette simple : hanches et épaules sont des groupes pivots, on
+   les fait tourner sur X pour obtenir un cycle de marche crédible.
+   Réutilisé pour les joueurs (blouse) et les clients (manteau).
+====================================================================== */
+function mat(c, r, m) {
+  return new THREE.MeshStandardMaterial({
+    color: c, roughness: r === undefined ? 0.82 : r, metalness: m || 0
+  });
+}
+
+function humanoide(o) {
+  const peau = o.peau, tenue = o.tenue, accent = o.accent, cheveux = o.cheveux;
+  const g = new THREE.Group();
+
+  const cuisseMat = mat(o.pantalon || 0x2b3a33, 0.9);
+  const brasMat = mat(tenue, 0.85);
+  const peauMat = mat(peau, 0.78);
+
+  // --- Jambes ---
+  const membres = {};
+  [-1, 1].forEach((s, i) => {
+    const hanche = new THREE.Group();
+    hanche.position.set(s * 0.115, 0.52, 0);
+    const cuisse = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.072, 0.5, 10), cuisseMat);
+    cuisse.position.y = -0.25;
+    const pied = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.09, 0.27), mat(0x14201b, 0.7));
+    pied.position.set(0, -0.51, 0.05);
+    hanche.add(cuisse, pied);
+    g.add(hanche);
+    membres[i === 0 ? 'jambeG' : 'jambeD'] = hanche;
+  });
+
+  // --- Torse ---
+  const bassin = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.185, 0.2, 12), brasMat);
+  bassin.position.y = 0.6;
+  const torse = new THREE.Mesh(new THREE.CylinderGeometry(0.225, 0.205, 0.46, 12), brasMat);
+  torse.position.y = 0.92;
+  // Revers de blouse / écharpe : c'est la couleur d'identification du joueur
+  const bande = new THREE.Mesh(new THREE.CylinderGeometry(0.232, 0.232, 0.1, 12), mat(accent, 0.6));
+  bande.position.y = 1.13;
+  g.add(bassin, torse, bande);
+
+  // --- Bras ---
+  [-1, 1].forEach((s, i) => {
+    const epaule = new THREE.Group();
+    epaule.position.set(s * 0.235, 1.12, 0);
+    const bras = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.055, 0.44, 9), brasMat);
+    bras.position.y = -0.22;
+    const main = new THREE.Mesh(new THREE.SphereGeometry(0.072, 10, 8), peauMat);
+    main.position.y = -0.46;
+    epaule.add(bras, main);
+    g.add(epaule);
+    membres[i === 0 ? 'brasG' : 'brasD'] = epaule;
+  });
+
+  // --- Tête ---
+  const cou = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.062, 0.08, 8), peauMat);
+  cou.position.y = 1.21;
+  const tete = new THREE.Mesh(new THREE.SphereGeometry(0.185, 18, 14), peauMat);
+  tete.position.y = 1.4;
+  tete.scale.set(1, 1.06, 0.94);
+  const nez = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.11, 8), peauMat);
+  nez.position.set(0, 1.38, 0.175);
+  nez.rotation.x = Math.PI / 2;
+  g.add(cou, tete, nez);
+
+  // Yeux, pour donner un sens de lecture à l'orientation
+  const traits = [nez];
+  [-1, 1].forEach(s => {
+    const oeil = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 8), new THREE.MeshBasicMaterial({ color: 0x1b2621 }));
+    oeil.position.set(s * 0.072, 1.44, 0.158);
+    g.add(oeil);
+    traits.push(oeil);
+  });
+
+  if (o.charlotte) {
+    // Calot de pharmacien : demi-sphère aux couleurs du joueur
+    const calot = new THREE.Mesh(
+      new THREE.SphereGeometry(0.197, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(accent, 0.7)
+    );
+    calot.position.y = 1.4;
+    calot.scale.set(1, 1.02, 0.96);
+    const bord = new THREE.Mesh(new THREE.TorusGeometry(0.192, 0.022, 8, 20), mat(accent, 0.6));
+    bord.position.y = 1.405;
+    bord.rotation.x = Math.PI / 2;
+    g.add(calot, bord);
+  } else {
+    const chev = new THREE.Mesh(
+      new THREE.SphereGeometry(0.192, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2.2), mat(cheveux, 0.95)
+    );
+    chev.position.y = 1.4;
+    g.add(chev);
+  }
+
+  g.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  g.userData.membres = membres;
+  g.userData.traits = traits;
+  return g;
+}
+
+/* Visage photo : un disque légèrement basculé vers la caméra.
+   Avec une vue plongeante à 68°, un visage plaqué à la verticale serait
+   écrasé à quelques pixels ; l'inclinaison le rend lisible en permanence,
+   tout en tournant avec le personnage pour garder le sens d'orientation. */
+const INCLINAISON_VISAGE = 0.62;   // ≈ 35°
+
+function visagePhoto(photo, couleurHex) {
+  const T = 256;
+  const cv = document.createElement('canvas');
+  cv.width = T; cv.height = T;
+  const tex = new THREE.CanvasTexture(cv);
+  tex.minFilter = THREE.LinearFilter;
+
+  function dessiner(img) {
+    const g = cv.getContext('2d');
+    g.clearRect(0, 0, T, T);
+    g.save();
+    g.beginPath();
+    g.arc(T / 2, T / 2, T / 2 - 10, 0, Math.PI * 2);
+    g.closePath();
+    g.clip();
+    if (img) {
+      const c = Math.min(img.width, img.height);
+      g.drawImage(img, (img.width - c) / 2, (img.height - c) / 2, c, c, 0, 0, T, T);
+    } else {
+      g.fillStyle = '#e8c4a0';
+      g.fillRect(0, 0, T, T);
+    }
+    g.restore();
+    // Liseré à la couleur du joueur, pour la lisibilité de loin
+    g.beginPath();
+    g.arc(T / 2, T / 2, T / 2 - 9, 0, Math.PI * 2);
+    g.lineWidth = 12;
+    g.strokeStyle = couleurHex;
+    g.stroke();
+    tex.needsUpdate = true;
+  }
+
+  dessiner(null);
+  if (photo) {
+    const img = new Image();
+    img.onload = () => dessiner(img);
+    img.src = photo;
+  }
+
+  const disque = new THREE.Mesh(
+    new THREE.CircleGeometry(0.175, 28),
+    new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.85 })
+  );
+  // Posé tangentiellement à la surface du crâne, le long de la normale
+  // du disque, pour qu'aucun bord ne s'enfonce dans la sphère.
+  const dist = 0.215, cy = 1.40;
+  disque.position.set(0, cy + Math.sin(INCLINAISON_VISAGE) * dist, Math.cos(INCLINAISON_VISAGE) * dist);
+  disque.rotation.x = -INCLINAISON_VISAGE;
+  return disque;
+}
+
+/* Cycle de marche / posture de portage */
+function animerHumanoide(g, vitesse, phase, porte) {
+  const m = g.userData.membres;
+  if (!m) return;
+  const amp = Math.min(vitesse, 1);
+  m.jambeG.rotation.x = Math.sin(phase) * 0.62 * amp;
+  m.jambeD.rotation.x = -Math.sin(phase) * 0.62 * amp;
+  if (porte) {
+    // Les deux bras tendus devant, léger ballant
+    const s = Math.sin(phase) * 0.06 * amp;
+    m.brasG.rotation.x = -1.28 + s;
+    m.brasD.rotation.x = -1.28 - s;
+    m.brasG.rotation.z = 0.16;
+    m.brasD.rotation.z = -0.16;
+  } else {
+    m.brasG.rotation.x = -Math.sin(phase) * 0.5 * amp;
+    m.brasD.rotation.x = Math.sin(phase) * 0.5 * amp;
+    m.brasG.rotation.z = 0.07;
+    m.brasD.rotation.z = -0.07;
+  }
+}
+
+/* ------------------------ Construction du décor --------------------- */
+const groupeMonde = new THREE.Group();
+scene.add(groupeMonde);
+
+// Sol
+const sol = new THREE.Mesh(
+  new THREE.PlaneGeometry(LARG, HAUT),
+  new THREE.MeshStandardMaterial({ color: 0x1a2a24, roughness: 0.95 })
+);
+sol.rotation.x = -Math.PI / 2;
+sol.position.set(LARG / 2, 0, HAUT / 2);
+sol.receiveShadow = true;
+groupeMonde.add(sol);
+
+// Damier léger pour lire les distances
+for (let z = 0; z < HAUT; z++) {
+  for (let x = 0; x < LARG; x++) {
+    if ((x + z) % 2 || SOLIDE.has(caseA(x, z))) continue;
+    const t = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      new THREE.MeshStandardMaterial({ color: 0x1f3129, roughness: 0.95 })
+    );
+    t.rotation.x = -Math.PI / 2;
+    t.position.set(x + 0.5, 0.012, z + 0.5);
+    t.receiveShadow = true;
+    groupeMonde.add(t);
+  }
+}
+
+// Séparation visuelle back / avant
+const tapisSalle = new THREE.Mesh(
+  new THREE.PlaneGeometry(LARG - 2, 3.4),
+  new THREE.MeshStandardMaterial({ color: 0x243a31, roughness: 1 })
+);
+tapisSalle.rotation.x = -Math.PI / 2;
+tapisSalle.position.set(LARG / 2, 0.02, 9.7);
+tapisSalle.receiveShadow = true;
+groupeMonde.add(tapisSalle);
+
+function ajouterPoste(p) { Jeu.postes.push(p); return p; }
+
+for (let z = 0; z < HAUT; z++) {
+  for (let x = 0; x < LARG; x++) {
+    const c = PLAN[z][x];
+    const cx = x + 0.5, cz = z + 0.5;
+    let m = null, poste = null;
+
+    if (c === '#') {
+      m = boite(1, 1.5, 1, 0x16241e);
+      m.position.set(cx, 0.75, cz);
+
+    } else if (c === '1' || c === '2' || c === '3') {
+      const p = +c - 1;
+      m = new THREE.Group();
+      // Meuble d'herboriste : caisson bois, deux tiroirs, jardinière au-dessus
+      const caisson = boite(0.94, 0.82, 0.9, 0x4a3a2c, 0.9);
+      caisson.position.y = 0.41;
+      m.add(caisson);
+      [0.24, 0.6].forEach(h => {
+        const tiroir = boite(0.74, 0.28, 0.06, 0x604c39, 0.85);
+        tiroir.position.set(0, h, 0.46);
+        const poignee = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.26, 8), mat(0xc9b283, 0.4, 0.6));
+        poignee.rotation.z = Math.PI / 2;
+        poignee.position.set(0, h, 0.51);
+        m.add(tiroir, poignee);
+      });
+      const bac = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.2, 0.72), mat(0x6b5540, 0.9));
+      bac.position.y = 0.92;
+      const terre = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.05, 0.64), mat(0x2c2018, 1));
+      terre.position.y = 1.0;
+      m.add(bac, terre);
+      // Touffe de plantes : tiges + feuilles à la couleur de l'espèce
+      for (let k = 0; k < 7; k++) {
+        const a = (k / 7) * Math.PI * 2;
+        const rx = Math.cos(a) * 0.2, rz = Math.sin(a) * 0.18;
+        const h = 0.26 + Math.random() * 0.14;
+        const tige = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.02, h, 5), mat(0x3f6b45, 0.95));
+        tige.position.set(rx, 1.02 + h / 2, rz);
+        tige.rotation.z = rx * 0.5;
+        const feuille = new THREE.Mesh(new THREE.SphereGeometry(0.085, 8, 6), mat(PLANTES[p].c, 0.7));
+        feuille.scale.set(1, 0.45, 0.7);
+        feuille.position.set(rx * 1.15, 1.02 + h, rz * 1.15);
+        feuille.rotation.y = a;
+        m.add(tige, feuille);
+      }
+      m.position.set(cx, 0, cz);
+      const et = etiquette(PLANTES[p].n, '#' + PLANTES[p].c.toString(16).padStart(6, '0'), 0.82);
+      et.position.set(cx, 1.85, cz);
+      groupeMonde.add(et);
+      poste = { t: 'etagere', p: p, gx: x, gz: z };
+
+    } else if (c === 'M') {
+      m = new THREE.Group();
+      const paillasse = boite(0.92, 0.72, 0.9, 0x2f4038, 0.9);
+      paillasse.position.y = 0.36;
+      const plateau = boite(0.98, 0.08, 0.96, 0x93a49c, 0.45, 0.25);
+      plateau.position.y = 0.76;
+      m.add(paillasse, plateau);
+      // Bol de pierre évasé
+      const bol = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.16, 0.26, 20), mat(0x8f9c95, 0.45, 0.2));
+      bol.position.y = 0.93;
+      const creux = new THREE.Mesh(new THREE.CylinderGeometry(0.235, 0.13, 0.2, 20), mat(0x5c6862, 0.7));
+      creux.position.y = 0.98;
+      const lisiere = new THREE.Mesh(new THREE.TorusGeometry(0.285, 0.028, 8, 22), mat(0xa8b5ad, 0.4, 0.25));
+      lisiere.position.y = 1.06;
+      lisiere.rotation.x = Math.PI / 2;
+      m.add(bol, creux, lisiere);
+      // Pilon posé en biais
+      const pilon = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.062, 0.42, 10), mat(0x9aa79f, 0.45, 0.2));
+      pilon.position.set(0.13, 1.13, 0.02);
+      pilon.rotation.set(0.35, 0, -0.55);
+      m.add(pilon);
+      m.userData.pilon = pilon;
+      m.position.set(cx, 0, cz);
+      poste = { t: 'mortier', gx: x, gz: z, objet: null, prog: 0 };
+
+    } else if (c === 'A') {
+      m = new THREE.Group();
+      const cuivre = mat(0xc98a4b, 0.32, 0.75);
+      const socle = boite(0.92, 0.66, 0.9, 0x2f4038, 0.9);
+      socle.position.y = 0.33;
+      const plateau = boite(0.98, 0.08, 0.96, 0x93a49c, 0.45, 0.25);
+      plateau.position.y = 0.7;
+      m.add(socle, plateau);
+      // Réchaud + flamme
+      const rechaud = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.12, 14), mat(0x3a3128, 0.8, 0.3));
+      rechaud.position.y = 0.8;
+      const flamme = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.2, 10), new THREE.MeshBasicMaterial({
+        color: 0x5fb8ff, transparent: true, opacity: 0.65
+      }));
+      flamme.position.y = 0.94;
+      m.add(rechaud, flamme);
+      m.userData.flamme = flamme;
+      // Ballon de verre
+      const ballon = new THREE.Mesh(new THREE.SphereGeometry(0.25, 20, 16), new THREE.MeshStandardMaterial({
+        color: 0xbfe4dc, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.42
+      }));
+      ballon.position.y = 1.11;
+      ballon.scale.set(1, 0.86, 1);
+      // Liquide à l'intérieur (recoloré selon le contenu)
+      const liquide = new THREE.Mesh(new THREE.SphereGeometry(0.19, 16, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+        mat(0x3fbf8f, 0.3));
+      liquide.position.y = 1.09;
+      liquide.visible = false;
+      m.add(ballon, liquide);
+      m.userData.liquide = liquide;
+      // Chapiteau conique en cuivre
+      const chapiteau = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.3, 16), cuivre);
+      chapiteau.position.y = 1.44;
+      const bague = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.026, 8, 20), cuivre);
+      bague.position.y = 1.3;
+      bague.rotation.x = Math.PI / 2;
+      m.add(chapiteau, bague);
+      // Col de cygne + serpentin descendant vers un bec
+      const col = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.036, 8, 18, Math.PI * 0.9), cuivre);
+      col.position.set(0.16, 1.45, 0);
+      col.rotation.set(Math.PI / 2, 0, -0.35);
+      const bec = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.03, 0.34, 9), cuivre);
+      bec.position.set(0.38, 1.16, 0);
+      bec.rotation.z = 0.22;
+      m.add(col, bec);
+      m.position.set(cx, 0, cz);
+      poste = { t: 'alambic', gx: x, gz: z, contenu: [], sortie: null, prog: 0 };
+
+    } else if (c === 'E') {
+      m = new THREE.Group();
+      const acier = mat(0x556a62, 0.4, 0.45);
+      const four = boite(0.94, 0.92, 0.9, 0x3c4a44, 0.6);
+      four.position.y = 0.46;
+      const dessus = boite(0.98, 0.08, 0.94, 0x6d7f77, 0.35, 0.4);
+      dessus.position.y = 0.96;
+      m.add(four, dessus);
+      // Hublot vitré
+      const cadre = boite(0.66, 0.46, 0.06, 0x2a3630, 0.5);
+      cadre.position.set(0, 0.52, 0.46);
+      const vitre = new THREE.Mesh(new THREE.PlaneGeometry(0.54, 0.34), new THREE.MeshStandardMaterial({
+        color: 0x1a2b26, roughness: 0.15, metalness: 0.3, transparent: true, opacity: 0.9
+      }));
+      vitre.position.set(0, 0.52, 0.5);
+      const poignee = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.6, 8), acier);
+      poignee.rotation.z = Math.PI / 2;
+      poignee.position.set(0, 0.79, 0.5);
+      m.add(cadre, vitre, poignee);
+      m.userData.vitre = vitre;
+      // Boutons de réglage
+      [-0.2, 0, 0.2].forEach(x => {
+        const b = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.05, 10), acier);
+        b.rotation.x = Math.PI / 2;
+        b.position.set(x, 0.19, 0.47);
+        m.add(b);
+      });
+      // Cheminée d'évacuation
+      const tuyau = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.5, 10), acier);
+      tuyau.position.set(-0.3, 1.24, -0.28);
+      m.add(tuyau);
+      m.position.set(cx, 0, cz);
+      const lampe = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055, 12, 12),
+        new THREE.MeshBasicMaterial({ color: 0x30463c })
+      );
+      lampe.position.set(cx + 0.28, 1.06, cz + 0.44);
+      groupeMonde.add(lampe);
+      poste = { t: 'etuve', gx: x, gz: z, objet: null, etat: 'vide', t0: 0, panne: 0, lampe: lampe };
+
+    } else if (c === 'X') {
+      m = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.36, 0.3, 0.85, 14),
+        new THREE.MeshStandardMaterial({ color: 0x4a2a24, roughness: 0.9 })
+      );
+      m.position.set(cx, 0.43, cz);
+      const et = etiquette('Rebut', '#e0523c', 0.72);
+      et.position.set(cx, 1.5, cz);
+      groupeMonde.add(et);
+      poste = { t: 'poubelle', gx: x, gz: z };
+
+    } else if (c === 'I') {
+      // Mini-comptoir ouvert : on voit par-dessus, la cloison n'est pas pleine
+      m = new THREE.Group();
+      const meuble = boite(1, 0.86, 0.9, 0x3d5147, 0.9);
+      meuble.position.y = 0.43;
+      const tablette = boite(1.06, 0.09, 1.0, 0x8ea69a, 0.4, 0.2);
+      tablette.position.y = 0.9;
+      m.add(meuble, tablette);
+      // Deux montants et un linteau fin, pour lire le passage sans le boucher
+      [-0.46, 0.46].forEach(x => {
+        const mont = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.72, 8), mat(0x8ea69a, 0.4, 0.3));
+        mont.position.set(x, 1.31, 0);
+        m.add(mont);
+      });
+      const linteau = boite(1.06, 0.1, 0.28, 0x8ea69a, 0.4, 0.2);
+      linteau.position.y = 1.72;
+      m.add(linteau);
+      // Rouleaux d'entrée du tapis, côté salle
+      for (let k = -1; k <= 1; k++) {
+        const rl = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.8, 10), mat(0x4d6b7d, 0.5, 0.4));
+        rl.rotation.z = Math.PI / 2;
+        rl.position.set(0, 0.97, 0.2 + k * 0.16);
+        m.add(rl);
+      }
+      m.position.set(cx, 0, cz);
+      const et = etiquette('Passe-plat', '#3fbf8f', 0.82);
+      et.position.set(cx, 2.1, cz);
+      groupeMonde.add(et);
+      poste = { t: 'passe', gx: x, gz: z };
+
+    } else if (c === 'O') {
+      m = boite(0.96, 0.9, 0.96, 0x3d5147);
+      m.position.set(cx, 0.45, cz);
+      const et = etiquette('Table', '#e8f0ea', 0.7);
+      et.position.set(cx, 1.75, cz);
+      groupeMonde.add(et);
+      poste = { t: 'table', gx: x, gz: z, pile: [] };
+
+    } else if (c === 'K') {
+      m = new THREE.Group();
+      const plan = boite(0.98, 1.05, 0.98, 0x46352a);
+      plan.position.y = 0.525;
+      const dessus = boite(1.04, 0.1, 1.04, 0x6a5140, 0.6);
+      dessus.position.y = 1.1;
+      m.add(plan, dessus);
+      m.position.set(cx, 0, cz);
+      poste = { t: 'comptoir', gx: x, gz: z, client: null };
+
+    } else if (c === 'B') {
+      // Tableau où l'on épingle les ordonnances rapportées du comptoir
+      m = new THREE.Group();
+      const pied = boite(0.9, 0.9, 0.5, 0x2f4038, 0.9);
+      pied.position.set(0, 0.45, -0.2);
+      const cadre = boite(0.92, 0.78, 0.09, 0x5b432c, 0.85);
+      cadre.position.set(0, 1.32, -0.1);
+      const liege = boite(0.8, 0.66, 0.04, 0xbf9a63, 0.98);
+      liege.position.set(0, 1.32, -0.04);
+      m.add(pied, cadre, liege);
+      m.position.set(cx, 0, cz);
+      const et = etiquette('Ordonnances', '#f0b429', 0.86);
+      et.position.set(cx, 2.15, cz);
+      groupeMonde.add(et);
+      poste = { t: 'tableau', gx: x, gz: z, fiches: [] };
+
+    } else if (c === '>') {
+      m = new THREE.Mesh(
+        new THREE.PlaneGeometry(1, 0.94),
+        new THREE.MeshStandardMaterial({ color: 0x2d3f4d, roughness: 0.7 })
+      );
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(cx, 0.03, cz);
+      m.receiveShadow = true;
+      // chevrons de direction
+      const ch = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.16, 0.5),
+        new THREE.MeshBasicMaterial({ color: 0x4d6b7d })
+      );
+      ch.rotation.x = -Math.PI / 2;
+      ch.rotation.z = Math.PI / 4;
+      ch.position.set(cx, 0.045, cz);
+      groupeMonde.add(ch);
+    }
+
+    if (m) {
+      m.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      groupeMonde.add(m);
+    }
+    if (poste) {
+      poste.mesh = m;
+      poste.centre = new THREE.Vector3(cx, 0, cz);
+      poste.ancre = new THREE.Vector3(cx, 1.28, cz);
+      ajouterPoste(poste);
+    }
+  }
+}
+
+/* Jauges et objets posés sur les postes */
+Jeu.postes.forEach(p => {
+  if (p.t === 'mortier' || p.t === 'alambic' || p.t === 'etuve') {
+    p.jauge = jauge3d(1.15, 0x3fbf8f);
+    p.jauge.position.set(p.centre.x, 1.86, p.centre.z);
+    groupeMonde.add(p.jauge);
+  }
+  p.visuels = new THREE.Group();
+  groupeMonde.add(p.visuels);
+
+  /* Anneau qui s'allume aux couleurs du joueur qui vise ce poste.
+     Il doit respecter la profondeur : sans test de profondeur il se
+     dessinait par-dessus le meuble au lieu de passer dessous. Il est
+     donc posé au sol, plus large que la case, et décalé par
+     polygonOffset pour ne pas vibrer contre le carrelage. */
+  p.surbrillance = new THREE.Mesh(
+    new THREE.RingGeometry(0.58, 0.74, 32),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.9,
+      side: THREE.DoubleSide, depthWrite: false,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2
+    })
+  );
+  p.surbrillance.rotation.x = -Math.PI / 2;
+  p.surbrillance.position.set(p.centre.x, 0.035, p.centre.z);
+  p.surbrillance.visible = false;
+  groupeMonde.add(p.surbrillance);
+});
+
+/* --------------------- Représentation d'un objet -------------------- */
+function meshObjet(o) {
+  const g = new THREE.Group();
+  const c = couleurObjet(o);
+  if (o.k === 'plante') {
+    // Brin cueilli : tige, feuilles opposées, ombelle au sommet
+    const tige = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.024, 0.34, 6), mat(0x3f6b45, 0.95));
+    tige.position.y = 0.17;
+    g.add(tige);
+    for (let k = 0; k < 4; k++) {
+      const f = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), mat(0x4d8a55, 0.85));
+      f.scale.set(1, 0.35, 0.62);
+      const a = k * 1.9;
+      f.position.set(Math.cos(a) * 0.075, 0.1 + k * 0.06, Math.sin(a) * 0.075);
+      f.rotation.y = a;
+      g.add(f);
+    }
+    const ombelle = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10), mat(c, 0.6));
+    ombelle.scale.set(1, 0.72, 1);
+    ombelle.position.y = 0.38;
+    g.add(ombelle);
+
+  } else if (o.k === 'poudre') {
+    // Sachet en papier avec sa pincée de poudre
+    const sachet = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.17, 0.2, 4), mat(0xe4dccb, 0.95));
+    sachet.rotation.y = Math.PI / 4;
+    sachet.position.y = 0.1;
+    const pli = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.05, 0.03), mat(0xcfc5b0, 0.95));
+    pli.position.y = 0.21;
+    const tas = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.07, 12), mat(c, 1));
+    tas.position.y = 0.23;
+    g.add(sachet, pli, tas);
+
+  } else if (o.k === 'mixture' || o.k === 'ratee') {
+    // Fiole de laboratoire : panse ronde, col étroit, bouchon de liège
+    const verre = new THREE.MeshStandardMaterial({
+      color: 0xd6efe8, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.4
+    });
+    const panse = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 12), verre);
+    panse.position.y = 0.16;
+    const liquide = new THREE.Mesh(
+      new THREE.SphereGeometry(0.125, 14, 10, 0, Math.PI * 2, Math.PI / 2.6, Math.PI), mat(c, 0.25)
+    );
+    liquide.position.y = 0.16;
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.14, 10), verre);
+    col.position.y = 0.34;
+    const liege = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.045, 0.07, 10), mat(0xc9a877, 0.9));
+    liege.position.y = 0.43;
+    g.add(panse, liquide, col, liege);
+
+  } else if (o.k === 'brulee') {
+    const b = new THREE.Mesh(new THREE.DodecahedronGeometry(0.17), mat(0x231f1c, 1));
+    b.position.y = 0.18;
+    const fumee = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({
+      color: 0x555049, transparent: true, opacity: 0.32
+    }));
+    fumee.position.y = 0.4;
+    g.add(b, fumee);
+
+  } else if (o.k === 'boite') {
+    // Boîte de médicament : carton, bandeau coloré, notice qui dépasse
+    const carton = boite(0.34, 0.3, 0.2, 0xf0eade, 0.92);
+    carton.position.y = 0.15;
+    const bandeau = boite(0.35, 0.09, 0.21, c, 0.55);
+    bandeau.position.y = 0.22;
+    const bandeau2 = boite(0.35, 0.035, 0.21, c, 0.55);
+    bandeau2.position.y = 0.09;
+    const notice = boite(0.2, 0.015, 0.14, 0xffffff, 1);
+    notice.position.set(0.06, 0.305, 0.02);
+    notice.rotation.y = 0.3;
+    g.add(carton, bandeau, bandeau2, notice);
+
+  } else if (o.k === 'ticket') {
+    // Feuille d'ordonnance, légèrement gondolée
+    const feuille = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.012, 0.34), mat(0xf2ead8, 0.98));
+    feuille.position.y = 0.11;
+    feuille.rotation.set(0.28, 0.2, 0);
+    const entete = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.014, 0.07), mat(0xd8543f, 0.9));
+    entete.position.set(0, 0.125, -0.12);
+    entete.rotation.copy(feuille.rotation);
+    g.add(feuille, entete);
+    for (let k = 0; k < 3; k++) {
+      const ligne = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.014, 0.014), mat(0x9aa2a8, 1));
+      ligne.position.set(0, 0.122, 0.0 + k * 0.06);
+      ligne.rotation.copy(feuille.rotation);
+      g.add(ligne);
+    }
+  }
+  g.traverse(m => { if (m.isMesh) m.castShadow = true; });
+  return g;
+}
+
+/* Badge flottant au-dessus du joueur : photo ronde + nom.
+   Sans photo, on affiche l'initiale sur une pastille de sa couleur. */
+function badgeJoueur(nom, couleurHex, photo) {
+  const L = 460, H = 128;
+  const cv = document.createElement('canvas');
+  cv.width = L; cv.height = H;
+  const tex = new THREE.CanvasTexture(cv);
+  tex.minFilter = THREE.LinearFilter;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: tex, transparent: true, depthTest: false, depthWrite: false
+  }));
+  sp.scale.set(1.55, 1.55 * H / L, 1);
+  sp.renderOrder = 45;
+
+  function dessiner(img) {
+    const g = cv.getContext('2d');
+    g.clearRect(0, 0, L, H);
+    const r = 58, cxA = 66, cyA = H / 2;
+
+    // Plaque
+    coinsArrondis(g, 8, 14, L - 16, H - 28, (H - 28) / 2);
+    g.fillStyle = 'rgba(8,17,14,.86)';
+    g.fill();
+    g.lineWidth = 3;
+    g.strokeStyle = couleurHex;
+    g.stroke();
+
+    // Pastille photo
+    g.save();
+    g.beginPath();
+    g.arc(cxA, cyA, r - 6, 0, Math.PI * 2);
+    g.closePath();
+    g.clip();
+    if (img) {
+      // Recadrage carré centré, quelle que soit la photo envoyée
+      const c = Math.min(img.width, img.height);
+      g.drawImage(img, (img.width - c) / 2, (img.height - c) / 2, c, c,
+                  cxA - r + 6, cyA - r + 6, (r - 6) * 2, (r - 6) * 2);
+    } else {
+      g.fillStyle = couleurHex;
+      g.fillRect(cxA - r, cyA - r, r * 2, r * 2);
+      g.fillStyle = '#07100c';
+      g.font = '700 56px ui-monospace, Menlo, monospace';
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText((nom[0] || '?').toUpperCase(), cxA, cyA + 2);
+    }
+    g.restore();
+
+    // Anneau de couleur
+    g.beginPath();
+    g.arc(cxA, cyA, r - 4, 0, Math.PI * 2);
+    g.lineWidth = 5;
+    g.strokeStyle = couleurHex;
+    g.stroke();
+
+    // Nom, réduit s'il déborde
+    g.fillStyle = '#e8f0ea';
+    g.textAlign = 'left'; g.textBaseline = 'middle';
+    let taille = 46;
+    do {
+      g.font = '600 ' + taille + 'px ui-monospace, Menlo, monospace';
+      taille -= 3;
+    } while (g.measureText(nom).width > L - 160 && taille > 20);
+    g.fillText(nom, 140, H / 2 + 2);
+
+    tex.needsUpdate = true;
+  }
+
+  dessiner(null);
+  if (photo) {
+    const img = new Image();
+    img.onload = () => dessiner(img);
+    img.src = photo;
+  }
+  return sp;
+}
+
+/* ============================== JOUEURS ============================== */
+function creerJoueur(padId, nom, place, photo) {
+  const couleurHex = COULEURS_J[place % 4];
+  const couleur = parseInt(couleurHex.slice(1), 16);
+
+  const TEINTS = [0xe8c4a0, 0xc98d63, 0x8d5a3b, 0xf0d3b4];
+  const g = humanoide({
+    peau: TEINTS[place % 4],
+    tenue: 0xf2f6f3,          // blouse blanche
+    pantalon: 0x2b3a33,
+    accent: couleur,
+    charlotte: true
+  });
+
+  if (photo) {
+    // La photo remplace les traits dessinés, sinon le nez traverse le disque
+    g.userData.traits.forEach(t => { t.visible = false; });
+    g.add(visagePhoto(photo, couleurHex));
+  }
+
+  const et = badgeJoueur(nom, couleurHex, photo);
+  et.position.y = 2.14;
+  g.add(et);
+
+  const halo = new THREE.Mesh(
+    new THREE.RingGeometry(0.3, 0.4, 20),
+    new THREE.MeshBasicMaterial({ color: couleur, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
+  );
+  halo.rotation.x = -Math.PI / 2;
+  halo.position.y = 0.02;
+  g.add(halo);
+
+  const sp = SPAWNS[place % 4];
+  g.position.set(sp[0], 0, sp[1]);
+  groupeMonde.add(g);
+
+  // Les mains portent l'objet devant le torse
+  const porteAncre = new THREE.Group();
+  porteAncre.position.set(0, 0.72, 0.42);
+  g.add(porteAncre);
+
+  const jaugeCharge = jauge3d(0.9, 0xf0b429);
+  jaugeCharge.position.y = 1.78;
+  g.add(jaugeCharge);
+
+  return {
+    id: padId, nom: nom, place: place, couleur: couleurHex, photo: photo || null,
+    mesh: g, ancre: porteAncre, halo: halo, jaugeCharge: jaugeCharge,
+    x: sp[0], z: sp[1], dirX: 0, dirZ: 1,
+    ax: 0, az: 0, a: 0, b: 0, aPrec: 0, charge: 0, chargeSonne: false,
+    objet: null, meshObjet: null, cible: null, dernierHud: '', dernierLib: '',
+    deconnecte: false, jeton: null,
+    stats: { servis: 0, erreurs: 0, brules: 0, lancers: 0 },
+    balancement: 0
+  };
+}
+
+function poser(j, o) {
+  if (j.meshObjet) { j.ancre.remove(j.meshObjet); j.meshObjet = null; }
+  j.objet = o;
+  if (o) { j.meshObjet = meshObjet(o); j.ancre.add(j.meshObjet); }
+  envoyerHud(j);
+}
+
+/* ============================== RÉSEAU ============================== */
+const params = new URLSearchParams(location.search);
+const RELAY = params.get('relay') ||
+  ((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
+Jeu.salon = (params.get('room') || codeAleatoire()).toUpperCase();
+
+function codeAleatoire() {
+  const lettres = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 4; i++) s += lettres[Math.floor(Math.random() * lettres.length)];
+  return s;
+}
+
+let sock = null;
+const $reseau = document.getElementById('reseau');
+
+function connecter() {
+  sock = new WebSocket(RELAY + '/ws?room=' + Jeu.salon + '&role=host');
+  sock.onopen = () => { $reseau.textContent = 'relais connecté · ' + Jeu.salon; $reseau.classList.remove('ko'); };
+  sock.onclose = () => {
+    $reseau.textContent = 'relais perdu — reconnexion';
+    $reseau.classList.add('ko');
+    setTimeout(connecter, 1500);
+  };
+  sock.onerror = () => { $reseau.classList.add('ko'); };
+  sock.onmessage = (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (m.t === 'padleave') { retirerJoueur(m.id); return; }
+    if (m.t === 'join') { accueillir(m.id, (m.nom || 'Joueur').slice(0, 10), m.photo, m.jeton); return; }
+    if (m.t === 'in') {
+      const j = Jeu.joueurs.get(m.id);
+      if (!j) return;
+      j.ax = m.x || 0; j.az = m.z || 0;
+      j.a = m.a || 0; j.b = m.b || 0;
+    }
+  };
+}
+connecter();
+
+function versPad(id, obj) {
+  if (!sock || sock.readyState !== 1) return;
+  obj.to = id;
+  sock.send(JSON.stringify(obj));
+}
+function envoyerHud(j) {
+  if (j.local) return;
+  const txt = nomObjet(j.objet);
+  if (txt === j.dernierHud) return;
+  j.dernierHud = txt;
+  versPad(j.id, { t: 'hud', porte: txt });
+}
+function buzz(j, fort) { if (!j.local) versPad(j.id, { t: 'buzz', fort: !!fort }); }
+
+function accueillir(padId, nom, photo, jeton) {
+  if (Jeu.joueurs.has(padId)) return;
+
+  // Reconnexion : le téléphone renvoie son jeton, on lui rend son personnage
+  if (jeton && Jeu.parJeton.has(jeton)) {
+    const j = Jeu.parJeton.get(jeton);
+    Jeu.joueurs.delete(j.id);
+    j.id = padId;
+    j.deconnecte = false;
+    j.dernierHud = ''; j.dernierLib = '';
+    Jeu.joueurs.set(padId, j);
+    versPad(padId, { t: 'assigne', place: j.place + 1, couleur: j.couleur, reprise: true });
+    envoyerHud(j);
+    annoncer(j.nom + ' est de retour', j.couleur);
+    majEquipe();
+    return;
+  }
+
+  if (Jeu.joueurs.size >= 4) { versPad(padId, { t: 'hud', porte: 'Table complète' }); return; }
+  const places = new Set(Array.from(Jeu.joueurs.values()).map(j => j.place));
+  let place = 0; while (places.has(place)) place++;
+  const j = creerJoueur(padId, nom, place, photo);
+  j.jeton = jeton || null;
+  Jeu.joueurs.set(padId, j);
+  if (jeton) Jeu.parJeton.set(jeton, j);
+  versPad(padId, { t: 'assigne', place: place + 1, couleur: j.couleur });
+  majEquipe();
+}
+
+function retirerJoueur(padId) {
+  const j = Jeu.joueurs.get(padId);
+  if (!j) return;
+  // En pleine partie on garde le personnage en place : il attend son joueur
+  if (Jeu.phase === 'jeu' && j.jeton) {
+    j.deconnecte = true;
+    annoncer(j.nom + ' a perdu le réseau', '#e0523c');
+    majEquipe();
+    return;
+  }
+  if (j.objet) poser(j, null);
+  if (j.jeton) Jeu.parJeton.delete(j.jeton);
+  groupeMonde.remove(j.mesh);
+  Jeu.joueurs.delete(padId);
+  majEquipe();
+}
+
+/* Joueur clavier local, pour tester sans téléphone (touche T) */
+let joueurLocal = null;
+const touches = {};
+addEventListener('keydown', (e) => {
+  touches[e.code] = true;
+  if (e.code === 'KeyT') basculerLocal();
+  if (e.code === 'Enter' && Jeu.phase !== 'jeu') demarrer();
+});
+addEventListener('keyup', (e) => { touches[e.code] = false; });
+
+function basculerLocal() {
+  if (joueurLocal) { retirerJoueur(joueurLocal.id); joueurLocal = null; return; }
+  const id = -1;
+  if (Jeu.joueurs.has(id)) return;
+  const places = new Set(Array.from(Jeu.joueurs.values()).map(j => j.place));
+  let place = 0; while (places.has(place)) place++;
+  const j = creerJoueur(id, 'Clavier', place);
+  j.local = true;
+  Jeu.joueurs.set(id, j);
+  joueurLocal = j;
+  majEquipe();
+}
+function lireClavier() {
+  if (!joueurLocal) return;
+  const g = (touches.KeyA || touches.KeyQ || touches.ArrowLeft) ? -1 : 0;
+  const d = (touches.KeyD || touches.ArrowRight) ? 1 : 0;
+  const h = (touches.KeyW || touches.KeyZ || touches.ArrowUp) ? -1 : 0;
+  const b = (touches.KeyS || touches.ArrowDown) ? 1 : 0;
+  joueurLocal.ax = g + d;
+  joueurLocal.az = h + b;
+  joueurLocal.a = touches.Space ? 1 : 0;
+  joueurLocal.b = touches.KeyE ? 1 : 0;
+}
+
+/* ============================== CLIENTS ============================== */
+const comptoirs = Jeu.postes.filter(p => p.t === 'comptoir');
+
+function creerClient() {
+  const libres = comptoirs.filter(c => !c.client);
+  if (!libres.length) return;
+  const poste = libres[Math.floor(Math.random() * libres.length)];
+
+  const dispo = RECETTES.map((r, i) => i)
+    .filter(i => !RECETTES[i].tardif || (REGL.duree - Jeu.temps) > 55);
+  const r = dispo[Math.floor(Math.random() * dispo.length)];
+  const patience = REGL.patienceMin + Math.random() * (REGL.patienceMax - REGL.patienceMin);
+
+  const MANTEAUX = [0x51636f, 0x7a4a52, 0x4d5b3a, 0x6b5a7d, 0x8a6a45, 0x3f5a6b];
+  const PEAUX = [0xdcb491, 0xc08a5f, 0x8a5a3a, 0xefd6bb];
+  const CHEVEUX = [0x2a1f18, 0x50331f, 0x8a7a5c, 0x3a3a3a, 0xa9a29b];
+  const pioche = (a) => a[Math.floor(Math.random() * a.length)];
+
+  const g = humanoide({
+    peau: pioche(PEAUX),
+    tenue: pioche(MANTEAUX),
+    pantalon: pioche([0x2e3540, 0x3f3630, 0x24303a]),
+    accent: 0x2b3038,
+    cheveux: pioche(CHEVEUX),
+    charlotte: false
+  });
+  g.position.set(poste.centre.x, 0, poste.centre.z + 1.15);
+  g.rotation.y = Math.PI;   // face au comptoir, donc dos à la caméra
+
+  /* L'étiquette mesure 0,675 de haut et la jauge 0,23 : il faut au moins
+     0,45 d'écart entre leurs centres pour qu'elles ne se chevauchent pas. */
+  const carte = etiquette('Ordonnance ?', '#f2ead8', 1.35);
+  carte.position.set(0, 2.38, 0);
+  g.add(carte);
+  const carteRevelee = etiquette(RECETTES[r].n, '#' + RECETTES[r].c.toString(16).padStart(6, '0'), 1.35);
+  carteRevelee.position.set(0, 2.38, 0);
+  carteRevelee.visible = false;
+  g.add(carteRevelee);
+
+  const jg = jauge3d(1.3, 0x3fbf8f);
+  jg.position.set(0, 1.78, 0);
+  jg.visible = true;
+  g.add(jg);
+
+  groupeMonde.add(g);
+
+  const cl = {
+    r: r, poste: poste, reste: patience, total: patience,
+    mesh: g, jauge: jg, phase: Math.random() * 6.28,
+    revelee: false, ticketDispo: true, plainte: false,
+    carte: carte, carteRevelee: carteRevelee
+  };
+  poste.client = cl;
+  Jeu.clients.push(cl);
+  Son.client();
+  majCommandes();
+}
+
+function retirerClient(cl) {
+  cl.poste.client = null;
+  groupeMonde.remove(cl.mesh);
+  const i = Jeu.clients.indexOf(cl);
+  if (i >= 0) Jeu.clients.splice(i, 1);
+  majCommandes();
+}
+
+/* =========================== INTERACTIONS =========================== */
+function posteVise(j) {
+  let meilleur = null, meilleurScore = 1e9;
+  for (const p of Jeu.postes) {
+    const dx = p.centre.x - j.x, dz = p.centre.z - j.z;
+    const d = Math.hypot(dx, dz);
+    if (d > REGL.porteeAction) continue;
+    const dot = (dx / d) * j.dirX + (dz / d) * j.dirZ;
+    const s = d - dot * 0.9;      // on privilégie ce qui est devant
+    if (s < meilleurScore) { meilleurScore = s; meilleur = p; }
+  }
+  return meilleur;
+}
+
+function actionA(j, p) {
+  if (!p) return;
+  const o = j.objet;
+
+  if (p.t === 'etagere') {
+    if (!o) { poser(j, { k: 'plante', p: p.p }); Son.prendre(); buzz(j); }
+    else Son.refus();
+    return;
+  }
+
+  if (p.t === 'mortier') {
+    if (!o && p.objet) { poser(j, p.objet); p.objet = null; p.prog = 0; Son.prendre(); buzz(j); }
+    else if (o && o.k === 'plante' && !p.objet) { p.objet = o; p.prog = 0; poser(j, null); Son.poser(); buzz(j); }
+    else Son.refus();
+    return;
+  }
+
+  if (p.t === 'alambic') {
+    if (!o && p.sortie) { poser(j, p.sortie); p.sortie = null; Son.prendre(); buzz(j); }
+    else if (o && o.k === 'poudre' && !p.sortie && p.contenu.length < 3) {
+      p.contenu.push(o.p); poser(j, null); p.prog = 0; Son.poser(); buzz(j);
+    } else if (!o && !p.sortie && p.contenu.length) {
+      poser(j, { k: 'poudre', p: p.contenu.pop() }); Son.prendre(); buzz(j);
+    } else Son.refus();
+    return;
+  }
+
+  if (p.t === 'etuve') {
+    if (p.panne > 0) { Son.refus(); return; }
+    if (!o && p.objet) {
+      let sortie;
+      if (p.etat === 'pret') sortie = { k: 'boite', r: p.objet.r };
+      else if (p.etat === 'brule') sortie = { k: 'brulee' };
+      else sortie = p.objet;
+      poser(j, sortie);
+      p.objet = null; p.etat = 'vide'; p.t0 = 0;
+      Son.prendre(); buzz(j);
+    } else if (o && o.k === 'mixture' && !p.objet) {
+      p.objet = o; p.etat = 'cuisson'; p.t0 = 0; poser(j, null);
+      Son.poser(); buzz(j);
+    }
+    return;
+  }
+
+  if (p.t === 'tableau') {
+    // On épingle l'ordonnance : c'est ce qui révèle la recette au back
+    if (o && o.k === 'ticket') {
+      if (o.cl && Jeu.clients.indexOf(o.cl) >= 0) {
+        o.cl.revelee = true;
+        flotter(p.centre, RECETTES[o.cl.r].n, '#f0b429');
+        Son.ticket();
+        majCommandes();
+      } else {
+        flotter(p.centre, 'Client parti', '#e0523c');
+        Son.refus();
+      }
+      poser(j, null);
+      buzz(j);
+    }
+    return;
+  }
+
+  if (p.t === 'passe') {
+    if (o && o.k === 'boite' && placeSurTapis(4.5)) {
+      deposerSurTapis(o); poser(j, null); Son.poser(); buzz(j);
+    } else if (o) Son.refus();
+    return;
+  }
+
+  if (p.t === 'table') {
+    if (!o && p.pile.length) { poser(j, p.pile.pop().objet); rangerPile(p); Son.prendre(); buzz(j); }
+    else if (o && o.k === 'boite' && p.pile.length < REGL.pileTable) { empiler(p, o); poser(j, null); Son.poser(); buzz(j); }
+    return;
+  }
+
+  if (p.t === 'poubelle') {
+    if (o) { poser(j, null); Son.poser(); buzz(j); }
+    return;
+  }
+
+  if (p.t === 'comptoir') {
+    const cl = p.client;
+    // Livraison
+    if (o && o.k === 'boite' && cl) {
+      if (!cl.revelee) {
+        flotter(p.centre, 'Ordonnance non lue', '#f0b429');
+        Son.refus();
+        return;
+      }
+      if (cl.r === o.r) {
+        Jeu.combo = (Jeu.dernierServi === cl.r) ? Math.min(Jeu.combo + 1, REGL.comboMax) : 0;
+        Jeu.dernierServi = cl.r;
+        const mult = 1 + 0.25 * Jeu.combo;
+        const bonus = Math.round(RECETTES[cl.r].pts * (0.55 + 0.45 * (cl.reste / cl.total)) * mult);
+        Jeu.score += bonus; Jeu.servis++;
+        j.stats.servis++;
+        flotter(p.centre, '+' + bonus + (Jeu.combo ? '  x' + (1 + Jeu.combo) : ''), '#3fbf8f');
+        Son.servi(Jeu.combo);
+        retirerClient(cl);
+        poser(j, null);
+        buzz(j);
+      } else {
+        Jeu.score = Math.max(0, Jeu.score - 30);
+        Jeu.rates++; Jeu.combo = 0; Jeu.dernierServi = -1;
+        j.stats.erreurs++;
+        flotter(p.centre, 'Mauvaise boîte', '#e0523c');
+        Son.rate();
+        poser(j, null);
+        buzz(j, true);
+      }
+      majHud();
+      return;
+    }
+    // Récupération de l'ordonnance à porter au tableau
+    if (!o && cl && cl.ticketDispo) {
+      cl.ticketDispo = false;
+      poser(j, { k: 'ticket', r: cl.r, cl: cl });
+      Son.ticket(); buzz(j);
+      majCommandes();
+    }
+  }
+}
+
+/* On peut se pencher sur le tapis pour cueillir une boîte au passage,
+   ou en reposer une dessus si on est à portée. */
+function actionTapis(j) {
+  if (Math.abs(j.z - TAPIS_Z) > 1.15) return;
+  if (!j.objet) {
+    let best = null, bd = 1.1;
+    for (const e of Jeu.tapis) {
+      if (e.chute) continue;
+      const d = Math.hypot(e.x - j.x, TAPIS_Z - j.z);
+      if (d < bd) { bd = d; best = e; }
+    }
+    if (best) {
+      groupeMonde.remove(best.mesh);
+      Jeu.tapis.splice(Jeu.tapis.indexOf(best), 1);
+      poser(j, best.objet);
+      buzz(j);
+    }
+  } else if (j.objet.k === 'boite') {
+    const x = Math.max(TAPIS_X0, Math.min(TAPIS_X1 - 0.5, j.x));
+    if (placeSurTapis(x)) { deposerSurTapis(j.objet, x); poser(j, null); buzz(j); }
+  }
+}
+
+/* ====================== LANCER ET OBJETS AU SOL ======================
+   Le lancer transforme la géographie : avec un seul passage entre le
+   back et la salle, pouvoir envoyer une boîte par-dessus la cloison
+   change complètement la circulation.
+==================================================================== */
+function lancer(j, charge) {
+  const o = j.objet;
+  if (!o) return;
+  const t = Math.min(1, Math.max(0, (charge - REGL.seuilLancer) / (REGL.chargeMax - REGL.seuilLancer)));
+  const portee = REGL.porteeMin + t * (REGL.porteeMax - REGL.porteeMin);
+  const m = meshObjet(o);
+  m.position.set(j.x, 1.0, j.z);
+  groupeMonde.add(m);
+  Jeu.projectiles.push({
+    objet: o, mesh: m,
+    x: j.x, z: j.z, y: 1.0,
+    vx: j.dirX * portee / 0.85, vz: j.dirZ * portee / 0.85,
+    vy: 3.4, tourne: (Math.random() - 0.5) * 8
+  });
+  poser(j, null);
+  j.stats.lancers++;
+  Son.lancer();
+}
+
+function majProjectiles(dt) {
+  for (let i = Jeu.projectiles.length - 1; i >= 0; i--) {
+    const p = Jeu.projectiles[i];
+    p.vy -= 9.4 * dt;
+    p.x += p.vx * dt; p.z += p.vz * dt; p.y += p.vy * dt;
+    p.mesh.position.set(p.x, p.y, p.z);
+    p.mesh.rotation.y += p.tourne * dt;
+    p.mesh.rotation.x += p.tourne * dt * 0.6;
+
+    if (p.y <= 0.1) {
+      groupeMonde.remove(p.mesh);
+      Jeu.projectiles.splice(i, 1);
+      atterrir(p.objet, p.x, p.z);
+      Son.atterrit();
+    }
+  }
+}
+
+/* Un objet qui retombe cherche une case libre ; s'il tombe sur le tapis
+   il y est déposé, s'il tombe dans un mur il glisse vers la case libre
+   la plus proche plutôt que de disparaître. */
+function atterrir(o, x, z) {
+  if (caseA(Math.floor(x), Math.floor(z)) === '>' && o.k === 'boite') {
+    const px = Math.max(TAPIS_X0, Math.min(TAPIS_X1 - 0.5, x));
+    if (placeSurTapis(px)) { deposerSurTapis(o, px); return; }
+  }
+  let bx = x, bz = z;
+  if (estSolide(Math.floor(bx), Math.floor(bz))) {
+    let trouve = false;
+    for (let r = 1; r <= 4 && !trouve; r++) {
+      for (const [dx, dz] of [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]]) {
+        const nx = bx + dx * r * 0.6, nz = bz + dz * r * 0.6;
+        if (!estSolide(Math.floor(nx), Math.floor(nz))) { bx = nx; bz = nz; trouve = true; break; }
+      }
+    }
+    if (!trouve) return;   // rien de jouable autour, l'objet est perdu
+  }
+  const m = meshObjet(o);
+  m.position.set(bx, 0.04, bz);
+  groupeMonde.add(m);
+  Jeu.ausol.push({ objet: o, x: bx, z: bz, mesh: m });
+}
+
+function ramasserAuSol(j) {
+  let best = null, bd = 0.85;
+  for (const e of Jeu.ausol) {
+    const d = Math.hypot(e.x - j.x, e.z - j.z);
+    if (d < bd) { bd = d; best = e; }
+  }
+  if (!best) return false;
+  groupeMonde.remove(best.mesh);
+  Jeu.ausol.splice(Jeu.ausol.indexOf(best), 1);
+  poser(j, best.objet);
+  Son.prendre(); buzz(j);
+  return true;
+}
+
+/* Libellé renvoyé au téléphone : c'est lui qui rend l'action lisible */
+function libelleAction(j, p) {
+  const o = j.objet;
+  if (!p) {
+    if (!o && Jeu.ausol.some(e => Math.hypot(e.x - j.x, e.z - j.z) < 0.85)) return 'Ramasser';
+    if (Math.abs(j.z - TAPIS_Z) < 1.15) {
+      if (!o && Jeu.tapis.some(e => !e.chute && Math.hypot(e.x - j.x, TAPIS_Z - j.z) < 1.1)) return 'Attraper';
+      if (o && o.k === 'boite') return 'Poser sur le tapis';
+    }
+    if (Jeu.obstacles.some(ob => Math.hypot(ob.x - j.x, ob.z - j.z) < 1.15)) return 'Ranger le carton';
+    return o ? 'Maintenir pour lancer' : '';
+  }
+  switch (p.t) {
+    case 'etagere': return o ? '' : 'Cueillir ' + PLANTES[p.p].n;
+    case 'mortier': return !o && p.objet ? 'Prendre' : (o && o.k === 'plante' && !p.objet ? 'Poser au mortier' : '');
+    case 'alambic':
+      if (!o && p.sortie) return 'Prendre';
+      if (o && o.k === 'poudre' && !p.sortie && p.contenu.length < 3) return 'Verser';
+      if (!o && p.contenu.length) return 'Reprendre';
+      return '';
+    case 'etuve':
+      if (p.panne > 0) return 'En panne';
+      if (!o && p.objet) return p.etat === 'pret' ? 'Sortir la boîte' : 'Reprendre';
+      if (o && o.k === 'mixture' && !p.objet) return 'Enfourner';
+      return '';
+    case 'tableau': return o && o.k === 'ticket' ? 'Épingler' : '';
+    case 'passe':   return o && o.k === 'boite' ? 'Envoyer' : '';
+    case 'table':   return !o && p.pile.length ? 'Prendre la boîte' : (o && o.k === 'boite' ? 'Déposer' : '');
+    case 'poubelle':return o ? 'Jeter' : '';
+    case 'comptoir':
+      if (o && o.k === 'boite' && p.client) return p.client.revelee ? 'Servir' : 'Ordonnance non lue';
+      if (!o && p.client && p.client.ticketDispo) return 'Prendre l\'ordonnance';
+      return '';
+  }
+  return '';
+}
+
+/* ---------------------------- Tapis roulant ------------------------- */
+const TAPIS_X0 = 4.5, TAPIS_X1 = 11.5, TAPIS_Z = 8.5;
+function placeSurTapis(x) {
+  return !Jeu.tapis.some(e => Math.abs(e.x - x) < 0.72);
+}
+function deposerSurTapis(o, x) {
+  const px = x === undefined ? TAPIS_X0 : x;
+  const m = meshObjet(o);
+  m.position.set(px, 0.1, TAPIS_Z);
+  groupeMonde.add(m);
+  Jeu.tapis.push({ objet: o, x: px, mesh: m, chute: 0 });
+}
+const tablePoste = Jeu.postes.find(p => p.t === 'table');
+function empiler(p, o) {
+  const m = meshObjet(o);
+  groupeMonde.add(m);
+  p.pile.push({ objet: o, mesh: m });
+  rangerPile(p);
+}
+function rangerPile(p) {
+  p.pile.forEach((e, i) => e.mesh.position.set(p.centre.x, 0.92 + i * 0.28, p.centre.z));
+}
+
+/* --------------------------- Texte flottant ------------------------- */
+const flottants = [];
+function flotter(pos, texte, couleur) {
+  const sp = etiquette(texte, couleur, 1.1);
+  sp.position.set(pos.x, 1.9, pos.z);
+  groupeMonde.add(sp);
+  flottants.push({ sp: sp, t: 0 });
+}
+
+/* ============================== BOUCLE ============================== */
+let dernier = performance.now();
+
+function boucle() {
+  requestAnimationFrame(boucle);
+  const now = performance.now();
+  let dt = (now - dernier) / 1000;
+  dernier = now;
+  if (dt > 0.1) dt = 0.1;
+
+  lireClavier();
+  majJoueurs(dt);
+
+  if (Jeu.phase === 'jeu') {
+    majPostes(dt);
+    majTapis(dt);
+    majProjectiles(dt);
+    majClients(dt);
+    majEvenements(dt);
+    Jeu.temps -= dt;
+    // Décompte sonore des dix dernières secondes
+    const s = Math.ceil(Jeu.temps);
+    if (s <= 10 && s !== Jeu.dernierTic && s > 0) { Jeu.dernierTic = s; Son.tic(); }
+    if (Jeu.temps <= 0) { Jeu.temps = 0; terminer(); }
+    majHud();
+  }
+
+  // Surbrillance : on éteint tout, puis on rallume les postes visés
+  Jeu.postes.forEach(p => { p.surbrillance.visible = false; });
+  Jeu.joueurs.forEach(j => {
+    if (j.cible && !j.deconnecte) {
+      const s = j.cible.surbrillance;
+      s.visible = true;
+      s.material.color.set(j.couleur);
+      s.material.opacity = 0.55 + Math.sin(performance.now() / 190) * 0.25;
+    }
+  });
+
+  // Textes flottants
+  for (let i = flottants.length - 1; i >= 0; i--) {
+    const f = flottants[i];
+    f.t += dt;
+    f.sp.position.y += dt * 0.9;
+    f.sp.material.opacity = Math.max(0, 1 - f.t / 1.5);
+    if (f.t > 1.5) { groupeMonde.remove(f.sp); flottants.splice(i, 1); }
+  }
+
+  // Les jauges sont des sprites : elles s'orientent d'elles-mêmes.
+
+  renderer.render(scene, camera);
+}
+
+function majJoueurs(dt) {
+  Jeu.joueurs.forEach(j => {
+    // Un joueur déconnecté reste sur place, grisé, en attendant son retour
+    if (j.deconnecte) {
+      j.ax = 0; j.az = 0; j.a = 0; j.b = 0;
+      j.halo.material.opacity = 0.12;
+      j.jaugeCharge.visible = false;
+      j.cible = null;
+      animerHumanoide(j.mesh, 0, 0, !!j.objet);
+      return;
+    }
+    // Direction
+    let ax = j.ax, az = j.az;
+    const n = Math.hypot(ax, az);
+    if (n > 1) { ax /= n; az /= n; }
+    if (n > 0.08) { j.dirX = ax / Math.max(n, 0.001); j.dirZ = az / Math.max(n, 0.001); }
+
+    if (Jeu.phase === 'jeu') {
+      let vx = ax * REGL.vitesse * dt;
+      let vz = az * REGL.vitesse * dt;
+      if (caseA(Math.floor(j.x), Math.floor(j.z)) === '>') vx += REGL.tapisVitesse * REGL.poussetapis * dt;
+      deplacer(j, vx, vz);
+      j.balancement += Math.min(n, 1) * dt * 11;
+    }
+
+    j.mesh.position.set(j.x, Math.abs(Math.sin(j.balancement)) * 0.035, j.z);
+    j.mesh.rotation.y = Math.atan2(j.dirX, j.dirZ);
+    animerHumanoide(j.mesh, Math.min(n, 1), j.balancement, !!j.objet);
+
+    // Poste visé
+    const cible = Jeu.phase === 'jeu' ? posteVise(j) : null;
+    j.cible = cible;
+    j.halo.material.opacity = cible ? 0.9 : 0.35;
+
+    /* Bouton A : appui court = agir, maintien = charger un lancer.
+       On ne déclenche l'action qu'au relâchement pour pouvoir
+       distinguer les deux sans latence perçue. */
+    if (Jeu.phase === 'jeu') {
+      if (j.a && !j.aPrec) { j.charge = 0; j.chargeSonne = false; }
+      if (j.a) {
+        j.charge += dt;
+        if (j.objet && j.charge > REGL.seuilLancer && !j.chargeSonne) { Son.charge(); j.chargeSonne = true; }
+      }
+      if (!j.a && j.aPrec) {
+        /* Priorité à l'action du poste visé. Sinon enfourner une mixture
+           exigeait un appui plus court que le seuil de lancer, et l'objet
+           partait au sol au lieu d'entrer dans l'étuve. On ne lance donc
+           que si aucune action n'est possible là où on se trouve. */
+        const action = libelleAction(j, cible);
+        if (cible && action) {
+          actionA(j, cible);
+        } else if (rangerObstacle(j)) {
+          /* rangé */
+        } else if (j.objet && j.charge >= REGL.seuilLancer) {
+          lancer(j, j.charge);
+        } else if (!ramasserAuSol(j)) {
+          if (cible) actionA(j, cible);
+          else actionTapis(j);
+        }
+        j.charge = 0;
+      }
+      // Jauge de charge : uniquement quand le lancer est réellement possible
+      const peutLancer = j.objet && !(cible && libelleAction(j, cible));
+      const charge = (j.a && peutLancer && j.charge > REGL.seuilLancer)
+        ? Math.min(1, (j.charge - REGL.seuilLancer) / (REGL.chargeMax - REGL.seuilLancer)) : 0;
+      j.jaugeCharge.visible = charge > 0;
+      if (charge > 0) majJauge(j.jaugeCharge, charge, 0xf0b429);
+
+      // Libellé d'action renvoyé au téléphone
+      const lib = libelleAction(j, cible);
+      if (lib !== j.dernierLib) { j.dernierLib = lib; versPad(j.id, { t: 'action', txt: lib }); }
+    }
+    j.aPrec = j.a;
+  });
+}
+
+function deplacer(j, vx, vz) {
+  const r = REGL.rayonJoueur;
+  // Axe X
+  let nx = j.x + vx;
+  if (!bloque(nx, j.z, r)) j.x = nx;
+  // Axe Z
+  let nz = j.z + vz;
+  if (!bloque(j.x, nz, r)) j.z = nz;
+  // Séparation douce entre joueurs
+  Jeu.joueurs.forEach(k => {
+    if (k === j) return;
+    const dx = j.x - k.x, dz = j.z - k.z;
+    const d = Math.hypot(dx, dz);
+    if (d > 0.001 && d < 0.62) {
+      const pousse = (0.62 - d) * 0.5;
+      const px = dx / d * pousse, pz = dz / d * pousse;
+      if (!bloque(j.x + px, j.z, r)) j.x += px;
+      if (!bloque(j.x, j.z + pz, r)) j.z += pz;
+    }
+  });
+}
+function bloque(x, z, r) {
+  for (const [ox, oz] of [[-r, -r], [r, -r], [-r, r], [r, r]]) {
+    if (estSolide(Math.floor(x + ox), Math.floor(z + oz))) return true;
+  }
+  // Cartons de livraison : obstacles dynamiques
+  for (const ob of Jeu.obstacles) {
+    if (Math.hypot(x - ob.x, z - ob.z) < ob.r + r) return true;
+  }
+  return false;
+}
+
+function majPostes(dt) {
+  // Qui maintient B sur quoi ?
+  const aide = new Map();
+  Jeu.joueurs.forEach(j => {
+    if (!j.b || !j.cible) return;
+    aide.set(j.cible, (aide.get(j.cible) || 0) + 1);
+  });
+
+  Jeu.postes.forEach(p => {
+    p.aRendre = [];
+
+    if (p.t === 'mortier') {
+      if (p.objet && p.objet.k === 'plante') {
+        const mains = aide.get(p) || 0;
+        if (mains) {
+          p.prog += dt * mains / REGL.broyage;
+          p.tic = (p.tic || 0) + dt;
+          if (p.tic > 0.13) { p.tic = 0; Son.pilon(); }
+          if (p.prog >= 1) {
+            p.objet = { k: 'poudre', p: p.objet.p };
+            p.prog = 0;
+            flotter(p.centre, 'Broyé', '#e8f0ea');
+            Son.pret();
+          }
+        }
+        p.jauge.visible = true;
+        majJauge(p.jauge, p.prog, 0x3fbf8f);
+        if (p.mesh && p.mesh.userData.pilon && mains) {
+          const t = performance.now() / 1000;
+          p.mesh.userData.pilon.position.y = 1.13 + Math.abs(Math.sin(t * 11)) * 0.13;
+          p.mesh.userData.pilon.rotation.z = -0.55 + Math.sin(t * 11) * 0.22;
+        }
+      } else {
+        p.prog = 0;
+        p.jauge.visible = false;
+        if (p.mesh && p.mesh.userData.pilon) {
+          p.mesh.userData.pilon.position.y = 1.13;
+          p.mesh.userData.pilon.rotation.z = -0.55;
+        }
+      }
+      if (p.objet) poserVisuel(p, p.objet, 0);
+
+    } else if (p.t === 'alambic') {
+      if (!p.sortie && p.contenu.length >= 2) {
+        const mains = aide.get(p) || 0;
+        if (mains) {
+          p.prog += dt * mains / REGL.melange;
+          p.tic = (p.tic || 0) + dt;
+          if (p.tic > 0.2) { p.tic = 0; Son.bulle(); }
+          if (p.prog >= 1) {
+            const cle = p.contenu.slice().sort().join('-');
+            const idx = CLE_RECETTE[cle];
+            p.sortie = (idx === undefined) ? { k: 'ratee' } : { k: 'mixture', r: idx };
+            p.contenu = [];
+            p.prog = 0;
+            flotter(p.centre, idx === undefined ? 'Raté' : RECETTES[idx].n,
+                    idx === undefined ? '#e0523c' : '#3fbf8f');
+            if (idx === undefined) Son.rate(); else Son.pret();
+          }
+        }
+        p.jauge.visible = true;
+        majJauge(p.jauge, p.prog, 0xf0b429);
+      } else {
+        p.prog = 0;
+        p.jauge.visible = false;
+      }
+      // Le ballon se remplit et se teinte selon ce qu'on y a versé
+      if (p.mesh) {
+        const liq = p.mesh.userData.liquide, fl = p.mesh.userData.flamme;
+        if (liq) {
+          const n = p.contenu.length;
+          liq.visible = n > 0 || !!p.sortie;
+          if (p.sortie) {
+            liq.material.color.setHex(couleurObjet(p.sortie));
+            liq.scale.setScalar(1);
+          } else if (n) {
+            // Moyenne des teintes des poudres versées
+            const c = new THREE.Color(0, 0, 0);
+            p.contenu.forEach(pl => c.add(new THREE.Color(PLANTES[pl].c)));
+            c.multiplyScalar(1 / n);
+            liq.material.color.copy(c);
+            liq.scale.setScalar(0.55 + n * 0.15);
+          }
+        }
+        if (fl) {
+          const chauffe = (aide.get(p) || 0) > 0;
+          fl.scale.setScalar(chauffe ? 1 + Math.sin(performance.now() / 60) * 0.28 : 0.55);
+          fl.material.color.setHex(chauffe ? 0xffb547 : 0x5fb8ff);
+        }
+      }
+      if (p.sortie) poserVisuel(p, p.sortie, 0);
+      else p.contenu.forEach((pl, i) => poserVisuel(p, { k: 'poudre', p: pl }, i));
+
+    } else if (p.t === 'etuve') {
+      if (p.objet && p.panne <= 0) {
+        p.t0 += dt;
+        if (p.etat === 'cuisson' && p.t0 >= REGL.cuisson) {
+          p.etat = 'pret'; buzzTous(); Son.pret(); flotter(p.centre, 'Prêt', '#f0b429');
+        } else if (p.etat === 'pret' && p.t0 >= REGL.cuisson + REGL.fenetrePrete) {
+          p.etat = 'brule';
+          flotter(p.centre, 'Ça brûle !', '#e0523c');
+          Son.brule();
+        }
+        p.jauge.visible = true;
+        if (p.etat === 'cuisson') {
+          majJauge(p.jauge, p.t0 / REGL.cuisson, 0x4bb4ff);
+          p.lampe.material.color.setHex(0x4bb4ff);
+        } else if (p.etat === 'pret') {
+          const reste = 1 - (p.t0 - REGL.cuisson) / REGL.fenetrePrete;
+          majJauge(p.jauge, reste, reste < 0.35 ? 0xe0523c : 0xf0b429);
+          p.lampe.material.color.setHex(Math.floor(p.t0 * 6) % 2 ? 0xf0b429 : 0x3a2f14);
+        } else {
+          majJauge(p.jauge, 1, 0x3a2f2a);
+          p.lampe.material.color.setHex(0xe0523c);
+        }
+        if (p.mesh && p.mesh.userData.vitre) {
+          p.mesh.userData.vitre.material.color.setHex(
+            p.etat === 'brule' ? 0x3a1410 : (p.etat === 'pret' ? 0x6b4a12 : 0x1f3a44)
+          );
+        }
+        poserVisuel(p, p.etat === 'brule' ? { k: 'brulee' } : p.objet, 0);
+      } else {
+        p.jauge.visible = false;
+        p.lampe.material.color.setHex(0x30463c);
+        if (p.mesh && p.mesh.userData.vitre) p.mesh.userData.vitre.material.color.setHex(0x1a2b26);
+      }
+    }
+
+    rendreVisuels(p);
+  });
+}
+
+/* On accumule les objets à afficher, et on ne reconstruit les meshes
+   que si l'état du poste a réellement changé. */
+function poserVisuel(p, o) { p.aRendre.push(o); }
+
+function signature(liste) {
+  return liste.map(o => o.k + (o.p === undefined ? '' : o.p) + (o.r === undefined ? '' : 'r' + o.r)).join('|');
+}
+function rendreVisuels(p) {
+  const liste = p.aRendre || [];
+  const sig = signature(liste);
+  if (sig === p.sig) return;
+  p.sig = sig;
+  while (p.visuels.children.length) p.visuels.remove(p.visuels.children[0]);
+  liste.forEach((o, i) => {
+    const m = meshObjet(o);
+    m.position.set(p.centre.x + (i - (liste.length - 1) / 2) * 0.26, 1.25, p.centre.z);
+    m.scale.setScalar(0.85);
+    p.visuels.add(m);
+  });
+}
+function buzzTous() { Jeu.joueurs.forEach(j => buzz(j)); }
+
+function majTapis(dt) {
+  for (let i = Jeu.tapis.length - 1; i >= 0; i--) {
+    const e = Jeu.tapis[i];
+    if (!e.chute) {
+      // Blocage si l'objet devant n'a pas avancé
+      let limite = TAPIS_X1;
+      for (const autre of Jeu.tapis) {
+        if (autre !== e && !autre.chute && autre.x > e.x) limite = Math.min(limite, autre.x - 0.72);
+      }
+      e.x = Math.min(limite, e.x + REGL.tapisVitesse * dt);
+      e.mesh.position.set(e.x, 0.1, TAPIS_Z);
+    }
+
+    // Arrivée en bout de course
+    if (e.x >= TAPIS_X1 - 0.01) {
+      if (tablePoste && tablePoste.pile.length < REGL.pileTable) {
+        groupeMonde.remove(e.mesh);
+        Jeu.tapis.splice(i, 1);
+        empiler(tablePoste, e.objet);
+      } else if (!e.chute) {
+        // Plus de place : la boîte bascule au sol et se perd
+        e.chute = 0.01;
+      }
+    }
+    if (e.chute) {
+      e.chute += dt;
+      e.mesh.position.y = Math.max(0, 0.1 - e.chute * e.chute * 3.5);
+      e.mesh.rotation.z += dt * 6;
+      e.mesh.position.x = e.x + e.chute * 0.9;
+      if (e.chute > 0.55) {
+        groupeMonde.remove(e.mesh);
+        Jeu.tapis.splice(i, 1);
+        Jeu.score = Math.max(0, Jeu.score - REGL.penaliteChute);
+        Jeu.rates++; Jeu.combo = 0; Jeu.dernierServi = -1;
+        flotter(tablePoste.centre, 'Boîte au sol', '#e0523c');
+        Son.chute();
+        buzzTous();
+      }
+    }
+  }
+}
+
+function majClients(dt) {
+  Jeu.clients.forEach(cl => {
+    cl.reste -= dt;
+    const r = cl.reste / cl.total;
+    majJauge(cl.jauge, r, r < 0.25 ? 0xe0523c : (r < 0.5 ? 0xf0b429 : 0x3fbf8f));
+    // Plus l'attente dure, plus le client piétine et se balance
+    const nervosite = r > 0.6 ? 0.12 : (r > 0.3 ? 0.4 : 1);
+    cl.phase += dt * (2.2 + nervosite * 7);
+    animerHumanoide(cl.mesh, nervosite, cl.phase, false);
+    cl.mesh.rotation.y = Math.PI + Math.sin(cl.phase * 0.5) * 0.22 * nervosite;
+    cl.mesh.position.y = Math.abs(Math.sin(cl.phase)) * 0.03 * nervosite;
+    cl.carte.visible = !cl.revelee;
+    cl.carteRevelee.visible = cl.revelee;
+    if (r < 0.25 && !cl.plainte) { cl.plainte = true; Son.impatient(); }
+  });
+  for (let i = Jeu.clients.length - 1; i >= 0; i--) {
+    const cl = Jeu.clients[i];
+    if (cl.reste <= 0) {
+      Jeu.score = Math.max(0, Jeu.score - 25);
+      Jeu.rates++; Jeu.combo = 0; Jeu.dernierServi = -1;
+      flotter(cl.poste.centre, 'Parti fâché', '#e0523c');
+      Son.rate();
+      retirerClient(cl);
+    }
+  }
+
+  Jeu.prochainClient -= dt;
+  if (Jeu.prochainClient <= 0 && Jeu.clients.length < REGL.clientsMax) {
+    creerClient();
+    const avancement = 1 - Jeu.temps / REGL.duree;
+    const rush = Jeu.rushReste > 0 ? 0.5 : 1;   // coup de feu : deux fois plus de monde
+    Jeu.prochainClient = (13 - avancement * 6 + Math.random() * 4) * rush;
+  }
+}
+
+/* ========================= ÉVÉNEMENTS DE SERVICE =====================
+   Trois perturbations, tirées au sort, pour que deux services ne se
+   ressemblent pas et que l'équipe doive se réorganiser en cours de route.
+==================================================================== */
+function declencherEvenement() {
+  const choix = [];
+  const etuves = Jeu.postes.filter(p => p.t === 'etuve' && p.panne <= 0);
+  if (etuves.length > 1) choix.push('panne');
+  if (Jeu.obstacles.length < 2) choix.push('livraison');
+  choix.push('rush');
+  const type = choix[Math.floor(Math.random() * choix.length)];
+
+  if (type === 'panne') {
+    const e = etuves[Math.floor(Math.random() * etuves.length)];
+    e.panne = REGL.dureePanne;
+    if (e.objet) { e.objet = null; e.etat = 'vide'; e.t0 = 0; }
+    annoncer('Étuve en panne', '#e0523c');
+    Son.panne();
+
+  } else if (type === 'livraison') {
+    /* Un carton tombe et gêne la circulation, mais jamais dans le goulet
+       de la colonne 9 : un carton dans le seul passage couperait la
+       pharmacie en deux et rendrait la partie irrécupérable.
+       Ces cinq points ont été validés par parcours de la carte. */
+    const points = [[2.5, 9.5], [7.5, 9.5], [11.5, 9.5], [2.5, 4.5], [7.5, 2.5]];
+    const libres = points.filter(p =>
+      !Jeu.obstacles.some(o => Math.hypot(o.x - p[0], o.z - p[1]) < 1.2) &&
+      !Array.from(Jeu.joueurs.values()).some(j => Math.hypot(j.x - p[0], j.z - p[1]) < 0.9));
+    if (!libres.length) { Jeu.rushReste = REGL.dureeRush; annoncer('Coup de feu', '#4bb4ff'); Son.annonce(); return; }
+    const pt = libres[Math.floor(Math.random() * libres.length)];
+    const m = new THREE.Group();
+    const carton = boite(0.72, 0.62, 0.72, 0x9a7748, 0.95);
+    carton.position.y = 0.31;
+    const ruban = boite(0.74, 0.09, 0.1, 0xc9b283, 0.9);
+    ruban.position.y = 0.44;
+    m.add(carton, ruban);
+    m.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    m.position.set(pt[0], 0, pt[1]);
+    m.rotation.y = Math.random() * 0.6 - 0.3;
+    groupeMonde.add(m);
+    Jeu.obstacles.push({ x: pt[0], z: pt[1], r: 0.42, mesh: m });
+    annoncer('Livraison à ranger', '#f0b429');
+    Son.annonce();
+
+  } else {
+    Jeu.rushReste = REGL.dureeRush;
+    annoncer('Coup de feu', '#4bb4ff');
+    Son.annonce();
+  }
+}
+
+function rangerObstacle(j) {
+  for (let i = 0; i < Jeu.obstacles.length; i++) {
+    const ob = Jeu.obstacles[i];
+    if (Math.hypot(ob.x - j.x, ob.z - j.z) < 1.15) {
+      groupeMonde.remove(ob.mesh);
+      Jeu.obstacles.splice(i, 1);
+      Jeu.score += 15;
+      flotter(new THREE.Vector3(ob.x, 0, ob.z), 'Rangé +15', '#3fbf8f');
+      Son.poser(); buzz(j);
+      return true;
+    }
+  }
+  return false;
+}
+
+function majEvenements(dt) {
+  if (Jeu.rushReste > 0) {
+    Jeu.rushReste -= dt;
+    if (Jeu.rushReste <= 0) { Jeu.rushReste = 0; annoncer('Le calme revient', '#3fbf8f'); }
+  }
+  Jeu.postes.forEach(p => {
+    if (p.t === 'etuve' && p.panne > 0) {
+      p.panne -= dt;
+      p.lampe.material.color.setHex(Math.floor(performance.now() / 220) % 2 ? 0xe0523c : 0x2a1a18);
+      if (p.panne <= 0) { p.panne = 0; flotter(p.centre, 'Réparée', '#3fbf8f'); Son.pret(); }
+    }
+  });
+  Jeu.prochainEvenement -= dt;
+  if (Jeu.prochainEvenement <= 0 && Jeu.temps > 20) {
+    declencherEvenement();
+    Jeu.prochainEvenement = REGL.ecartEvenement * (0.75 + Math.random() * 0.5);
+  }
+}
+
+/* Bandeau d'annonce */
+let annonceTimer = null;
+function annoncer(texte, couleur) {
+  const el = document.getElementById('annonce');
+  el.textContent = texte;
+  el.style.color = couleur;
+  el.classList.add('visible');
+  clearTimeout(annonceTimer);
+  annonceTimer = setTimeout(() => el.classList.remove('visible'), 2600);
+}
+
+/* =============================== HUD =============================== */
+const $chrono = document.getElementById('chrono');
+const $score = document.getElementById('score');
+const $equipe = document.getElementById('equipe');
+const $commandes = document.getElementById('commandes');
+const $voile = document.getElementById('voile');
+const $code = document.getElementById('code');
+const $lien = document.getElementById('lien');
+const $listeJ = document.getElementById('liste');
+const $consigne = document.getElementById('consigne');
+
+$code.textContent = Jeu.salon;
+
+/* Lien de la manette + QR code à scanner, comme sur Pharma-Kart */
+const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+let urlManette = base + 'controller.html?room=' + Jeu.salon;
+if (params.get('relay')) urlManette += '&relay=' + encodeURIComponent(params.get('relay'));
+
+$lien.innerHTML = 'Scanne le code, ou va sur<br><b>' + urlManette + '</b>';
+
+(function dessinerQR() {
+  const cv = document.getElementById('qr');
+  try {
+    const q = qrEncoder()(urlManette);
+    const marge = 4, n = q.taille, cote = n + marge * 2, ech = 8;
+    cv.width = cote * ech; cv.height = cote * ech;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#f4f7f4';
+    g.fillRect(0, 0, cv.width, cv.height);
+    g.fillStyle = '#0b1310';
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        if (q.modules[y][x]) g.fillRect((x + marge) * ech, (y + marge) * ech, ech, ech);
+      }
+    }
+  } catch (e) {
+    // Si l'URL est trop longue pour un QR, on retombe sur le lien écrit
+    document.getElementById('cadreQR').style.display = 'none';
+  }
+})();
+
+const $combo = document.getElementById('combo');
+const $barreObj = document.querySelector('#barreObj i');
+const $prochainObj = document.getElementById('prochainObj');
+
+function majHud() {
+  const m = Math.floor(Jeu.temps / 60), s = Math.floor(Jeu.temps % 60);
+  $chrono.textContent = m + ':' + String(s).padStart(2, '0');
+  $chrono.classList.toggle('urgent', Jeu.temps < 30);
+  $score.textContent = Jeu.score;
+
+  $combo.textContent = 'série x' + (1 + Jeu.combo);
+  $combo.classList.toggle('on', Jeu.combo > 0);
+
+  const max = OBJECTIFS[OBJECTIFS.length - 1].s;
+  $barreObj.style.width = Math.min(100, Jeu.score / max * 100) + '%';
+  const suivant = OBJECTIFS.find(o => Jeu.score < o.s);
+  if (suivant) {
+    $prochainObj.textContent = suivant.n + ' ' + suivant.s;
+    $barreObj.style.background = suivant.c;
+  } else {
+    $prochainObj.textContent = 'Or atteint';
+    $barreObj.style.background = OBJECTIFS[2].c;
+  }
+}
+
+/* Crans des paliers sur la jauge d'objectif */
+(function cransObjectif() {
+  const cont = document.getElementById('barreObj');
+  const max = OBJECTIFS[OBJECTIFS.length - 1].s;
+  OBJECTIFS.slice(0, -1).forEach(o => {
+    const c = document.createElement('span');
+    c.className = 'cran';
+    c.style.left = (o.s / max * 100) + '%';
+    cont.appendChild(c);
+  });
+})();
+
+function vignette(j, cls) {
+  if (j.photo) {
+    return '<img class="avatar ' + cls + '" style="border-color:' + j.couleur + '" src="' + j.photo + '">';
+  }
+  return '<span class="avatar ' + cls + '" style="border-color:' + j.couleur +
+         ';background:' + j.couleur + ';color:#07100c">' + (j.nom[0] || '?').toUpperCase() + '</span>';
+}
+
+function majEquipe() {
+  $equipe.innerHTML = '';
+  $listeJ.innerHTML = '';
+  Array.from(Jeu.joueurs.values()).sort((a, b) => a.place - b.place).forEach(j => {
+    const d = document.createElement('div');
+    d.className = 'jeton' + (j.deconnecte ? ' absent' : '');
+    d.innerHTML = vignette(j, '') + j.nom + (j.deconnecte ? ' (hors ligne)' : '');
+    $equipe.appendChild(d);
+
+    const c = document.createElement('div');
+    c.className = 'carteJ';
+    c.innerHTML = vignette(j, '') + j.nom;
+    $listeJ.appendChild(c);
+  });
+  if (Jeu.phase === 'lobby') {
+    const n = Jeu.joueurs.size;
+    $consigne.textContent = n ? 'Entrée pour ouvrir la pharmacie · ' + n + ' en blouse' :
+      'En attente des manettes · T pour un joueur clavier';
+    $consigne.classList.toggle('pret', n > 0);
+  }
+}
+
+function majCommandes() {
+  $commandes.innerHTML = '';
+  Jeu.clients.forEach(cl => {
+    const r = RECETTES[cl.r];
+    const d = document.createElement('div');
+    d.className = 'cmd';
+    d.style.borderLeftColor = cl.revelee ? '#' + r.c.toString(16).padStart(6, '0') : '#4a5b53';
+    const titre = cl.revelee ? r.n : 'Ordonnance non lue';
+    const ing = cl.revelee ? r.ing.map(i => PLANTES[i].n).join(' + ')
+      : (cl.ticketDispo ? 'À prendre au comptoir' : 'En route vers le tableau');
+    d.innerHTML = '<div class="nom">' + titre + '</div>' +
+      '<div class="ing">' + ing + '</div>' +
+      '<div class="jauge"><i style="width:100%"></i></div>';
+    cl.dom = d.querySelector('i');
+    cl.domJauge = d.querySelector('.jauge');
+    $commandes.appendChild(d);
+  });
+}
+setInterval(() => {
+  Jeu.clients.forEach(cl => {
+    if (!cl.dom) return;
+    const r = Math.max(0, cl.reste / cl.total);
+    cl.dom.style.width = (r * 100) + '%';
+    cl.domJauge.classList.toggle('chaud', r < 0.3);
+  });
+}, 120);
+
+/* ============================ DÉROULEMENT =========================== */
+function demarrer() {
+  if (Jeu.phase === 'jeu') return;
+  if (!Jeu.joueurs.size) return;
+  Son.reprendre();
+  // Remise à zéro
+  Jeu.clients.slice().forEach(retirerClient);
+  Jeu.tapis.forEach(e => groupeMonde.remove(e.mesh));
+  Jeu.tapis = [];
+  Jeu.projectiles.forEach(e => groupeMonde.remove(e.mesh));
+  Jeu.projectiles = [];
+  Jeu.ausol.forEach(e => groupeMonde.remove(e.mesh));
+  Jeu.ausol = [];
+  Jeu.obstacles.forEach(e => groupeMonde.remove(e.mesh));
+  Jeu.obstacles = [];
+  Jeu.postes.forEach(p => {
+    if (p.t === 'mortier') { p.objet = null; p.prog = 0; }
+    if (p.t === 'alambic') { p.contenu = []; p.sortie = null; p.prog = 0; }
+    if (p.t === 'etuve') { p.objet = null; p.etat = 'vide'; p.t0 = 0; p.panne = 0; }
+    if (p.t === 'table') { p.pile.forEach(e => groupeMonde.remove(e.mesh)); p.pile = []; }
+    p.sig = null;
+  });
+  Jeu.joueurs.forEach(j => {
+    poser(j, null);
+    const sp = SPAWNS[j.place % 4];
+    j.x = sp[0]; j.z = sp[1];
+    j.charge = 0; j.dernierLib = '';
+    j.stats = { servis: 0, erreurs: 0, brules: 0, lancers: 0 };
+  });
+  Jeu.score = 0; Jeu.servis = 0; Jeu.rates = 0;
+  Jeu.combo = 0; Jeu.dernierServi = -1;
+  Jeu.temps = REGL.duree;
+  Jeu.prochainClient = 2.5;
+  Jeu.prochainEvenement = REGL.premierEvenement;
+  Jeu.rushReste = 0;
+  Jeu.dernierTic = -1;
+  Jeu.phase = 'jeu';
+  $voile.style.display = 'none';
+  Son.depart();
+  majHud();
+}
+
+function terminer() {
+  Jeu.phase = 'fin';
+  Son.fin();
+
+  // Médaille obtenue
+  let medaille = null;
+  OBJECTIFS.forEach(o => { if (Jeu.score >= o.s) medaille = o; });
+
+  const joueurs = Array.from(Jeu.joueurs.values())
+    .sort((a, b) => (b.stats.servis - a.stats.servis) || (a.stats.erreurs - b.stats.erreurs));
+
+  const fiches = joueurs.map((j, i) => {
+    const couronne = i === 0 && joueurs.length > 1 && j.stats.servis > 0 ? ' 🥇' : '';
+    return '<div class="fiche" style="border-top-color:' + j.couleur + '">' +
+      '<div class="tete">' + vignette(j, '') + j.nom + couronne + '</div>' +
+      '<div class="stat"><span>Clients servis</span><b>' + j.stats.servis + '</b></div>' +
+      '<div class="stat"><span>Erreurs de boîte</span><b>' + j.stats.erreurs + '</b></div>' +
+      '<div class="stat"><span>Lancers</span><b>' + j.stats.lancers + '</b></div>' +
+      '</div>';
+  }).join('');
+
+  $voile.innerHTML =
+    '<h1>Service terminé</h1>' +
+    '<div id="bilan">' + Jeu.score + '</div>' +
+    '<div id="medaille" style="color:' + (medaille ? medaille.c : '#7d8f86') + '">' +
+      (medaille ? medaille.n : 'Sous le bronze') + '</div>' +
+    '<div id="mention">' + Jeu.servis + ' clients servis · ' + Jeu.rates + ' ratés' +
+      (medaille && medaille.n === 'Or' ? '' :
+        ' · ' + (OBJECTIFS.find(o => Jeu.score < o.s).s - Jeu.score) + ' points pour le palier suivant') +
+    '</div>' +
+    '<div id="podium">' + fiches + '</div>' +
+    '<div id="consigne" class="pret">Entrée pour relancer un service</div>';
+  $voile.style.display = 'flex';
+}
+
+majEquipe();
+majHud();
+boucle();
+</script>
+</body>
+</html>

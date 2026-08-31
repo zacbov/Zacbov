@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d1512">
+<title>Pharma-Cook — Manette</title>
+<style>
+  :root{
+    --vert:#3fbf8f; --vert-sombre:#0d1512; --creme:#e8f0ea;
+    --ambre:#f0b429; --rouge:#e0523c;
+    --moi:#3fbf8f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none;touch-action:none}
+  body{
+    background:var(--vert-sombre);
+    color:var(--creme);
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    user-select:none;-webkit-user-select:none;
+    display:flex;flex-direction:column;
+  }
+
+  /* --- Écran de connexion --- */
+  #connexion{
+    position:absolute;inset:0;z-index:20;
+    display:flex;flex-direction:column;justify-content:center;
+    padding:28px;gap:18px;
+    background:var(--vert-sombre);
+  }
+  #connexion h1{
+    font-size:13px;letter-spacing:.34em;text-transform:uppercase;
+    font-weight:500;color:var(--moi);
+  }
+  #connexion p{font-size:13px;line-height:1.6;color:#7d8f86}
+  .champ{display:flex;flex-direction:column;gap:7px}
+  .champ label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#7d8f86}
+  input{
+    background:#141f1b;border:1px solid #24352e;color:var(--creme);
+    font-family:inherit;font-size:22px;padding:14px 16px;border-radius:10px;
+    letter-spacing:.18em;text-transform:uppercase;width:100%;
+  }
+  input#nom{font-size:16px;letter-spacing:.06em;text-transform:none}
+  input:focus{outline:none;border-color:var(--moi)}
+  button.principal{
+    background:var(--moi);color:#07100c;border:0;border-radius:10px;
+    font-family:inherit;font-size:14px;font-weight:700;letter-spacing:.16em;
+    text-transform:uppercase;padding:17px;width:100%;
+  }
+  button.principal:disabled{opacity:.35}
+  button.secondaire{
+    background:#141f1b;border:1px solid #24352e;color:var(--creme);
+    font-family:inherit;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+    padding:14px 16px;border-radius:10px;flex:1;
+  }
+  #lignephoto{display:flex;align-items:center;gap:14px}
+  #apercu{
+    width:64px;height:64px;border-radius:50%;flex:0 0 auto;
+    background:#141f1b;border:2px solid var(--moi);color:#3d4b45;
+    display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;
+    background-size:cover;background-position:center;overflow:hidden;
+  }
+  #apercu.rempli{color:transparent}
+  /* Vignette dans le bandeau une fois en jeu */
+  #pastille{
+    width:30px;height:30px;border-radius:50%;background:var(--moi);flex:0 0 auto;
+    background-size:cover;background-position:center;border:2px solid var(--moi);
+  }
+  #etat{font-size:11px;letter-spacing:.1em;color:var(--ambre);min-height:16px}
+
+  /* --- Bandeau du haut --- */
+  #bandeau{
+    flex:0 0 auto;display:flex;align-items:center;gap:10px;
+    padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;
+    border-bottom:1px solid #1c2a24;
+  }
+  #monNom{font-size:12px;letter-spacing:.1em;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #porte{
+    font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    color:#07100c;background:var(--ambre);padding:5px 9px;border-radius:5px;
+    max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  #porte.vide{background:#1c2a24;color:#5e6f67}
+
+  /* --- Zone de jeu --- */
+  #zone{flex:1;position:relative}
+
+  #stick{
+    position:absolute;left:5%;bottom:11%;
+    width:47vw;height:47vw;max-width:230px;max-height:230px;
+    border-radius:50%;background:#111c18;border:1px solid #22322b;
+  }
+  #pouce{
+    position:absolute;left:50%;top:50%;width:38%;height:38%;
+    margin:0;border-radius:50%;background:var(--moi);
+    transform:translate(-50%,-50%);opacity:.85;
+    box-shadow:0 0 24px rgba(63,191,143,.32);
+  }
+
+  .bouton{
+    position:absolute;border-radius:50%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;font-weight:700;border:2px solid transparent;
+  }
+  .bouton .lettre{font-size:26px;line-height:1}
+  .bouton .role{font-size:9px;letter-spacing:.09em;text-transform:uppercase;opacity:.72}
+  #btA{
+    right:6%;bottom:23%;
+    width:33vw;height:33vw;max-width:158px;max-height:158px;
+    background:#1d3a2e;border-color:var(--moi);color:var(--moi);
+  }
+  #btB{
+    right:41%;bottom:7%;
+    width:27vw;height:27vw;max-width:130px;max-height:130px;
+    background:#3a2f14;border-color:var(--ambre);color:var(--ambre);
+  }
+  .bouton.actif{filter:brightness(1.75);transform:scale(.94)}
+  .bouton.inerte{opacity:.4}
+  .bouton .role{max-width:88%;text-align:center;line-height:1.25}
+
+  #deco{
+    position:absolute;left:0;right:0;bottom:2px;text-align:center;
+    font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#3d4b45;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  #deco.alerte{color:var(--rouge)}
+</style>
+</head>
+<body>
+
+<div id="connexion">
+  <h1>Pharma-Cook</h1>
+  <p>Entre le code affiché sur l'écran de jeu pour rejoindre l'équipe.</p>
+  <div class="champ">
+    <label for="salon">Code du salon</label>
+    <input id="salon" maxlength="6" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="ABCD">
+  </div>
+  <div class="champ">
+    <label for="nom">Ton prénom</label>
+    <input id="nom" maxlength="10" autocomplete="off" placeholder="Tice">
+  </div>
+  <div class="champ">
+    <label>Ta photo (facultatif)</label>
+    <div id="lignephoto">
+      <div id="apercu">?</div>
+      <button id="btPhoto" class="secondaire">Prendre une photo</button>
+    </div>
+    <input id="fichier" type="file" accept="image/*" capture="user" hidden>
+  </div>
+  <button class="principal" id="rejoindre">Rejoindre</button>
+  <div id="etat"></div>
+</div>
+
+<div id="bandeau">
+  <div id="pastille"></div>
+  <div id="monNom">—</div>
+  <div id="porte" class="vide">Mains vides</div>
+</div>
+
+<div id="zone">
+  <div id="stick"><div id="pouce"></div></div>
+  <div class="bouton" id="btA"><span class="lettre">A</span><span class="role">Prendre</span></div>
+  <div class="bouton" id="btB"><span class="lettre">B</span><span class="role">Utiliser</span></div>
+  <div id="deco">Maintiens A pour lancer</div>
+</div>
+
+<script>
+'use strict';
+
+/* Le relais est déduit de l'URL de la page : la manette est servie
+   par le même domaine que l'écran. On peut forcer avec ?relay=... */
+const params = new URLSearchParams(location.search);
+const RELAY = params.get('relay') ||
+  ((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
+
+const el = (id) => document.getElementById(id);
+const $connexion = el('connexion'), $etat = el('etat'), $deco = el('deco');
+const $porte = el('porte'), $monNom = el('monNom'), $pastille = el('pastille');
+const $stick = el('stick'), $pouce = el('pouce'), $btA = el('btA'), $btB = el('btB');
+const $roleA = $btA.querySelector('.role');
+
+/* Jeton de session : c'est lui qui permet de récupérer son personnage
+   après une coupure réseau, au lieu de revenir comme un nouveau joueur. */
+let jeton = null;
+try {
+  jeton = localStorage.getItem('pc_jeton');
+  if (!jeton) {
+    jeton = 'j' + Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+    localStorage.setItem('pc_jeton', jeton);
+  }
+} catch (e) {
+  jeton = 'j' + Math.random().toString(36).slice(2, 12);
+}
+
+let ws = null, salon = '', pseudo = '', photo = null;
+let ax = 0, az = 0, boutonA = false, boutonB = false;
+let dernierEnvoi = 0;
+
+/* ---------------- Photo de profil ---------------- */
+const $apercu = el('apercu'), $fichier = el('fichier');
+el('btPhoto').addEventListener('click', () => $fichier.click());
+
+$fichier.addEventListener('change', () => {
+  const f = $fichier.files && $fichier.files[0];
+  if (!f) return;
+  const lecteur = new FileReader();
+  lecteur.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      // Recadrage carré centré puis réduction : on n'envoie que ~5 ko
+      const T = 128;
+      const cv = document.createElement('canvas');
+      cv.width = T; cv.height = T;
+      const g = cv.getContext('2d');
+      const c = Math.min(img.width, img.height);
+      g.drawImage(img, (img.width - c) / 2, (img.height - c) / 2, c, c, 0, 0, T, T);
+      photo = cv.toDataURL('image/jpeg', 0.62);
+      $apercu.style.backgroundImage = 'url(' + photo + ')';
+      $apercu.classList.add('rempli');
+      try { localStorage.setItem('pc_photo', photo); } catch (e) {}
+    };
+    img.src = lecteur.result;
+  };
+  lecteur.readAsDataURL(f);
+});
+
+/* On réutilise la photo de la dernière session */
+try {
+  const p = localStorage.getItem('pc_photo');
+  if (p) {
+    photo = p;
+    $apercu.style.backgroundImage = 'url(' + p + ')';
+    $apercu.classList.add('rempli');
+  }
+} catch (e) {}
+
+/* Préremplissage depuis l'URL (?room=ABCD) ou la dernière session. */
+el('salon').value = (params.get('room') || localStorage.getItem('pc_salon') || '').toUpperCase();
+el('nom').value = localStorage.getItem('pc_nom') || '';
+
+el('rejoindre').addEventListener('click', () => {
+  salon = el('salon').value.trim().toUpperCase();
+  pseudo = el('nom').value.trim() || 'Joueur';
+  if (!/^[A-Z0-9]{4,6}$/.test(salon)) { $etat.textContent = 'Code invalide (4 à 6 caractères).'; return; }
+  localStorage.setItem('pc_salon', salon);
+  localStorage.setItem('pc_nom', pseudo);
+  connecter();
+});
+
+function connecter() {
+  $etat.textContent = 'Connexion…';
+  ws = new WebSocket(RELAY + '/ws?room=' + salon + '&role=pad');
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ t: 'join', nom: pseudo, photo: photo, jeton: jeton }));
+    $connexion.style.display = 'none';
+    $monNom.textContent = pseudo;
+    if (photo) $pastille.style.backgroundImage = 'url(' + photo + ')';
+    $deco.textContent = 'Connecté · salon ' + salon;
+    $deco.classList.remove('alerte');
+    if (navigator.vibrate) navigator.vibrate(25);
+  };
+
+  ws.onmessage = (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (m.t === 'assigne') {
+      document.documentElement.style.setProperty('--moi', m.couleur);
+      $pastille.style.borderColor = m.couleur;
+      if (!photo) $pastille.style.background = m.couleur;
+      $monNom.textContent = pseudo + ' · P' + m.place;
+    } else if (m.t === 'hud') {
+      // Ce que le personnage tient en main, renvoyé par l'écran.
+      $porte.textContent = m.porte || 'Mains vides';
+      $porte.classList.toggle('vide', !m.porte);
+    } else if (m.t === 'action') {
+      // Libellé contextuel : sans lui, entre deux postes voisins,
+      // on ne sait pas ce que le bouton va déclencher.
+      const txt = m.txt || 'Prendre';
+      $roleA.textContent = txt.length > 16 ? txt.slice(0, 15) + '…' : txt;
+      $btA.classList.toggle('inerte', !m.txt);
+    } else if (m.t === 'buzz') {
+      if (navigator.vibrate) navigator.vibrate(m.fort ? [40, 50, 40] : 18);
+    }
+  };
+
+  ws.onclose = () => {
+    $deco.textContent = 'Déconnecté — reconnexion…';
+    $deco.classList.add('alerte');
+    setTimeout(connecter, 1400);
+  };
+  ws.onerror = () => { $etat.textContent = 'Relais injoignable.'; };
+}
+
+/* ---------------- Stick directionnel ---------------- */
+let stickTouche = null, centreX = 0, centreY = 0, rayon = 1;
+
+function majCentre() {
+  const r = $stick.getBoundingClientRect();
+  centreX = r.left + r.width / 2;
+  centreY = r.top + r.height / 2;
+  rayon = r.width * 0.42;
+}
+window.addEventListener('resize', majCentre);
+setTimeout(majCentre, 60);
+
+function bougerStick(x, y) {
+  let dx = x - centreX, dy = y - centreY;
+  const d = Math.hypot(dx, dy);
+  if (d > rayon) { dx = dx / d * rayon; dy = dy / d * rayon; }
+  $pouce.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
+  // Zone morte de 12 % pour éviter la dérive du pouce.
+  const nx = dx / rayon, ny = dy / rayon, n = Math.hypot(nx, ny);
+  if (n < 0.12) { ax = 0; az = 0; }
+  else { ax = nx; az = ny; }
+}
+function lacherStick() {
+  stickTouche = null; ax = 0; az = 0;
+  $pouce.style.transform = 'translate(-50%,-50%)';
+}
+
+$stick.addEventListener('touchstart', (e) => {
+  majCentre();
+  const t = e.changedTouches[0];
+  stickTouche = t.identifier;
+  bougerStick(t.clientX, t.clientY);
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('touchmove', (e) => {
+  if (stickTouche === null) return;
+  for (const t of e.changedTouches) {
+    if (t.identifier === stickTouche) { bougerStick(t.clientX, t.clientY); e.preventDefault(); }
+  }
+}, { passive: false });
+
+const finTouche = (e) => {
+  for (const t of e.changedTouches) if (t.identifier === stickTouche) lacherStick();
+};
+document.addEventListener('touchend', finTouche);
+document.addEventListener('touchcancel', finTouche);
+
+/* ---------------- Boutons A / B ---------------- */
+function brancherBouton($b, appui) {
+  const bas = (e) => {
+    $b.classList.add('actif'); appui(true);
+    if (navigator.vibrate) navigator.vibrate(12);
+    e.preventDefault();
+  };
+  const haut = (e) => { $b.classList.remove('actif'); appui(false); e.preventDefault(); };
+  $b.addEventListener('touchstart', bas, { passive: false });
+  $b.addEventListener('touchend', haut, { passive: false });
+  $b.addEventListener('touchcancel', haut, { passive: false });
+  $b.addEventListener('mousedown', bas);
+  $b.addEventListener('mouseup', haut);
+  $b.addEventListener('mouseleave', (e) => { if ($b.classList.contains('actif')) haut(e); });
+}
+brancherBouton($btA, (v) => { boutonA = v; });
+brancherBouton($btB, (v) => { boutonB = v; });
+
+/* Empêche le zoom / défilement parasite pendant le jeu. */
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('dblclick', (e) => e.preventDefault());
+
+/* ---------------- Envoi des entrées à 25 Hz ---------------- */
+setInterval(() => {
+  if (!ws || ws.readyState !== 1) return;
+  const now = performance.now();
+  const immobile = (ax === 0 && az === 0 && !boutonA && !boutonB);
+  // On garde un battement de cœur même à l'arrêt (2 Hz) pour la présence.
+  if (immobile && now - dernierEnvoi < 500) return;
+  dernierEnvoi = now;
+  ws.send(JSON.stringify({
+    t: 'in',
+    x: Math.round(ax * 100) / 100,
+    z: Math.round(az * 100) / 100,
+    a: boutonA ? 1 : 0,
+    b: boutonB ? 1 : 0
+  }));
+}, 40);
+</script>
+</body>
+</html>

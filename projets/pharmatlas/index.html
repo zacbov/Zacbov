@@ -11253,9 +11253,32 @@ function initSheetRendererHistoDICOM(m, slide){
           minZoomImageRatio:0.8, maxZoomPixelRatio:2.5,
           homeFillsViewer:true,
           visibilityRatio:1, constrainDuringPan:true,
-          animationTime:0.5, blendTime:0.25
+          animationTime:0.5, blendTime:0.25,
+          /* Le proxy IDC renvoie par intermittence des 500 sur certaines frames
+             (le navigateur les signale en « CORS » car la réponse d'erreur ne porte
+             pas d'en-tête Access-Control-Allow-Origin). On réessaie au lieu d'abandonner. */
+          ajaxWithCredentials:false,
+          timeout:20000,
+          maxImageCacheCount:300
         });
         window._osdViewer=_osdViewer;
+        /* Reprise sur erreur de tuile : jusqu'à 2 nouvelles tentatives espacées,
+           puis abandon silencieux de la tuile (le reste de la lame reste navigable). */
+        (function(){
+          var retry={}, MAXR=2;
+          _osdViewer.addHandler('tile-load-failed', function(ev){
+            try{
+              var k=(ev.tile&&ev.tile.url)||'';
+              if(!k) return;
+              retry[k]=(retry[k]||0)+1;
+              if(retry[k]<=MAXR && ev.tiledImage){
+                setTimeout(function(){
+                  try{ ev.tiledImage._needsDraw=true; _osdViewer.forceRedraw(); }catch(_){}
+                }, 400*retry[k]);
+              }
+            }catch(_){}
+          });
+        })();
         _osdViewer.addOnceHandler('open',function(){
           load.remove(); _osdInjectTools();
           try{ _osdViewer.viewport.goHome(true); }catch(_){}
@@ -15549,12 +15572,28 @@ function paSortConceptFirst(models){
    ══════════════════════════════════════════════════════════════════════════ */
 (function(){
   var _obs=null;
+  /* Un visuel existe si l'application elle-même sait en produire un.
+     On NE duplique PLUS la logique : on interroge les mêmes résolveurs que _needs3D,
+     sinon toute nouvelle source (lames IDC, splat, EMDB…) casse silencieusement. */
   function hasVisual(m){
     if(!m) return false;
-    return !!(m.file || m.image || m.thumbnail || m.pdb_id || m.smiles || m.pubchem_cid
-           || m.lame_idc || m.spectra_url || m.content_base64 || m.tool_mode
-           || m.uniprot || m.icn3d_pdb || (m.photos&&m.photos.length)
-           || (m.widget_def&&m.widget_def.html) || (m.ms_widget_def&&m.ms_widget_def.html));
+    try{
+      if(m.file || m.image || m.thumbnail || m.pdb_id || m.smiles || m.pubchem_cid
+         || m.lame_idc || m.spectra_url || m.content_base64 || m.tool_mode
+         || m.uniprot || m.icn3d_pdb || (m.photos&&m.photos.length)
+         || (m.widget_def&&m.widget_def.html) || (m.ms_widget_def&&m.ms_widget_def.html)
+         || m.ms_widget) return true;
+      /* résolveurs de l'application — source de vérité */
+      if(typeof resolveHistoSlide==='function'    && resolveHistoSlide(m))    return true;
+      if(typeof resolvePdbId==='function'         && resolvePdbId(m))         return true;
+      if(typeof resolveEmdbEntry==='function'     && resolveEmdbEntry(m))     return true;
+      if(typeof resolveBactEntry==='function'     && resolveBactEntry(m))     return true;
+      if(typeof resolveICn3DEntry==='function'    && resolveICn3DEntry(m))    return true;
+      if(typeof resolveGeneStructure==='function' && resolveGeneStructure(m)) return true;
+      if(typeof resolvePhysioNIH==='function'     && resolvePhysioNIH(m))     return true;
+      if(typeof PharmatlasSplat!=='undefined' && PharmatlasSplat.isSplat && PharmatlasSplat.isSplat(m.file)) return true;
+    }catch(e){ return true; }   /* dans le doute, on AFFICHE le viewer */
+    return false;
   }
   function decideViewer(m){
     var sheet=document.getElementById('detailSheet');
@@ -15569,7 +15608,9 @@ function paSortConceptFirst(models){
     if(_obs){ try{_obs.disconnect();}catch(e){} _obs=null; }
     var concept = (typeof paIsConcept==='function') && paIsConcept(m);
     var taxon   = !concept && !!(m && (m.scientific||m.latin));
-    var off     = concept || (!hasVisual(m) && !taxon);
+    /* catégories dont le visuel est résolu côté application : ne jamais replier */
+    var VIS={'Histologie':1,'Organites':1,'Microscopiques':1,'Musée':1,'Dispositifs_Medicaux':1};
+    var off     = concept || (!VIS[m&&m._cat] && !hasVisual(m) && !taxon);
     sheet.classList.toggle('pa-noviewer', !!off);
     sv.setAttribute('data-concept', off?'1':'0');
     if(off){
@@ -16004,22 +16045,38 @@ try{ window.PA_Search=PA_Search; window.PA_Graph=PA_Graph;
 </script>
 <script id="pharmatlas-splat-loader">
 /* Loader Gaussian Splat isolé (three r160 + GaussianSplats3D), séparé du THREE r128 global.
-   Gère .ksplat ET .splat (détection par extension -> SceneFormat). */
+   Gère .ksplat, .splat et .ply -> SceneFormat.
+   Le .spz n'est pas supporté par GaussianSplats3D (bibliothèque quasi à l'arrêt) : il est
+   routé vers Spark (sparkjsdev/spark, activement maintenue), dans une seconde instance
+   Three.js isolée (r180, via scopes de l'import map) pour éviter tout conflit de version. */
 (function(global){
   'use strict';
+
+  function ensureImportMap(){
+    if(document.querySelector('script[type="importmap"]')) return;
+    var im=document.createElement('script');
+    im.type='importmap';
+    im.textContent=JSON.stringify({
+      imports:{
+        'three':'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
+        'GaussianSplats3D':'https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js',
+        '@sparkjsdev/spark':'https://sparkjs.dev/releases/spark/2.1.0/spark.module.js'
+      },
+      scopes:{
+        'https://sparkjs.dev/releases/spark/2.1.0/':{
+          'three':'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js',
+          'three/addons/':'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/'
+        }
+      }
+    });
+    document.head.appendChild(im);
+  }
+
   var _mod=null;
   function getSplatModule(){
     if(_mod) return _mod;
+    ensureImportMap();
     _mod=new Promise(function(resolve,reject){
-      if(!document.querySelector('script[type="importmap"]')){
-        var im=document.createElement('script');
-        im.type='importmap';
-        im.textContent=JSON.stringify({imports:{
-          'three':'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
-          'GaussianSplats3D':'https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js'
-        }});
-        document.head.appendChild(im);
-      }
       var ms=document.createElement('script');
       ms.type='module';
       ms.textContent=[
@@ -16038,6 +16095,34 @@ try{ window.PA_Search=PA_Search; window.PA_Graph=PA_Graph;
     });
     return _mod;
   }
+
+  // Second, independent loader: Spark + son propre Three.js r180 (pour .spz uniquement).
+  // Chargé à la demande seulement — jamais tiré si aucun .spz n'est ouvert.
+  var _sparkMod=null;
+  function getSparkModule(){
+    if(_sparkMod) return _sparkMod;
+    ensureImportMap();
+    _sparkMod=new Promise(function(resolve,reject){
+      var ms=document.createElement('script');
+      ms.type='module';
+      ms.textContent=[
+        "import * as T180 from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';",
+        "import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js';",
+        "import * as Spark from '@sparkjsdev/spark';",
+        "window.__pharmatlasSparkAPI={THREE:T180,OrbitControls:OrbitControls,Spark:Spark,ready:true};",
+        "window.dispatchEvent(new Event('pharmatlas-spark-module-ready'));"
+      ].join('\n');
+      document.head.appendChild(ms);
+      if(global.__pharmatlasSparkAPI&&global.__pharmatlasSparkAPI.ready){resolve(global.__pharmatlasSparkAPI);}
+      else{
+        var on=function(){global.removeEventListener('pharmatlas-spark-module-ready',on);resolve(global.__pharmatlasSparkAPI);};
+        global.addEventListener('pharmatlas-spark-module-ready',on);
+        setTimeout(function(){if(!global.__pharmatlasSparkAPI)reject(new Error('Module de rendu Spark (.spz) non chargé (réseau/CDN).'));},15000);
+      }
+    });
+    return _sparkMod;
+  }
+
   function _fmt(G,file){
     var f=(file||'').toLowerCase();
     if(f.endsWith('.ksplat')) return G.SceneFormat.KSplat;
@@ -16045,8 +16130,10 @@ try{ window.PA_Search=PA_Search; window.PA_Graph=PA_Graph;
     if(f.endsWith('.ply'))    return G.SceneFormat.Ply;
     return G.SceneFormat.KSplat;
   }
-  // Monte un viewer splat isolé dans `container`. camObj = m.camera éventuel.
+
+  // Monte un viewer splat isolé (GaussianSplats3D) dans `container`. camObj = m.camera éventuel.
   function loadSplatCell(file, container, camObj){
+    if(/\.spz$/i.test(file||'')) return loadSpzCell(file, container, camObj);
     var overlay=container.querySelector('.loader');
     return getSplatModule().then(function(api){
       var G=api.GaussianSplats3D;
@@ -16075,7 +16162,88 @@ try{ window.PA_Search=PA_Search; window.PA_Graph=PA_Graph;
       throw err;
     });
   }
-  global.PharmatlasSplat={loadSplatCell:loadSplatCell,isSplat:function(f){return /\.(splat|ksplat|ply)$/i.test(f||'');}};
+
+  // Monte un viewer .spz isolé (Spark) dans `container`. camObj = m.camera éventuel.
+  function loadSpzCell(file, container, camObj){
+    var overlay=container.querySelector('.loader');
+    return getSparkModule().then(function(api){
+      var THREE180=api.THREE, OrbitControls180=api.OrbitControls, Spark=api.Spark;
+      var innerEl=document.createElement('div');
+      innerEl.style.position='absolute'; innerEl.style.inset='0';
+      container.appendChild(innerEl);
+
+      var width=innerEl.clientWidth||container.clientWidth||1;
+      var height=innerEl.clientHeight||container.clientHeight||1;
+
+      var scene=new THREE180.Scene();
+      var camera=new THREE180.PerspectiveCamera(60,width/height,0.01,1000);
+      if(camObj&&typeof camObj.x==='number'){camera.position.set(camObj.x,camObj.y,camObj.z);}
+      else{camera.position.set(0,0,5);}
+
+      var renderer=new THREE180.WebGLRenderer({antialias:true});
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+      renderer.setSize(width,height);
+      innerEl.appendChild(renderer.domElement);
+
+      var spark=new Spark.SparkRenderer({renderer:renderer});
+      scene.add(spark);
+
+      var splatMesh=new Spark.SplatMesh({url:file});
+      scene.add(splatMesh);
+
+      var controls=new OrbitControls180(camera,renderer.domElement);
+      controls.enableDamping=true;
+
+      splatMesh.initialized.then(function(){
+        if(camObj&&typeof camObj.x==='number') return; // caméra déjà fournie par le modèle -> ne pas recadrer
+        try{
+          var box=new THREE180.Box3().setFromObject(splatMesh);
+          var center=box.getCenter(new THREE180.Vector3());
+          var size=box.getSize(new THREE180.Vector3()).length()||5;
+          controls.target.copy(center);
+          camera.position.copy(center).add(new THREE180.Vector3(0,0,size*0.9));
+          camera.near=Math.max(size/100,0.01);
+          camera.far=size*10;
+          camera.updateProjectionMatrix();
+        }catch(e){ /* recadrage non bloquant */ }
+      });
+
+      var resizeObs=new ResizeObserver(function(){
+        var w=innerEl.clientWidth||1, h=innerEl.clientHeight||1;
+        camera.aspect=w/h; camera.updateProjectionMatrix();
+        renderer.setSize(w,h);
+      });
+      resizeObs.observe(innerEl);
+
+      var animId=0, stopped=false;
+      function animate(){
+        if(stopped) return;
+        animId=requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene,camera);
+      }
+      animate();
+
+      if(overlay) overlay.remove();
+      return {stop:function(){
+        stopped=true;
+        try{cancelAnimationFrame(animId);}catch(e){}
+        try{resizeObs.disconnect();}catch(e){}
+        try{controls.dispose();}catch(e){}
+        try{renderer.dispose();}catch(e){}
+        if(innerEl.parentNode) innerEl.parentNode.removeChild(innerEl);
+      }};
+    }).catch(function(err){
+      console.error('[PharmAtlas] Échec .spz:',file,err);
+      if(overlay) overlay.remove();
+      var e=document.createElement('div');e.className='error-msg';
+      e.innerHTML='<strong>Modèle .spz indisponible</strong><br><small>'+(err&&err.message||'')+'</small>';
+      container.appendChild(e);
+      throw err;
+    });
+  }
+
+  global.PharmatlasSplat={loadSplatCell:loadSplatCell,isSplat:function(f){return /\.(splat|ksplat|ply|spz)$/i.test(f||'');}};
 })(window);
 </script>
 

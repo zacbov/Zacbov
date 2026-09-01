@@ -515,7 +515,7 @@ input[type=color]{width:100%;height:26px;padding:2px;background:var(--ink-3);
     <div id="objList" style="display:flex;flex-direction:column;gap:5px"></div>
     <label class="filebtn" id="addObjBtn" style="width:100%;text-align:center;margin-top:8px">
       Ajouter un objet<input type="file" id="fileAdd" multiple
-        accept=".glb,.gltf,.fbx,.obj,.js,.mjs,.splat,.ksplat,.ply,.bin,.png,.jpg,.jpeg,.webp,.ktx2"></label>
+        accept=".glb,.gltf,.fbx,.obj,.js,.mjs,.splat,.ksplat,.ply,.spz,.bin,.png,.jpg,.jpeg,.webp,.ktx2"></label>
     <div id="objEdit" style="display:none">
       <label>Outil de manipulation</label>
       <div class="seg" style="margin-bottom:4px">
@@ -595,7 +595,7 @@ input[type=color]{width:100%;height:26px;padding:2px;background:var(--ink-3);
       </div>
       <button id="oSpread" style="width:100%;margin-top:5px">Aligner tous les objets</button>
     </div>
-    <p class="hint">Le gizmo apparaît sur l'objet sélectionné en mode <strong>Cadrer</strong>. Les formats <strong>.splat .ksplat .ply</strong> chargent un nuage gaussien.</p>
+    <p class="hint">Le gizmo apparaît sur l'objet sélectionné en mode <strong>Cadrer</strong>. Les formats <strong>.splat .ksplat .ply</strong> chargent un nuage gaussien. Le <strong>.spz</strong> est aussi pris en charge (rendu séparé via Spark, superposé à la scène).</p>
   </div>
 </details>
 
@@ -625,7 +625,14 @@ input[type=color]{width:100%;height:26px;padding:2px;background:var(--ink-3);
 <script type="importmap">
 {"imports":{
   "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
-  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
+  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/",
+  "@sparkjsdev/spark":"https://sparkjs.dev/releases/spark/2.1.0/spark.module.js"
+},
+"scopes":{
+  "https://sparkjs.dev/releases/spark/2.1.0/":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  }
 }}
 </script>
 
@@ -1353,8 +1360,9 @@ function pickClip(){
 $('anClip').onchange = e=>{ cfg.anim.clip=+e.target.value; pickClip(); };
 $('anMode').onchange = e=>{ cfg.anim.mode=e.target.value; };
 
-const MODEL_RE = /\.(glb|gltf|fbx|obj|m?js|splat|ksplat|ply)$/i;
-const SPLAT_RE = /\.(splat|ksplat|ply)$/i;
+const MODEL_RE = /\.(glb|gltf|fbx|obj|m?js|splat|ksplat|ply|spz)$/i;
+const SPLAT_RE = /\.(splat|ksplat|ply|spz)$/i;
+const SPZ_RE = /\.spz$/i; // sous-ensemble de SPLAT_RE : nécessite Spark (three r180 isolé), pas GaussianSplats3D
 
 /* ── le gizmo de déplacement ── */
 let gizmo = null;
@@ -1478,7 +1486,7 @@ async function instantiate(o){
   try{
     let inner = null, clipsFound = [];
     if(SPLAT_RE.test(o.main)){
-      inner = await loadSplat(url, o);
+      inner = SPZ_RE.test(o.main) ? await loadSpz(url, o) : await loadSplat(url, o);
       if(!inner) return;
     } else if(/\.(glb|gltf)$/i.test(o.main)){
       const g = await new Promise((res,rej)=>gltfLoader.load(url,res,undefined,rej));
@@ -1539,10 +1547,122 @@ async function loadSplat(url, o){
 }
 const splatViewers = [];
 
+/* ── .spz (Spark, three r180 isolé) ──
+   GaussianSplats3D ne sait pas lire le .spz. Spark exige three >= 0.180, incompatible
+   avec le three r160 qui porte tout le reste de l'Atelier (meshes, gizmo, post-processing).
+   Solution : un second canvas WebGL (Spark, r180) superposé au canvas principal (r160),
+   caméra synchronisée chaque frame. Composite visuellement correct pour un aperçu/export ;
+   limite connue : pas d'occlusion profondeur pixel-exacte entre un .spz et un mesh r160. */
+/* SPZ v4 -> v3 transcoder — Spark 2.1.0 ne lit que les .spz v1-3 (gzip simple).
+   Le v4 (Niantic, mai 2026) utilise un header 32o + N flux ZSTD independants.
+   On retranscode le conteneur (decompresse chaque flux, reassemble en v3 + gzip)
+   plutot que de reimplementer le decodage numerique des attributs. */
+function bytesToDataUrl(bytes){
+  // Blob + FileReader plutot que btoa(String.fromCharCode(...bytes)) pour rester
+  // robuste sur des fichiers de plusieurs Mo (pas de depassement de pile d'appel).
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=> resolve(reader.result);
+    reader.onerror = ()=> reject(reader.error);
+    reader.readAsDataURL(new Blob([bytes], {type:'application/octet-stream'}));
+  });
+}
+
+// Convertit en data: URL, meme pour un .spz deja v1-3 compatible : sous file://,
+// les blob: URL crees par la page principale ont une origine opaque ("null") et
+// le Worker interne de Spark ne peut pas les recuperer (Fetch API cannot load
+// blob:...). Une data: URL n'a pas cette limite, quel que soit le contexte.
+async function transcodeSpzV4(url){
+  const buf = await (await fetch(url)).arrayBuffer();
+  const b = new Uint8Array(buf);
+  if(b.length < 20) return url;
+  if(b[0]===0x1f && b[1]===0x8b) return bytesToDataUrl(b); // deja gzip -> v1-3, relais en data:
+  const dv = new DataView(buf);
+  if(dv.getUint32(0,true) !== 0x5053474e) return url; // pas 'NGSP'
+  if(dv.getUint32(4,true) !== 4) return url; // pas v4
+  const fzstdMod = await import('https://cdn.jsdelivr.net/npm/fzstd@0.1.1/+esm');
+  const numPoints = dv.getUint32(8,true);
+  const shDegree=b[12], fracBits=b[13], flags=b[14], numStreams=b[15];
+  const tocOffset = dv.getUint32(16,true);
+  const entries = []; let off = tocOffset;
+  for(let i=0;i<numStreams;i++){
+    const comp = Number(dv.getBigUint64(off,true));
+    const uncomp = Number(dv.getBigUint64(off+8,true));
+    entries.push([comp,uncomp]); off += 16;
+  }
+  let pos = off, total = 0;
+  const chunks = entries.map(([comp,uncomp])=>{
+    const out = fzstdMod.decompress(b.subarray(pos,pos+comp), new Uint8Array(uncomp));
+    total += out.length; pos += comp; return out;
+  });
+  const payload = new Uint8Array(16+total);
+  const pdv = new DataView(payload.buffer);
+  pdv.setUint32(0,0x5053474e,true); pdv.setUint32(4,3,true); pdv.setUint32(8,numPoints,true);
+  payload[12]=shDegree; payload[13]=fracBits; payload[14]=flags; payload[15]=0;
+  let w=16; for(const c of chunks){ payload.set(c,w); w+=c.length; }
+  const cs = new CompressionStream('gzip');
+  const writer = cs.writable.getWriter();
+  writer.write(payload); writer.close();
+  const gz = await new Response(cs.readable).arrayBuffer();
+  return bytesToDataUrl(new Uint8Array(gz));
+}
+
+let sparkOverlayPromise = null;
+let sparkOverlayReady = null; // set once the promise above resolves — avoids awaiting every frame
+function ensureSparkOverlay(){
+  if(sparkOverlayPromise) return sparkOverlayPromise;
+  sparkOverlayPromise = (async()=>{
+    toast('Téléchargement du moteur Spark (.spz)…');
+    const [T180, Spark] = await Promise.all([
+      import('https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js'),
+      import('@sparkjsdev/spark')
+    ]);
+    const canvas = document.createElement('canvas');
+    canvas.style.position='absolute'; canvas.style.inset='0';
+    canvas.style.width='100%'; canvas.style.height='100%';
+    canvas.style.zIndex='2'; canvas.style.pointerEvents='none';
+    stage.appendChild(canvas);
+    const width = stage.clientWidth||1, height = stage.clientHeight||1;
+    const sRenderer = new T180.WebGLRenderer({canvas, antialias:true, alpha:true});
+    sRenderer.setClearAlpha(0);
+    sRenderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    sRenderer.setSize(width, height, false);
+    const sScene = new T180.Scene();
+    const sCamera = new T180.PerspectiveCamera(50, width/height, .05, 4000);
+    const sparkRenderer = new Spark.SparkRenderer({renderer:sRenderer});
+    sScene.add(sparkRenderer);
+    const ov = {THREE:T180, Spark:Spark, canvas, renderer:sRenderer, scene:sScene, camera:sCamera};
+    sparkOverlayReady = ov;
+    return ov;
+  })().catch(err=>{
+    console.error('[Atelier] Spark indisponible', err);
+    toast('Moteur Spark indisponible — vérifie ta connexion');
+    sparkOverlayPromise = null;
+    throw err;
+  });
+  return sparkOverlayPromise;
+}
+// Charge un .spz dans l'overlay Spark et renvoie un Group r160 factice
+// (sert de porteur de transform pour le gizmo / la liste d'objets / le cadrage).
+async function loadSpz(url, o){
+  const ov = await ensureSparkOverlay();
+  let safeUrl = url;
+  try{ safeUrl = await transcodeSpzV4(url); }
+  catch(e){ console.error('[Atelier] Transcodage .spz v4 echoue, tentative directe:', e); }
+  const mesh = new ov.Spark.SplatMesh({url: safeUrl});
+  ov.scene.add(mesh);
+  try{ await mesh.initialized; }catch(e){ console.error('[Atelier] .spz invalide', e); ov.scene.remove(mesh); toast('Fichier .spz invalide'); return null; }
+  o.spark = mesh;
+  return new THREE.Group(); // placeholder r160, invisible, purement transform
+}
+
 /* ── suppression ── */
 function removeObj(i){
   const o = objects[i]; if(!o) return;
   if(o.root){ pivot.remove(o.root); }
+  if(o.spark){
+    ensureSparkOverlay().then(ov=>{ try{ ov.scene.remove(o.spark); }catch(e){} }).catch(()=>{});
+  }
   objects.splice(i,1);
   if(objects.length===0){ $('drop').classList.remove('hide'); baseK=null; modelRoot=null; framedOnce=false; }
   selectObj(Math.min(i, objects.length-1));
@@ -2183,6 +2303,9 @@ function resize(){
   const w=stage.clientWidth,h=stage.clientHeight;
   renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
   if(composer) composer.setSize(w,h);
+  if(sparkOverlayPromise) sparkOverlayPromise.then(ov=>{
+    ov.renderer.setSize(w,h,false); ov.camera.aspect=w/h; ov.camera.updateProjectionMatrix();
+  }).catch(()=>{});
 }
 new ResizeObserver(resize).observe(stage); resize();
 
@@ -2247,6 +2370,24 @@ renderer.setAnimationLoop(()=>{
 
   if(composer){ if(filmPass) filmPass.uniforms.uTime.value=T; composer.render(); }
   else renderer.render(scene,camera);
+
+  if(sparkOverlayReady){
+    const ov = sparkOverlayReady;
+    objects.forEach(o=>{
+      if(!o.spark || !o.root) return;
+      try{
+        o.root.updateMatrixWorld();
+        o.root.matrixWorld.decompose(o.spark.position, o.spark.quaternion, o.spark.scale);
+        o.spark.visible = o.root.visible;
+      }catch(e){}
+    });
+    ov.camera.position.copy(camera.position);
+    ov.camera.quaternion.copy(camera.quaternion);
+    ov.camera.fov = camera.fov; ov.camera.aspect = camera.aspect;
+    ov.camera.near = camera.near; ov.camera.far = camera.far;
+    ov.camera.updateProjectionMatrix();
+    ov.renderer.render(ov.scene, ov.camera);
+  }
 });
 
 let toastT;
@@ -2416,7 +2557,7 @@ function buildSite(assetMap){
     inter:cfg.inter, text:cfg.text, degrade:cfg.site.degrade,
     imgOpacity:S.map(s=>s.img.opacity),
     spots:S.map(s=>s.spots||[]), assets:assetMap||null, baseK:baseK||1,
-    objects: objects.map(o=>({main:o.main, kind:o.kind, t:o.t, fx:o.fx, vis:o.vis, splat:SPLAT_RE.test(o.main)})),
+    objects: objects.map(o=>({main:o.main, kind:o.kind, t:o.t, fx:o.fx, vis:o.vis, splat:SPLAT_RE.test(o.main), spz:SPZ_RE.test(o.main)})),
     nCh: S.length
   });
 
@@ -2553,7 +2694,13 @@ cfg.inter.cursor?'@media (pointer:fine){body{cursor:none}a,button{cursor:none}}'
 (cfg.inter.cursor?'<div id="cur"></div>\n':'')+nav+'\n<main>\n'+body+'\n</main>\n\n'+
 '<script type="importmap">\n{"imports":{\n'+
 '  "three":"https://unpkg.com/three@0.160.0/build/three.module.js",\n'+
-'  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"\n}}\n<\/script>\n'+
+'  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/",\n'+
+'  "@sparkjsdev/spark":"https://sparkjs.dev/releases/spark/2.1.0/spark.module.js"\n'+
+'},\n"scopes":{\n'+
+'  "https://sparkjs.dev/releases/spark/2.1.0/":{\n'+
+'    "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",\n'+
+'    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"\n'+
+'  }\n}}\n<\/script>\n'+
 '<script type="module">\n'+ runtime(data) +'\n<\/script>\n</body>\n</html>';
 }
 
@@ -2646,7 +2793,8 @@ ENGINE,
 "  holder.scale.setScalar(o.t.s);",
 "  pivot.add(holder);",
 "  holder.userData.__splat = !!isSplat;",
-"  seated.push({root:holder, vis:o.vis, base:o.t});",
+"  var sd = {root:holder, vis:o.vis, base:o.t};",
+"  seated.push(sd);",
 "  if(C.ground.shadow && !light) holder.traverse(function(x){ if(x.isMesh){x.castShadow=true;x.receiveShadow=true;} });",
 "  if(o.fx && o.fx.kind && o.fx.kind !== 'none' && !isSplat){",
 "    MATFX.apply(holder, o.fx.kind, {color:o.fx.color, power:o.fx.power, opacity:o.fx.opacity});",
@@ -2656,6 +2804,7 @@ ENGINE,
 "    action = mixer.clipAction(clips[C.anim.clip]); action.clampWhenFinished=true; action.play();",
 "  }",
 "  done();",
+"  return sd;",
 "}",
 "let SplatLib = null;",
 "async function loadSplat(o){",
@@ -2665,8 +2814,81 @@ ENGINE,
 "  await v.addSplatScene(resolve(o.main), {format:fmt, splatAlphaRemovalThreshold:5, showLoadingUI:false});",
 "  return v;",
 "}",
+"/* .spz : Spark (three r180 isolé, superposé au canvas r160 principal — voir sync dans la boucle) */",
+"var sparkOv = null;",
+"async function ensureSparkOv(){",
+"  if(sparkOv) return sparkOv;",
+"  var T180 = await import('https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js');",
+"  var Spark = await import('@sparkjsdev/spark');",
+"  var canvas = document.createElement('canvas');",
+"  canvas.style.position='fixed'; canvas.style.inset='0'; canvas.style.zIndex='1';",
+"  canvas.style.pointerEvents='none';",
+"  document.getElementById('bg').appendChild(canvas);",
+"  var sRenderer = new T180.WebGLRenderer({canvas:canvas, antialias:true, alpha:true});",
+"  sRenderer.setClearAlpha(0);",
+"  sRenderer.setPixelRatio(Math.min(devicePixelRatio,2));",
+"  sRenderer.setSize(innerWidth, innerHeight);",
+"  var sScene = new T180.Scene();",
+"  var sCamera = new T180.PerspectiveCamera(50, innerWidth/innerHeight, .05, 4000);",
+"  var sparkRenderer = new Spark.SparkRenderer({renderer:sRenderer});",
+"  sScene.add(sparkRenderer);",
+"  sparkOv = {THREE:T180, Spark:Spark, canvas:canvas, renderer:sRenderer, scene:sScene, camera:sCamera};",
+"  return sparkOv;",
+"}",
+"function bytesToDataUrl(bytes){",
+"  return new Promise(function(resolve,reject){",
+"    var reader = new FileReader();",
+"    reader.onload = function(){ resolve(reader.result); };",
+"    reader.onerror = function(){ reject(reader.error); };",
+"    reader.readAsDataURL(new Blob([bytes], {type:'application/octet-stream'}));",
+"  });",
+"}",
+"async function transcodeSpzV4(url){",
+"  var buf = await (await fetch(url)).arrayBuffer();",
+"  var b = new Uint8Array(buf);",
+"  if(b.length<20) return url;",
+"  if(b[0]===0x1f && b[1]===0x8b) return bytesToDataUrl(b);",
+"  var dv = new DataView(buf);",
+"  if(dv.getUint32(0,true)!==0x5053474e) return url;",
+"  if(dv.getUint32(4,true)!==4) return url;",
+"  var fzstdMod = await import('https://cdn.jsdelivr.net/npm/fzstd@0.1.1/+esm');",
+"  var numPoints = dv.getUint32(8,true);",
+"  var shDegree=b[12], fracBits=b[13], flags=b[14], numStreams=b[15];",
+"  var tocOffset = dv.getUint32(16,true);",
+"  var entries=[], off=tocOffset;",
+"  for(var i=0;i<numStreams;i++){",
+"    var comp=Number(dv.getBigUint64(off,true)), uncomp=Number(dv.getBigUint64(off+8,true));",
+"    entries.push([comp,uncomp]); off+=16;",
+"  }",
+"  var pos=off, total=0, chunks=[];",
+"  for(i=0;i<entries.length;i++){",
+"    var out = fzstdMod.decompress(b.subarray(pos,pos+entries[i][0]), new Uint8Array(entries[i][1]));",
+"    chunks.push(out); total+=out.length; pos+=entries[i][0];",
+"  }",
+"  var payload = new Uint8Array(16+total);",
+"  var pdv = new DataView(payload.buffer);",
+"  pdv.setUint32(0,0x5053474e,true); pdv.setUint32(4,3,true); pdv.setUint32(8,numPoints,true);",
+"  payload[12]=shDegree; payload[13]=fracBits; payload[14]=flags; payload[15]=0;",
+"  var w=16; for(i=0;i<chunks.length;i++){ payload.set(chunks[i],w); w+=chunks[i].length; }",
+"  var cs = new CompressionStream('gzip');",
+"  var writer = cs.writable.getWriter();",
+"  writer.write(payload); writer.close();",
+"  var gz = await new Response(cs.readable).arrayBuffer();",
+"  return bytesToDataUrl(new Uint8Array(gz));",
+"}",
+"async function loadSpz(o){",
+"  var ov = await ensureSparkOv();",
+"  var safeUrl = resolve(o.main);",
+"  try{ safeUrl = await transcodeSpzV4(safeUrl); }catch(e){ console.error('Transcodage .spz v4 echoue:', e); }",
+"  var mesh = new ov.Spark.SplatMesh({url:safeUrl});",
+"  ov.scene.add(mesh);",
+"  await mesh.initialized;",
+"  var sd = seat(o, new THREE.Group(), [], true);",
+"  sd.spark = mesh;",
+"}",
 "C.objects.forEach(function(o){",
 "  var url = resolve(o.main);",
+"  if(o.spz){ loadSpz(o).catch(fail); return; }",
 "  if(o.splat){ loadSplat(o).then(function(v){ seat(o, v, [], true); }).catch(fail); return; }",
 "  if(o.kind==='glb'||o.kind==='gltf'){",
 "    var d = new DRACOLoader(); d.setDecoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/');",
@@ -2696,6 +2918,7 @@ ENGINE,
 "  renderer.setSize(innerWidth,innerHeight);",
 "  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();",
 "  if(composer) composer.setSize(innerWidth,innerHeight);",
+"  if(sparkOv){ sparkOv.renderer.setSize(innerWidth,innerHeight); sparkOv.camera.aspect=innerWidth/innerHeight; sparkOv.camera.updateProjectionMatrix(); }",
 "}",
 "addEventListener('resize',resize); resize();",
 "const PATH = makePath(THREE); PATH.set(C.cams, C.view.smooth);",
@@ -2813,6 +3036,22 @@ SPOT_SVG,
 "  }",
 "  if(composer){ if(filmPass) filmPass.uniforms.uTime.value=T; composer.render(); }",
 "  else renderer.render(scene,camera);",
+"  if(sparkOv){",
+"    for(var ki=0; ki<seated.length; ki++){",
+"      var sk = seated[ki]; if(!sk.spark) continue;",
+"      try{",
+"        sk.root.updateMatrixWorld();",
+"        sk.root.matrixWorld.decompose(sk.spark.position, sk.spark.quaternion, sk.spark.scale);",
+"        sk.spark.visible = sk.root.visible;",
+"      }catch(e){}",
+"    }",
+"    sparkOv.camera.position.copy(camera.position);",
+"    sparkOv.camera.quaternion.copy(camera.quaternion);",
+"    sparkOv.camera.fov = camera.fov; sparkOv.camera.aspect = camera.aspect;",
+"    sparkOv.camera.near = camera.near; sparkOv.camera.far = camera.far;",
+"    sparkOv.camera.updateProjectionMatrix();",
+"    sparkOv.renderer.render(sparkOv.scene, sparkOv.camera);",
+"  }",
 "});"
 ].join('\n');
 }

@@ -1,0 +1,234 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Décodeur HGVS</title><style>
+:root{--bg:#0d1117;--s1:#161b22;--s2:#1e2530;--bd:#30363d;--ac:#7ee787;--ac2:#58a6ff;
+--ac3:#f78166;--ac4:#d2a8ff;--ac5:#ffa657;--tx:#e6edf3;--mu:#8b949e;--r:10px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,sans-serif;padding:14px;line-height:1.55}
+h1{font-size:17px}h1 span{color:var(--ac)}
+.sub{color:var(--mu);font-size:12px;margin:3px 0 14px}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:13px;margin-bottom:11px}
+.card h2{font-size:13px;color:var(--ac2);margin-bottom:9px}
+input[type=text]{width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);
+border-radius:7px;padding:10px;font-size:14px;font-family:ui-monospace,monospace}
+input:focus{outline:none;border-color:var(--ac2)}
+label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--mu);margin:9px 0 4px}
+.ex{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.chip{background:var(--s2);border:1px solid var(--bd);border-radius:16px;padding:3px 10px;font-size:11px;
+cursor:pointer;font-family:ui-monospace,monospace}
+.chip:hover{border-color:var(--ac);color:var(--ac)}
+.out{margin-top:12px;display:none}
+.row{display:grid;grid-template-columns:112px 1fr;gap:9px;padding:7px 0;border-bottom:1px solid var(--bd);font-size:12.5px}
+.row:last-child{border-bottom:none}
+.k{color:var(--mu);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;padding-top:2px}
+.v{color:var(--tx)}.v b{color:var(--ac)}
+.msg{margin-top:11px;padding:9px 11px;border-radius:8px;font-size:12px;line-height:1.6}
+.ok{background:rgba(126,231,135,.12);border-left:3px solid var(--ac)}
+.wa{background:rgba(255,166,87,.12);border-left:3px solid var(--ac5)}
+.ba{background:rgba(247,129,102,.12);border-left:3px solid var(--ac3)}
+.in{background:rgba(88,166,255,.12);border-left:3px solid var(--ac2)}
+table{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:8px}
+th,td{border:1px solid var(--bd);padding:5px 7px;text-align:left;vertical-align:top}
+th{background:var(--s2);color:var(--ac2);font-size:10.5px}
+code{font-family:ui-monospace,monospace;background:var(--s2);padding:1px 5px;border-radius:4px;font-size:11px;color:var(--ac4)}
+.small{font-size:11px;color:var(--mu);margin-top:6px}
+</style></head><body>
+
+<h1>🧬 Décodeur <span>HGVS</span></h1>
+<div class="sub">Interprétation de la nomenclature des variants — Human Genome Variation Society</div>
+
+<div class="card">
+<label>Variant à décoder</label>
+<input type="text" id="q" placeholder="ex. NM_000546.6:c.743G>A  ou  p.(Arg248Gln)" value="c.1521_1523delCTT">
+<div class="ex" id="ex"></div>
+<div class="out" id="out"></div>
+<div class="msg" id="msg" style="display:none"></div>
+</div>
+
+<div class="card"><h2>Préfixes de référence</h2>
+<table><tr><th>Préfixe</th><th>Séquence de référence</th><th>Numérotation</th></tr>
+<tr><td><code>g.</code></td><td>Génomique</td><td>Position sur le chromosome, introns inclus</td></tr>
+<tr><td><code>c.</code></td><td><b>Codante</b> (ADNc) — la plus utilisée en clinique</td><td>+1 = A de l'ATG initiateur ; pas de position 0. Les introns s'écrivent <code>c.87+3</code> ou <code>c.88-2</code></td></tr>
+<tr><td><code>n.</code></td><td>Non codante</td><td>ARN non codant</td></tr>
+<tr><td><code>r.</code></td><td>ARN</td><td>En minuscules : <code>r.76a&gt;u</code></td></tr>
+<tr><td><code>p.</code></td><td><b>Protéine</b></td><td>+1 = méthionine initiatrice. Parenthèses = conséquence <b>prédite</b>, non vérifiée</td></tr>
+<tr><td><code>m.</code></td><td>Mitochondrial</td><td>Génome mitochondrial</td></tr></table>
+<div class="small">Les positions <code>c.-30</code> (avant l'ATG, 5'UTR) et <code>c.*15</code> (après le codon stop, 3'UTR) sont fréquentes en promoteur et en région régulatrice.</div>
+</div>
+
+<div class="card"><h2>Types de variants</h2>
+<table><tr><th>Notation</th><th>Signification</th></tr>
+<tr><td><code>&gt;</code></td><td>Substitution — <code>c.743G&gt;A</code></td></tr>
+<tr><td><code>del</code></td><td>Délétion — <code>c.1521_1523del</code></td></tr>
+<tr><td><code>dup</code></td><td>Duplication — <code>c.35dup</code></td></tr>
+<tr><td><code>ins</code></td><td>Insertion — <code>c.51_52insT</code></td></tr>
+<tr><td><code>delins</code></td><td>Délétion-insertion (indel)</td></tr>
+<tr><td><code>inv</code></td><td>Inversion</td></tr>
+<tr><td><code>fs</code></td><td>Décalage du cadre de lecture — <code>p.Arg97ProfsTer23</code></td></tr>
+<tr><td><code>Ter</code> ou <code>*</code></td><td>Codon stop — <code>p.Arg213Ter</code> = non-sens</td></tr>
+<tr><td><code>=</code></td><td>Pas de changement — <code>p.(Leu54=)</code> = variant synonyme</td></tr>
+<tr><td><code>?</code></td><td>Conséquence inconnue</td></tr></table>
+</div>
+
+<script>
+var AA3={Ala:'Alanine',Arg:'Arginine',Asn:'Asparagine',Asp:'Aspartate',Cys:'Cystéine',
+Gln:'Glutamine',Glu:'Glutamate',Gly:'Glycine',His:'Histidine',Ile:'Isoleucine',Leu:'Leucine',
+Lys:'Lysine',Met:'Méthionine',Phe:'Phénylalanine',Pro:'Proline',Ser:'Sérine',Thr:'Thréonine',
+Trp:'Tryptophane',Tyr:'Tyrosine',Val:'Valine',Ter:'STOP',Sec:'Sélénocystéine'};
+var AA1={A:'Ala',R:'Arg',N:'Asn',D:'Asp',C:'Cys',Q:'Gln',E:'Glu',G:'Gly',H:'His',I:'Ile',
+L:'Leu',K:'Lys',M:'Met',F:'Phe',P:'Pro',S:'Ser',T:'Thr',W:'Trp',Y:'Tyr',V:'Val',X:'Ter'};
+/* propriétés physico-chimiques, pour juger du caractère conservatif d'une substitution */
+var PROP={Ala:'apolaire',Val:'apolaire',Leu:'apolaire',Ile:'apolaire',Met:'apolaire',
+Phe:'aromatique',Trp:'aromatique',Tyr:'aromatique',Pro:'apolaire (cyclique)',Gly:'apolaire (petit)',
+Ser:'polaire',Thr:'polaire',Cys:'polaire (thiol)',Asn:'polaire',Gln:'polaire',
+Asp:'acide',Glu:'acide',Lys:'basique',Arg:'basique',His:'basique',Ter:'—'};
+function q(i){return document.getElementById(i)}
+function row(k,v){return '<div class="row"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'}
+function msg(c,h){var e=q('msg');e.className='msg '+c;e.innerHTML=h;e.style.display='block'}
+function norm3(x){
+  if(!x) return null;
+  if(x==='*') return 'Ter';
+  if(x.length===1) return AA1[x.toUpperCase()]||null;
+  var c=x.charAt(0).toUpperCase()+x.slice(1,3).toLowerCase();
+  return AA3[c]?c:null;          /* rejette les codes inexistants (Zzz, Aaa…) */
+}
+function decode(s){
+  s=(s||'').trim();
+  var out=q('out');out.style.display='none';q('msg').style.display='none';
+  if(!s) return;
+  var H='';
+  /* référence éventuelle : NM_000546.6:c.743G>A */
+  var ref=null,v=s;
+  var mr=s.match(/^([A-Za-z]{2}_[0-9.]+)(?:\(([^)]+)\))?\s*:\s*(.+)$/);
+  if(mr){ref=mr[1];var gene=mr[2];v=mr[3];
+    var t=ref.slice(0,2).toUpperCase();
+    var lib=({NM:'ARNm de référence (RefSeq)',NC:'chromosome (RefSeq)',NG:'région génomique',
+              NP:'protéine (RefSeq)',NR:'ARN non codant',ENST:'transcrit Ensembl'})[t]||'séquence de référence';
+    H+=row('Référence','<b>'+ref+'</b> — '+lib+(gene?' · gène <b>'+gene+'</b>':''));
+  }
+  var pfx=v.charAt(0).toLowerCase(), ok='gcnrpm'.indexOf(pfx)>=0 && v.charAt(1)==='.';
+  if(!ok){msg('ba','❌ Format non reconnu. Un variant HGVS commence par un préfixe <code>g. c. n. r. p. m.</code> suivi d\'un point.');return;}
+  var LIB={g:'génomique',c:'codante (ADNc)',n:'non codante',r:'ARN',p:'protéine',m:'mitochondriale'};
+  H+=row('Niveau','<b>'+LIB[pfx]+'</b> — préfixe <code>'+pfx+'.</code>');
+  var body=v.slice(2), type='?', desc='', cons='', cls='in', notes=[];
+
+  if(pfx==='p'){
+    var pred=/^\(.*\)$/.test(body);
+    var b=body.replace(/^\(|\)$/g,'');
+    var m;
+    if((m=b.match(/^([A-Za-z*]{1,3})(\d+)([A-Za-z*]{1,3})fsTer(\d+|\?)$/i))||
+       (m=b.match(/^([A-Za-z*]{1,3})(\d+)([A-Za-z*]{1,3})fs\*?(\d+|\?)?$/i))){
+      var r1=norm3(m[1]),r2=norm3(m[3]);
+      if(!r1||!r2){msg('ba','❌ Acide aminé non reconnu : utilisez le code à 3 lettres (Arg) ou à 1 lettre (R).');return;}
+      type='Décalage du cadre de lecture (frameshift)';
+      desc='Le résidu <b>'+(AA3[r1]||r1)+' '+m[2]+'</b> est remplacé par <b>'+(AA3[r2]||r2)+'</b>, puis le cadre est décalé ; un codon STOP apparaît '+(m[4]&&m[4]!=='?'?'<b>'+m[4]+' résidus</b> plus loin':'à une position non précisée')+'.';
+      cons='Protéine tronquée et anormale. Un frameshift est presque toujours <b>délétère</b> : il déclenche fréquemment la dégradation de l\'ARNm par NMD (nonsense-mediated decay).';
+      cls='ba';
+    }else if((m=b.match(/^([A-Za-z*]{1,3})(\d+)(Ter|\*)$/i))){
+      var rr=norm3(m[1]);
+      if(!rr){msg('ba','❌ Acide aminé non reconnu.');return;}
+      type='Non-sens (nonsense)';
+      desc='Le résidu <b>'+(AA3[rr]||rr)+' '+m[2]+'</b> est remplacé par un <b>codon STOP</b>.';
+      cons='Protéine tronquée. Effet généralement <b>perte de fonction</b>. Si le stop survient loin de l\'extrémité 3\', l\'ARNm est dégradé par NMD.';
+      cls='ba';
+    }else if((m=b.match(/^([A-Za-z*]{1,3})(\d+)=$/))){
+      type='Synonyme (silencieux)';
+      desc='Le résidu <b>'+m[2]+'</b> est <b>inchangé</b>.';
+      cons='Pas de modification de la protéine. Attention : un variant synonyme peut néanmoins <b>altérer l\'épissage</b> s\'il touche un site donneur/accepteur ou un exonic splicing enhancer.';
+      cls='wa';
+    }else if((m=b.match(/^([A-Za-z*]{1,3})(\d+)del$/i))){
+      if(!norm3(m[1])){msg('ba','❌ Acide aminé non reconnu.');return;}
+      type='Délétion d\'un acide aminé';
+      desc='Perte du résidu <b>'+(AA3[norm3(m[1])]||m[1])+' '+m[2]+'</b>.';
+      cons='Délétion en phase : la protéine reste dans le cadre mais perd un résidu.';cls='wa';
+    }else if((m=b.match(/^([A-Za-z*]{1,3})(\d+)_([A-Za-z*]{1,3})(\d+)(del|dup|delins.*|ins.*)$/i))){
+      if(!norm3(m[1])||!norm3(m[3])){msg('ba','❌ Acide aminé non reconnu.');return;}
+      type='Variant multi-résidus ('+m[5].replace(/[A-Z][a-z]{2}/g,'').toUpperCase()+')';
+      desc='De <b>'+(AA3[norm3(m[1])]||m[1])+' '+m[2]+'</b> à <b>'+(AA3[norm3(m[3])]||m[3])+' '+m[4]+'</b>.';
+      cons='Conséquence à évaluer selon le nombre de résidus : multiple de 3 → en phase, sinon frameshift.';cls='wa';
+    }else if((m=b.match(/^([A-Za-z*]{1,3})(\d+)([A-Za-z*]{1,3})$/))){
+      var a1=norm3(m[1]),a2=norm3(m[3]);
+      if(!a1||!a2){msg('ba','❌ Acide aminé non reconnu. Utilisez le code à 3 lettres (Arg) ou à 1 lettre (R).');return;}
+      type='Faux-sens (missense)';
+      desc='<b>'+(AA3[a1]||a1)+'</b> ('+a1+') en position <b>'+m[2]+'</b> → <b>'+(AA3[a2]||a2)+'</b> ('+a2+').';
+      var p1=PROP[a1],p2=PROP[a2];
+      var conserv=(p1===p2);
+      cons='Propriétés : '+p1+' → '+p2+'. '+(conserv
+        ?'Substitution <b>conservative</b> (même classe physico-chimique) : impact fonctionnel souvent moindre.'
+        :'Substitution <b>non conservative</b> : changement de classe physico-chimique, impact potentiellement important.');
+      if(a1==='Pro'||a2==='Pro')notes.push('La <b>proline</b> impose une contrainte conformationnelle forte : son gain ou sa perte déstabilise souvent les hélices et les feuillets.');
+      if(a1==='Gly')notes.push('La <b>glycine</b> est le seul résidu sans chaîne latérale : elle occupe souvent des positions à forte contrainte stérique.');
+      if(a1==='Cys'||a2==='Cys')notes.push('La <b>cystéine</b> peut former des ponts disulfure : sa perte ou son gain modifie le repliement.');
+      cls='wa';
+    }else if(/^0$/.test(b)){type='Aucune protéine produite';desc='Notation <code>p.0</code>';cons='Absence totale de produit protéique.';cls='ba';}
+    else if(/^\?$/.test(b)){type='Conséquence inconnue';desc='';cons='La conséquence protéique n\'a pas pu être prédite.';cls='in';}
+    else {msg('wa','⚠️ Syntaxe protéique non reconnue. Formats acceptés : <code>p.Arg248Gln</code>, <code>p.Arg213Ter</code>, <code>p.Arg97ProfsTer23</code>, <code>p.(Leu54=)</code>.');return;}
+    if(pred)notes.push('Les <b>parenthèses</b> indiquent une conséquence <b>PRÉDITE</b> par traduction théorique, et non vérifiée expérimentalement sur l\'ARN ou la protéine.');
+  }else{
+    var m2;
+    if((m2=body.match(/^([\-*]?\d+(?:[+\-]\d+)?)([ACGTU])>([ACGTU])$/i))){
+      type='Substitution';
+      desc='Position <b>'+m2[1]+'</b> : <b>'+m2[2].toUpperCase()+'</b> → <b>'+m2[3].toUpperCase()+'</b>.';
+      var tr=(m2[2]+m2[3]).toUpperCase(),pur='AG',pyr='CT';
+      var trans=(pur.indexOf(tr[0])>=0&&pur.indexOf(tr[1])>=0)||(pyr.indexOf(tr[0])>=0&&pyr.indexOf(tr[1])>=0);
+      cons=(trans?'<b>Transition</b> (purine↔purine ou pyrimidine↔pyrimidine) — type de substitution le plus fréquent.'
+                 :'<b>Transversion</b> (purine↔pyrimidine) — plus rare, souvent plus délétère.');
+      cls='in';
+      if(/[+\-]/.test(m2[1]))notes.push('La position contient <b>+</b> ou <b>−</b> : le variant est <b>INTRONIQUE</b>. Les positions ±1 et ±2 correspondent aux sites d\'épissage canoniques (GT…AG) et sont presque toujours pathogènes.');
+    }else if((m2=body.match(/^([\-*]?\d+(?:[+\-]\d+)?)(?:_([\-*]?\d+(?:[+\-]\d+)?))?del([ACGTU]*)$/i))){
+      var n=m2[3]?m2[3].length:(m2[2]?(parseInt(m2[2])-parseInt(m2[1])+1):1);
+      type='Délétion';
+      desc=m2[2]?('De la position <b>'+m2[1]+'</b> à <b>'+m2[2]+'</b> — <b>'+n+' nucléotide(s)</b>.')
+                :('Position <b>'+m2[1]+'</b> — <b>'+n+' nucléotide(s)</b>.');
+      cons=(pfx==='c')?((n%3===0)?'Nombre de nucléotides <b>multiple de 3</b> → délétion <b>EN PHASE</b> : perte de '+(n/3)+' acide(s) aminé(s), cadre de lecture préservé.'
+                                 :'Nombre de nucléotides <b>non multiple de 3</b> → <b>DÉCALAGE DU CADRE</b> (frameshift), généralement délétère.')
+                      :'Conséquence protéique à évaluer au niveau c.';
+      cls=(pfx==='c'&&n%3!==0)?'ba':'wa';
+    }else if((m2=body.match(/^([\-*]?\d+(?:[+\-]\d+)?)(?:_([\-*]?\d+(?:[+\-]\d+)?))?dup([ACGTU]*)$/i))){
+      var n2=m2[3]?m2[3].length:(m2[2]?(parseInt(m2[2])-parseInt(m2[1])+1):1);
+      type='Duplication';
+      desc='Duplication de <b>'+n2+' nucléotide(s)</b> à partir de la position <b>'+m2[1]+'</b>.';
+      cons=(pfx==='c')?((n2%3===0)?'<b>En phase</b> : insertion de '+(n2/3)+' acide(s) aminé(s).':'<b>Décalage du cadre</b> (frameshift).')
+                      :'Conséquence à évaluer au niveau c.';
+      cls=(pfx==='c'&&n2%3!==0)?'ba':'wa';
+    }else if((m2=body.match(/^([\-*]?\d+)_([\-*]?\d+)ins([ACGTU]+)$/i))){
+      var n3=m2[3].length;
+      type='Insertion';
+      desc='Insertion de <b>'+m2[3].toUpperCase()+'</b> ('+n3+' nt) entre les positions <b>'+m2[1]+'</b> et <b>'+m2[2]+'</b>.';
+      cons=(pfx==='c')?((n3%3===0)?'<b>En phase</b> : ajout de '+(n3/3)+' acide(s) aminé(s).':'<b>Décalage du cadre</b> (frameshift).')
+                      :'Conséquence à évaluer au niveau c.';
+      cls=(pfx==='c'&&n3%3!==0)?'ba':'wa';
+      notes.push('Les positions d\'une insertion doivent être <b>contiguës</b> (n et n+1).');
+    }else if((m2=body.match(/^([\-*]?\d+)(?:_([\-*]?\d+))?delins([ACGTU]+)$/i))){
+      type='Délétion-insertion (indel)';
+      desc='Remplacement de la séquence '+(m2[2]?('des positions <b>'+m2[1]+'</b> à <b>'+m2[2]+'</b>'):('en <b>'+m2[1]+'</b>'))+' par <b>'+m2[3].toUpperCase()+'</b>.';
+      var del=m2[2]?(parseInt(m2[2])-parseInt(m2[1])+1):1, dif=m2[3].length-del;
+      cons=(pfx==='c')?((dif%3===0)?'Bilan net multiple de 3 → <b>en phase</b>.':'Bilan net non multiple de 3 → <b>décalage du cadre</b>.'):'À évaluer au niveau c.';
+      cls=(pfx==='c'&&dif%3!==0)?'ba':'wa';
+    }else if((m2=body.match(/^([\-*]?\d+)_([\-*]?\d+)inv$/i))){
+      type='Inversion';desc='Inversion entre les positions <b>'+m2[1]+'</b> et <b>'+m2[2]+'</b>.';
+      cons='Séquence inversée en orientation reverse-complement.';cls='wa';
+    }else if((m2=body.match(/^([\-*]?\d+)([ACGTU])=$/i))){
+      type='Absence de variation';desc='Position <b>'+m2[1]+'</b> conforme à la référence.';cons='';cls='ok';
+    }else{
+      msg('wa','⚠️ Syntaxe non reconnue. Exemples valides : <code>c.743G&gt;A</code>, <code>c.1521_1523del</code>, <code>c.35dup</code>, <code>c.51_52insT</code>, <code>c.112_117delinsTG</code>, <code>c.88-2A&gt;G</code>.');return;
+    }
+    if(/^-/.test(body))notes.push('Position <b>négative</b> : le variant se situe en amont de l\'ATG, dans le <b>5\'UTR</b> ou le promoteur — effet possible sur la transcription ou la traduction.');
+    if(/^\*/.test(body))notes.push('Position précédée de <b>*</b> : le variant se situe après le codon stop, dans le <b>3\'UTR</b> — effet possible sur la stabilité de l\'ARNm.');
+  }
+  H+=row('Type','<b>'+type+'</b>');
+  if(desc)H+=row('Lecture',desc);
+  if(cons)H+=row('Conséquence',cons);
+  q('out').innerHTML=H;q('out').style.display='block';
+  var t='✅ Variant décodé.';
+  if(notes.length)t='<b>À retenir :</b><br>• '+notes.join('<br>• ');
+  t+='<br><span style="opacity:.75;font-size:11px">La nomenclature décrit le variant, elle ne préjuge <b>pas</b> de sa pathogénicité — celle-ci s\'évalue par les critères ACMG/AMP (PVS1, PS, PM, PP / BA, BS, BP) en intégrant fréquence populationnelle, ségrégation familiale, prédictions in silico et données fonctionnelles.</span>';
+  msg(cls,t);
+}
+var EX=['c.1521_1523delCTT','NM_000546.6:c.743G>A','p.Arg248Gln','p.(Arg213Ter)',
+'c.35dup','c.88-2A>G','p.Arg97ProfsTer23','c.-30C>T','c.112_117delinsTG','p.(Leu54=)'];
+EX.forEach(function(e){var d=document.createElement('div');d.className='chip';d.textContent=e;
+ d.onclick=function(){q('q').value=e;decode(e);};q('ex').appendChild(d);});
+q('q').addEventListener('input',function(){decode(this.value)});
+decode(q('q').value);
+</script></body></html>

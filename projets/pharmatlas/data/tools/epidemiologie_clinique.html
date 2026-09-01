@@ -1,0 +1,227 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Épidémiologie clinique</title><style>
+:root{--bg:#0d1117;--s1:#161b22;--s2:#1e2530;--bd:#30363d;--ac:#7ee787;--ac2:#58a6ff;
+--ac3:#f78166;--ac4:#d2a8ff;--ac5:#ffa657;--tx:#e6edf3;--mu:#8b949e;--r:10px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,sans-serif;padding:14px;line-height:1.55}
+h1{font-size:17px}h1 span{color:var(--ac)}
+.sub{color:var(--mu);font-size:12px;margin:3px 0 14px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tab{background:var(--s1);border:1px solid var(--bd);color:var(--mu);padding:7px 12px;border-radius:var(--r);
+cursor:pointer;font-size:12px;font-weight:600}
+.tab:hover{border-color:var(--ac2)}.tab.on{background:var(--s2);color:var(--ac);border-color:var(--ac)}
+.pane{display:none}.pane.on{display:block}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:13px;margin-bottom:11px}
+.card h2{font-size:13px;color:var(--ac2);margin-bottom:9px}
+table.m{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px}
+table.m th,table.m td{border:1px solid var(--bd);padding:6px;text-align:center}
+table.m th{background:var(--s2);color:var(--ac2);font-size:11px}
+input[type=number]{width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);
+border-radius:6px;padding:6px;font-size:13px;text-align:center;font-family:ui-monospace,monospace}
+input[type=range]{width:100%;accent-color:var(--ac)}
+input:focus{outline:none;border-color:var(--ac2)}
+label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--mu);margin:9px 0 4px}
+.res{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:8px;margin-top:10px}
+.kpi{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:9px;text-align:center}
+.kpi .v{font-size:18px;font-weight:800;color:var(--ac);font-family:ui-monospace,monospace}
+.kpi .l{font-size:9.5px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.kpi .ci{font-size:10px;color:var(--mu);font-family:ui-monospace,monospace}
+.msg{margin-top:11px;padding:9px 11px;border-radius:8px;font-size:12px;line-height:1.6}
+.ok{background:rgba(126,231,135,.12);border-left:3px solid var(--ac)}
+.wa{background:rgba(255,166,87,.12);border-left:3px solid var(--ac5)}
+.ba{background:rgba(247,129,102,.12);border-left:3px solid var(--ac3)}
+.in{background:rgba(88,166,255,.12);border-left:3px solid var(--ac2)}
+.small{font-size:11px;color:var(--mu);margin-top:6px}
+code{font-family:ui-monospace,monospace;background:var(--s2);padding:1px 5px;border-radius:4px;font-size:11px}
+ul{margin:6px 0 0 17px;font-size:12px}li{margin-bottom:4px}
+.bar{height:9px;background:var(--s2);border-radius:5px;overflow:hidden;margin-top:5px}
+.bar>i{display:block;height:100%;background:var(--ac)}
+</style></head><body>
+
+<h1>📊 Épidémiologie <span>clinique</span></h1>
+<div class="sub">Table 2×2, tests diagnostiques et théorème de Bayes, essais et cohortes — avec intervalles de confiance à 95 %</div>
+
+<div class="tabs">
+<div class="tab on" data-p="p1">Association (2×2)</div>
+<div class="tab" data-p="p2">Test diagnostique</div>
+<div class="tab" data-p="p3">Essai / Cohorte</div>
+<div class="tab" data-p="p4">Aide-mémoire</div>
+</div>
+
+<div class="pane on" id="p1">
+<div class="card"><h2>Tableau de contingence</h2>
+<table class="m"><tr><th></th><th>Malades</th><th>Non malades</th></tr>
+<tr><th>Exposés</th><td><input type="number" id="a" value="60" min="0"></td><td><input type="number" id="b" value="140" min="0"></td></tr>
+<tr><th>Non exposés</th><td><input type="number" id="c" value="30" min="0"></td><td><input type="number" id="d" value="270" min="0"></td></tr></table>
+<div class="res">
+<div class="kpi"><div class="v" id="rr">–</div><div class="l">Risque relatif</div><div class="ci" id="rrci"></div></div>
+<div class="kpi"><div class="v" id="or">–</div><div class="l">Odds ratio</div><div class="ci" id="orci"></div></div>
+<div class="kpi"><div class="v" id="rar">–</div><div class="l">Risque attribuable</div><div class="ci" id="rarci"></div></div>
+<div class="kpi"><div class="v" id="fap">–</div><div class="l">Fraction attribuable</div></div>
+<div class="kpi"><div class="v" id="chi">–</div><div class="l">Chi²</div><div class="ci" id="pv"></div></div>
+<div class="kpi"><div class="v" id="nnt">–</div><div class="l">NNT / NNH</div></div>
+</div>
+<div class="msg" id="m1"></div>
+</div></div>
+
+<div class="pane" id="p2">
+<div class="card"><h2>Performances du test</h2>
+<table class="m"><tr><th></th><th>Malades</th><th>Sains</th></tr>
+<tr><th>Test +</th><td><input type="number" id="tp" value="90" min="0"></td><td><input type="number" id="fp" value="50" min="0"></td></tr>
+<tr><th>Test −</th><td><input type="number" id="fn" value="10" min="0"></td><td><input type="number" id="tn" value="850" min="0"></td></tr></table>
+<div class="res">
+<div class="kpi"><div class="v" id="se">–</div><div class="l">Sensibilité</div><div class="ci" id="seci"></div></div>
+<div class="kpi"><div class="v" id="sp">–</div><div class="l">Spécificité</div><div class="ci" id="spci"></div></div>
+<div class="kpi"><div class="v" id="rvp">–</div><div class="l">Rapport vrais. +</div></div>
+<div class="kpi"><div class="v" id="rvn">–</div><div class="l">Rapport vrais. −</div></div>
+</div>
+<label>Prévalence dans la population testée : <span id="prevv" style="color:var(--ac);font-weight:700"></span></label>
+<input type="range" id="prev" min="0.1" max="80" step="0.1" value="10">
+<div class="small">Se et Sp sont des propriétés du TEST. VPP et VPN dépendent en plus de la PRÉVALENCE — c'est tout l'enjeu du théorème de Bayes.</div>
+<div class="res">
+<div class="kpi"><div class="v" id="vpp">–</div><div class="l">VPP (Bayes)</div><div class="bar"><i id="bvpp"></i></div></div>
+<div class="kpi"><div class="v" id="vpn">–</div><div class="l">VPN (Bayes)</div><div class="bar"><i id="bvpn"></i></div></div>
+</div>
+<div class="msg" id="m2"></div>
+</div></div>
+
+<div class="pane" id="p3">
+<div class="card"><h2>Deux groupes — essai ou cohorte</h2>
+<label>Groupe traité / exposé : événements — effectif total</label>
+<div style="display:flex;gap:8px"><input type="number" id="e1" value="45"><input type="number" id="n1" value="500"></div>
+<label>Groupe contrôle / non exposé : événements — effectif total</label>
+<div style="display:flex;gap:8px"><input type="number" id="e0" value="90"><input type="number" id="n0" value="500"></div>
+<div class="res">
+<div class="kpi"><div class="v" id="r1">–</div><div class="l">Risque traité</div></div>
+<div class="kpi"><div class="v" id="r0">–</div><div class="l">Risque contrôle</div></div>
+<div class="kpi"><div class="v" id="rrr">–</div><div class="l">Réduction relative</div></div>
+<div class="kpi"><div class="v" id="rra">–</div><div class="l">Réduction absolue</div></div>
+<div class="kpi"><div class="v" id="nnt3">–</div><div class="l">NNT</div><div class="ci" id="nnt3ci"></div></div>
+<div class="kpi"><div class="v" id="rr3">–</div><div class="l">Risque relatif</div><div class="ci" id="rr3ci"></div></div>
+</div>
+<div class="msg" id="m3"></div>
+</div></div>
+
+<div class="pane" id="p4">
+<div class="card"><h2>Choisir la bonne mesure</h2>
+<table class="m" style="font-size:11.5px"><tr><th>Schéma d'étude</th><th>Mesure appropriée</th></tr>
+<tr><td style="text-align:left">Transversale</td><td style="text-align:left">Rapport de prévalences — pas de temporalité</td></tr>
+<tr><td style="text-align:left">Cas-témoins</td><td style="text-align:left"><b>Odds ratio</b> — le RR n'est pas calculable</td></tr>
+<tr><td style="text-align:left">Cohorte</td><td style="text-align:left"><b>Risque relatif</b>, risque attribuable, incidence</td></tr>
+<tr><td style="text-align:left">Essai randomisé</td><td style="text-align:left"><b>RR, RRA, NNT</b> — seul schéma causal</td></tr></table>
+</div>
+<div class="card"><h2>Règles d'interprétation</h2>
+<ul>
+<li><b>OR ≈ RR</b> seulement si la maladie est <b>rare</b> (moins de 10 % chez les non exposés). Sinon l'OR surestime le RR.</li>
+<li><b>SnNout</b> — un test très <b>Sensible</b>, s'il est <b>Négatif</b>, permet d'éliminer (rule <b>out</b>) : usage en dépistage.</li>
+<li><b>SpPin</b> — un test très <b>Spécifique</b>, s'il est <b>Positif</b>, permet de confirmer (rule <b>in</b>) : usage en confirmation.</li>
+<li><b>RVP &gt; 10</b> ou <b>RVN &lt; 0,1</b> : le test modifie fortement la probabilité post-test. Entre 0,5 et 2 : apport négligeable.</li>
+<li><b>NNT</b> : nombre de patients à traiter pour éviter un événement. Plus il est bas, plus le traitement est efficace. S'il est négatif, on parle de <b>NNH</b> (nombre nécessaire pour nuire).</li>
+<li>Un <b>IC 95 % qui contient 1</b> (RR, OR) ou <b>0</b> (différence de risque) traduit une association <b>non significative</b>.</li>
+<li>La <b>réduction relative</b> paraît toujours plus impressionnante que l'absolue : c'est le chiffre mis en avant par les communications promotionnelles. Toujours demander la <b>réduction absolue</b> et le <b>NNT</b>.</li>
+</ul></div></div>
+
+<script>
+function q(i){return document.getElementById(i)}
+document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){
+ document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});
+ document.querySelectorAll('.pane').forEach(function(x){x.classList.remove('on')});
+ t.classList.add('on');q(t.dataset.p).classList.add('on');}});
+function msg(id,cls,html){var e=q(id);e.className='msg '+cls;e.innerHTML=html;}
+function f(x,n){return (!isFinite(x)||isNaN(x))?'–':x.toFixed(n===undefined?2:n)}
+/* p-value du chi² à 1 ddl, via la fonction d'erreur complémentaire */
+function erfc(x){var z=Math.abs(x),t=1/(1+z/2),
+ r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(.37409196+t*(.09678418+t*(-.18628806+t*(.27886807+
+ t*(-1.13520398+t*(1.48851587+t*(-.82215223+t*.17087277)))))))));
+ return x>=0?r:2-r;}
+function pchi1(x){return erfc(Math.sqrt(x/2));}
+
+/* ── 1. Table 2×2 ── */
+function calc1(){
+ var a=+q('a').value,b=+q('b').value,c=+q('c').value,d=+q('d').value;
+ if(a<0||b<0||c<0||d<0||(a+b)===0||(c+d)===0){msg('m1','ba','Effectifs invalides.');return;}
+ var r1=a/(a+b),r0=c/(c+d),n=a+b+c+d;
+ var RR=r1/r0,OR=(a*d)/(b*c);
+ q('rr').textContent=f(RR);q('or').textContent=f(OR);
+ var seRR=Math.sqrt(1/a-1/(a+b)+1/c-1/(c+d));
+ q('rrci').textContent=(a&&c)?'['+f(RR*Math.exp(-1.96*seRR))+' ; '+f(RR*Math.exp(1.96*seRR))+']':'';
+ var seOR=Math.sqrt(1/a+1/b+1/c+1/d);
+ q('orci').textContent=(a&&b&&c&&d)?'['+f(OR*Math.exp(-1.96*seOR))+' ; '+f(OR*Math.exp(1.96*seOR))+']':'';
+ var RAR=r1-r0;q('rar').textContent=f(RAR*100,1)+'%';
+ var seD=Math.sqrt(r1*(1-r1)/(a+b)+r0*(1-r0)/(c+d));
+ q('rarci').textContent='['+f((RAR-1.96*seD)*100,1)+' ; '+f((RAR+1.96*seD)*100,1)+']';
+ q('fap').textContent=RR>1?f((1-1/RR)*100,1)+'%':'–';
+ var E=[(a+b)*(a+c)/n,(a+b)*(b+d)/n,(c+d)*(a+c)/n,(c+d)*(b+d)/n],O=[a,b,c,d],X=0;
+ for(var i=0;i<4;i++){if(E[i]>0)X+=Math.pow(O[i]-E[i],2)/E[i];}
+ q('chi').textContent=f(X);var p=pchi1(X);
+ q('pv').textContent=p<0.0001?'p < 0,0001':'p = '+p.toFixed(4);
+ q('nnt').textContent=Math.abs(RAR)>1e-9?Math.ceil(Math.abs(1/RAR)):'∞';
+ var t='';
+ var petit=(E.some(function(v){return v<5}));
+ if(RR>1.1)t='⬆️ <b>Facteur de risque</b> (RR = '+f(RR)+').';
+ else if(RR<0.9)t='⬇️ <b>Facteur protecteur</b> (RR = '+f(RR)+').';
+ else t='➖ Pas d\'association nette (RR ≈ 1).';
+ t+=' '+(p<0.05?'Association <b>statistiquement significative</b> (p &lt; 0,05).':'Non significative (p ≥ 0,05) — l\'IC contient 1.');
+ var prev0=r0*100, ecart=Math.abs(OR-RR)/RR*100;
+ t+='<br>Prévalence chez les non exposés : <b>'+f(prev0,1)+' %</b>. '
+   +(prev0<10?'Maladie rare → l\'OR approche correctement le RR (écart '+f(ecart,0)+' %).'
+             :'⚠️ Maladie <b>non rare</b> → l\'OR <b>surestime</b> le RR (écart '+f(ecart,0)+' %). Ne pas les confondre.');
+ if(petit)t+='<br>⚠️ Un effectif théorique est inférieur à 5 : le chi² n\'est pas valide, utiliser le test exact de Fisher.';
+ msg('m1',p<0.05?(RR>1?'ba':'ok'):'in',t);
+}
+['a','b','c','d'].forEach(function(i){q(i).addEventListener('input',calc1)});
+
+/* ── 2. Test diagnostique ── */
+function calc2(){
+ var tp=+q('tp').value,fp=+q('fp').value,fn=+q('fn').value,tn=+q('tn').value;
+ var se=tp/(tp+fn),sp=tn/(tn+fp);
+ if(!isFinite(se)||!isFinite(sp)){msg('m2','ba','Effectifs invalides.');return;}
+ q('se').textContent=f(se*100,1)+'%';q('sp').textContent=f(sp*100,1)+'%';
+ function ci(p,n){var s=1.96*Math.sqrt(p*(1-p)/n);return '['+f(Math.max(0,p-s)*100,1)+' ; '+f(Math.min(1,p+s)*100,1)+']';}
+ q('seci').textContent=ci(se,tp+fn);q('spci').textContent=ci(sp,tn+fp);
+ var rvp=se/(1-sp),rvn=(1-se)/sp;
+ q('rvp').textContent=f(rvp);q('rvn').textContent=f(rvn,3);
+ var pr=+q('prev').value/100;q('prevv').textContent=f(pr*100,1)+' %';
+ var vpp=(se*pr)/(se*pr+(1-sp)*(1-pr));
+ var vpn=(sp*(1-pr))/(sp*(1-pr)+(1-se)*pr);
+ q('vpp').textContent=f(vpp*100,1)+'%';q('vpn').textContent=f(vpn*100,1)+'%';
+ q('bvpp').style.width=(vpp*100)+'%';q('bvpn').style.width=(vpn*100)+'%';
+ var t='Avec une prévalence de <b>'+f(pr*100,1)+' %</b> : un test positif correspond à une probabilité réelle de maladie de <b>'+f(vpp*100,1)+' %</b>.';
+ if(pr<0.05&&vpp<0.5)t+=' ⚠️ <b>Piège classique du dépistage</b> : même avec un excellent test, en population à faible prévalence la majorité des positifs sont des <b>faux positifs</b>.';
+ t+='<br>';
+ if(se>=0.95)t+='<b>SnNout</b> — test très sensible : un résultat négatif permet d\'ÉLIMINER le diagnostic. ';
+ if(sp>=0.95)t+='<b>SpPin</b> — test très spécifique : un résultat positif permet de CONFIRMER. ';
+ t+='<br>RVP = '+f(rvp)+' — '+(rvp>10?'apport <b>fort</b>':rvp>5?'apport modéré':'apport faible')
+   +' ; RVN = '+f(rvn,3)+' — '+(rvn<0.1?'apport <b>fort</b>':rvn<0.2?'apport modéré':'apport faible')+'.';
+ msg('m2',(pr<0.05&&vpp<0.5)?'wa':'ok',t);
+}
+['tp','fp','fn','tn','prev'].forEach(function(i){q(i).addEventListener('input',calc2)});
+
+/* ── 3. Essai / cohorte ── */
+function calc3(){
+ var e1=+q('e1').value,n1=+q('n1').value,e0=+q('e0').value,n0=+q('n0').value;
+ if(n1<=0||n0<=0){msg('m3','ba','Effectifs invalides.');return;}
+ var p1=e1/n1,p0=e0/n0;
+ q('r1').textContent=f(p1*100,1)+'%';q('r0').textContent=f(p0*100,1)+'%';
+ var RR=p1/p0,RRA=p0-p1,RRR=RRA/p0;
+ q('rrr').textContent=f(RRR*100,1)+'%';q('rra').textContent=f(RRA*100,1)+'%';
+ q('rr3').textContent=f(RR);
+ var seRR=Math.sqrt((1-p1)/e1+(1-p0)/e0);
+ q('rr3ci').textContent=(e1&&e0)?'['+f(RR*Math.exp(-1.96*seRR))+' ; '+f(RR*Math.exp(1.96*seRR))+']':'';
+ var nnt=Math.abs(RRA)>1e-9?1/RRA:Infinity;
+ q('nnt3').textContent=isFinite(nnt)?Math.ceil(Math.abs(nnt)):'∞';
+ var seD=Math.sqrt(p1*(1-p1)/n1+p0*(1-p0)/n0),lo=RRA-1.96*seD,hi=RRA+1.96*seD;
+ q('nnt3ci').textContent=(lo*hi>0)?'['+Math.ceil(Math.abs(1/hi))+' ; '+Math.ceil(Math.abs(1/lo))+']':'non significatif';
+ var t='';
+ if(RRA>0)t='✅ <b>Bénéfice</b> : il faut traiter <b>'+Math.ceil(1/RRA)+' patients</b> pour éviter un événement (NNT).';
+ else if(RRA<0)t='⚠️ <b>Excès de risque</b> : un événement supplémentaire tous les <b>'+Math.ceil(Math.abs(1/RRA))+' patients</b> traités (NNH).';
+ else t='Aucune différence entre les groupes.';
+ t+='<br>Réduction <b>relative</b> '+f(Math.abs(RRR)*100,1)+' % vs <b>absolue</b> '+f(Math.abs(RRA)*100,1)+' % — '
+   +'c\'est toujours la relative qui est mise en avant, alors que l\'absolue et le NNT reflètent le bénéfice réel.';
+ if(lo*hi<=0)t+='<br>⚠️ L\'IC 95 % de la différence contient 0 : résultat <b>non significatif</b>.';
+ msg('m3',RRA>0?'ok':(RRA<0?'ba':'in'),t);
+}
+['e1','n1','e0','n0'].forEach(function(i){q(i).addEventListener('input',calc3)});
+calc1();calc2();calc3();
+</script></body></html>

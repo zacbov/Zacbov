@@ -4,13 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PharmAtlas</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Polices hébergées localement — aucun appel tiers (RGPD) */
+@font-face{font-family:'Bebas Neue';src:url('vendor/fonts/BebasNeue.woff2') format('woff2');
+           font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Montserrat';src:url('vendor/fonts/Montserrat-Regular.woff2') format('woff2');
+           font-weight:400;font-style:normal;font-display:swap}
+</style>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--accent:rgb(58,176,158);--accent-light:rgba(58,176,158,0.12);--accent-dark:rgb(48,146,138);--bg:#f5f5f3;--white:#fff;--text:#1a1a1a;--muted:#888;--border:#e0e0e0;--paper2:#fafaf8}
 button:focus-visible,.cat-tab:focus-visible,.cat-group-btn:focus-visible,.cat-standalone:focus-visible,.model-card:focus-visible,.cat-back-btn:focus-visible,.btn-back:focus-visible,input:focus-visible{
   outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
-body{font-family:'Montserrat',sans-serif;background:
+body{font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;background:
     radial-gradient(circle at 14% 18%, rgba(58,176,158,.16) 0%, transparent 45%),
     radial-gradient(circle at 88% 12%, rgba(58,176,158,.09) 0%, transparent 40%),
     radial-gradient(circle at 55% 90%, rgba(58,176,158,.10) 0%, transparent 50%),
@@ -21,20 +27,20 @@ header{background:rgba(255,255,255,.72);backdrop-filter:blur(20px) saturate(160%
 .header-search{display:flex;align-items:center;gap:8px;background:rgba(26,26,26,.045);border:1px solid transparent;border-radius:20px;padding:6px 14px;transition:border .2s,background .2s;flex:1;max-width:320px}
 .header-search:focus-within{border-color:rgba(58,176,158,.35);background:rgba(255,255,255,.7)}
 .header-search svg{flex-shrink:0;opacity:.4}
-.header-search input{border:none;background:transparent;font-family:'Montserrat',sans-serif;font-size:12px;outline:none;width:100%;color:var(--text)}
+.header-search input{border:none;background:transparent;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:12px;outline:none;width:100%;color:var(--text)}
 .header-search input::placeholder{color:var(--muted)}
 .header-controls{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
 .header-controls .lbl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
-.header-controls input[type=text]{border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-family:'Montserrat',sans-serif;font-size:12px;width:190px;outline:none;transition:border .2s}
+.header-controls input[type=text]{border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:12px;width:190px;outline:none;transition:border .2s}
 .header-controls input[type=text]:focus{border-color:var(--accent)}
 .sep-v{width:1px;height:24px;background:var(--border);flex-shrink:0;margin:0 4px}
-.btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;white-space:nowrap}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;white-space:nowrap}
 .btn:hover{background:var(--accent-dark)}
 .btn.outline{background:var(--accent-light);color:var(--accent)}
 .btn.outline:hover{background:rgba(58,176,158,0.22)}
 .level-selector{display:flex;align-items:center;gap:5px;flex-shrink:0}
 .level-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
-.level-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);transition:background .15s,color .15s,border-color .15s;white-space:nowrap}
+.level-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);transition:background .15s,color .15s,border-color .15s;white-space:nowrap}
 .level-btn:hover{border-color:var(--accent);color:var(--accent)}
 .level-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .level-btn.pending{opacity:.45;cursor:not-allowed}
@@ -47,7 +53,7 @@ main{display:flex;flex:1;overflow:hidden;gap:12px;padding:12px}
 aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid rgba(255,255,255,.65);border-radius:18px;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;box-shadow:0 8px 28px rgba(26,26,26,.08),inset 0 1px 0 rgba(255,255,255,.5)}
 .cat-tabs{display:flex;flex-direction:column;gap:1px;padding:8px 10px 10px 10px;overflow-y:auto;overflow-x:visible;flex-shrink:0;transition:max-height .25s cubic-bezier(.4,0,.2,1),opacity .2s,padding .2s;max-height:4000px}
 .cat-tabs.collapsed{max-height:0;padding-top:0;padding-bottom:0;opacity:0;pointer-events:none;overflow:hidden}
-.cat-tabs-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;background:rgba(255,255,255,.4);border:none;border-bottom:1px solid rgba(26,26,26,.08);padding:13px 14px;cursor:pointer;font-family:'Bebas Neue',sans-serif;font-size:20px;font-weight:400;color:var(--text);text-transform:none;letter-spacing:1.5px;transition:background .15s,color .15s;flex-shrink:0}
+.cat-tabs-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;background:rgba(255,255,255,.4);border:none;border-bottom:1px solid rgba(26,26,26,.08);padding:13px 14px;cursor:pointer;font-family:'Bebas Neue','Oswald','Arial Narrow',sans-serif;font-size:20px;font-weight:400;color:var(--text);text-transform:none;letter-spacing:1.5px;transition:background .15s,color .15s;flex-shrink:0}
 .cat-tabs-toggle:hover{background:rgba(58,176,158,.10);color:var(--accent-dark)}
 .cat-tabs-toggle .ctt-arrow{font-size:11px;transition:transform .22s cubic-bezier(.4,0,.2,1);opacity:.5}
 .cat-tabs-toggle.collapsed .ctt-arrow{transform:rotate(-90deg)}
@@ -55,7 +61,7 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 .cat-tab:hover{background:var(--accent-light);border-color:rgba(58,176,158,.25);transform:translateY(-1px)}
 .cat-tab:active{transform:scale(.99)}
 .cat-tab.active{background:rgba(58,176,158,.09);border-color:rgba(58,176,158,.25);color:var(--accent-dark,var(--accent))}
-.cat-tab .count{margin-left:auto;font-size:10px;font-family:'Montserrat',sans-serif;font-weight:600;background:rgba(26,26,26,.05);color:var(--muted);padding:2px 8px;border-radius:20px;transition:background .15s,color .15s}
+.cat-tab .count{margin-left:auto;font-size:10px;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-weight:600;background:rgba(26,26,26,.05);color:var(--muted);padding:2px 8px;border-radius:20px;transition:background .15s,color .15s}
 .cat-tab:hover .count,.cat-tab.active .count{background:rgba(58,176,158,.14);color:var(--accent)}
 /* ── Drill-down menu ── */
 @keyframes pa-slide-in-right{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
@@ -71,11 +77,11 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 .cat-group-btn .gbtn-icon{font-size:15px;width:32px;height:32px;flex-shrink:0;border-radius:9px;background:rgba(26,26,26,.045);display:inline-flex;align-items:center;justify-content:center;margin-right:2px;transition:background .15s}
 .cat-group-btn:hover .gbtn-icon,.cat-group-btn.active-group .gbtn-icon{background:rgba(58,176,158,.14)}
 .cat-group-btn .gbtn-label{flex:1;text-align:left}
-.cat-group-btn .gbtn-count{font-size:10px;font-family:'Montserrat',sans-serif;font-weight:600;background:rgba(26,26,26,.05);color:var(--muted);padding:2px 8px;border-radius:20px;margin-right:4px;transition:background .15s,color .15s}
+.cat-group-btn .gbtn-count{font-size:10px;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-weight:600;background:rgba(26,26,26,.05);color:var(--muted);padding:2px 8px;border-radius:20px;margin-right:4px;transition:background .15s,color .15s}
 .cat-group-btn:hover .gbtn-count,.cat-group-btn.active-group .gbtn-count{background:rgba(58,176,158,.14);color:var(--accent)}
 .cat-group-btn .gbtn-arrow{font-size:13px;opacity:.35;margin-left:2px;transition:transform .15s,opacity .15s}
 .cat-group-btn:hover .gbtn-arrow{opacity:.9;color:var(--accent);transform:translateX(2px)}
-.cat-back-btn{display:flex;align-items:center;gap:6px;width:fit-content;background:var(--accent-light);border:none;border-radius:20px;cursor:pointer;padding:7px 13px 7px 10px;margin:0 0 10px 0;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;color:var(--accent-dark,var(--accent));text-transform:none;letter-spacing:.2px;transition:background .15s,transform .15s}
+.cat-back-btn{display:flex;align-items:center;gap:6px;width:fit-content;background:var(--accent-light);border:none;border-radius:20px;cursor:pointer;padding:7px 13px 7px 10px;margin:0 0 10px 0;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:12px;font-weight:700;color:var(--accent-dark,var(--accent));text-transform:none;letter-spacing:.2px;transition:background .15s,transform .15s}
 .cat-back-btn::before{content:'←';font-size:13px}
 .cat-back-btn:hover{background:rgba(58,176,158,.22)}
 .cat-back-btn:active{transform:scale(.96)}
@@ -87,7 +93,7 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 .cat-standalone .gbtn-icon{font-size:15px;width:32px;height:32px;flex-shrink:0;border-radius:9px;background:rgba(26,26,26,.045);display:inline-flex;align-items:center;justify-content:center;margin-right:2px;transition:background .15s}
 .cat-standalone:hover .gbtn-icon,.cat-standalone.active .gbtn-icon{background:rgba(58,176,158,.14)}
 .cat-standalone .gbtn-label{flex:1;text-align:left}
-.cat-standalone .gbtn-count{font-size:10px;font-family:'Montserrat',sans-serif;font-weight:600;background:rgba(26,26,26,.05);color:var(--muted);padding:2px 8px;border-radius:20px;transition:background .15s,color .15s}
+.cat-standalone .gbtn-count{font-size:10px;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-weight:600;background:rgba(26,26,26,.05);color:var(--muted);padding:2px 8px;border-radius:20px;transition:background .15s,color .15s}
 .cat-standalone:hover .gbtn-count,.cat-standalone.active .gbtn-count{background:rgba(58,176,158,.14);color:var(--accent)}
 .model-list{flex:1;overflow-y:auto;padding:8px}
 .model-list::-webkit-scrollbar{width:4px}
@@ -104,7 +110,7 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 .model-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .model-desc{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .model-cat-badge{font-size:9px;font-weight:600;color:var(--accent);background:var(--accent-light);padding:2px 6px;border-radius:10px;margin-top:3px;display:inline-block}
-.empty-cat{padding:36px 20px;text-align:center;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:13px;line-height:1.7}
+.empty-cat{padding:36px 20px;text-align:center;color:var(--muted);font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:13px;line-height:1.7}
 .empty-cat .big{font-size:34px;margin-bottom:10px;opacity:.35}
 
 .viewer-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;border-radius:18px}
@@ -187,7 +193,7 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 
 /* ══ Médicaments groupés — onglets galéniques ══ */
 .form-tabs-wrap{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;padding:2px 0}
-.form-tab{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);transition:all .18s;white-space:nowrap}
+.form-tab{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);transition:all .18s;white-space:nowrap}
 .form-tab:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 .form-tab.active{border-color:var(--accent);background:var(--accent);color:#fff;box-shadow:0 3px 10px rgba(58,176,158,0.3)}
 .form-tab .tab-count{font-size:9px;background:rgba(255,255,255,0.3);border-radius:10px;padding:1px 6px;font-weight:700}
@@ -235,7 +241,7 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 /* ══════ VIEWER HERBIER GBIF ══════ */
 .herbarium-viewer{width:100%;height:100%;display:flex;flex-direction:column;background:#f9f6ef;position:relative;overflow:hidden}
 .herbarium-toggle-bar{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;background:rgba(255,255,255,0.85);border-bottom:1px solid #e0d8c8;flex-shrink:0;z-index:2}
-.herb-toggle-btn{display:flex;align-items:center;gap:5px;border:1.5px solid #c8bfa8;border-radius:20px;padding:4px 12px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;cursor:pointer;background:transparent;color:#7a6a50;transition:all .18s;letter-spacing:.3px}
+.herb-toggle-btn{display:flex;align-items:center;gap:5px;border:1.5px solid #c8bfa8;border-radius:20px;padding:4px 12px;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;cursor:pointer;background:transparent;color:#7a6a50;transition:all .18s;letter-spacing:.3px}
 .herb-toggle-btn:hover{border-color:var(--accent);color:var(--accent)}
 .herb-toggle-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 8px rgba(58,176,158,.3)}
 .herbarium-stage{flex:1;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center}
@@ -366,7 +372,7 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 .sub-filter:hover{border-color:var(--accent);color:var(--accent)}
 .sub-filter.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 /* ── Toggle filtres ── */
-#filter-toggle{display:none;align-items:center;justify-content:space-between;padding:5px 10px;border-bottom:1px solid var(--border);cursor:pointer;background:none;border-left:none;border-right:none;border-top:none;width:100%;font-family:'Montserrat',sans-serif;transition:background .15s}
+#filter-toggle{display:none;align-items:center;justify-content:space-between;padding:5px 10px;border-bottom:1px solid var(--border);cursor:pointer;background:none;border-left:none;border-right:none;border-top:none;width:100%;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;transition:background .15s}
 #filter-toggle:hover{background:var(--accent-light)}
 #filter-toggle .ft-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:6px}
 #filter-toggle .ft-label span.ft-ico{display:flex;align-items:center;color:var(--muted)}
@@ -421,7 +427,7 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 /* ─── toggle variants (NAD⁺/NADH, FAD/FADH₂) ─── */
 .variant-toggle{display:flex;gap:6px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
 .variant-toggle-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-right:4px}
-.variant-btn{border:1px solid var(--border);border-radius:20px;padding:5px 16px;font-size:12px;font-weight:700;cursor:pointer;background:none;color:var(--muted);transition:all .18s;font-family:'Montserrat',sans-serif;letter-spacing:.3px}
+.variant-btn{border:1px solid var(--border);border-radius:20px;padding:5px 16px;font-size:12px;font-weight:700;cursor:pointer;background:none;color:var(--muted);transition:all .18s;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.3px}
 .variant-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 .variant-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 8px rgba(58,176,158,.3)}
 
@@ -519,13 +525,13 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 .tf-bar-fill{height:100%;border-radius:3px;transition:width .4s}
 .tf-bar-lbl{font-size:10px;color:var(--muted);margin-top:3px}
 
-.teacher-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 11px;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .2s;white-space:nowrap}
+.teacher-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 11px;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .2s;white-space:nowrap}
 .teacher-btn:hover{border-color:#e67e22;color:#e67e22}
 .teacher-btn.active{background:#e67e22;color:#fff;border-color:#e67e22}
-.teacher-export-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 11px;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .2s;white-space:nowrap;display:none}
+.teacher-export-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 11px;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .2s;white-space:nowrap;display:none}
 .teacher-export-btn.visible{display:inline-block}
 .teacher-export-btn:hover{border-color:var(--accent);color:var(--accent)}
-.lv-badge{display:none;position:absolute;top:6px;right:8px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;cursor:pointer;user-select:none;transition:all .15s;font-family:'Montserrat',sans-serif;letter-spacing:.5px;z-index:2}
+.lv-badge{display:none;position:absolute;top:6px;right:8px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;cursor:pointer;user-select:none;transition:all .15s;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.5px;z-index:2}
 .lv-badge:hover{transform:scale(1.1)}
 .lv-badge[data-level="1"]{background:#E1F5EE;color:#085041;border:1px solid #5DCAA5}
 .lv-badge[data-level="2"]{background:#E6F1FB;color:#0C447C;border:1px solid #85B7EB}
@@ -545,7 +551,7 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 .sci2d-tabbar{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;
   background:rgba(255,255,255,0.9);border-bottom:1px solid var(--border);flex-shrink:0;z-index:2}
 .sci2d-tab{display:flex;align-items:center;gap:5px;border:1.5px solid var(--border);border-radius:20px;
-  padding:5px 14px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;cursor:pointer;
+  padding:5px 14px;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;cursor:pointer;
   background:transparent;color:var(--muted);transition:all .18s;letter-spacing:.3px}
 .sci2d-tab:hover{border-color:var(--accent);color:var(--accent)}
 .sci2d-tab.on{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 8px rgba(58,176,158,.3)}
@@ -557,7 +563,7 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
   gap:10px;background:#0a0a0f;z-index:5;color:rgba(255,255,255,.6);font-size:11px;letter-spacing:.4px}
 .sci2d-imgfail{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   text-align:center;padding:26px;color:rgba(255,255,255,.7);font-size:12px;z-index:4}
-.sci2d-pdbtag{position:absolute;left:10px;top:10px;font-family:'Bebas Neue',sans-serif;letter-spacing:2px;
+.sci2d-pdbtag{position:absolute;left:10px;top:10px;font-family:'Bebas Neue','Oswald','Arial Narrow',sans-serif;letter-spacing:2px;
   font-size:13px;color:var(--accent);background:rgba(10,10,15,.7);border:1px solid rgba(58,176,158,.4);
   padding:2px 9px;border-radius:6px;z-index:4;pointer-events:none}
 /* Mini-barre d'outils (styles + spin) en bas du viewer */
@@ -627,7 +633,7 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 /* Bandeau EN BAS : une seule ligne (PDB · titre court · liens externes) */
 .sci2d-desc{flex-shrink:0;background:#fff;border-top:1px solid var(--border);padding:9px 14px}
 .sci2d-descrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.sci2d-descid{font-family:'Bebas Neue',sans-serif;letter-spacing:1.5px;font-size:15px;color:var(--accent);flex-shrink:0}
+.sci2d-descid{font-family:'Bebas Neue','Oswald','Arial Narrow',sans-serif;letter-spacing:1.5px;font-size:15px;color:var(--accent);flex-shrink:0}
 .sci2d-desctitle{font-size:12.5px;font-weight:600;color:var(--text);flex:1 1 auto;min-width:0;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sci2d-desclinks{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
@@ -645,7 +651,7 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 
 /* Bouton bascule mobile/bureau (toujours présent dans le header) */
 .pa-mobile-toggle{background:var(--accent-light);color:var(--accent);border:1px solid transparent;
-  border-radius:6px;padding:6px 12px;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:600;
+  border-radius:6px;padding:6px 12px;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:12px;font-weight:600;
   cursor:pointer;white-space:nowrap;transition:background .2s;display:inline-flex;align-items:center;gap:5px}
 .pa-mobile-toggle:hover{background:rgba(58,176,158,0.22)}
 .pa-mobile-toggle.on{background:var(--accent);color:#fff}
@@ -659,7 +665,7 @@ body.pa-mobile .pa-bottomnav{
   box-shadow:0 -2px 12px rgba(0,0,0,.06)}
 .pa-bn-btn{flex:1;background:none;border:none;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--muted);
-  font-family:'Montserrat',sans-serif;font-size:9px;font-weight:600;letter-spacing:.3px;
+  font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:9px;font-weight:600;letter-spacing:.3px;
   transition:color .15s;padding:6px 2px}
 .pa-bn-btn .bn-ico{font-size:19px;line-height:1}
 .pa-bn-btn.active{color:var(--accent)}
@@ -770,7 +776,7 @@ body.pa-mobile .pa-vtoggle{
   border:none;border-bottom:1px solid var(--border);width:100%;cursor:pointer;
   font-family:Bebas Neue,sans-serif;font-size:15px;letter-spacing:1.2px;flex-shrink:0}
 body.pa-mobile .pa-vtoggle:active{background:rgba(58,176,158,0.22)}
-body.pa-mobile .pa-vtoggle .vt-chev{font-size:11px;transition:transform .25s;font-family:'Montserrat',sans-serif}
+body.pa-mobile .pa-vtoggle .vt-chev{font-size:11px;transition:transform .25s;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif}
 body.pa-mobile .pa-vtoggle.open .vt-chev{transform:rotate(180deg)}
 /* si aucun viewer utile pour cette fiche, on masque le bouton (classe posée en JS) */
 #detailSheet.pa-noviewer .sheet-viewer{display:none!important}
@@ -838,9 +844,9 @@ body.pa-mobile .sheet-viewer .spinner{margin:auto}
 
 
 <script>
-window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$'],['\\[','\\]']],processEscapes:true},options:{skipHtmlTags:['script','noscript','style','textarea']},startup:{typeset:false}};
+window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$'],['\\[','\\]']],processEscapes:true},options:{skipHtmlTags:['script','noscript','style','textarea']},startup:{typeset:false},/* polices servies localement : sans cette ligne MathJax les retélécharge depuis un CDN */chtml:{fontURL:'vendor/mathjax/output/chtml/fonts/woff-v2'},loader:{paths:{mathjax:'vendor/mathjax'}}};
 </script>
-<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script"></script>
+<script async src="vendor/mathjax/tex-chtml.js" id="MathJax-script"></script>
 </head>
 <body>
 
@@ -913,8 +919,8 @@ window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$
   </div>
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://unpkg.com/3dmol@2.0.3/build/3Dmol-min.js"></script>
+<script src="vendor/three-r128/three.min.js"></script>
+<script src="vendor/3dmol/3Dmol-min.js"></script>
 <!-- NGL Viewer (RCSB PDB structures) — chargé à la demande -->
 <!-- OpenSeadragon (viewer lame histologique) — chargé à la demande -->
 <script>
@@ -10590,8 +10596,8 @@ function loadGLTF(url){
   return new Promise((res,rej)=>{
     if(window.GLTFLoaderReady){doLoad(url,res,rej);return;}
     // Charger GLTFLoader puis DRACOLoader (pour les .glb compressés Draco)
-    _loadScriptOnce('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js')
-      .then(()=>_loadScriptOnce('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js').catch(()=>{}))
+    _loadScriptOnce('vendor/three-r128/loaders/GLTFLoader.js')
+      .then(()=>_loadScriptOnce('vendor/three-r128/loaders/DRACOLoader.js').catch(()=>{}))
       .then(()=>{window.GLTFLoaderReady=true;doLoad(url,res,rej);})
       .catch(()=>rej(new Error('GLTFLoader indisponible')));
   });
@@ -10602,7 +10608,7 @@ function _getDracoLoader(){
   if(typeof THREE.DRACOLoader!=='function') return null;
   var dl=new THREE.DRACOLoader();
   // décodeur Draco hébergé (compatible three r128)
-  dl.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/');
+  dl.setDecoderPath('vendor/three-r128/draco/');
   dl.setDecoderConfig({type:'js'});
   _dracoLoaderInstance=dl;
   return dl;
@@ -11082,11 +11088,11 @@ function _loadOSD(cb){
   _osdCBs.push(cb);
   if(_osdCBs.length>1) return;
   var s=document.createElement('script');
-  s.src='https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/openseadragon.min.js';
+  s.src='vendor/openseadragon/openseadragon.min.js';
   s.onload=function(){ _osdLoaded=true; _osdCBs.forEach(function(f){f();}); _osdCBs=[]; };
   s.onerror=function(){
     var s2=document.createElement('script');
-    s2.src='https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js';
+    s2.src='vendor/openseadragon/openseadragon.min.js';
     s2.onload=function(){ _osdLoaded=true; _osdCBs.forEach(function(f){f();}); _osdCBs=[]; };
     s2.onerror=function(){ _osdLoaded=true; _osdCBs.forEach(function(f){f(true);}); _osdCBs=[]; };
     document.head.appendChild(s2);
@@ -11241,7 +11247,7 @@ function initSheetRendererHistoDICOM(m, slide){
       try{
         _osdViewer=OpenSeadragon({
           element: vp,
-          prefixUrl:'https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/images/',
+          prefixUrl:'vendor/openseadragon/images/',
           tileSources: ts,
           showNavigator:true,
           navigatorPosition:'BOTTOM_RIGHT',
@@ -11417,11 +11423,11 @@ function _loadNGL(cb) {
   if (_nglCallbacks.length > 1) return;
   var s = document.createElement('script');
   // Version stable 0.10.4-1 (plus fiable que 2.x dev sur CDN)
-  s.src = 'https://cdn.jsdelivr.net/npm/ngl@0.10.4-1/dist/ngl.js';
+  s.src = 'vendor/ngl/ngl.js';
   s.onload = function() { _nglLoaded = true; _nglCallbacks.forEach(function(fn){ fn(); }); _nglCallbacks = []; };
   s.onerror = function() {
     var s2 = document.createElement('script');
-    s2.src = 'https://unpkg.com/ngl@0.10.4-1/dist/ngl.js';
+    s2.src = 'vendor/ngl/ngl.js';
     s2.onload = function() { _nglLoaded = true; _nglCallbacks.forEach(function(fn){ fn(); }); _nglCallbacks = []; };
     s2.onerror = function() { _nglLoaded = true; _nglCallbacks.forEach(function(fn){ fn(true); }); _nglCallbacks = []; };
     document.head.appendChild(s2);
@@ -12290,7 +12296,7 @@ function _v3dExportGLTF(){
   }
   if(window.GLTFExporterReady && THREE.GLTFExporter){ doExport(); return; }
   var s=document.createElement('script');
-  s.src='https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js';
+  s.src='vendor/three-r128/exporters/GLTFExporter.js';
   s.onload=function(){ window.GLTFExporterReady=true; doExport(); };
   s.onerror=function(){ alert('Export GLTF indisponible (chargement échoué).'); };
   document.head.appendChild(s);
@@ -13245,32 +13251,6 @@ function _relatedCategoriesLinks(m){
        + out.join('') + '</div>';
 }
 
-/* ── Injection AUTOMATIQUE des liens en bas de TOUTE fiche ────────────────
-   Auparavant seules 5 catégories sur 45 appelaient _relatedCategoriesLinks().
-   On l'ajoute désormais systématiquement, une seule fois par ouverture.      */
-(function(){
-  function appendRelated(){
-    try{
-      var info=document.getElementById('sheetInfo'); if(!info) return;
-      var m=(typeof activeModel!=='undefined')?activeModel:null; if(!m) return;
-      if(m._cat==='Outils' || m.tool_mode || m._outil_render) return;   // outils : jamais
-      if(info.querySelector('.pa-related')) return;                     // déjà présent
-      if(info.querySelector('iframe')) return;                          // rendu iframe en cours
-      var html=_relatedCategoriesLinks(m);
-      if(html) info.insertAdjacentHTML('beforeend', html);
-    }catch(e){ /* ne doit jamais bloquer l'ouverture de la fiche */ }
-  }
-  window.paAppendRelated=appendRelated;
-  var _o=openSheet;
-  openSheet=function(m){
-    var r=_o.apply(this,arguments);
-    if(r&&typeof r.then==='function') r.then(function(){ setTimeout(appendRelated,80); });
-    else setTimeout(appendRelated,80);
-    setTimeout(appendRelated,500);
-    return r;
-  };
-})();
-
 function _ctLinksFromText(text){
   if(!text) return '';
   var _tn = (text+'').toLowerCase();
@@ -13680,7 +13660,7 @@ async function toggleCT(itemName, term, btnId, panelId){
       Les données de l'atlas n'ont pas pu être chargées.<br>
       Vérifiez votre connexion puis relancez l'application.
     </p>
-    <button onclick="location.reload()" style="display:inline-flex;align-items:center;gap:8px;background:rgb(58,176,158);color:#fff;border:none;border-radius:8px;padding:10px 22px;cursor:pointer;font-weight:600;font-size:13px;font-family:'Montserrat',sans-serif">
+    <button onclick="location.reload()" style="display:inline-flex;align-items:center;gap:8px;background:rgb(58,176,158);color:#fff;border:none;border-radius:8px;padding:10px 22px;cursor:pointer;font-weight:600;font-size:13px;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif">
       ↻ Réessayer
     </button>
   </div>
@@ -15471,16 +15451,29 @@ function buildCard(m){
 
 
 
-/* ══════════════════════════════════════════════════════════════════════════
-   PATCH FICHES-CONCEPT & MISE EN PAGE
-   - tri : les fiches marquées "concept" remontent en tête de catégorie
-   - viewer : aucun visuel ni galerie iNaturalist sur une fiche-concept
-   - typographie : retour à la ligne sur chaque puce (•, ①, 1., ①..⑩, tirets)
-   - champs vides : les sections sans contenu réel ne sont plus affichées
-   ══════════════════════════════════════════════════════════════════════════ */
 
-/* Une fiche est "concept" si elle le déclare, ou si son nom correspond à une
-   fiche transversale connue des catégories concernées. */
+/* ╔══════════════════════════════════════════════════════════════════════════╗
+   ║  PHARMATLAS — BLOC DE PATCHS CONSOLIDÉ                                   ║
+   ║                                                                          ║
+   ║  Les correctifs étaient auparavant dispersés en 5 endroits du fichier,   ║
+   ║  avec 6 enveloppes successives de openSheet/closeSheet/buildModelList.   ║
+   ║  Chaque couche ajoutée augmentait le risque d'interférence — deux        ║
+   ║  régressions en sont issues (lames histologiques repliées, clignotement  ║
+   ║  du viewer). Tout est désormais regroupé ici, avec UNE SEULE enveloppe   ║
+   ║  par fonction et un ordre d'exécution explicite.                         ║
+   ║                                                                          ║
+   ║  Contenu :                                                               ║
+   ║    §1 Utilitaires        paIsConcept · paBullets · paSortConceptFirst    ║
+   ║    §2 Rendu              sec() — sections vides et mise en page          ║
+   ║    §3 Viewer             décision unique, sans clignotement              ║
+   ║    §4 Liens inter-fiches injection automatique en bas de fiche           ║
+   ║    §5 Liste              scroll préservé + fiches-concept en tête        ║
+   ║    §6 Enveloppes         openSheet / closeSheet — UNE SEULE fois         ║
+   ╚══════════════════════════════════════════════════════════════════════════╝ */
+(function(){
+'use strict';
+
+/* ─────────────────────────── §1 · UTILITAIRES ─────────────────────────── */
 var PA_CONCEPT_NAMES = {
  'Champignons':['Syndromes mycologiques','Mycotoxicoses','Détermination des macromycètes'],
  'Chimie_Inorganique':['Chimie Bioinorganique','Oligoéléments','Eau —','Tableau Périodique'],
@@ -15498,11 +15491,12 @@ var PA_CONCEPT_NAMES = {
 function paIsConcept(m){
   if(!m) return false;
   if(m.concept===true || m._concept===true) return true;
-  if(m._cat==='Phytotherapie') return true;
   if(m._cat==='Galénique' && (m.voie==='Opérations Pharmaceutiques'||m.voie==='Libération Modifiée')) return true;
   var list = PA_CONCEPT_NAMES[m._cat]; if(!list) return false;
   var n=(m.name||'');
-  for(var i=0;i<list.length;i++){ if(n.indexOf(list[i])===0 || n.indexOf(list[i])!==-1) return true; }
+  /* correspondance ancrée en DÉBUT de nom : évite les faux positifs
+     (une recherche de sous-chaîne libre rattachait à tort des fiches voisines) */
+  for(var i=0;i<list.length;i++){ if(n.indexOf(list[i])===0) return true; }
   return false;
 }
 
@@ -15515,7 +15509,7 @@ function paBullets(v){
   t = t.replace(/\s*(?=[•▪◦‣])/g, '\n');
   t = t.replace(/\s*(?=[①②③④⑤⑥⑦⑧⑨⑩])/g, '\n');
   // "1." / "2)" en début de segment
-  t = t.replace(/([.;:])\s+(?=\d{1,2}[.)]\s)/g, '$1\n');
+  t = t.replace(/([.;:])\s+(?=\d{1,2}[.)]\s[A-ZÀ-ÖØ-Þ])/g, '$1\n');
   // "■" et "▶" : titres de bloc → ligne à part
   t = t.replace(/\s*(?=[■▶►])/g, '\n');
   // NB : pas de règle sur les tirets — ils servent d'incise en français
@@ -15524,7 +15518,24 @@ function paBullets(v){
   return t;
 }
 
-/* ── sec() : masque les sections vides et applique la mise en page ──────── */
+
+function paSortConceptFirst(models){
+  if(!Array.isArray(models)) return models;
+  var idx=0;
+  models.forEach(function(m){ m.__ord=idx++; });
+  models.sort(function(a,b){
+    var ca=paIsConcept(a)?0:1, cb=paIsConcept(b)?0:1;
+    if(ca!==cb) return ca-cb;
+    return a.__ord-b.__ord;
+  });
+  models.forEach(function(m){ delete m.__ord; });
+  return models;
+}
+
+
+
+
+/* ─────────────── §2 · RENDU : sections vides et mise en page ──────────── */
 (function(){
   var _origSec = sec;
   window.sec = sec = function(label,val,fk){
@@ -15541,36 +15552,8 @@ function paBullets(v){
   };
 })();
 
-
-/* ── Tri : les fiches-concept en tête de catégorie ──────────────────────── */
-(function(){
-  var _b = buildModelList;
-  buildModelList = function(){
-    var r = _b.apply(this, arguments);
-    return r;
-  };
-})();
-function paSortConceptFirst(models){
-  if(!Array.isArray(models)) return models;
-  var idx=0;
-  models.forEach(function(m){ m.__ord=idx++; });
-  models.sort(function(a,b){
-    var ca=paIsConcept(a)?0:1, cb=paIsConcept(b)?0:1;
-    if(ca!==cb) return ca-cb;
-    return a.__ord-b.__ord;
-  });
-  models.forEach(function(m){ delete m.__ord; });
-  return models;
-}
-
-
-/* ══════════════════════════════════════════════════════════════════════════
-   PATCH VIEWER — décision UNIQUE, sans clignotement
-   Le masquage est décidé une seule fois, en SYNCHRONE, avant tout remplissage
-   asynchrone, et appliqué par une classe CSS (aucune bascule display répétée).
-   Un MutationObserver purge silencieusement ce qui serait injecté ensuite.
-   ══════════════════════════════════════════════════════════════════════════ */
-(function(){
+/* ──────────────────────────── §3 · VIEWER ─────────────────────────────── */
+var _paViewer=(function(){
   var _obs=null;
   /* Un visuel existe si l'application elle-même sait en produire un.
      On NE duplique PLUS la logique : on interroge les mêmes résolveurs que _needs3D,
@@ -15622,19 +15605,43 @@ function paSortConceptFirst(models){
       _obs.observe(sv,{childList:true});
     }
   }
-  window.paDecideViewer = decideViewer;
-  var _os = openSheet;
-  openSheet = function(m){ decideViewer(m); return _os.apply(this, arguments); };
-  var _cs = closeSheet;
-  closeSheet = function(){
-    if(_obs){ try{_obs.disconnect();}catch(e){} _obs=null; }
-    var sh=document.getElementById('detailSheet'); if(sh) sh.classList.remove('pa-noviewer');
-    var sv=document.getElementById('sheetViewer'); if(sv) sv.removeAttribute('data-concept');
-    return _cs.apply(this, arguments);
-  };
+  window.paDecideViewer=decideViewer;
+
+  return {decide:decideViewer, dispose:function(){ if(_obs){ try{_obs.disconnect();}catch(e){} _obs=null; } }};
 })();
 
-/* PATCH scroll : restauration de la position de la liste après re-rendu ─────── */
+/* ───────────────────── §4 · LIENS INTER-FICHES ────────────────────────── */
+var _paLinks=(function(){
+  function appendRelated(){
+    try{
+      var info=document.getElementById('sheetInfo'); if(!info) return;
+      var m=(typeof activeModel!=='undefined')?activeModel:null; if(!m) return;
+      if(m._cat==='Outils' || m.tool_mode || m._outil_render) return;   // outils : jamais
+      if(info.querySelector('.pa-related')) return;                     // déjà présent
+      if(info.querySelector('iframe')) return;                          // rendu iframe en cours
+      var html=_relatedCategoriesLinks(m);
+      if(html) info.insertAdjacentHTML('beforeend', html);
+    }catch(e){ /* ne doit jamais bloquer l'ouverture de la fiche */ }
+  }
+  window.paAppendRelated=appendRelated;
+  /* Purge du cache texte posé sur les objets gallery par le moteur de liens.
+     Sans cela il grossit indéfiniment au fil de la navigation (constaté sur le heap). */
+  window.paPurgeHayCache=function(){
+    try{
+      if(typeof gallery==='undefined') return;
+      Object.keys(gallery).forEach(function(c){
+        var l=gallery[c]; if(!Array.isArray(l)) return;
+        for(var i=0;i<l.length;i++){ if(l[i] && l[i].__hay!==undefined) delete l[i].__hay; }
+      });
+    }catch(e){}
+  };
+  /* purge différée après fermeture de fiche, hors du chemin critique */
+
+
+  return {append:appendRelated, purge:window.paPurgeHayCache};
+})();
+
+/* ────────────────── §5 · LISTE : scroll et tri concept ────────────────── */
 (function(){
   var _origBuild = buildModelList;
   var _paLastScroll = 0, _paLastCat = null, _paLastQuery = null;
@@ -15652,6 +15659,37 @@ function paSortConceptFirst(models){
     }
     return r;
   };
+})();
+
+/* ──────── §6 · ENVELOPPES UNIQUES — ordre d'exécution explicite ───────── */
+(function(){
+  var _open=openSheet, _close=closeSheet, _purgeTimer=null;
+
+  openSheet=function(m){
+    /* 1. décision viewer AVANT tout rendu asynchrone (évite le clignotement) */
+    try{ _paViewer.decide(m); }catch(e){}
+    /* 2. rendu natif */
+    var r=_open.apply(this,arguments);
+    /* 3. liens inter-fiches, une fois le contenu posé */
+    var add=function(){ try{ _paLinks.append(); }catch(e){} };
+    if(r&&typeof r.then==='function') r.then(function(){ setTimeout(add,80); });
+    else setTimeout(add,80);
+    setTimeout(add,500);
+    return r;
+  };
+
+  closeSheet=function(){
+    try{ _paViewer.dispose(); }catch(e){}
+    var sh=document.getElementById('detailSheet'); if(sh) sh.classList.remove('pa-noviewer');
+    var sv=document.getElementById('sheetViewer'); if(sv) sv.removeAttribute('data-concept');
+    var r=_close.apply(this,arguments);
+    /* purge différée du cache texte du moteur de liens (hors chemin critique) */
+    clearTimeout(_purgeTimer);
+    _purgeTimer=setTimeout(function(){ try{ _paLinks.purge&&_paLinks.purge(); }catch(e){} },4000);
+    return r;
+  };
+})();
+
 })();
 
 /* Rendu progressif non bloquant : premier lot immédiat, reste en idle. */
@@ -16058,14 +16096,16 @@ try{ window.PA_Search=PA_Search; window.PA_Graph=PA_Graph;
     im.type='importmap';
     im.textContent=JSON.stringify({
       imports:{
-        'three':'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
-        'GaussianSplats3D':'https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js',
+        /* chemins RELATIFS À LA PAGE : un import map exige ./ ou / en tête,
+           un chemin nu serait interprété comme un « bare specifier » invalide */
+        'three':new URL('vendor/three-r160/three.module.js',document.baseURI).href,
+        'GaussianSplats3D':new URL('vendor/gsplat/gaussian-splats-3d.module.js',document.baseURI).href,
         '@sparkjsdev/spark':'https://sparkjs.dev/releases/spark/2.1.0/spark.module.js'
       },
       scopes:{
         'https://sparkjs.dev/releases/spark/2.1.0/':{
-          'three':'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js',
-          'three/addons/':'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/'
+          'three':new URL('vendor/three-r180/three.module.js',document.baseURI).href,
+          'three/addons/':new URL('vendor/three-r180/',document.baseURI).href
         }
       }
     });
@@ -16106,8 +16146,8 @@ try{ window.PA_Search=PA_Search; window.PA_Graph=PA_Graph;
       var ms=document.createElement('script');
       ms.type='module';
       ms.textContent=[
-        "import * as T180 from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';",
-        "import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js';",
+        "import * as T180 from 'vendor/three-r180/three.module.js';",
+        "import { OrbitControls } from 'vendor/three-r180/controls/OrbitControls.js';",
         "import * as Spark from '@sparkjsdev/spark';",
         "window.__pharmatlasSparkAPI={THREE:T180,OrbitControls:OrbitControls,Spark:Spark,ready:true};",
         "window.dispatchEvent(new Event('pharmatlas-spark-module-ready'));"

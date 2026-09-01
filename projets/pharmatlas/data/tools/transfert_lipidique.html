@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Sites de contact RE–MP — Transfert lipidique OSBP1</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,400&family=Spline+Sans+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap');
+:root{--bg:#070b12;--ink:#eef3f8;--muted:#7a8ca2;--line:rgba(255,255,255,.07);
+  --panel:#080e19;--er:#ff8f6b;--pm:#6be3d6;--sterol:#ffd166;--pip:#a78bfa;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{color:var(--ink);font-family:'Outfit',sans-serif;-webkit-font-smoothing:antialiased;
+  background:radial-gradient(ellipse 1000px 600px at 70% -10%,rgba(107,227,214,.09),transparent),
+  radial-gradient(ellipse 700px 700px at 0% 110%,rgba(167,139,250,.09),transparent),var(--bg)}
+#app{position:fixed;inset:0;display:grid;grid-template-columns:1fr 420px}
+canvas{display:block;touch-action:none}
+#stage{position:relative;overflow:hidden}
+#stage::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(130% 130% at 50% 45%,transparent 56%,rgba(0,0,0,.55))}
+#three{position:absolute;inset:0}
+/* BRAND */
+.brand{position:absolute;top:20px;left:22px;z-index:5;pointer-events:none;max-width:46%}
+.brand .kick{font:500 9px/1 'Spline Sans Mono',monospace;letter-spacing:.32em;text-transform:uppercase;color:var(--muted)}
+.brand h1{font-family:'Fraunces',serif;font-weight:600;font-size:24px;line-height:1.07;margin-top:7px}
+.brand h1 em{font-style:italic;color:var(--pm)}
+.brand p{margin-top:5px;font-size:11.5px;color:var(--muted);line-height:1.42}
+/* TAGS */
+.tag{position:absolute;transform:translate(-50%,-50%);z-index:4;pointer-events:none;
+  font:500 10px 'Spline Sans Mono',monospace;white-space:nowrap;
+  background:rgba(5,9,17,.78);border:1px solid var(--line);padding:3px 8px;border-radius:6px;
+  backdrop-filter:blur(6px);opacity:0;transition:opacity .35s}
+.tag.show{opacity:1}.tag.er{color:var(--er)}.tag.pm{color:var(--pm)}.tag.s{color:var(--sterol)}.tag.p{color:var(--pip)}
+/* STEPS CHIPS */
+.chips{position:absolute;top:16px;right:16px;z-index:6;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.chip{font:500 9px 'Spline Sans Mono',monospace;color:var(--muted);background:rgba(5,9,17,.82);
+  border:1px solid var(--line);padding:5px 10px;border-radius:7px;backdrop-filter:blur(10px);
+  transition:.16s;cursor:pointer;display:flex;gap:7px;align-items:center}
+.chip .nb{width:15px;height:15px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:8px;flex:0 0 auto}
+.chip.on{color:var(--ink);border-color:rgba(107,227,214,.4)}
+.chip.on .nb{background:var(--pm);color:#030e0c;border-color:transparent}
+/* PROGRESS ARC */
+.prog-wrap{position:absolute;bottom:80px;left:22px;z-index:5}
+#progSvg{display:block}
+/* DOCK */
+.dock{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:6;
+  background:rgba(5,10,20,.90);border:1px solid var(--line);border-radius:14px;
+  padding:8px 10px;display:flex;align-items:center;gap:7px;backdrop-filter:blur(14px)}
+.ib{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,.03);
+  color:var(--ink);cursor:pointer;display:grid;place-items:center;transition:.12s}
+.ib:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18)}
+.ib svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8}
+.ib.play{width:40px;height:40px;background:rgba(107,227,214,.12);border-color:rgba(107,227,214,.35)}
+.ib.play svg{width:17px;height:17px}
+.sep{width:1px;height:24px;background:var(--line)}
+.ctrl{display:flex;align-items:center;gap:5px;font:500 9px 'Spline Sans Mono',monospace;color:var(--muted)}
+.ctrl input[type=range]{width:60px;accent-color:var(--pm);cursor:pointer}
+.ctrl .v{min-width:22px;text-align:right;color:var(--pm)}
+.ctrl span.lab{opacity:.7}
+.hint{position:absolute;bottom:22px;right:18px;z-index:5;font:400 9px 'Spline Sans Mono',monospace;color:var(--muted);opacity:.6;pointer-events:none}
+/* LOADER */
+.loader{position:absolute;inset:0;display:grid;place-items:center;z-index:20;background:var(--bg);transition:opacity .5s}
+.loader.gone{opacity:0;pointer-events:none}
+.spin{width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.08);border-top-color:var(--pm);animation:rot 1s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+/* PANEL */
+#panel{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;height:100%;overflow:hidden}
+.phead{padding:20px 22px 15px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.phead .pt{font:500 8.5px 'Spline Sans Mono',monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.phead h2{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin-top:6px;line-height:1.15}
+.phead .pd{font-size:12px;line-height:1.55;color:#b0bcc8;margin-top:7px}
+/* CYCLE PROGRESS BAR in panel */
+.cyc-prog{display:flex;gap:0;padding:10px 22px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.cp-step{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:4px 0}
+.cp-step .cp-dot{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);
+  display:grid;place-items:center;font:500 9px 'Spline Sans Mono',monospace;color:var(--muted);transition:.2s;background:var(--panel)}
+.cp-step.on .cp-dot{background:var(--pm);color:#030e0c;border-color:transparent}
+.cp-step.done .cp-dot{background:rgba(107,227,214,.2);border-color:rgba(107,227,214,.4);color:var(--pm)}
+.cp-step .cp-lbl{font:500 8px 'Spline Sans Mono',monospace;color:var(--muted);text-align:center;max-width:70px}
+.cp-step.on .cp-lbl{color:var(--pm)}
+.cp-line{flex:1;height:1.5px;background:var(--line);margin-top:18px;align-self:auto}
+.cp-line.done{background:rgba(107,227,214,.35)}
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--line);flex:0 0 auto}
+.tab{flex:1;padding:10px 4px;font:500 8.5px 'Spline Sans Mono',monospace;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);cursor:pointer;text-align:center;
+  border:none;border-bottom:2px solid transparent;background:none;transition:.12s}
+.tab:hover{color:var(--ink)}.tab.on{color:var(--pm);border-bottom-color:var(--pm)}
+.tpane{display:none;flex:1;overflow-y:auto;padding:15px 20px 28px}
+.tpane.on{display:block}
+.tpane::-webkit-scrollbar{width:4px}
+.tpane::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+/* SEC */
+.sec{font:500 8.5px 'Spline Sans Mono',monospace;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--muted);margin:15px 0 9px;display:flex;align-items:center;gap:6px}
+.sec::before{content:"";width:12px;height:2px;background:var(--pm);border-radius:2px;flex:0 0 auto}
+/* LEGEND */
+.leg{display:flex;flex-direction:column;gap:7px;margin-bottom:4px}
+.li{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:#c8d3de}
+.li .sw{width:10px;height:10px;border-radius:2px;flex:0 0 auto;margin-top:2px}
+.li small{font:400 10px 'Spline Sans Mono',monospace;color:var(--muted);display:block;margin-top:1px}
+/* FACT */
+.fact{border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:8px;background:rgba(255,255,255,.01)}
+.fact .k{font:500 8.5px 'Spline Sans Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.fact .v{font-size:11.5px;line-height:1.55;color:#c0ccd8}.fact .v b{color:var(--ink)}
+.fact .v code{font:400 10.5px 'Spline Sans Mono',monospace;color:var(--pm);background:rgba(107,227,214,.08);padding:1px 5px;border-radius:3px}
+/* ENERGY */
+.erow{display:flex;align-items:center;gap:9px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:11.5px}
+.erow:last-child{border-bottom:none}
+.erow .em{font:500 8.5px 'Spline Sans Mono',monospace;color:var(--muted);width:78px;flex:0 0 auto}
+.etrack{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.efill{height:100%;border-radius:3px}
+.eval{font:500 9px 'Spline Sans Mono',monospace;min-width:56px;text-align:right}
+/* QUIZ */
+.qsc{font:500 9px 'Spline Sans Mono',monospace;color:var(--muted);margin-bottom:10px;display:flex;gap:5px}
+.qsc span{color:var(--pm)}
+.qq{font:600 13.5px 'Fraunces',serif;line-height:1.35;margin-bottom:10px}
+.qopts{display:flex;flex-direction:column;gap:5px}
+.qo{padding:9px 12px;border-radius:8px;border:1px solid var(--line);font-size:11.5px;cursor:pointer;
+  transition:.12s;color:#b8c4d0;background:rgba(255,255,255,.02)}
+.qo:hover:not(.picked){background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18)}
+.qo.correct{background:rgba(107,227,214,.1);border-color:rgba(107,227,214,.45);color:#8de0d8}
+.qo.wrong{background:rgba(255,100,100,.08);border-color:rgba(255,100,100,.35);color:#f08}
+.qexp{margin-top:10px;padding:10px 12px;border-radius:8px;background:rgba(107,227,214,.06);
+  border:1px solid rgba(107,227,214,.18);font-size:11px;line-height:1.55;color:#c8d3de;display:none}
+.qexp.show{display:block}
+.qnext{margin-top:10px;padding:7px 14px;border-radius:8px;border:1px solid rgba(107,227,214,.38);
+  background:rgba(107,227,214,.09);color:var(--pm);font:500 9.5px 'Spline Sans Mono',monospace;cursor:pointer}
+.qdone{text-align:center;padding:22px 0;font-family:'Fraunces',serif;font-size:16px}
+.qdone .sc{font-size:38px;color:var(--pm);display:block;margin:8px 0}
+.qrst{padding:9px 20px;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,.04);
+  color:var(--muted);font:500 9px 'Spline Sans Mono',monospace;cursor:pointer;margin-top:10px}
+.src{margin-top:8px;font-size:10.5px;color:var(--muted);line-height:1.5}
+.src a{color:#8fd9d0;text-decoration:none;border-bottom:1px dotted rgba(143,217,208,.45)}
+@media(max-width:880px){#app{grid-template-columns:1fr;grid-template-rows:54vh 46vh}
+  #panel{border-left:none;border-top:1px solid var(--line)}.brand p{display:none}}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="stage">
+  <div id="three"></div>
+  <div class="brand">
+    <div class="kick">Sites de contact membranaires · ERMCS</div>
+    <h1>Transfert <em>lipidique</em> RE → MP</h1>
+    <p>OSBP1 couple transport de cholestérol et contre-transport de PI4P entre réticulum endoplasmique et membrane plasmique. Cycle irréversible couplé à SAC1.</p>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="prog-wrap">
+    <svg id="progSvg" width="64" height="64" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="4"/>
+      <circle id="progArc" cx="32" cy="32" r="26" fill="none" stroke="#6be3d6" stroke-width="4"
+        stroke-linecap="round" stroke-dasharray="163.4" stroke-dashoffset="163.4"
+        transform="rotate(-90 32 32)" style="transition:stroke-dashoffset .3s"/>
+      <text x="32" y="37" text-anchor="middle" font-family="'Spline Sans Mono',monospace" font-size="13" font-weight="500" fill="#6be3d6" id="progTxt">0%</text>
+    </svg>
+  </div>
+  <div class="dock">
+    <button class="ib" id="prevBtn"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="ib play" id="playBtn"><svg id="playIco" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/></svg></button>
+    <button class="ib" id="nextBtn"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+    <div class="sep"></div>
+    <div class="ctrl"><span class="lab">×</span><input id="speedR" type="range" min="0.25" max="2" step="0.25" value="1"><span class="v" id="spdVal">1×</span></div>
+    <div class="ctrl"><span class="lab">t</span><input id="scrubR" type="range" min="0" max="100" value="0"><span class="v" id="scrubVal">0%</span></div>
+  </div>
+  <div class="hint">glisser : orbiter · molette : zoom · ← → : étapes</div>
+  <div class="loader" id="loader"><div class="spin"></div></div>
+</div>
+<aside id="panel">
+  <div class="phead">
+    <div class="pt">Étape <span id="stepNum">1</span> / 4</div>
+    <h2 id="stepTitle">—</h2>
+    <div class="pd" id="stepDesc"></div>
+  </div>
+  <div class="cyc-prog" id="cycProg"></div>
+  <div class="tabs">
+    <button class="tab on" data-t="meca">Mécanisme</button>
+    <button class="tab" data-t="energy">Énergie</button>
+    <button class="tab" data-t="quiz">Quiz</button>
+  </div>
+  <div class="tpane on" id="tp-meca">
+    <div class="leg">
+      <div class="li"><span class="sw" style="background:var(--er);box-shadow:0 0 7px var(--er)44"></span><div>Membrane du RE<small>donneuse de cholestérol</small></div></div>
+      <div class="li"><span class="sw" style="background:var(--pm);box-shadow:0 0 7px var(--pm)44"></span><div>Membrane plasmique<small>riche en PI4P (PI4KIIIα)</small></div></div>
+      <div class="li"><span class="sw" style="background:var(--sterol)"></span><div>Cholestérol C₂₇H₄₆O<small>cargo « aller » · structure atomique réelle</small></div></div>
+      <div class="li"><span class="sw" style="background:var(--pip)"></span><div>PI4P<small>cargo « retour » · contre-transport</small></div></div>
+    </div>
+    <div class="sec">Navette OSBP1 — domaines</div>
+    <div class="fact"><div class="k">Architecture</div><div class="v">
+      <b>Domaine PH</b> (cyan) : recrutement PI4P-MP en premier.<br>
+      <b>Motif FFAT</b> : ancrage à VAP-A/B du RE.<br>
+      <b>Domaine ORD</b> (blanc nacré) : poche hydrophobe transportant le cargo.<br>
+      <b>Linker flexible</b> : permet la rotation entre les deux membranes.
+    </div></div>
+    <div class="fact"><div class="k">Ancrage membranaire (tethers)</div><div class="v">
+      Les protéines <b>VAP-A / VAP-B</b> du RE forment un coiled-coil homodimérique. Le motif <b>FFAT</b> d'OSBP1 (<code>FFxxT</code>) s'y lie avec une affinité nanomolaire. L'espace imposé : <b>10–30 nm</b>.
+    </div></div>
+    <div class="fact"><div class="k">Contre-transport</div><div class="v">Échange strict 1:1 — un cholestérol livré contre un PI4P récupéré. Aucune consommation d'ATP. L'irréversibilité vient de l'hydrolyse du PI4P par <b>SAC1</b> dans le RE.</div></div>
+    <div class="src">Molécules générées avec RDKit (MMFF94). <a href="https://www.lipidmaps.org" target="_blank">LIPID MAPS</a> · <a href="https://www.rcsb.org" target="_blank">RCSB PDB</a> · Mesmin et al. 2013 <i>Cell</i>.</div>
+  </div>
+  <div class="tpane" id="tp-energy">
+    <div class="sec" style="margin-top:2px">Bilan thermodynamique du cycle</div>
+    <div class="fact"><div class="k">Forces motrices</div><div class="v">
+      Deux gradients de concentration couplés : <b>cholestérol</b> (RE → MP) et <b>PI4P</b> (MP → RE). Leur produit fournit l'énergie libre nécessaire. SAC1 hydrolysant le PI4P dans le RE maintient ce gradient.
+    </div></div>
+    <div style="border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:8px">
+      <div class="erow"><span class="em">Gradient Chol.</span><div class="etrack"><div class="efill" style="width:78%;background:var(--sterol)"></div></div><span class="eval" style="color:var(--sterol)">RE → MP</span></div>
+      <div class="erow"><span class="em">Gradient PI4P</span><div class="etrack"><div class="efill" style="width:68%;background:var(--pip)"></div></div><span class="eval" style="color:var(--pip)">MP → RE</span></div>
+      <div class="erow"><span class="em">Hydrolyse SAC1</span><div class="etrack"><div class="efill" style="width:88%;background:#ff6b6b"></div></div><span class="eval" style="color:#ff6b6b">−ΔG irréversible</span></div>
+      <div class="erow"><span class="em">Bilan cycle</span><div class="etrack"><div class="efill" style="width:100%;background:var(--pm)"></div></div><span class="eval" style="color:var(--pm)">ΔG &lt; 0 ✓</span></div>
+    </div>
+    <div class="fact"><div class="k">Contexte pathologique — VHC</div><div class="v">
+      Le virus de l'hépatite C détourne OSBP1 pour enrichir ses <b>membranes de réplication</b> (organelle membranaire appelée "web membraneux") en cholestérol. <br><br>
+      <b>Inhibiteurs OSBP1</b> bloquant ce mécanisme : itraconazole (antifongique reconverti), OSW-1 (saponine naturelle), ORPphilins. Piste antivirale active.
+    </div></div>
+    <div class="fact"><div class="k">PI4KIIIα — source du PI4P</div><div class="v">
+      La PI4-kinase de type IIIα (<b>PI4KIIIα</b>) associée au complexe EFR3/FAM126/YPP1 génère le pool de PI4P de la membrane plasmique qui alimente le cycle. Son inhibition bloque le transport.
+    </div></div>
+  </div>
+  <div class="tpane" id="tp-quiz">
+    <div id="quizEl"></div>
+  </div>
+</aside>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script>window.__MOL__={"cholesterol":{"atoms":[{"e":"C","x":2.798,"y":2.46,"z":0.783},{"e":"C","x":2.832,"y":1.065,"z":1.416},{"e":"C","x":4.264,"y":0.477,"z":1.317},{"e":"C","x":4.76,"y":0.198,"z":-0.108},{"e":"C","x":6.197,"y":-0.338,"z":-0.09},{"e":"C","x":6.796,"y":-0.664,"z":-1.472},{"e":"C","x":6.906,"y":0.571,"z":-2.366},{"e":"C","x":6.034,"y":-1.778,"z":-2.19},{"e":"C","x":1.745,"y":0.117,"z":0.839},{"e":"C","x":1.796,"y":-1.295,"z":1.491},{"e":"C","x":0.368,"y":-1.855,"z":1.471},{"e":"C","x":-0.407,"y":-0.853,"z":0.628},{"e":"C","x":0.24,"y":0.51,"z":0.974},{"e":"C","x":-0.287,"y":1.515,"z":-0.065},{"e":"C","x":-1.824,"y":1.594,"z":-0.063},{"e":"C","x":-2.525,"y":0.22,"z":-0.223},{"e":"C","x":-1.937,"y":-0.858,"z":0.729},{"e":"C","x":-2.501,"y":-2.242,"z":0.372},{"e":"C","x":-3.97,"y":-2.236,"z":0.085},{"e":"C","x":-4.704,"y":-1.129,"z":-0.125},{"e":"C","x":-4.102,"y":0.285,"z":-0.127},{"e":"C","x":-4.635,"y":1.066,"z":-1.365},{"e":"C","x":-6.149,"y":0.985,"z":-1.559},{"e":"C","x":-6.622,"y":-0.463,"z":-1.627},{"e":"C","x":-6.192,"y":-1.239,"z":-0.381},{"e":"O","x":-8.043,"y":-0.468,"z":-1.741},{"e":"C","x":-4.559,"y":1.001,"z":1.167},{"e":"C","x":-0.078,"y":1.003,"z":2.406}],"bonds":[[0,1,1],[1,2,1],[2,3,1],[3,4,1],[4,5,1],[5,6,1],[5,7,1],[1,8,1],[8,9,1],[9,10,1],[10,11,1],[11,12,1],[12,13,1],[13,14,1],[14,15,1],[15,16,1],[16,17,1],[17,18,1],[18,19,2],[19,20,1],[20,21,1],[21,22,1],[22,23,1],[23,24,1],[23,25,1],[20,26,1],[12,27,1],[12,8,1],[16,11,1],[20,15,1],[24,19,1]]},"pi4p":{"atoms":[{"e":"C","x":-9.08,"y":-2.674,"z":1.633},{"e":"C","x":-7.773,"y":-1.908,"z":1.772},{"e":"C","x":-7.578,"y":-0.927,"z":0.616},{"e":"C","x":-6.315,"y":-0.067,"z":0.745},{"e":"C","x":-5.088,"y":-0.61,"z":0.005},{"e":"C","x":-4.483,"y":-1.911,"z":0.537},{"e":"C","x":-4.014,"y":-1.877,"z":1.997},{"e":"C","x":-2.889,"y":-0.883,"z":2.281},{"e":"C","x":-1.565,"y":-1.293,"z":1.678},{"e":"O","x":-1.212,"y":-2.441,"z":1.446},{"e":"O","x":-0.787,"y":-0.189,"z":1.49},{"e":"C","x":0.53,"y":-0.442,"z":0.962},{"e":"C","x":0.496,"y":-0.678,"z":-0.554},{"e":"C","x":1.876,"y":-1.054,"z":-1.098},{"e":"O","x":2.852,"y":-0.104,"z":-0.696},{"e":"P","x":4.338,"y":-0.314,"z":-1.259},{"e":"O","x":4.478,"y":-0.581,"z":-2.72},{"e":"O","x":5.125,"y":0.969,"z":-0.725},{"e":"O","x":4.918,"y":-1.506,"z":-0.346},{"e":"C","x":6.337,"y":-1.654,"z":-0.285},{"e":"C","x":6.719,"y":-3.125,"z":-0.533},{"e":"O","x":5.649,"y":-4.009,"z":-0.145},{"e":"C","x":7.982,"y":-3.567,"z":0.238},{"e":"O","x":7.598,"y":-4.066,"z":1.527},{"e":"C","x":8.998,"y":-2.436,"z":0.429},{"e":"O","x":9.497,"y":-2.056,"z":-0.855},{"e":"P","x":10.94,"y":-2.613,"z":-1.266},{"e":"O","x":11.133,"y":-4.082,"z":-1.156},{"e":"O","x":11.957,"y":-1.778,"z":-0.363},{"e":"O","x":11.197,"y":-1.974,"z":-2.699},{"e":"C","x":8.386,"y":-1.173,"z":1.08},{"e":"O","x":8.813,"y":-0.981,"z":2.435},{"e":"C","x":6.847,"y":-1.174,"z":1.077},{"e":"O","x":6.376,"y":0.165,"z":1.353},{"e":"O","x":0.082,"y":0.554,"z":-1.195},{"e":"C","x":-1.233,"y":0.647,"z":-1.521},{"e":"O","x":-2.059,"y":-0.248,"z":-1.408},{"e":"C","x":-1.57,"y":2.036,"z":-1.99},{"e":"C","x":-1.988,"y":2.889,"z":-0.797},{"e":"C","x":-2.438,"y":4.3,"z":-1.18},{"e":"C","x":-3.672,"y":4.376,"z":-2.086},{"e":"C","x":-4.922,"y":3.658,"z":-1.568},{"e":"C","x":-5.421,"y":4.109,"z":-0.191},{"e":"C","x":-5.753,"y":5.597,"z":-0.063},{"e":"C","x":-6.852,"y":6.057,"z":-1.008}],"bonds":[[0,1,1],[1,2,1],[2,3,1],[3,4,1],[4,5,1],[5,6,1],[6,7,1],[7,8,1],[8,9,2],[8,10,1],[10,11,1],[11,12,1],[12,13,1],[13,14,1],[14,15,1],[15,16,2],[15,17,1],[15,18,1],[18,19,1],[19,20,1],[20,21,1],[20,22,1],[22,23,1],[22,24,1],[24,25,1],[25,26,1],[26,27,2],[26,28,1],[26,29,1],[24,30,1],[30,31,1],[30,32,1],[32,33,1],[12,34,1],[34,35,1],[35,36,2],[35,37,1],[37,38,1],[38,39,1],[39,40,1],[40,41,1],[41,42,1],[42,43,1],[43,44,1],[32,19,1]]}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+const MOL=window.__MOL__;
+
+const STEPS=[
+  {t:"Rapprochement — ancrage VAP/FFAT",
+   d:"OSBP1 est d'abord recruté par la membrane plasmique via son domaine PH (affinité PI4P). Il s'ancre simultanément au RE via son motif FFAT et la protéine VAP-A, maintenant RE et MP à 10–30 nm (espace ERMCS)."},
+  {t:"Extraction du cholestérol (RE)",
+   d:"Le domaine ORD d'OSBP1 plonge dans la membrane du RE et extrait une molécule de cholestérol (noyau stérane, C₂₇H₄₆O). Le couvercle du domaine ORD se ferme sur le cargo hydrophobe."},
+  {t:"Livraison du cholestérol (MP)",
+   d:"La navette traverse l'espace intermembranaire et dépose le cholestérol dans la membrane plasmique. Le cholestérol enrichit les radeaux lipidiques (DRM) en augmentant la fluidité membranaire localement."},
+  {t:"Contre-transport PI4P + reset SAC1",
+   d:"La navette charge un PI4P de la MP et le ramène au RE. SAC1 (phosphatase du RE) hydrolyse le PI4P en PI, dissi­pant son gradient et rendant le cycle thermodynamiquement irréversible. Le cycle recommence."},
+];
+const CYCLE_LABELS=["Ancrage","Extraction","Livraison","Retour"];
+
+// BUILD CYCLE PROGRESS BAR
+const cycProgEl=document.getElementById('cycProg');
+STEPS.forEach((s,i)=>{
+  if(i>0){const line=document.createElement('div');line.className='cp-line';line.id='cpline'+i;cycProgEl.appendChild(line);}
+  const step=document.createElement('div');step.className='cp-step';step.dataset.i=i;
+  step.innerHTML=`<div class="cp-dot">${i+1}</div><div class="cp-lbl">${CYCLE_LABELS[i]}</div>`;
+  step.onclick=()=>gotoStep(i,true);
+  cycProgEl.appendChild(step);
+});
+// CHIPS
+STEPS.forEach((s,i)=>{
+  const d=document.createElement('div');d.className='chip';
+  d.innerHTML=`<span class="nb">${i+1}</span>${s.t}`;d.onclick=()=>gotoStep(i,true);
+  document.getElementById('chips').appendChild(d);
+});
+
+// QUIZ
+const QUIZ=[
+  {q:"Quel domaine d'OSBP1 est recruté EN PREMIER par la membrane plasmique ?",
+   o:["Domaine ORD","Motif FFAT","Domaine PH","Région coiled-coil"],a:2,
+   e:"Le domaine PH reconnaît le PI4P de la MP en premier. Le motif FFAT s'ancre ensuite à VAP-A/B du RE. L'ordre est important : PH d'abord, FFAT ensuite."},
+  {q:"SAC1 hydrolyse le PI4P en PI dans le RE. Quel est l'impact sur le cycle ?",
+   o:["Il est accéléré par la production d'ATP","Le cycle devient irréversible thermodynamiquement","Le gradient de cholestérol est inversé","La navette OSBP1 est dégradée"],a:1,
+   e:"En hydrolysant le PI4P (−ΔG), SAC1 maintient un gradient PI4P faible en RE, ce qui favorise en permanence le retour du PI4P vers le RE. Ce couplage à une réaction exergonique rend le cycle unidirectionnel."},
+  {q:"Pourquoi un espace de 10–30 nm est-il nécessaire pour le transport non-vésiculaire ?",
+   o:["Pour permettre la fusion des membranes","Parce que les vésicules COPI/COPII ne peuvent pas entrer (diamètre ~60–80 nm)","Pour concentrer les PI4-kinases","Pour empêcher la diffusion du cholestérol"],a:1,
+   e:"Les vésicules COPI/COPII ont un diamètre de 60–80 nm : elles ne peuvent pas s'intercaler dans l'espace de 10–30 nm. Cela crée un microenvironnement exclusif pour le transport par protéines navettes."},
+  {q:"Quel complexe génère le pool de PI4P de la membrane plasmique qui alimente le cycle ?",
+   o:["PI3-kinase de classe I","PI4KIIIα / EFR3 / FAM126 / YPP1","PTEN phosphatase","SHIP2 inositol phosphatase"],a:1,
+   e:"PI4KIIIα forme un complexe avec EFR3 (ancrage membranaire), FAM126 et YPP1. Ce complexe génère le pool de PI4P de la MP. Son inhibition (ex. par GSK-A1) bloque le cycle OSBP1."},
+  {q:"Le virus de l'hépatite C (VHC) exploite OSBP1 pour :",
+   o:["Dégrader les membranes hépatiques","Enrichir ses membranes de réplication en cholestérol","Activer l'apoptose des hépatocytes","Inhiber l'interféron de type I"],a:1,
+   e:"Le VHC recrute OSBP1 sur ses membranes de réplication (web membraneux). L'enrichissement en cholestérol stabilise ces membranes et favorise la réplication virale. L'itraconazole et OSW-1 bloquent ce détournement."},
+  {q:"Les radeaux lipidiques (lipid rafts) visibles dans la simulation sont enrichis en :",
+   o:["Phosphatidylsérine et lysophospholipides","Cholestérol et sphingomyéline","PI4P et phosphatidyléthanolamine","Cardiolipine et acides gras insaturés"],a:1,
+   e:"Les radeaux lipidiques sont des microdomaines enrichis en cholestérol et sphingomyéline (SM). Ils forment des phases liquide-ordonnée (Lo) résistantes aux détergents (DRM). Ils concentrent des récepteurs (GPI, Src) et régulent la signalisation."},
+];
+let qi=0,qs=0,qp=false;
+function renderQ(){
+  const box=document.getElementById('quizEl');
+  if(qi>=QUIZ.length){box.innerHTML=`<div class="qdone">Quiz terminé !<span class="sc">${qs}/${QUIZ.length}</span><button class="qrst" onclick="qi=0;qs=0;renderQ()">Recommencer</button></div>`;return;}
+  const q=QUIZ[qi];
+  box.innerHTML=`<div class="qsc">Question <span>${qi+1}/${QUIZ.length}</span> · Score <span>${qs}</span></div>
+<div class="qq">${q.q}</div>
+<div class="qopts">${q.o.map((o,i)=>`<div class="qo" data-i="${i}">${o}</div>`).join('')}</div>
+<div class="qexp" id="qe">${q.e}</div>`;
+  qp=false;
+  box.querySelectorAll('.qo').forEach(opt=>{opt.onclick=()=>{
+    if(qp)return;qp=true;const ch=+opt.dataset.i;
+    box.querySelectorAll('.qo').forEach(o=>o.classList.add('picked'));
+    opt.classList.add(ch===q.a?'correct':'wrong');
+    if(ch!==q.a)box.querySelectorAll('.qo')[q.a].classList.add('correct');
+    document.getElementById('qe').classList.add('show');
+    if(ch===q.a)qs++;
+    const btn=document.createElement('button');btn.className='qnext';
+    btn.textContent=qi<QUIZ.length-1?'Question suivante →':'Voir le score →';
+    btn.onclick=()=>{qi++;renderQ();};box.appendChild(btn);
+  };});
+}
+renderQ();
+// TABS
+document.querySelectorAll('.tab').forEach(tb=>{tb.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.tpane').forEach(x=>x.classList.remove('on'));
+  tb.classList.add('on');document.getElementById('tp-'+tb.dataset.t).classList.add('on');
+};});
+
+/* ── THREE.JS ── */
+const stage=document.getElementById('three');
+const W=()=>stage.clientWidth,H=()=>stage.clientHeight;
+const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x070b12,0.014);
+const camera=new THREE.PerspectiveCamera(44,W()/H(),0.1,400);camera.position.set(0,2,48);
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(W(),H());
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
+stage.appendChild(renderer.domElement);
+scene.add(new THREE.AmbientLight(0x5060a0,1.0));
+const key=new THREE.DirectionalLight(0xfff4ee,2.2);key.position.set(5,7,9);scene.add(key);
+const rim=new THREE.DirectionalLight(0x6be3d6,1.6);rim.position.set(-7,2,-5);scene.add(rim);
+const fill=new THREE.DirectionalLight(0xa78bfa,0.75);fill.position.set(0,-6,2);scene.add(fill);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.dampingFactor=0.07;controls.minDistance=16;controls.maxDistance=85;
+controls.target.set(0,1,0);
+
+const ER_Y=-11,PM_Y=11,SPAN=34,DEPTH=20,HEAD=0.78,TAIL=2.0;
+
+/* molecules */
+const CPK={C:0x909090,O:0xff2200,P:0xff8000,N:0x3050f8,H:0xffffff,S:0xffff30};
+const RAD={C:.30,O:.32,P:.44,N:.30,H:.18,S:.36};
+const atomGeo=new THREE.IcosahedronGeometry(1,2);
+const mCache={};
+function amat(e){if(!mCache[e])mCache[e]=new THREE.MeshStandardMaterial({color:CPK[e]||0x999,roughness:.38,metalness:.05});return mCache[e];}
+const bondMat=new THREE.MeshStandardMaterial({color:0x9aa6b8,roughness:.5});
+const bGeo=new THREE.CylinderGeometry(1,1,1,8);
+const UP=new THREE.Vector3(0,1,0);
+function buildMol(spec,scale){
+  const g=new THREE.Group();
+  const pos=spec.atoms.map(a=>new THREE.Vector3(a.x,a.y,a.z).multiplyScalar(scale));
+  spec.atoms.forEach((a,i)=>{const m=new THREE.Mesh(atomGeo,amat(a.e));const r=(RAD[a.e]||.3)*scale;m.scale.setScalar(r);m.position.copy(pos[i]);g.add(m);});
+  spec.bonds.forEach(([a,b])=>{const pa=pos[a],pb=pos[b];const mid=pa.clone().add(pb).multiplyScalar(.5);const len=pa.distanceTo(pb);const cyl=new THREE.Mesh(bGeo,bondMat);cyl.position.copy(mid);cyl.scale.set(.09*scale,len,.09*scale);cyl.quaternion.setFromUnitVectors(UP,pb.clone().sub(pa).normalize());g.add(cyl);});
+  return g;
+}
+
+/* bilayer */
+function makeLipid(hc,tc){
+  const g=new THREE.Group();
+  const head=new THREE.Mesh(new THREE.SphereGeometry(HEAD,12,12),new THREE.MeshStandardMaterial({color:hc,roughness:.42,metalness:.05,emissive:new THREE.Color(hc).multiplyScalar(.1)}));g.add(head);
+  const tm=new THREE.MeshStandardMaterial({color:tc,roughness:.72});
+  for(const dx of[-.34,.34]){const t=new THREE.Mesh(new THREE.CapsuleGeometry(.16,TAIL,4,6),tm);t.position.set(dx,-(HEAD+TAIL/2)*.86,0);g.add(t);}
+  return g;
+}
+function buildBilayer(midY,hc,tc){
+  const layer=new THREE.Group();
+  const nx=Math.floor(SPAN/1.9),nz=Math.floor(DEPTH/2.0);
+  for(let leaf=0;leaf<2;leaf++){const dir=leaf?-1:1;
+    for(let i=0;i<nx;i++)for(let j=0;j<nz;j++){
+      const x=-SPAN/2+(i+.5)*(SPAN/nx)+(j%2?.7:0),z=-DEPTH/2+(j+.5)*(DEPTH/nz);
+      const lip=makeLipid(hc,tc);const y=midY+dir*1.35;
+      lip.position.set(x,y,z);lip.rotation.x=dir>0?0:Math.PI;
+      lip.userData={baseY:y,ph:Math.random()*6.28,amp:.14+Math.random()*.1};layer.add(lip);
+    }}
+  scene.add(layer);return layer;
+}
+const erMem=buildBilayer(ER_Y,0xff8f6b,0xc25b3e);
+const pmMem=buildBilayer(PM_Y,0x6be3d6,0x3a9b91);
+
+/* lipid rafts */
+(()=>{
+  const rm=new THREE.MeshStandardMaterial({color:0xffd580,roughness:.28,metalness:.10,emissive:new THREE.Color(0xffd166).multiplyScalar(.15)});
+  const rtm=new THREE.MeshStandardMaterial({color:0xb88e18,roughness:.55});
+  [[-6,2],[6,-2]].forEach(([rx,rz])=>{
+    for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){
+      if(Math.abs(di)+Math.abs(dj)>1.5)continue;
+      const x=rx+di*1.9,z=rz+dj*1.9;
+      for(const [,dir] of[[0,1],[1,-1]]){
+        const g2=new THREE.Group();
+        g2.add(new THREE.Mesh(new THREE.SphereGeometry(HEAD*1.07,10,10),rm));
+        for(const dx of[-.34,.34]){const t=new THREE.Mesh(new THREE.CapsuleGeometry(.16,TAIL*.92,4,6),rtm);t.position.set(dx,-(HEAD+TAIL/2)*.86,0);g2.add(t);}
+        const y=PM_Y+dir*1.35;g2.position.set(x,y,z);g2.rotation.x=dir>0?0:Math.PI;
+        g2.userData={baseY:y,ph:Math.random()*6.28,amp:.05+Math.random()*.03};pmMem.add(g2);
+      }
+    }
+    const hm=new THREE.MeshBasicMaterial({color:0xffd166,transparent:true,opacity:.07,side:THREE.DoubleSide,depthWrite:false});
+    const h=new THREE.Mesh(new THREE.CircleGeometry(3.6,20),hm);h.rotation.x=Math.PI/2;h.position.set(rx,PM_Y,rz);scene.add(h);
+  });
+})();
+
+/* TETHERS VAP-A/B — hélicoïdaux */
+function buildTether(x){
+  const g=new THREE.Group();
+  // coiled-coil visuel : spirale de sphères
+  const mat=new THREE.MeshStandardMaterial({color:0x5a6480,roughness:.55,transparent:true,opacity:.65});
+  const N=14,h=PM_Y-ER_Y-5;
+  for(let i=0;i<N;i++){
+    const frac=i/(N-1);const y=ER_Y+2.5+frac*h;const r=.7;const a=frac*Math.PI*4;
+    const s=new THREE.Mesh(new THREE.SphereGeometry(.42,8,8),mat);
+    s.position.set(x+Math.cos(a)*r,y,(-DEPTH/2+2.5)+Math.sin(a)*r);g.add(s);
+  }
+  // central rod
+  const rod=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,h,8),
+    new THREE.MeshStandardMaterial({color:0x46506a,roughness:.6,transparent:true,opacity:.4}));
+  rod.position.set(x,(ER_Y+PM_Y)/2,-DEPTH/2+2.5);g.add(rod);
+  scene.add(g);return g;
+}
+buildTether(-SPAN/2+3);buildTether(SPAN/2-3);
+
+/* ERMCS zone */
+(()=>{
+  const planeH=PM_Y-ER_Y-5;
+  const pm=new THREE.MeshBasicMaterial({color:0x6be3d6,transparent:true,opacity:.025,side:THREE.DoubleSide,depthWrite:false});
+  const plane=new THREE.Mesh(new THREE.PlaneGeometry(SPAN-2,planeH,18,8),pm);
+  plane.position.set(0,(ER_Y+PM_Y)/2,-DEPTH/2+.5);scene.add(plane);
+  const gm=new THREE.LineBasicMaterial({color:0x6be3d6,transparent:true,opacity:.09});
+  const cols=9,rows=4,pts=[];
+  for(let r=0;r<=rows;r++){const y=(ER_Y+2.5)+r*(planeH/rows);pts.push(new THREE.Vector3(-SPAN/2+1,y,-DEPTH/2+.5),new THREE.Vector3(SPAN/2-1,y,-DEPTH/2+.5));}
+  for(let c=0;c<=cols;c++){const x=(-SPAN/2+1)+c*((SPAN-2)/cols);pts.push(new THREE.Vector3(x,ER_Y+2.5,-DEPTH/2+.5),new THREE.Vector3(x,PM_Y-2.5,-DEPTH/2+.5));}
+  for(let i=0;i<pts.length;i+=2){const bg=new THREE.BufferGeometry().setFromPoints([pts[i],pts[i+1]]);scene.add(new THREE.Line(bg,gm));}
+  const am=new THREE.MeshBasicMaterial({color:0x6be3d6,transparent:true,opacity:.58});
+  const arrow=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,planeH-2,6),am);
+  arrow.position.set(SPAN/2-1.5,(ER_Y+PM_Y)/2,-DEPTH/2+.5);scene.add(arrow);
+  [ER_Y+2.5,PM_Y-2.5].forEach(y=>{const cap=new THREE.Mesh(new THREE.SphereGeometry(.2,8,8),am);cap.position.set(SPAN/2-1.5,y,-DEPTH/2+.5);scene.add(cap);});
+})();
+
+/* OSBP1 shuttle */
+const shuttle=new THREE.Group();
+const ordMat=new THREE.MeshStandardMaterial({color:0xdde8f5,roughness:.30,metalness:.08,transparent:true,opacity:.72,emissive:0x0a1020,emissiveIntensity:.3});
+const ordMesh=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.8,3.4,12),ordMat);
+ordMesh.position.y=0;
+shuttle.add(ordMesh);
+const lid=new THREE.Mesh(new THREE.SphereGeometry(1.7,14,8,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0xc8d8ee,roughness:.35,transparent:true,opacity:.60}));
+lid.position.y=2.0;shuttle.add(lid);
+const linker=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,2.2,8),new THREE.MeshStandardMaterial({color:0x8899bb,roughness:.6,transparent:true,opacity:.55}));
+linker.position.y=-2.6;shuttle.add(linker);
+const phMat=new THREE.MeshStandardMaterial({color:0x7adfd4,roughness:.28,metalness:.06,transparent:true,opacity:.78,emissive:0x041814,emissiveIntensity:.4});
+const phDom=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.5,1.8,10),phMat);
+phDom.position.y=-3.7;shuttle.add(phDom);
+shuttle.position.set(0,ER_Y+4,0);scene.add(shuttle);
+
+/* cargo molecules */
+const cholMol=buildMol(MOL.cholesterol,.52);const pipMol=buildMol(MOL.pi4p,.46);
+cholMol.visible=false;pipMol.visible=false;shuttle.add(cholMol);shuttle.add(pipMol);
+const cholDepot=buildMol(MOL.cholesterol,.52);cholDepot.visible=false;scene.add(cholDepot);
+const pipDepot=buildMol(MOL.pi4p,.46);pipDepot.visible=false;scene.add(pipDepot);
+let cargo=null;
+function setCargo(t){cargo=t;cholMol.visible=t==='chol';pipMol.visible=t==='pip';}
+
+/* tags */
+const TAGS=[
+  {txt:'RE · donneur cholestérol',cls:'er',pos:new THREE.Vector3(-SPAN/2+5,ER_Y-3.5,0)},
+  {txt:'Membrane plasmique · PI4P',cls:'pm',pos:new THREE.Vector3(-SPAN/2+5,PM_Y+3.5,0)},
+  {txt:'ERMCS · 10–30 nm',cls:'pm',pos:new THREE.Vector3(SPAN/2+1.5,(ER_Y+PM_Y)/2,-DEPTH/2+.5)},
+  {txt:'VAP-A/B (tether)',cls:'er',pos:new THREE.Vector3(-SPAN/2+5,(ER_Y+PM_Y)/2,-DEPTH/2+2.5)},
+  {txt:'Radeau lipidique (SM + Chol)',cls:'s',pos:new THREE.Vector3(-5.5,PM_Y+2.8,1.8)},
+];
+const tagEls=TAGS.map(t=>{const e=document.createElement('div');e.className='tag '+t.cls;e.textContent=t.txt;document.getElementById('stage').appendChild(e);return e;});
+const tv=new THREE.Vector3();
+function projectTags(){TAGS.forEach((t,i)=>{tv.copy(t.pos).project(camera);const x=(tv.x*.5+.5)*W(),y=(-tv.y*.5+.5)*H();tagEls[i].style.left=x+'px';tagEls[i].style.top=y+'px';tagEls[i].classList.toggle('show',tv.z<1);});}
+
+/* step logic */
+let step=0,t=0,playing=true,speed=1;
+const DUR=3.5;
+function ease(x){return x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;}
+function applyStep(si,tt){
+  const e=ease(tt);
+  cholDepot.visible=false;pipDepot.visible=false;
+  if(si===0){
+    shuttle.position.set(THREE.MathUtils.lerp(2,0,e),ER_Y+THREE.MathUtils.lerp(8,4,e),0);
+    shuttle.rotation.z=THREE.MathUtils.lerp(.28,0,e);setCargo(null);
+  } else if(si===1){
+    const dip=Math.sin(tt*Math.PI);shuttle.position.set(0,ER_Y+4-dip*2.6,0);lid.rotation.x=dip*.58;
+    if(tt>.48&&!cargo)setCargo('chol');if(tt<.48)setCargo(null);
+  } else if(si===2){
+    shuttle.position.set(0,THREE.MathUtils.lerp(ER_Y+4,PM_Y-4,e),Math.sin(e*Math.PI)*2);setCargo('chol');
+    if(tt>.86){setCargo(null);cholDepot.position.set(.5,PM_Y-2.4,.5);cholDepot.visible=true;}
+  } else {
+    if(tt<.2){setCargo(null);pipDepot.position.set(1.5,PM_Y-2.4,0);pipDepot.visible=true;}
+    else if(tt<.32){setCargo('pip');pipDepot.visible=false;}else setCargo('pip');
+    shuttle.position.set(0,THREE.MathUtils.lerp(PM_Y-4,ER_Y+4,Math.max(0,(tt-.28)/.72)),-Math.sin(Math.max(0,(tt-.28)/.72)*Math.PI)*2);
+    if(tt>.92)setCargo(null);
+  }
+}
+function updatePanel(){
+  const s=STEPS[step];
+  document.getElementById('stepNum').textContent=step+1;
+  document.getElementById('stepTitle').textContent=s.t;
+  document.getElementById('stepDesc').textContent=s.d;
+  document.querySelectorAll('.chip').forEach((c,i)=>c.classList.toggle('on',i===step));
+  document.querySelectorAll('.cp-step').forEach((c,i)=>{c.classList.toggle('on',i===step);c.classList.toggle('done',i<step);});
+  document.querySelectorAll('.cp-line').forEach((l,i)=>l.classList.toggle('done',i<step));
+  // progress arc
+  const pct=(step+Math.min(t,1))/(STEPS.length);
+  const circ=163.4;document.getElementById('progArc').setAttribute('stroke-dashoffset',circ*(1-pct));
+  document.getElementById('progTxt').textContent=Math.round(pct*100)+'%';
+}
+function gotoStep(i,click){step=((i%4)+4)%4;t=0;updatePanel();if(click){playing=true;updatePIco();}}
+updatePanel();
+const pIco=document.getElementById('playIco');
+function updatePIco(){pIco.innerHTML=playing?'<path d="M6 4h4v16H6zM14 4h4v16h-4z" fill="currentColor" stroke="none"/>':'<path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/>';}
+document.getElementById('playBtn').onclick=()=>{playing=!playing;updatePIco();};
+document.getElementById('prevBtn').onclick=()=>gotoStep(step-1,true);
+document.getElementById('nextBtn').onclick=()=>gotoStep(step+1,true);
+const spR=document.getElementById('speedR'),spV=document.getElementById('spdVal');
+spR.oninput=e=>{speed=+e.target.value;spV.textContent=speed+'×';};
+const scR=document.getElementById('scrubR'),scV=document.getElementById('scrubVal');
+scR.oninput=e=>{playing=false;updatePIco();t=+e.target.value/100;scV.textContent=e.target.value+'%';};
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')gotoStep(step+1,true);
+  else if(e.key==='ArrowLeft')gotoStep(step-1,true);
+  else if(e.key===' '){e.preventDefault();playing=!playing;updatePIco();}
+  else if(e.key>='1'&&e.key<='4')gotoStep(+e.key-1,true);
+});
+updatePIco();
+let last=performance.now();
+function loop(now){
+  requestAnimationFrame(loop);const dt=Math.min((now-last)/1e3,.05);last=now;const time=now/1e3;
+  [erMem,pmMem].forEach(m=>m.children.forEach(l=>{l.position.y=l.userData.baseY+Math.sin(time*1.4+l.userData.ph)*l.userData.amp;}));
+  if(playing){t+=dt*speed/DUR;if(t>=1){t=0;step=(step+1)%4;updatePanel();}}
+  applyStep(step,t);
+  scR.value=Math.round(t*100);scV.textContent=Math.round(t*100)+'%';
+  if(cholMol.visible){cholMol.rotation.y+=dt*.75;cholMol.position.y=Math.sin(time*4)*.1;}
+  if(pipMol.visible){pipMol.rotation.y+=dt*.75;pipMol.position.y=Math.sin(time*4)*.1;}
+  controls.update();renderer.render(scene,camera);projectTags();
+}
+requestAnimationFrame(loop);
+document.getElementById('loader').classList.add('gone');
+addEventListener('resize',()=>{camera.aspect=W()/H();camera.updateProjectionMatrix();renderer.setSize(W(),H());});
+</script>
+</body>
+</html>

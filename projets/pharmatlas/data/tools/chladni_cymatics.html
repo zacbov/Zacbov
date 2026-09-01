@@ -1,0 +1,1269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0a0b0c" />
+<title>Chladni Cymatics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root {
+  color: #f3f4ef;
+  background: #070807;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --amber: #f5b11b;
+  --amber-deep: #d57e05;
+  --plate: #202527;
+  --panel: #101212;
+  --line: rgba(255, 255, 255, 0.12);
+  --muted-text: rgba(255, 255, 255, 0.75);
+  --label-control-gap: 8px;
+}
+* { box-sizing: border-box; }
+html, body, #app {
+  width: 100%;
+  min-width: 320px;
+  height: 100%;
+  margin: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+body { overflow: hidden; }
+button, input { font: inherit; }
+.app-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(330px, 28vw, 430px);
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 40% 35%, rgba(245, 177, 27, 0.08), transparent 32%),
+    linear-gradient(135deg, #070807 0%, #141716 100%);
+}
+.stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+.scene-root { width: 100%; height: 100%; }
+.scene-root canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.status-pill {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  width: fit-content;
+  padding: 7px 11px;
+  border: 1px solid rgba(245, 177, 27, 0.3);
+  border-radius: 999px;
+  color: #f7d37b;
+  background: rgba(10, 11, 10, 0.78);
+  font-size: 12px;
+  line-height: 1;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
+}
+.control-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  min-width: 0;
+  height: 100%;
+  padding: clamp(18px, 3vw, 32px);
+  border-left: 1px solid var(--line);
+  background: rgba(12, 13, 13, 0.88);
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.24);
+  overflow: hidden;
+}
+.dial {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  touch-action: none;
+  outline: none;
+}
+.dial:focus-visible .dial-base { stroke: rgba(245, 177, 27, 0.34); }
+.dial-svg { width: 100%; height: 100%; overflow: visible; }
+.dial-base {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 36;
+  stroke-linecap: round;
+}
+.dial-arc {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 36;
+  stroke-linecap: round;
+  transform: rotate(140deg);
+  transform-origin: 160px 160px;
+  filter: drop-shadow(0 10px 20px rgba(245, 177, 27, 0.18));
+}
+.dial-knob {
+  fill: #171817;
+  stroke: var(--amber);
+  stroke-width: 5;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.45));
+}
+.dial-tick { stroke: rgba(255, 255, 255, 0.48); stroke-width: 3; stroke-linecap: round; }
+.dial-label {
+  fill: rgba(255, 255, 255, 0.54);
+  font-size: 17px;
+  font-weight: 500;
+  user-select: none;
+}
+.dial-center {
+  position: absolute;
+  inset: 32%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.7);
+  background: #0b0c0c;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 16px 40px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+.dial-center strong {
+  color: #fffdf4;
+  font-size: clamp(22px, 2.2vw, 30px);
+  font-weight: 500;
+  line-height: 1;
+}
+.dial-center span {
+  align-self: center;
+  color: var(--amber);
+  font-size: clamp(11px, 1.2vw, 14px);
+}
+.control-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted-text);
+}
+.control-row output { color: #fff7df; }
+.section-heading {
+  margin-bottom: calc((16px - var(--label-control-gap)) * -1);
+  color: var(--muted-text);
+}
+.particle-control, .range-control { display: grid; gap: 7px; }
+.particle-slider, .control-slider {
+  width: 100%;
+  height: 10px;
+  margin: 0;
+  accent-color: var(--amber);
+}
+.preset-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+.preset-button, .secondary-button {
+  min-width: 0;
+  min-height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.045);
+  cursor: pointer;
+}
+.preset-button:hover, .secondary-button:hover {
+  border-color: rgba(245, 177, 27, 0.42);
+  color: #fff7df;
+}
+.preset-button:disabled, .secondary-button:disabled { cursor: wait; opacity: 0.58; }
+.action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mute-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border: 1px solid var(--amber);
+  border-radius: 8px;
+  color: #0e0c05;
+  background: var(--amber);
+  cursor: pointer;
+}
+.mute-button:disabled { cursor: wait; opacity: 0.7; }
+.mute-button.is-live { color: #fff7df; background: rgba(245, 177, 27, 0.12); }
+.app-error {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  color: #f4efe4;
+  background: #080909;
+}
+.app-error div {
+  max-width: 520px;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: #111313;
+}
+.app-error h1 { margin: 0 0 10px; font-size: 22px; }
+.app-error p { margin: 0; color: rgba(255, 255, 255, 0.72); }
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  .app-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(420px, 58vh) auto;
+    height: auto;
+    min-height: 100%;
+  }
+  .control-panel { height: auto; gap: 18px; border-top: 1px solid var(--line); border-left: 0; }
+  .dial { width: 100%; margin-top: 0; }
+}
+@media (max-height: 680px) and (min-width: 901px) {
+  .control-panel { justify-content: flex-start; overflow-y: auto; overflow-x: hidden; }
+}
+@media (max-width: 520px) {
+  .app-shell { grid-template-rows: minmax(360px, 52vh) auto; }
+  .control-panel { gap: 18px; padding: 18px; }
+  .status-pill { top: 12px; left: 12px; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+
+/* ============================== Patterns ============================== */
+
+const MIN_FREQUENCY = 345;
+const MAX_FREQUENCY = 5907;
+
+const PATTERN_MODES = [
+  { frequency: 345, m: 1, n: 2 },
+  { frequency: 1033, m: 2, n: 3 },
+  { frequency: 1820, m: 3, n: 4 },
+  { frequency: 2041, m: 2, n: 5 },
+  { frequency: 3240, m: 4, n: 5 },
+  { frequency: 3835, m: 5, n: 6 },
+  { frequency: 3975, m: 4, n: 7 },
+  { frequency: 4444, m: 6, n: 7 },
+  { frequency: 4840, m: 5, n: 8 },
+  { frequency: 5201, m: 7, n: 8 },
+  { frequency: 5284, m: 6, n: 9 },
+  { frequency: 5907, m: 8, n: 9 }
+];
+
+function getModeMix(frequencyHz) {
+  const frequency = Math.min(MAX_FREQUENCY, Math.max(MIN_FREQUENCY, frequencyHz));
+
+  for (let index = 0; index < PATTERN_MODES.length - 1; index += 1) {
+    const current = PATTERN_MODES[index];
+    const next = PATTERN_MODES[index + 1];
+
+    if (frequency >= current.frequency && frequency <= next.frequency) {
+      const span = next.frequency - current.frequency;
+      const blend = span === 0 ? 0 : (frequency - current.frequency) / span;
+      return { current, next, blend: smoothstep(blend) };
+    }
+  }
+
+  const last = PATTERN_MODES[PATTERN_MODES.length - 1];
+  return { current: last, next: last, blend: 0 };
+}
+
+function evaluateChladniField(x, y, mode) {
+  const px = Math.PI * x;
+  const py = Math.PI * y;
+  return (
+    Math.cos(mode.m * px) * Math.cos(mode.n * py) -
+    Math.cos(mode.n * px) * Math.cos(mode.m * py)
+  );
+}
+
+function evaluateChladniGradient(x, y, mode) {
+  const px = Math.PI * x;
+  const py = Math.PI * y;
+  const pi = Math.PI;
+  return {
+    x:
+      -mode.m * pi * Math.sin(mode.m * px) * Math.cos(mode.n * py) +
+      mode.n * pi * Math.sin(mode.n * px) * Math.cos(mode.m * py),
+    y:
+      -mode.n * pi * Math.cos(mode.m * px) * Math.sin(mode.n * py) +
+      mode.m * pi * Math.cos(mode.n * px) * Math.sin(mode.m * py)
+  };
+}
+
+function evaluateMixedField(x, y, frequencyHz, mix) {
+  const fieldA = evaluateChladniField(x, y, mix.current);
+  const fieldB = evaluateChladniField(x, y, mix.next);
+  return fieldA * (1 - mix.blend) + fieldB * mix.blend;
+}
+
+function evaluateMixedGradient(x, y, frequencyHz, mix) {
+  const gradientA = evaluateChladniGradient(x, y, mix.current);
+  const gradientB = evaluateChladniGradient(x, y, mix.next);
+  return {
+    x: gradientA.x * (1 - mix.blend) + gradientB.x * mix.blend,
+    y: gradientA.y * (1 - mix.blend) + gradientB.y * mix.blend
+  };
+}
+
+function smoothstep(value) {
+  const x = Math.min(1, Math.max(0, value));
+  return x * x * (3 - 2 * x);
+}
+
+/* ============================== Audio ============================== */
+
+function createAudioController(initialFrequency) {
+  let context = null;
+  let oscillator = null;
+  let gain = null;
+  let muted = true;
+  let frequencyHz = initialFrequency;
+
+  function createOscillator(startTime = 0) {
+    const nextOscillator = context.createOscillator();
+    nextOscillator.type = "sine";
+    nextOscillator.frequency.value = frequencyHz;
+    nextOscillator.connect(gain);
+    nextOscillator.start(startTime);
+    return nextOscillator;
+  }
+
+  function ensureAudio() {
+    if (context) return;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    context = new AudioContextClass();
+    gain = context.createGain();
+    gain.gain.value = 0;
+    gain.connect(context.destination);
+    oscillator = createOscillator();
+  }
+
+  async function resumeAudio() {
+    ensureAudio();
+    if (context.state === "suspended") {
+      await Promise.race([
+        context.resume().catch(() => {}),
+        new Promise((resolve) => { window.setTimeout(resolve, 500); })
+      ]);
+    }
+  }
+
+  async function setMuted(nextMuted) {
+    muted = nextMuted;
+    await resumeAudio();
+    const now = context.currentTime;
+    const targetGain = muted ? 0 : 0.035;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setTargetAtTime(targetGain, now, 0.015);
+  }
+
+  function setFrequency(nextFrequency) {
+    frequencyHz = nextFrequency;
+    if (!oscillator || !context) return;
+    oscillator.frequency.cancelScheduledValues(context.currentTime);
+    oscillator.frequency.setTargetAtTime(frequencyHz, context.currentTime, 0.01);
+  }
+
+  async function restartTone() {
+    await resumeAudio();
+    const now = context.currentTime;
+    const restartAt = muted ? now : now + 0.018;
+    const oldOscillator = oscillator;
+
+    if (!muted) {
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setTargetAtTime(0, now, 0.004);
+      gain.gain.setValueAtTime(0, restartAt);
+      gain.gain.setTargetAtTime(0.035, restartAt, 0.015);
+    }
+
+    oscillator = createOscillator(restartAt);
+
+    if (oldOscillator) {
+      oldOscillator.stop(restartAt);
+      oldOscillator.onended = () => oldOscillator.disconnect();
+    }
+  }
+
+  return {
+    get muted() { return muted; },
+    setMuted,
+    setFrequency,
+    restartTone
+  };
+}
+
+/* ============================== Renderer (WebGL / Three.js) ============================== */
+
+const PLATE_HALF = 3.15;
+const MAX_PARTICLES = 50000;
+const DEFAULT_PARTICLE_SIZE_CONST = 0.01;
+const BASE_OPACITY_AMOUNT = 100000;
+const BASE_PARTICLE_OPACITY = 0.015;
+const LOW_BLUR_PARTICLE_OPACITY = 0.055;
+const WEBGL_POINT_SIZE_SCALE = 300;
+const CRISP_PARTICLE_OPACITY = 0.92;
+const BLUR_RESPONSE_POWER = 3.2;
+const PARTICLE_TEXTURE_SIZE = 64;
+
+class ChladniRenderer {
+  constructor(container, initialState) {
+    this.container = container;
+    this.frequencyHz = initialState.frequencyHz;
+    this.particleCount = Math.min(initialState.particleCount, MAX_PARTICLES);
+    this.particleSpeed = initialState.particleSpeed ?? 1;
+    this.particleSize = initialState.particleSize ?? DEFAULT_PARTICLE_SIZE_CONST;
+    this.particleOffset = initialState.particleOffset ?? 0;
+    this.particleBlur = initialState.particleBlur ?? 1;
+    this.positions = null;
+    this.renderPositions = null;
+    this.velocities = null;
+    this.pathOffsets = null;
+    this.seeds = null;
+    this.geometry = null;
+    this.points = null;
+    this.scene = null;
+    this.camera = null;
+    this.renderer = null;
+    this.resizeObserver = null;
+    this.animationFrame = 0;
+    this.seedBase = 0;
+    this.particleTexture = createParticleTexture();
+  }
+
+  init() {
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x080909);
+
+    this.camera = new THREE.OrthographicCamera(-4, 4, 4, -4, 0.1, 20);
+    this.camera.position.set(0, 0, 8);
+    this.camera.lookAt(0, 0, 0);
+
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.container.append(this.renderer.domElement);
+
+    this.rebuildParticles(this.particleCount);
+    this.resize();
+
+    this.resizeObserver = new ResizeObserver(() => this.resize());
+    this.resizeObserver.observe(this.container);
+    this.animate();
+  }
+
+  rebuildParticles(requestedCount) {
+    this.particleCount = Math.min(requestedCount, MAX_PARTICLES);
+
+    if (this.points) {
+      this.scene.remove(this.points);
+      this.geometry.dispose();
+      this.points.material.dispose();
+    }
+
+    this.positions = new Float32Array(this.particleCount * 3);
+    this.renderPositions = new Float32Array(this.particleCount * 3);
+    this.velocities = new Float32Array(this.particleCount * 2);
+    this.pathOffsets = new Float32Array(this.particleCount * 2);
+    this.seeds = new Float32Array(this.particleCount);
+    const colors = new Float32Array(this.particleCount * 3);
+
+    for (let index = 0; index < this.particleCount; index += 1) {
+      const offset3 = index * 3;
+      const seed = seeded(index + 1 + this.seedBase);
+      const x = seeded(index * 7 + 11 + this.seedBase) * 2 - 1;
+      const y = seeded(index * 13 + 19 + this.seedBase) * 2 - 1;
+      const tone = 0.82 + seeded(index * 17 + 3 + this.seedBase) * 0.16;
+      const offsetAngle = seeded(index * 23 + 1201 + this.seedBase) * Math.PI * 2;
+      const offsetRadius = seeded(index * 29 + 1601 + this.seedBase);
+
+      this.positions[offset3] = x * PLATE_HALF * 0.96;
+      this.positions[offset3 + 1] = y * PLATE_HALF * 0.96;
+      this.positions[offset3 + 2] = 0;
+      this.pathOffsets[index * 2] = Math.cos(offsetAngle) * offsetRadius;
+      this.pathOffsets[index * 2 + 1] = Math.sin(offsetAngle) * offsetRadius;
+      this.seeds[index] = seed;
+      colors[offset3] = tone;
+      colors[offset3 + 1] = tone * 0.985;
+      colors[offset3 + 2] = tone * 0.91;
+    }
+
+    this.updateRenderPositions();
+
+    this.geometry = new THREE.BufferGeometry();
+    this.geometry.setAttribute("position", new THREE.BufferAttribute(this.renderPositions, 3));
+    this.geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+      vertexColors: true,
+      transparent: true,
+      depthWrite: false
+    });
+
+    this.points = new THREE.Points(this.geometry, material);
+    this.points.frustumCulled = false;
+    this.applyParticleMaterialSettings();
+    this.scene.add(this.points);
+  }
+
+  updateFrequency(frequencyHz) {
+    this.frequencyHz = frequencyHz;
+  }
+
+  setParticleSpeed(nextSpeed) {
+    this.particleSpeed = nextSpeed;
+  }
+
+  setParticleSize(nextSize) {
+    this.particleSize = nextSize;
+    this.applyParticleMaterialSettings();
+  }
+
+  setParticleOffset(nextOffset) {
+    this.particleOffset = clampNonNegative(nextOffset);
+    this.updateRenderPositions();
+    this.geometry.attributes.position.needsUpdate = true;
+  }
+
+  setParticleBlur(nextBlur) {
+    this.particleBlur = clamp01(nextBlur);
+    this.applyParticleMaterialSettings();
+  }
+
+  setParticleCount(nextCount) {
+    this.rebuildParticles(nextCount);
+    return this.particleCount;
+  }
+
+  resetParticles() {
+    this.seedBase += 1009;
+    this.rebuildParticles(this.particleCount);
+    return this.particleCount;
+  }
+
+  resize() {
+    const rect = this.container.getBoundingClientRect();
+    const width = Math.max(1, rect.width);
+    const height = Math.max(1, rect.height);
+    const aspect = width / height;
+    const view = aspect > 1 ? 4.1 : 4.1 / aspect;
+
+    this.camera.left = -view * aspect;
+    this.camera.right = view * aspect;
+    this.camera.top = view;
+    this.camera.bottom = -view;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(width, height);
+  }
+
+  animate() {
+    this.step();
+    this.renderer.render(this.scene, this.camera);
+    this.animationFrame = window.requestAnimationFrame(() => this.animate());
+  }
+
+  step() {
+    const attraction = 0.00115;
+    const damping = 0.9;
+    const jitter = 0.0009;
+    const time = performance.now() * 0.001;
+    const speed = this.particleSpeed;
+    const mix = getModeMix(this.frequencyHz);
+
+    for (let index = 0; index < this.particleCount; index += 1) {
+      const offset3 = index * 3;
+      const offset2 = index * 2;
+      const x = this.positions[offset3] / PLATE_HALF;
+      const y = this.positions[offset3 + 1] / PLATE_HALF;
+      const field = evaluateMixedField(x, y, this.frequencyHz, mix);
+      const gradient = evaluateMixedGradient(x, y, this.frequencyHz, mix);
+      const pull = -field * attraction;
+      const pulse = Math.sin(this.seeds[index] * 91.7 + time) * jitter;
+
+      this.velocities[offset2] = (this.velocities[offset2] + gradient.x * pull + pulse * 0.6) * damping;
+      this.velocities[offset2 + 1] = (this.velocities[offset2 + 1] + gradient.y * pull + pulse * 0.35) * damping;
+
+      let nextX = this.positions[offset3] + this.velocities[offset2] * speed;
+      let nextY = this.positions[offset3 + 1] + this.velocities[offset2 + 1] * speed;
+
+      if (nextX > PLATE_HALF) {
+        nextX = PLATE_HALF;
+        this.velocities[offset2] = -Math.abs(this.velocities[offset2]) * 0.35;
+      } else if (nextX < -PLATE_HALF) {
+        nextX = -PLATE_HALF;
+        this.velocities[offset2] = Math.abs(this.velocities[offset2]) * 0.35;
+      }
+
+      if (nextY > PLATE_HALF) {
+        nextY = PLATE_HALF;
+        this.velocities[offset2 + 1] = -Math.abs(this.velocities[offset2 + 1]) * 0.35;
+      } else if (nextY < -PLATE_HALF) {
+        nextY = -PLATE_HALF;
+        this.velocities[offset2 + 1] = Math.abs(this.velocities[offset2 + 1]) * 0.35;
+      }
+
+      this.positions[offset3] = nextX;
+      this.positions[offset3 + 1] = nextY;
+    }
+
+    this.updateRenderPositions();
+    this.geometry.attributes.position.needsUpdate = true;
+  }
+
+  applyParticleMaterialSettings() {
+    if (!this.points) return;
+
+    const material = this.points.material;
+    const blur = clamp01(this.particleBlur);
+
+    if (blur <= 0.001) {
+      material.size = toWebGLPointSize(this.particleSize);
+      material.sizeAttenuation = false;
+      material.map = null;
+      material.alphaMap = null;
+      material.blending = THREE.NormalBlending;
+      material.opacity = CRISP_PARTICLE_OPACITY;
+    } else {
+      updateParticleTexture(this.particleTexture, easeBlur(blur));
+      material.size = toWebGLPointSize(this.particleSize);
+      material.sizeAttenuation = false;
+      material.map = this.particleTexture;
+      material.alphaMap = this.particleTexture;
+      material.blending = THREE.AdditiveBlending;
+      material.opacity = getParticleOpacityForSettings(this.particleCount, this.particleSize, blur);
+    }
+
+    material.needsUpdate = true;
+  }
+
+  updateRenderPositions() {
+    if (!this.positions || !this.renderPositions || !this.pathOffsets) return;
+
+    const offset = this.particleOffset;
+    for (let index = 0; index < this.particleCount; index += 1) {
+      const offset3 = index * 3;
+      const offset2 = index * 2;
+      this.renderPositions[offset3] = this.positions[offset3] + this.pathOffsets[offset2] * offset;
+      this.renderPositions[offset3 + 1] = this.positions[offset3 + 1] + this.pathOffsets[offset2 + 1] * offset;
+      this.renderPositions[offset3 + 2] = this.positions[offset3 + 2];
+    }
+  }
+}
+
+function createParticleTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = PARTICLE_TEXTURE_SIZE;
+  canvas.height = PARTICLE_TEXTURE_SIZE;
+  const texture = new THREE.CanvasTexture(canvas);
+  updateParticleTexture(texture, 1);
+  return texture;
+}
+
+function updateParticleTexture(texture, blurAmount) {
+  const canvas = texture.image;
+  const context = canvas.getContext("2d");
+  const center = PARTICLE_TEXTURE_SIZE / 2;
+  const blur = clamp01(blurAmount);
+  const hardEdge = 0.48 - blur * 0.32;
+  const midEdge = 0.58 + blur * 0.04;
+
+  const gradient = context.createRadialGradient(center, center, 0, center, center, center);
+  gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+  gradient.addColorStop(Math.max(0.08, hardEdge), `rgba(255, 255, 255, ${1 - blur * 0.58})`);
+  gradient.addColorStop(Math.max(hardEdge + 0.02, midEdge), `rgba(255, 255, 255, ${blur * 0.12})`);
+  gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+  context.clearRect(0, 0, PARTICLE_TEXTURE_SIZE, PARTICLE_TEXTURE_SIZE);
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, PARTICLE_TEXTURE_SIZE, PARTICLE_TEXTURE_SIZE);
+  texture.needsUpdate = true;
+}
+
+function getParticleOpacityForSettings(amount, particleSize = DEFAULT_PARTICLE_SIZE_CONST, particleBlur = 1) {
+  const blur = clamp01(particleBlur);
+  if (blur <= 0.001) return CRISP_PARTICLE_OPACITY;
+  const easedBlur = easeBlur(blur);
+
+  const safeAmount = Math.max(1, amount);
+  const sizeScale = Math.min(1.4, Math.max(0.25, DEFAULT_PARTICLE_SIZE_CONST / Math.max(0.001, particleSize)));
+  const softOpacity = Math.min(
+    0.05,
+    Math.max(0.004, BASE_PARTICLE_OPACITY * Math.sqrt(BASE_OPACITY_AMOUNT / safeAmount) * sizeScale)
+  );
+  return mixNumber(LOW_BLUR_PARTICLE_OPACITY, softOpacity, easedBlur);
+}
+
+function toWebGLPointSize(size) {
+  return Math.max(1, size * WEBGL_POINT_SIZE_SCALE);
+}
+
+function clamp01(value) {
+  return Math.min(1, Math.max(0, Number(value)));
+}
+
+function clampNonNegative(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, number) : 0;
+}
+
+function mixNumber(a, b, t) {
+  const amount = clamp01(t);
+  return a * (1 - amount) + b * amount;
+}
+
+function easeBlur(value) {
+  return Math.pow(clamp01(value), BLUR_RESPONSE_POWER);
+}
+
+function seeded(value) {
+  const x = Math.sin(value * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/* ============================== UI ============================== */
+
+const MIN_PARTICLES = 5000;
+const MIN_PARTICLE_SPEED = 0.1;
+const MAX_PARTICLE_SPEED = 3;
+const MIN_PARTICLE_SIZE = 0.004;
+const MAX_PARTICLE_SIZE = 0.05;
+const MIN_PARTICLE_OFFSET = 0;
+const MAX_PARTICLE_OFFSET = 0.2;
+const MIN_PARTICLE_BLUR = 0;
+const MAX_PARTICLE_BLUR = 1;
+const DIAL_START_DEGREES = 140;
+const DIAL_SWEEP_DEGREES = 260;
+const DIAL_END_DEGREES = DIAL_START_DEGREES + DIAL_SWEEP_DEGREES;
+const DIAL_RADIUS = 142;
+
+function createInterface(root, initialState, handlers) {
+  root.innerHTML = `
+    <main class="app-shell">
+      <section class="stage" aria-label="Chladni cymatics plate">
+        <div id="scene-root" class="scene-root"></div>
+        <div class="status-pill" id="renderer-status"></div>
+      </section>
+      <aside class="control-panel" aria-label="Cymatics controls">
+        <div class="dial" id="frequency-dial" role="slider" aria-label="Frequency" tabindex="0"
+          aria-valuemin="${MIN_FREQUENCY}" aria-valuemax="${MAX_FREQUENCY}" aria-valuenow="${Math.round(initialState.frequencyHz)}">
+          <svg class="dial-svg" viewBox="0 0 320 320" aria-hidden="true">
+            <circle class="dial-base" cx="160" cy="160" r="${DIAL_RADIUS}"></circle>
+            <circle class="dial-arc" id="dial-arc" cx="160" cy="160" r="${DIAL_RADIUS}"></circle>
+            <g id="dial-ticks"></g>
+            <circle class="dial-knob" id="dial-knob" cx="160" cy="30" r="17"></circle>
+          </svg>
+          <div class="dial-center">
+            <strong id="dial-center-frequency">${Math.round(initialState.frequencyHz)}</strong>
+            <span>Hz</span>
+          </div>
+        </div>
+        <div class="section-heading">Presets</div>
+        <div class="preset-strip" id="preset-strip" aria-label="Frequency presets">
+          ${PATTERN_MODES.map((mode) => `<button class="preset-button" type="button" data-frequency="${mode.frequency}">${mode.frequency}</button>`).join("")}
+        </div>
+        <div class="particle-control">
+          <div class="control-row">
+            <label for="particle-count">Particles</label>
+            <output id="particle-count-output">${formatParticleCount(initialState.particleCount)}</output>
+          </div>
+          <input id="particle-count" class="particle-slider" type="range" min="${MIN_PARTICLES}" max="${MAX_PARTICLES}" step="5000" value="${initialState.particleCount}" />
+        </div>
+        <div class="range-control">
+          <div class="control-row">
+            <label for="particle-speed">Speed</label>
+            <output id="particle-speed-output">${formatParticleSpeed(initialState.particleSpeed)}</output>
+          </div>
+          <input id="particle-speed" class="control-slider" type="range" min="${MIN_PARTICLE_SPEED}" max="${MAX_PARTICLE_SPEED}" step="0.05" value="${initialState.particleSpeed}" />
+        </div>
+        <div class="range-control">
+          <div class="control-row">
+            <label for="particle-size">Size</label>
+            <output id="particle-size-output">${formatParticleSize(initialState.particleSize)}</output>
+          </div>
+          <input id="particle-size" class="control-slider" type="range" min="${MIN_PARTICLE_SIZE}" max="${MAX_PARTICLE_SIZE}" step="0.001" value="${initialState.particleSize}" />
+        </div>
+        <div class="range-control">
+          <div class="control-row">
+            <label for="particle-offset">Offset</label>
+            <output id="particle-offset-output">${formatParticleOffset(initialState.particleOffset)}</output>
+          </div>
+          <input id="particle-offset" class="control-slider" type="range" min="${MIN_PARTICLE_OFFSET}" max="${MAX_PARTICLE_OFFSET}" step="0.005" value="${initialState.particleOffset}" />
+        </div>
+        <div class="range-control">
+          <div class="control-row">
+            <label for="particle-blur">Blur</label>
+            <output id="particle-blur-output">${formatParticleBlur(initialState.particleBlur)}</output>
+          </div>
+          <input id="particle-blur" class="control-slider" type="range" min="${MIN_PARTICLE_BLUR}" max="${MAX_PARTICLE_BLUR}" step="0.01" value="${initialState.particleBlur}" />
+        </div>
+        <div class="action-row">
+          <button class="secondary-button" id="reset-sand" type="button">Reset Sand</button>
+          <button class="secondary-button" id="random-preset" type="button">Random Mode</button>
+        </div>
+        <button class="mute-button" id="mute-button" type="button" aria-pressed="${!initialState.muted}">
+          <span id="mute-label">${initialState.muted ? "Unmute Tone" : "Mute Tone"}</span>
+        </button>
+      </aside>
+    </main>
+  `;
+
+  const sceneRoot = root.querySelector("#scene-root");
+  const dial = root.querySelector("#frequency-dial");
+  const arc = root.querySelector("#dial-arc");
+  const knob = root.querySelector("#dial-knob");
+  const ticks = root.querySelector("#dial-ticks");
+  const centerValue = root.querySelector("#dial-center-frequency");
+  const particleSlider = root.querySelector("#particle-count");
+  const particleOutput = root.querySelector("#particle-count-output");
+  const speedSlider = root.querySelector("#particle-speed");
+  const speedOutput = root.querySelector("#particle-speed-output");
+  const sizeSlider = root.querySelector("#particle-size");
+  const sizeOutput = root.querySelector("#particle-size-output");
+  const offsetSlider = root.querySelector("#particle-offset");
+  const offsetOutput = root.querySelector("#particle-offset-output");
+  const blurSlider = root.querySelector("#particle-blur");
+  const blurOutput = root.querySelector("#particle-blur-output");
+  const presetStrip = root.querySelector("#preset-strip");
+  const resetSandButton = root.querySelector("#reset-sand");
+  const randomPresetButton = root.querySelector("#random-preset");
+  const muteButton = root.querySelector("#mute-button");
+  const muteLabel = root.querySelector("#mute-label");
+  const rendererStatus = root.querySelector("#renderer-status");
+
+  let frequencyHz = initialState.frequencyHz;
+  let muted = initialState.muted;
+  let pointerActive = false;
+  let controlsBusy = false;
+
+  renderTicks(ticks);
+  updateFrequencyVisuals(frequencyHz);
+  updateStatus(initialState.rendererMode);
+
+  dial.addEventListener("pointerdown", (event) => {
+    pointerActive = true;
+    dial.setPointerCapture(event.pointerId);
+    updateFrequencyFromPointer(event);
+  });
+
+  dial.addEventListener("pointermove", (event) => {
+    if (!pointerActive) return;
+    updateFrequencyFromPointer(event);
+  });
+
+  dial.addEventListener("pointerup", (event) => {
+    pointerActive = false;
+    dial.releasePointerCapture(event.pointerId);
+  });
+
+  dial.addEventListener("pointercancel", () => {
+    pointerActive = false;
+  });
+
+  dial.addEventListener("keydown", (event) => {
+    const coarse = event.shiftKey ? 250 : 25;
+
+    if (event.key === "ArrowRight" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setFrequency(Math.min(MAX_FREQUENCY, frequencyHz + coarse), true);
+    }
+
+    if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
+      event.preventDefault();
+      setFrequency(Math.max(MIN_FREQUENCY, frequencyHz - coarse), true);
+    }
+  });
+
+  particleSlider.addEventListener("input", () => {
+    const count = Number(particleSlider.value);
+    particleOutput.textContent = formatParticleCount(count);
+  });
+
+  particleSlider.addEventListener("change", async () => {
+    const count = Number(particleSlider.value);
+    setControlsBusy(true);
+    try {
+      const actualCount = await handlers.onParticleCountChange(count);
+      if (actualCount) {
+        particleSlider.value = actualCount;
+        particleOutput.textContent = formatParticleCount(actualCount);
+      }
+    } finally {
+      setControlsBusy(false);
+    }
+  });
+
+  speedSlider.addEventListener("input", () => {
+    const speed = Number(speedSlider.value);
+    speedOutput.textContent = formatParticleSpeed(speed);
+    handlers.onParticleSpeedChange(speed);
+  });
+
+  sizeSlider.addEventListener("input", () => {
+    const size = Number(sizeSlider.value);
+    sizeOutput.textContent = formatParticleSize(size);
+    handlers.onParticleSizeChange(size);
+  });
+
+  offsetSlider.addEventListener("input", () => {
+    const offset = Number(offsetSlider.value);
+    offsetOutput.textContent = formatParticleOffset(offset);
+    handlers.onParticleOffsetChange(offset);
+  });
+
+  blurSlider.addEventListener("input", () => {
+    const blur = Number(blurSlider.value);
+    blurOutput.textContent = formatParticleBlur(blur);
+    handlers.onParticleBlurChange(blur);
+  });
+
+  sceneRoot.addEventListener("click", async (event) => {
+    if (controlsBusy || event.target?.tagName !== "CANVAS") return;
+    await applyPresetFrequency(getRandomPresetFrequency(frequencyHz));
+  });
+
+  presetStrip.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-frequency]");
+    if (!button || controlsBusy) return;
+    await applyPresetFrequency(Number(button.dataset.frequency));
+  });
+
+  resetSandButton.addEventListener("click", resetParticles);
+
+  randomPresetButton.addEventListener("click", async () => {
+    if (controlsBusy) return;
+    await applyPresetFrequency(getRandomPresetFrequency(frequencyHz));
+  });
+
+  async function applyPresetFrequency(nextFrequency) {
+    setFrequency(nextFrequency, true);
+    await handlers.onToneRestart();
+  }
+
+  async function resetParticles() {
+    setControlsBusy(true);
+    try {
+      const actualCount = await handlers.onResetParticles();
+      if (actualCount) {
+        particleSlider.value = actualCount;
+        particleOutput.textContent = formatParticleCount(actualCount);
+      }
+    } finally {
+      setControlsBusy(false);
+    }
+  }
+
+  muteButton.addEventListener("click", async () => {
+    muted = !muted;
+    updateMute();
+    muteButton.disabled = true;
+    try {
+      await handlers.onMutedChange(muted);
+    } finally {
+      muteButton.disabled = false;
+    }
+  });
+
+  function updateFrequencyFromPointer(event) {
+    const rect = dial.getBoundingClientRect();
+    const x = event.clientX - rect.left - rect.width / 2;
+    const y = event.clientY - rect.top - rect.height / 2;
+    const angle = Math.atan2(y, x);
+    const progress = angleToProgress(angle);
+    const nextFrequency = MIN_FREQUENCY + progress * (MAX_FREQUENCY - MIN_FREQUENCY);
+    setFrequency(nextFrequency, true);
+  }
+
+  function setFrequency(nextFrequency, emit) {
+    frequencyHz = normalizeFrequency(nextFrequency);
+    updateFrequencyVisuals(frequencyHz);
+    if (emit) {
+      handlers.onFrequencyChange(frequencyHz);
+    }
+  }
+
+  function updateFrequencyVisuals(nextFrequency) {
+    const progress = (nextFrequency - MIN_FREQUENCY) / (MAX_FREQUENCY - MIN_FREQUENCY);
+    const angle = progressToAngle(progress);
+    const point = polarToCartesian(160, 160, DIAL_RADIUS, angle);
+    const circumference = 2 * Math.PI * DIAL_RADIUS;
+    const visibleLength = circumference * DIAL_SWEEP_DEGREES / 360 * progress;
+
+    arc.style.strokeDasharray = `${visibleLength} ${circumference}`;
+    arc.style.strokeDashoffset = "0";
+    knob.setAttribute("cx", point.x);
+    knob.setAttribute("cy", point.y);
+    centerValue.textContent = Math.round(nextFrequency);
+    dial.setAttribute("aria-valuenow", Math.round(nextFrequency));
+  }
+
+  function updateMute() {
+    muteButton.setAttribute("aria-pressed", String(!muted));
+    muteLabel.textContent = muted ? "Unmute Tone" : "Mute Tone";
+    muteButton.classList.toggle("is-live", !muted);
+  }
+
+  function updateStatus(rendererMode) {
+    rendererStatus.textContent = rendererMode;
+  }
+
+  function setControlsBusy(isBusy) {
+    controlsBusy = isBusy;
+    particleSlider.disabled = isBusy;
+    speedSlider.disabled = isBusy;
+    sizeSlider.disabled = isBusy;
+    offsetSlider.disabled = isBusy;
+    blurSlider.disabled = isBusy;
+    resetSandButton.disabled = isBusy;
+    randomPresetButton.disabled = isBusy;
+    presetStrip.querySelectorAll("button").forEach((button) => {
+      button.disabled = isBusy;
+    });
+  }
+
+  return {
+    sceneRoot,
+    updateFrequency: (nextFrequency) => setFrequency(nextFrequency, false),
+    updateParticleCount: (count) => {
+      particleSlider.value = count;
+      particleOutput.textContent = formatParticleCount(count);
+    },
+    updateParticleSpeed: (speed) => {
+      speedSlider.value = speed;
+      speedOutput.textContent = formatParticleSpeed(speed);
+    },
+    updateParticleSize: (size) => {
+      sizeSlider.value = size;
+      sizeOutput.textContent = formatParticleSize(size);
+    },
+    updateParticleOffset: (offset) => {
+      offsetSlider.value = offset;
+      offsetOutput.textContent = formatParticleOffset(offset);
+    },
+    updateParticleBlur: (blur) => {
+      blurSlider.value = blur;
+      blurOutput.textContent = formatParticleBlur(blur);
+    },
+    updateStatus
+  };
+}
+
+function getRandomPresetFrequency(currentFrequency) {
+  const availableModes = PATTERN_MODES.filter((mode) => mode.frequency !== currentFrequency);
+  const modes = availableModes.length > 0 ? availableModes : PATTERN_MODES;
+  const index = Math.floor(Math.random() * modes.length);
+  return modes[index].frequency;
+}
+
+function normalizeFrequency(frequencyHz) {
+  return Math.round(Math.min(MAX_FREQUENCY, Math.max(MIN_FREQUENCY, frequencyHz)));
+}
+
+function renderTicks(group) {
+  const labels = [
+    { frequency: MIN_FREQUENCY, label: "345" },
+    { frequency: 1000, label: "1k" },
+    { frequency: 2000, label: "2k" },
+    { frequency: 3000, label: "3k" },
+    { frequency: 4000, label: "4k" },
+    { frequency: 5000, label: "5k" },
+    { frequency: MAX_FREQUENCY, label: "6k" }
+  ];
+
+  for (const mark of labels) {
+    const progress = (mark.frequency - MIN_FREQUENCY) / (MAX_FREQUENCY - MIN_FREQUENCY);
+    const angle = progressToAngle(progress);
+    const outer = polarToCartesian(160, 160, 124, angle);
+    const inner = polarToCartesian(160, 160, 109, angle);
+    const label = polarToCartesian(160, 160, 84, angle);
+
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", inner.x);
+    line.setAttribute("y1", inner.y);
+    line.setAttribute("x2", outer.x);
+    line.setAttribute("y2", outer.y);
+    line.setAttribute("class", "dial-tick");
+    group.append(line);
+
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute("x", label.x);
+    text.setAttribute("y", label.y);
+    text.setAttribute("class", "dial-label");
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("dominant-baseline", "central");
+    text.textContent = mark.label;
+    group.append(text);
+  }
+}
+
+function progressToAngle(progress) {
+  return (DIAL_START_DEGREES + progress * DIAL_SWEEP_DEGREES) * (Math.PI / 180);
+}
+
+function angleToProgress(angle) {
+  let degrees = angle * (180 / Math.PI);
+  if (degrees < 0) degrees += 360;
+
+  const endModulo = DIAL_END_DEGREES % 360;
+  if (degrees < endModulo) {
+    degrees += 360;
+  }
+
+  if (degrees < DIAL_START_DEGREES) {
+    const distanceToStart = DIAL_START_DEGREES - degrees;
+    const distanceToEnd = degrees + 360 - DIAL_END_DEGREES;
+    degrees = distanceToStart <= distanceToEnd ? DIAL_START_DEGREES : DIAL_END_DEGREES;
+  }
+
+  const clamped = Math.min(DIAL_END_DEGREES, Math.max(DIAL_START_DEGREES, degrees));
+  return (clamped - DIAL_START_DEGREES) / DIAL_SWEEP_DEGREES;
+}
+
+function polarToCartesian(cx, cy, radius, angle) {
+  return {
+    x: cx + radius * Math.cos(angle),
+    y: cy + radius * Math.sin(angle)
+  };
+}
+
+function formatParticleCount(value) {
+  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}m`;
+  return `${Math.round(value / 1000)}k`;
+}
+
+function formatParticleSpeed(value) {
+  return `${Number(value).toFixed(2)}x`;
+}
+
+function formatParticleSize(value) {
+  return Number(value).toFixed(3);
+}
+
+function formatParticleOffset(value) {
+  return Number(value).toFixed(3);
+}
+
+function formatParticleBlur(value) {
+  return `${Math.round(Number(value) * 100)}%`;
+}
+
+/* ============================== App bootstrap ============================== */
+
+const DEFAULT_FREQUENCY = 1820;
+const DEFAULT_PARTICLE_COUNT = 50000;
+const DEFAULT_PARTICLE_SPEED = 0.2;
+const DEFAULT_PARTICLE_SIZE = 0.02;
+const DEFAULT_PARTICLE_OFFSET = 0.03;
+const DEFAULT_PARTICLE_BLUR = 0.05;
+
+const appState = {
+  frequencyHz: DEFAULT_FREQUENCY,
+  particleCount: DEFAULT_PARTICLE_COUNT,
+  particleSpeed: DEFAULT_PARTICLE_SPEED,
+  particleSize: DEFAULT_PARTICLE_SIZE,
+  particleOffset: DEFAULT_PARTICLE_OFFSET,
+  particleBlur: DEFAULT_PARTICLE_BLUR,
+  muted: true,
+  rendererMode: "WebGL2"
+};
+
+const root = document.querySelector("#app");
+root.addEventListener("contextmenu", (event) => event.preventDefault());
+
+const audio = createAudioController(appState.frequencyHz);
+let activeRenderer = null;
+let ui = null;
+
+try {
+  startApp();
+} catch (error) {
+  console.error(error);
+  root.innerHTML = `
+    <section class="app-error">
+      <div>
+        <h1>Unable to start Chladni Cymatics</h1>
+        <p>${error instanceof Error ? error.message : "The renderer failed to initialize."}</p>
+      </div>
+    </section>
+  `;
+}
+
+function startApp() {
+  ui = createInterface(root, appState, {
+    onFrequencyChange: (frequencyHz) => {
+      appState.frequencyHz = frequencyHz;
+      audio.setFrequency(frequencyHz);
+      activeRenderer?.updateFrequency(frequencyHz);
+    },
+    onParticleCountChange: async (particleCount) => {
+      const actualCount = activeRenderer.setParticleCount(Number(particleCount));
+      appState.particleCount = actualCount;
+      ui.updateParticleCount(actualCount);
+      return actualCount;
+    },
+    onParticleSpeedChange: (particleSpeed) => {
+      appState.particleSpeed = particleSpeed;
+      activeRenderer?.setParticleSpeed(particleSpeed);
+    },
+    onParticleSizeChange: (particleSize) => {
+      appState.particleSize = particleSize;
+      activeRenderer?.setParticleSize(particleSize);
+    },
+    onParticleOffsetChange: (particleOffset) => {
+      appState.particleOffset = particleOffset;
+      activeRenderer?.setParticleOffset(particleOffset);
+    },
+    onParticleBlurChange: (particleBlur) => {
+      appState.particleBlur = particleBlur;
+      activeRenderer?.setParticleBlur(particleBlur);
+    },
+    onMutedChange: async (muted) => {
+      appState.muted = muted;
+      await audio.setMuted(muted);
+    },
+    onToneRestart: async () => {
+      await audio.restartTone();
+    },
+    onResetParticles: async () => {
+      const actualCount = activeRenderer.resetParticles();
+      appState.particleCount = actualCount;
+      return actualCount;
+    }
+  });
+
+  activeRenderer = new ChladniRenderer(ui.sceneRoot, appState);
+  activeRenderer.init();
+  activeRenderer.updateFrequency(appState.frequencyHz);
+  activeRenderer.setParticleSpeed(appState.particleSpeed);
+  activeRenderer.setParticleSize(appState.particleSize);
+  activeRenderer.setParticleOffset(appState.particleOffset);
+  activeRenderer.setParticleBlur(appState.particleBlur);
+  ui.updateStatus(appState.rendererMode);
+  ui.updateParticleCount(appState.particleCount);
+  ui.updateParticleSpeed(appState.particleSpeed);
+  ui.updateParticleSize(appState.particleSize);
+  ui.updateParticleOffset(appState.particleOffset);
+  ui.updateParticleBlur(appState.particleBlur);
+
+  window.chladniApp = {
+    state: appState,
+    setFrequency(frequencyHz) {
+      appState.frequencyHz = frequencyHz;
+      ui.updateFrequency(frequencyHz);
+      audio.setFrequency(frequencyHz);
+      activeRenderer.updateFrequency(frequencyHz);
+    }
+  };
+}
+</script>
+</body>
+</html>

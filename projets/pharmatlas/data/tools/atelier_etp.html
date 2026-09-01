@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atelier ETP</title><style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1e2530;--border:#30363d;
+--accent:#7ee787;--accent2:#58a6ff;--accent3:#f78166;--accent4:#d2a8ff;--accent5:#ffa657;
+--text:#e6edf3;--muted:#8b949e;--radius:10px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:14px;line-height:1.55}
+h1{font-size:17px;margin-bottom:3px}h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:12px;margin-bottom:14px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tab{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:7px 12px;
+border-radius:var(--radius);cursor:pointer;font-size:12px;font-weight:600;transition:.15s}
+.tab:hover{border-color:var(--accent2)}
+.tab.on{background:var(--surface2);color:var(--accent);border-color:var(--accent)}
+.pane{display:none}.pane.on{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px;margin-bottom:11px}
+.card h2{font-size:13px;color:var(--accent2);margin-bottom:8px}
+label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:9px 0 4px}
+input[type=text],textarea,select{width:100%;background:var(--bg);border:1px solid var(--border);
+color:var(--text);border-radius:7px;padding:8px;font-size:13px;font-family:inherit}
+textarea{min-height:60px;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent2)}
+button{background:var(--surface2);border:1px solid var(--accent);color:var(--accent);padding:8px 14px;
+border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;margin-top:10px}
+button:hover{background:var(--accent);color:var(--bg)}
+button.sec{border-color:var(--border);color:var(--muted)}
+.res{margin-top:11px;padding:10px;border-radius:8px;font-size:12.5px;line-height:1.6;display:none}
+.ok{background:rgba(126,231,135,.12);border-left:3px solid var(--accent)}
+.warn{background:rgba(255,166,87,.12);border-left:3px solid var(--accent5)}
+.bad{background:rgba(247,129,102,.12);border-left:3px solid var(--accent3)}
+.dim{display:grid;gap:8px}
+.chip{display:inline-block;background:var(--surface2);border:1px solid var(--border);border-radius:20px;
+padding:3px 10px;font-size:11px;margin:2px 3px 2px 0;cursor:pointer}
+.chip.on{border-color:var(--accent);color:var(--accent)}
+.small{font-size:11px;color:var(--muted);margin-top:5px}
+ul{margin:6px 0 0 17px;font-size:12.5px}li{margin-bottom:4px}
+.score{font-size:26px;font-weight:800;color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+th,td{border:1px solid var(--border);padding:6px;text-align:left;vertical-align:top}
+th{background:var(--surface2);color:var(--accent2);font-size:11px}
+</style></head><body>
+
+<h1>🎓 Atelier <span>ETP</span></h1>
+<div class="sub">Éducation thérapeutique du patient — bilan éducatif partagé, objectifs pédagogiques, choix des techniques et posture</div>
+
+<div class="tabs">
+<div class="tab on" data-p="p1">1 · Bilan éducatif partagé</div>
+<div class="tab" data-p="p2">2 · Objectifs pédagogiques</div>
+<div class="tab" data-p="p3">3 · Choix de la technique</div>
+<div class="tab" data-p="p4">4 · Posture éducative</div>
+</div>
+
+<!-- 1 BEP -->
+<div class="pane on" id="p1">
+<div class="card"><h2>Les 5 dimensions à explorer</h2>
+<div class="small">Le BEP est l'étape fondatrice. Un BEP incomplet produit des objectifs hors sujet.</div>
+<div class="dim">
+<div><label>1 · Ce que le patient A — dimension biomédicale</label><textarea id="b1" placeholder="Maladie, ancienneté, traitements, comorbidités, résultats biologiques…"></textarea></div>
+<div><label>2 · Ce qu'il FAIT — socioprofessionnelle</label><textarea id="b2" placeholder="Métier, rythme de vie, entourage, loisirs, alimentation, contraintes…"></textarea></div>
+<div><label>3 · Ce qu'il SAIT — cognitive</label><textarea id="b3" placeholder="Représentations de la maladie, croyances, connaissances, sources d'information…"></textarea></div>
+<div><label>4 · Ce qu'il RESSENT — psycho-affective</label><textarea id="b4" placeholder="Vécu, stade d'acceptation, peurs, honte, colère, soutien perçu…"></textarea></div>
+<div><label>5 · Son PROJET — projective</label><textarea id="b5" placeholder="Ce qui compte pour lui, ses envies, ses échéances personnelles…"></textarea></div>
+</div>
+<button onclick="bep()">Analyser le BEP</button>
+<div class="res" id="rbep"></div>
+</div></div>
+
+<!-- 2 OP -->
+<div class="pane" id="p2">
+<div class="card"><h2>Rédiger un objectif pédagogique</h2>
+<div class="small">Formulation attendue : « À l'issue de la séance, le patient sera capable de… » + verbe <b>observable</b>.</div>
+<label>Votre objectif</label>
+<textarea id="op" placeholder="Ex. : le patient sera capable d'identifier les 3 signes d'hypoglycémie et de réaliser le resucrage adapté"></textarea>
+<label>Type de compétence visée</label>
+<select id="opt"><option value="soin">Auto-soins (geste, adaptation, prévention)</option><option value="adapt">Adaptation / psychosociale (se connaître, décider, s'affirmer)</option></select>
+<button onclick="chkop()">Vérifier</button>
+<div class="res" id="rop"></div>
+</div>
+<div class="card"><h2>Verbes utilisables</h2>
+<table><tr><th>✅ Observables</th><th>❌ À proscrire</th></tr>
+<tr><td>identifier, citer, expliquer avec ses mots, montrer, réaliser, mesurer, calculer, adapter, choisir, argumenter, différencier, planifier, alerter</td>
+<td>savoir, comprendre, connaître, être conscient de, prendre conscience, assimiler, intégrer, être sensibilisé</td></tr></table>
+<div class="small">Ces derniers décrivent un état mental interne : ils ne sont ni observables ni évaluables.</div>
+</div></div>
+
+<!-- 3 technique -->
+<div class="pane" id="p3">
+<div class="card"><h2>Quelle technique d'animation ?</h2>
+<label>Compétence visée</label>
+<select id="t1"><option value="repr">Faire émerger les représentations</option>
+<option value="emo">Aborder le vécu et les émotions</option>
+<option value="geste">Acquérir un geste technique</option>
+<option value="dec">Apprendre à décider / adapter</option>
+<option value="aff">S'affirmer, dire non, annoncer sa maladie</option>
+<option value="grp">Faire vivre la dynamique de groupe</option></select>
+<label>Format</label>
+<select id="t2"><option value="ind">Individuel</option><option value="col">Collectif</option></select>
+<button onclick="tech()">Proposer</button>
+<div class="res" id="rt"></div>
+</div></div>
+
+<!-- 4 posture -->
+<div class="pane" id="p4">
+<div class="card"><h2>Auto-évaluation de la posture</h2>
+<div class="small">Cochez ce que vous avez fait lors de votre dernière séance ou entretien.</div>
+<div id="chips"></div>
+<button onclick="post()">Évaluer</button>
+<div class="res" id="rp"></div>
+</div>
+<div class="card"><h2>Évaluer ≠ Contrôler</h2>
+<table><tr><th>Évaluation FORMATIVE (ETP)</th><th>Contrôle SOMMATIF</th></tr>
+<tr><td>Sert au patient à se situer et progresser<br>Repère les acquis ET les besoins<br>Sans jugement ni note<br>Continue, intégrée à la séance</td>
+<td>Sanctionne, compare à une norme<br>Verdict réussite/échec<br>Génère anxiété et désengagement<br>Ponctuelle, extérieure</td></tr></table>
+</div></div>
+
+<script>
+document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){
+ document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});
+ document.querySelectorAll('.pane').forEach(function(x){x.classList.remove('on')});
+ t.classList.add('on');document.getElementById(t.dataset.p).classList.add('on');};});
+function show(id,cls,html){var e=document.getElementById(id);e.className='res '+cls;e.innerHTML=html;e.style.display='block';}
+
+function bep(){
+ var L=['biomédicale','socioprofessionnelle','cognitive','psycho-affective','projective'];
+ var vides=[],n=0;
+ for(var i=1;i<=5;i++){var v=document.getElementById('b'+i).value.trim();
+  if(v.length<10)vides.push(L[i-1]);else n++;}
+ var h='<b>'+n+'/5 dimensions renseignées</b><br>';
+ if(n===5)show('rbep','ok',h+'✅ BEP complet. Vous pouvez négocier les objectifs <b>avec</b> le patient — en partant de sa dimension PROJECTIVE, qui est le levier de motivation le plus puissant.');
+ else if(vides.indexOf('projective')>=0)show('rbep','bad',h+'⚠️ La dimension <b>PROJECTIVE est manquante</b> — c\'est la plus souvent oubliée et la plus déterminante. Sans le projet du patient, les objectifs seront ceux du soignant et l\'adhésion sera faible.<br>Manquent aussi : '+vides.filter(function(x){return x!=='projective'}).join(', ')||'—');
+ else show('rbep','warn',h+'Dimensions à explorer : <b>'+vides.join(', ')+'</b>.<br>Un BEP partiel produit des objectifs hors sujet.');
+}
+
+function chkop(){
+ var t=document.getElementById('op').value.toLowerCase(),typ=document.getElementById('opt').value;
+ var bad=['savoir','comprendre','connaître','connaitre','être conscient','prendre conscience','assimiler','intégrer','sensibilis'];
+ var good=['identifier','citer','expliquer','montrer','réaliser','mesurer','calculer','adapter','choisir','argumenter','différencier','planifier','alerter','décrire','utiliser','préparer'];
+ var pb=[],pts=0;
+ if(t.trim().length<15){show('rop','bad','Saisissez un objectif complet.');return;}
+ var vb=bad.filter(function(w){return t.indexOf(w)>=0;});
+ var vg=good.filter(function(w){return t.indexOf(w)>=0;});
+ if(vb.length)pb.push('Verbe <b>non observable</b> détecté : « '+vb.join(', ')+' » → remplacez par un verbe d\'action évaluable');
+ else if(vg.length)pts++;else pb.push('Aucun verbe d\'action observable identifié');
+ if(t.indexOf('patient')<0&&t.indexOf('capable')<0)pb.push('Objectif formulé du point de vue du <b>soignant</b> — reformulez : « le patient sera capable de… »');else pts++;
+ if(!/\d/.test(t))pb.push('Pas de critère <b>mesurable</b> (nombre, fréquence, seuil) — l\'évaluation sera difficile');else pts++;
+ if(typ==='adapt'&&vg.indexOf('réaliser')>=0)pb.push('Verbe technique pour une compétence <b>psychosociale</b> — préférez « exprimer », « argumenter », « solliciter »');
+ if(!pb.length)show('rop','ok','✅ Objectif bien formulé ('+pts+'/3) — observable, centré patient et évaluable.');
+ else show('rop',pts>=2?'warn':'bad','<b>'+pts+'/3 critères</b><ul><li>'+pb.join('</li><li>')+'</li></ul>');
+}
+
+var TQ={
+ repr:{ind:['Cartes de représentation','Question ouverte « pour vous, le diabète c\'est… »','Dessin commenté'],col:['Métaplan','Brainstorming','Photolangage','Abaque de Régnier']},
+ emo:{ind:['Photolangage','Cartes émotionnelles','Ligne de vie'],col:['Photolangage','Blason','Atelier émotionnel','Groupe de parole']},
+ geste:{ind:['Démonstration commentée puis reprise par le patient','Simulateur, dispositif placebo','Checklist auto-évaluative'],col:['Atelier pratique en sous-groupes','Pair-à-pair : un patient montre à un autre']},
+ dec:{ind:['Étude de cas personnalisée','Chemin de table','Cartes de Barrows'],col:['Cas cliniques en sous-groupes','Jeu de plateau décisionnel','Table ronde de situations']},
+ aff:{ind:['Jeu de rôle avec le soignant','Entretien motivationnel'],col:['Jeu de rôle entre pairs','Théâtre-forum','Patient simulé']},
+ grp:{ind:['— non pertinent en individuel'],col:['Atelier « sous-marin » ou tâche collaborative','Jeu de construction en équipe','Débriefing de dynamique de groupe']}
+};
+function tech(){
+ var a=document.getElementById('t1').value,b=document.getElementById('t2').value;
+ var L=TQ[a][b];
+ var deb='<br><br><b>Ne jamais oublier le DÉBRIEFING</b> : la technique ne produit d\'apprentissage que si elle est suivie d\'une analyse — qu\'avez-vous ressenti ? qu\'en retenez-vous pour vous ?';
+ show('rt', a==='grp'&&b==='ind'?'bad':'ok','<b>Techniques adaptées :</b><ul><li>'+L.join('</li><li>')+'</li></ul>'+(a==='grp'&&b==='ind'?'':deb));
+}
+
+var P=[['Posé des questions ouvertes',1],['Reformulé ce que le patient a dit',1],['Respecté des silences',1],
+['Fait émerger ses représentations avant d\'expliquer',1],['Parti de son projet personnel',1],
+['Négocié les objectifs avec lui',1],['Monologué plus de 3 minutes d\'affilée',-1],
+['Corrigé immédiatement chaque propos erroné',-1],['Utilisé du jargon médical',-1],
+['Dit « il faut que vous… » ou « vous devez »',-1],['Donné un conseil non sollicité',-1]];
+var box=document.getElementById('chips');
+P.forEach(function(p,i){var d=document.createElement('div');d.className='chip';d.textContent=(p[1]>0?'✔ ':'✖ ')+p[0];
+ d.onclick=function(){d.classList.toggle('on');};box.appendChild(d);});
+function post(){
+ var cs=box.querySelectorAll('.chip'),s=0,neg=[];
+ cs.forEach(function(c,i){if(c.classList.contains('on')){s+=P[i][1];if(P[i][1]<0)neg.push(P[i][0]);}});
+ var h='<div class="score">'+s+'</div><div class="small">score de posture (max 6)</div>';
+ if(neg.length)h+='<br>⚠️ Comportements à travailler : <b>'+neg.join(' · ')+'</b><br>Le « réflexe correcteur » — vouloir rectifier aussitôt — est le mécanisme le plus sûr de désengagement du patient.';
+ if(s>=5)show('rp','ok',h+'<br>✅ Posture éducative bien installée.');
+ else if(s>=2)show('rp','warn',h+'<br>Posture en construction : privilégiez le questionnement à l\'explication.');
+ else show('rp','bad',h+'<br>Posture encore <b>expert-transmissif</b>. Objectif : passer de « celui qui sait » à « celui qui fait émerger ».');
+}
+</script></body></html>

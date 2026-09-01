@@ -5,7 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#0a0b0c" />
 <title>Chladni Cymatics</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* Chargement local des dépendances : l'outil s'exécute dans une iframe blob:,
+   où un chemin relatif ne résout pas. On reconstruit l'URL absolue du vendor
+   à partir de la page hôte (document.referrer), avec repli sur le CDN. */
+(function(){
+  var base='';
+  try{
+    var r=document.referrer||'';
+    if(r) base=r.replace(/[^/]*$/,'');
+  }catch(e){}
+  window.__PA_VENDOR__ = base ? base+'vendor/' : '';
+})();
+</script>
+<script>
+(function(){
+  var v=window.__PA_VENDOR__;
+  var src=v ? v+'three-r128/three.min.js'
+            : 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+  document.write('<scr'+'ipt src="'+src+'"><\/scr'+'ipt>');
+})();
+</script>
 <style>
 :root {
   color: #f3f4ef;

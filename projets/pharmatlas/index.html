@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+<link rel="icon" type="image/x-icon" href="./pharmatlas.ico">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PharmAtlas</title>
@@ -1233,7 +1234,17 @@ async function _getToolHTML(meta){
   if(_toolHTMLCache[slug]!=null) return _toolHTMLCache[slug];
   try{
     const r=await fetch('data/tools/'+slug+'.html',{cache:'force-cache'});
-    if(r.ok){ _toolHTMLCache[slug]=await r.text(); return _toolHTMLCache[slug]; }
+    if(r.ok){
+      const txt=await r.text();
+      /* Garde-fou : de nombreux slugs n'ont PAS de fichier dédié (widgets encore
+         inline en content_base64). Si le serveur répond 200 avec la page de
+         l'application au lieu d'un 404 (repli SPA / page d'erreur HTML), on
+         monterait PharmAtlas entier dans l'iframe — c'est ce qui faisait
+         « ne pas marcher » Van Deemter, Grandeurs chromatographiques,
+         GC-MS, LC-MS et ELL. On vérifie que la réponse est bien un outil. */
+      const looksLikeApp = /id=["']modelList["']|PharmAtlas<\/title>|id=["']detailSheet["']/.test(txt);
+      if(txt && !looksLikeApp){ _toolHTMLCache[slug]=txt; return _toolHTMLCache[slug]; }
+    }
   }catch(e){}
   if(meta.content_base64){
     try{ _toolHTMLCache[slug]=decodeURIComponent(escape(atob(meta.content_base64))); return _toolHTMLCache[slug]; }catch(e){}
@@ -1382,6 +1393,10 @@ const JSON_DIRS_TO_TRY=[DATA_DIR];
 const FILENAME_OVERRIDES={'Math_Stats':'Math-Stats'};
 // Map filename.glb → blob:URL (pour file:// protocol)
 const fileMap = new Map();
+/* ── Catégorie affichée à l'ouverture de l'application ──────────────────────
+   Mettre l'id exact d'une catégorie (ex. 'Pharmacologie', 'Médicaments').
+   null  →  première catégorie de CATS (comportement historique : Plantes).   */
+const PA_HOME_CAT = null;
 let activeCat='';
 let activeModel=null;
 let activeModelId=null; // unique ID for active model
@@ -1646,7 +1661,13 @@ function ingestData(raw,base){
     gallery['Médicaments']=groupMedicaments(gallery['Médicaments']);
   // Injecter les outils embarqués
   gallery['Outils'] = OUTILS_ITEMS;
-  activeCat=CATS.length?CATS[0].id:'';
+  /* Catégorie d'ouverture : par défaut CATS[0] valait toujours « Plantes »,
+     ce qui n'est pas une entrée neutre dans l'atlas. PA_HOME_CAT permet de
+     choisir la page d'accueil sans réordonner CATS (qui pilote les onglets). */
+  var _home = (typeof PA_HOME_CAT!=='undefined' && PA_HOME_CAT) ? PA_HOME_CAT : null;
+  var _homeOk = _home && CATS.some(function(c){ return c.id===_home; })
+                && gallery[_home] && gallery[_home].length;
+  activeCat = _homeOk ? _home : (CATS.length?CATS[0].id:'');
   activeModel=null; activeModelId=null; activeSubFilter=null; searchQuery='';
   document.getElementById('searchInput').value='';
   buildTabs(); buildSubFilters(); buildModelList();
@@ -14540,12 +14561,14 @@ async function toggleCT(itemName, term, btnId, panelId){
       techniquement visible par le service contacté, qui applique sa propre politique de
       confidentialité.</p>
 
-      <div class="a-card">
-        <span class="a-pill">Polices & bibliothèques d'affichage</span>
-        <ul>
-          <li><b>Google Fonts</b><span class="svc-use">Polices de caractères (Montserrat, Bebas Neue)</span></li>
-          <li><b>cdnjs (Cloudflare) · unpkg · jsDelivr</b><span class="svc-use">Bibliothèques de visualisation 3D et de rendu (Three.js, 3Dmol, NGL, MathJax)</span></li>
-        </ul>
+      <div class="a-highlight">
+        <div class="a-htitle">🇫🇷 Polices et bibliothèques hébergées localement</div>
+        Les polices de caractères (Montserrat, Bebas Neue) et l'ensemble des bibliothèques
+        d'affichage (Three.js, 3Dmol, NGL, MathJax, OpenSeadragon, ZXing) sont
+        <strong>servies depuis le serveur de l'université</strong>, et non depuis des réseaux
+        de diffusion externes. Aucune requête n'est adressée à Google Fonts ni à un CDN tiers
+        au chargement de l'application. Quelques outils interactifs complémentaires font encore
+        exception et sont en cours de migration.
       </div>
 
       <div class="a-card">
@@ -14586,11 +14609,52 @@ async function toggleCT(itemName, term, btnId, panelId){
       nécessaire auprès de l'application. Pour les données traitées par les services externes
       ci-dessus, reportez-vous à leurs politiques de confidentialité respectives.</p>
 
-      <h3>📚 Sources & exactitude</h3>
-      <p>Les contenus s'appuient sur les enseignements officiels de la faculté et sur des bases
-      scientifiques de référence. PharmAtlas est un <strong>support pédagogique de révision</strong> :
-      il ne constitue ni un avis médical, ni une source d'information pour la prise en charge
-      d'un patient. En cas d'intoxication, contactez le <strong>Centre antipoison</strong>.</p>
+      <h3>📚 Sources & méthodologie d'élaboration</h3>
+      <p>Le socle documentaire de PharmAtlas est constitué des <strong>supports de cours
+      officiels de la Faculté de Pharmacie</strong>. Les fiches n'en sont pas une reproduction :
+      le contenu des enseignements a été analysé, puis restructuré dans un format homogène et
+      progressif (organisation par catégorie, hiérarchisation par niveau d'études, mise en
+      évidence des points essentiels), afin de servir de support de révision transversal.</p>
+
+      <p>Chaque fiche a ensuite fait l'objet d'une <strong>vérification croisée</strong> auprès
+      des bases scientifiques publiques listées plus haut (RCSB PDB, PubChem, EDQM, ANSM,
+      Crossref, Europe PMC, GBIF, entre autres). Lorsqu'une donnée provient d'une base externe
+      identifiable, la source est <strong>affichée directement dans la fiche</strong>. En
+      l'absence de mention explicite, l'information est issue des supports de cours de la
+      faculté et a été contrôlée par recoupement documentaire.</p>
+
+      <h3>🤖 Usage de systèmes d'IA générative</h3>
+      <p>Conformément à la <strong>charte d'usage des systèmes d'IA générative d'Université
+      Paris Cité</strong>, l'élaboration de PharmAtlas est déclarée en toute transparence.</p>
+
+      <div class="a-card">
+        <span class="a-pill">Nature de l'assistance</span>
+        <ul>
+          <li><b>Restructuration pédagogique</b><span class="svc-use">Analyse des supports de cours et mise en forme des fiches dans le schéma de données de l'atlas</span></li>
+          <li><b>Recherche et recoupement documentaire</b><span class="svc-use">Interrogation des bases scientifiques publiques pour vérification des données</span></li>
+          <li><b>Développement logiciel</b><span class="svc-use">Écriture et maintenance du code de l'application (interface, moteurs de rendu 2D/3D, traitement des données)</span></li>
+        </ul>
+      </div>
+
+      <p>Ces systèmes ont été employés comme <strong>outils d'assistance, en aucun cas comme
+      substitut à l'expertise pharmaceutique</strong>. Aucun contenu n'est publié sans relecture
+      humaine préalable. Les données scientifiques ne sont pas générées : elles sont reprises
+      des enseignements et confrontées à des bases de référence.</p>
+
+      <div class="a-highlight">
+        <div class="a-htitle">🔍 Validation par le corps enseignant</div>
+        Un circuit de relecture des fiches par les enseignants responsables des unités
+        d'enseignement concernées est <strong>en cours de déploiement</strong>. Tant qu'il n'est
+        pas achevé, les fiches doivent être considérées comme un support de révision
+        complémentaire et non comme une référence validée se substituant aux enseignements et
+        aux ouvrages de référence. <strong>Toute erreur constatée peut être signalée au Service
+        TICE</strong> : les signalements sont traités en priorité.
+      </div>
+
+      <h3>⚠️ Limites d'usage</h3>
+      <p>PharmAtlas est un <strong>support pédagogique de révision</strong> : il ne constitue ni
+      un avis médical, ni une source d'information pour la prise en charge d'un patient. En cas
+      d'intoxication, contactez le <strong>Centre antipoison</strong>.</p>
 
       <div class="about-foot">
         PharmAtlas — Faculté de Pharmacie · Service TICE.<br>
@@ -15380,16 +15444,19 @@ const PA_Graph = (function(){
     for(const e of edges){ let a=groups.get(e.type); if(!a){a=[];groups.set(e.type,a);} a.push(e); }
     let html='<div class="info-section pa-related"><div class="info-label">🔗 Fiches liées '
            +'<span style="font-size:10px;font-weight:400;opacity:.55">— PharmAtlas</span></div>';
+    /* dédoublonnage GLOBAL : une même fiche liée par plusieurs types de relation
+       (ex. propranolol = cible + classe thérapeutique) ne doit apparaître qu'une fois. */
+    const seenGlobal=new Set();
     for(const [type,list] of groups){
       const meta=TYPE_META[type]||{ico:'•',label:type};
-      // dédoublonnage par cible
-      const seen=new Set(); const cards=[];
+      const seen=seenGlobal; const cards=[];
       for(const e of list){
         const key=e.ref.item._id; if(seen.has(key)) continue; seen.add(key);
         cards.push(typeof renderNavCard==='function'
           ? renderNavCard(e.ref.item, e.ref.cat)
           : ('<span>'+ (e.ref.item.name||'') +'</span>'));
       }
+      if(!cards.length) continue;   /* groupe vidé par le dédoublonnage global */
       html+='<div class="pa-rel-group"><div class="pa-rel-gtitle">'+meta.ico+' '+meta.label+'</div>'
           + '<div class="nav-links-section">'+cards.join('')+'</div></div>';
     }
@@ -15619,6 +15686,12 @@ var _paLinks=(function(){
       if(m._cat==='Outils' || m.tool_mode || m._outil_render) return;   // outils : jamais
       if(info.querySelector('.pa-related')) return;                     // déjà présent
       if(info.querySelector('iframe')) return;                          // rendu iframe en cours
+      /* Le graphe PA_Graph est désormais le moteur unique (bloc « Fiches liées »).
+         Ce moteur historique tournait EN PLUS de lui : d'où les fiches citées deux fois
+         (colchicine, chloroquine, propranolol, ezetimibe…), les rapprochements aberrants
+         (Math/Stats → Plantes, par appariement de texte brut) et la fuite du cache __hay
+         dans le panneau d'information. On le neutralise sans retirer son code. */
+      if(typeof PA_Graph!=='undefined') return;
       var html=_relatedCategoriesLinks(m);
       if(html) info.insertAdjacentHTML('beforeend', html);
     }catch(e){ /* ne doit jamais bloquer l'ouverture de la fiche */ }
@@ -15653,8 +15726,19 @@ var _paLinks=(function(){
     _paLastCat = activeCat; _paLastQuery = (typeof searchQuery!=='undefined'?searchQuery:'');
     if(ml){
       if(sameCtx){
+        /* La liste est remplie par renderCardsProgressive() en requestIdleCallback :
+           sur une grosse catégorie (Plantes, Chimie…) elle est encore vide à 60/220 ms,
+           donc scrollTop restait à 0. On restaure tant que la hauteur n'est pas atteinte. */
         var restore = function(){ ml.scrollTop = _paLastScroll; };
-        restore(); requestAnimationFrame(restore); setTimeout(restore,60); setTimeout(restore,220);
+        var target  = _paLastScroll;
+        restore(); requestAnimationFrame(restore);
+        var tries = 0;
+        var poll = setInterval(function(){
+          tries++;
+          if(ml.scrollHeight > ml.clientHeight + target){ restore(); }
+          if(ml.scrollTop >= target - 2 || tries > 40) clearInterval(poll);
+        }, 50);
+        setTimeout(function(){ clearInterval(poll); }, 2500);
       }else{ _paLastScroll = 0; ml.scrollTop = 0; }
     }
     return r;
@@ -15666,6 +15750,24 @@ var _paLinks=(function(){
   var _open=openSheet, _close=closeSheet, _purgeTimer=null;
 
   openSheet=function(m){
+    /* 0. libération des instances 3D de la fiche PRÉCÉDENTE.
+       Elles n'étaient détruites que dans closeSheet() : en navigant de fiche à fiche
+       (via « Fiches liées »), l'ancien rendu restait accroché — d'où le viewer qui
+       « ne se décharge pas » sur Physiologie, Immunologie et Chimie analytique,
+       et la fuite mémoire associée. */
+    try{
+      if(typeof _3dmolViewer!=='undefined' && _3dmolViewer){
+        try{ _3dmolViewer.removeAllModels(); _3dmolViewer.removeAllSurfaces(); }catch(e){}
+        _3dmolViewer=null;
+      }
+      if(typeof _nglStage!=='undefined' && _nglStage){
+        try{ _nglStage.dispose(); }catch(e){}
+        _nglStage=null;
+      }
+      if(typeof sheetAnimId!=='undefined' && sheetAnimId){
+        cancelAnimationFrame(sheetAnimId); sheetAnimId=null;
+      }
+    }catch(e){}
     /* 1. décision viewer AVANT tout rendu asynchrone (évite le clignotement) */
     try{ _paViewer.decide(m); }catch(e){}
     /* 2. rendu natif */
@@ -15918,14 +16020,22 @@ try{ window.PA_Search=PA_Search; window.PA_Graph=PA_Graph;
     btn.classList.toggle('open', open);
     btn.querySelector('.vt-txt').textContent = open ? 'Masquer le modèle' : 'Afficher le modèle';
     if(open){
-      // Forcer un resize des viewers 3D/OSD qui se sont montés à height:0
-      setTimeout(function(){
+      /* Les viewers montés dans un conteneur height:0 ont un canvas de 0 px.
+         Il faut les redimensionner APRÈS la transition CSS (.28s) : un simple
+         setTimeout(300) arrivait parfois avant la fin de l'animation, laissant
+         le modèle 3D invisible ou aplati. On écoute transitionend, avec filet. */
+      var _resized=false;
+      var _doResize=function(){
+        if(_resized) return; _resized=true;
         try{ window.dispatchEvent(new Event('resize')); }catch(e){}
         try{ if(window._3dmolViewer && _3dmolViewer.resize) _3dmolViewer.resize(); }catch(e){}
         try{ if(window._nglStage && _nglStage.handleResize) _nglStage.handleResize(); }catch(e){}
         try{ if(window._osdViewer && _osdViewer.viewport) _osdViewer.viewport.resize(); }catch(e){}
-        // Three.js : beaucoup de viewers écoutent 'resize' — déjà couvert.
-      }, 300);
+        /* second passage : certains moteurs ne recalculent qu'au frame suivant */
+        setTimeout(function(){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }, 120);
+      };
+      sv.addEventListener('transitionend', function te(){ sv.removeEventListener('transitionend',te); _doResize(); }, {once:true});
+      setTimeout(_doResize, 420);
     }
   }
 
@@ -15941,6 +16051,12 @@ try{ window.PA_Search=PA_Search; window.PA_Graph=PA_Graph;
     // Détection "viewer vide" : plusieurs passes (les viewers se remplissent async)
     var checks = 0;
     function check(){
+      /* Si l'utilisateur a déjà ouvert le viewer, on n'y touche plus.
+         Sinon la passe suivante posait 'pa-vempty' sur un viewer 3D encore en
+         cours de montage, et la règle CSS
+           .pa-vtoggle.pa-vempty + .sheet-viewer{display:none}
+         le refermait aussitôt : c'est le repli immédiat constaté sur mobile. */
+      if(sv.classList.contains('pa-vopen')){ btn.classList.remove('pa-vempty'); return; }
       var hasContent = sv.children.length>0 || sv.querySelector('canvas,img,svg,iframe,.herbarium-viewer,.osd-container');
       btn.classList.toggle('pa-vempty', !hasContent);
       // adapter le libellé selon le type de contenu
@@ -15954,7 +16070,10 @@ try{ window.PA_Search=PA_Search; window.PA_Graph=PA_Graph;
       }
       var _ds=document.getElementById('detailSheet');
       if(_ds && _ds.classList.contains('pa-noviewer')) return;
-      if(++checks<4) setTimeout(check, 300);
+      /* Les viewers lourds (3Dmol, NGL, OpenSeadragon, splat) se montent souvent
+         au-delà de 900 ms sur mobile : on allonge la fenêtre d'observation,
+         sinon une fiche pourvue d'un modèle est déclarée « sans visuel ». */
+      if(++checks<10) setTimeout(check, 400);
     }
     check();
     setNavActive('paBnList');

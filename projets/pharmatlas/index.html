@@ -11392,9 +11392,16 @@ function resolveBioslide(m){
   var dzi = null;
   if(e.id && e.base){
     var b = String(e.base).replace(/ /g,'%20');
-    dzi = [ ROOT+e.id+'/'+b+'.dzi',
-            ROOT+e.id+'/'+b+'.xml',
-            ROOT+e.id+'/'+b+'_files.dzi' ];
+    var D = ROOT + e.id + '/';
+    /* Les artefacts sont rangés par TYPE dans des sous-dossiers : le fichier
+       EFI est servi depuis data/<id>/EFI/<base>_EFI.tif. Par analogie, le
+       manifeste DeepZoom est cherché d'abord dans data/<id>/DZI/.
+       Le chemin à plat est conservé en second : il renvoie la page d'accueil
+       en HTTP 200, d'où la vérification du contenu dans probe(). */
+    dzi = [ D+'DZI/'+b+'.dzi',
+            D+'DZI/'+b+'.xml',
+            D+b+'.dzi',
+            D+b+'.xml' ];
   }
   /* ATTENTION : la collection filtre CÔTÉ CLIENT. Un paramètre ?species=… est
      ignoré par le serveur et renvoie la collection complète. */
@@ -11477,7 +11484,58 @@ window.initSheetRendererBioslides = function(m, slide){
   }
 
   if(!slide.dzi || !slide.dzi.length){ fallbackIframe(); return; }
-  var _cands = [].concat(slide.dzi), _ci = 0;
+
+  /* Le serveur BioSLiDES renvoie la PAGE D'ACCUEIL en HTTP 200 pour tout
+     chemin inconnu (constaté : data/<id>/<base>.dzi redirige vers l'accueil).
+     Un test sur le code HTTP ne suffit donc pas : on vérifie que la réponse
+     est bien un manifeste DZI (« <Image … »). On construit ensuite la source
+     de tuiles nous-mêmes, ce qui évite une seconde requête XHR par OSD. */
+  function probe(i){
+    if(i>=slide.dzi.length){ fallbackIframe(); return; }
+    var url=slide.dzi[i];
+    fetch(url,{mode:'cors'})
+      .then(function(r){ return r.ok ? r.text() : Promise.reject(r.status); })
+      .then(function(txt){
+        if(txt.indexOf('<Image')===-1) return Promise.reject('html');
+        var g=function(re){ var m=txt.match(re); return m?m[1]:null; };
+        var W=+g(/Width=["'](\d+)/), H=+g(/Height=["'](\d+)/);
+        var TS=+g(/TileSize=["'](\d+)/)||254, OV=+g(/Overlap=["'](\d+)/)||1;
+        var FMT=g(/Format=["']([a-z]+)/i)||'jpeg';
+        if(!W||!H) return Promise.reject('dims');
+        var dir=url.replace(/\.(dzi|xml)$/i,'')+'_files/';
+        openOSD({ width:W, height:H, tileSize:TS, tileOverlap:OV,
+                  minLevel:0, maxLevel:Math.ceil(Math.log(Math.max(W,H))/Math.LN2),
+                  getTileUrl:function(l,x,y){ return dir+l+'/'+x+'_'+y+'.'+FMT; } });
+      })
+      .catch(function(){ probe(i+1); });
+  }
+
+  function openOSD(src){
+    _loadOSD(function(err){
+      if(err || typeof OpenSeadragon==='undefined'){ fallbackIframe(); return; }
+      try{
+        _osdViewer = OpenSeadragon({
+          element: vp,
+          prefixUrl: 'vendor/openseadragon/images/',
+          tileSources: src,
+          showNavigator: true,
+          navigatorPosition: 'BOTTOM_RIGHT',
+          maxZoomPixelRatio: 2.5,
+          visibilityRatio: 0.6,
+          constrainDuringPan: true,
+          gestureSettingsTouch: { pinchToZoom:true, flickEnabled:true },
+          springStiffness: 8
+        });
+        window._osdViewer=_osdViewer;
+        _osdViewer.addHandler('open', function(){ if(load.parentNode) load.remove(); });
+        _osdViewer.addHandler('open-failed', function(){
+          try{ osdDestroy(); }catch(e){}
+          fallbackIframe();
+        });
+      }catch(e){ fallbackIframe(); }
+    });
+  }
+
 
   var vp=document.createElement('div');
   vp.id='osd-viewport';
@@ -11490,41 +11548,7 @@ window.initSheetRendererBioslides = function(m, slide){
   c.appendChild(load);
   tabs();
 
-  _loadOSD(function(err){
-    if(err || typeof OpenSeadragon==='undefined'){ fallbackIframe(); return; }
-    var failed=false;
-    try{
-      _osdViewer = OpenSeadragon({
-        element: vp,
-        prefixUrl: 'vendor/openseadragon/images/',
-        tileSources: _cands[_ci],
-        crossOriginPolicy: 'Anonymous',
-        showNavigator: true,
-        navigatorPosition: 'BOTTOM_RIGHT',
-        maxZoomPixelRatio: 2.5,
-        visibilityRatio: 0.6,
-        constrainDuringPan: true,
-        gestureSettingsTouch: { pinchToZoom:true, flickEnabled:true },
-        springStiffness: 8
-      });
-      window._osdViewer=_osdViewer;
-      _osdViewer.addHandler('open', function(){ if(load.parentNode) load.remove(); });
-      /* Chemin DZI injoignable → on bascule sur le viewer officiel plutôt que
-         de laisser un cadre noir. */
-      _osdViewer.addHandler('open-failed', function(){
-        if(failed) return;
-        _ci++;
-        if(_ci < _cands.length){
-          /* variante suivante du manifeste */
-          try{ _osdViewer.open(_cands[_ci]); }catch(e){ failed=true; try{osdDestroy();}catch(_){} fallbackIframe(); }
-          return;
-        }
-        failed=true;
-        try{ osdDestroy(); }catch(e){}
-        fallbackIframe();
-      });
-    }catch(e){ fallbackIframe(); }
-  });
+  probe(0);
 };
 
 function resolveHistoSlide(m){

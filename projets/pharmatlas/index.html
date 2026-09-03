@@ -5516,10 +5516,15 @@ function renderHerbariumViewer(m){
     +'  <button class="herb-toggle-btn" id="herbBtnModel" onclick="_herbToggle(\'3d\')">⬡ Modèle 3D</button>'
     /* Les Plantes ont leur PROPRE barre d'onglets (indépendante de
        _paViewerTabs) : c'est pourquoi « Lame » n'y apparaissait pas.
-       On l'ajoute en dernier, seulement si une lame existe pour la fiche. */
-    +((typeof resolveBioslide==='function' && resolveBioslide(m))
-       ? '  <button class="herb-toggle-btn" id="herbBtnSlide" onclick="_herbToggle(\'lame\')">🔬 Lame</button>'
-       : '')
+       L'appel est isolé : une exception ici ferait disparaître TOUTE la
+       planche d'herbier, puisqu'on est au milieu de la construction du HTML. */
+    +(function(){
+       try{
+         return (typeof resolveBioslide==='function' && resolveBioslide(m))
+           ? '  <button class="herb-toggle-btn" id="herbBtnSlide" onclick="_herbToggle(\'lame\')">🔬 Lame</button>'
+           : '';
+       }catch(e){ return ''; }
+     })()
     +'</div>'
     +'<div class="herbarium-stage" id="herbStage">'
     +'  <div class="herbarium-loader" id="herbLoader">'
@@ -11297,11 +11302,29 @@ function _paViewerTabs(m, tabs, activeKey){
 function _paVisualTabs(m){
   var tabs=[];
   if(m.file) tabs.push({key:'3d', label:'🧬 Modèle 3D',
-      run:function(){ m._paTab='3d'; initSheetRenderer(m); }});
+      run:function(){
+        m._paTab='3d';
+        /* Plantes : le modèle 3D vit DANS le viewer herbier (bouton interne).
+           L'ouvrir via initSheetRenderer sortait de l'herbier et supprimait
+           l'accès à la planche. */
+        if(m._cat==='Plantes' && typeof renderHerbariumViewer==='function'){
+          renderHerbariumViewer(m);
+          setTimeout(function(){ try{ _herbToggle('3d'); }catch(e){} },80);
+          return;
+        }
+        initSheetRenderer(m);
+      }});
   if(m._cat==='Plantes'){
-    /* Retour vers le viewer herbier (qui a sa propre barre interne). */
+    /* Retour vers le viewer herbier, qui a sa PROPRE barre interne
+       (Planche / Modèle 3D / Lame). Il faut rappeler renderHerbariumViewer :
+       passer par initSheetRenderer relançait le viewer 3D et rendait la
+       planche inaccessible une fois la lame ouverte. */
     tabs.push({key:'gbif', label:'🌿 Planches',
-      run:function(){ m._paTab=null; initSheetRenderer(m); }});
+      run:function(){
+        m._paTab=null;
+        if(typeof renderHerbariumViewer==='function') renderHerbariumViewer(m);
+        else initSheetRenderer(m);
+      }});
   }
   else if(m._cat==='Champignons'||m._cat==='Parasites'||m._cat==='Bacteries'){
     /* GBIF ne renvoie des planches d'herbier que pour les végétaux. Pour un
@@ -11345,13 +11368,29 @@ var BIOSLIDES_MAP_ALL = {
   'Plantes': {
     'Marronnier d\'Inde'   : {id:688, base:'Aesculus hippocastanum - Knospe quer 20x, Jungner 1238', label:'Aesculus hippocastanum — bourgeon, coupe transversale 20x'},
     'Grande bardane'        : {id:507, base:'Arctium lappa, Staengel quer 20x, Jungner 570', label:'Arctium lappa — tige, coupe transversale 20x'},
-    'Oignon'                : {id:208, base:'Allium cepa Epidermis 2_01', label:'Allium cepa — épiderme du bulbe 20x'},
-    'Érable sycomore'       : {id:4,   base:'Acer pseudoplatanus Blatt quer 20x', label:'Acer pseudoplatanus — feuille, coupe transversale 20x'}
+    'Oignon'                : {id:206, base:'Allium cepa Epidermis 2', label:'Allium cepa — épiderme du bulbe 20x'},
+    'Érable sycomore'       : {id:4,   base:'Acer pseudoplatanus Blatt quer 20x', label:'Acer pseudoplatanus — feuille, coupe transversale 20x'},
+    /* Aristolochia : coupes de tige annotées (sclérenchyme, cambium, druses
+       d'oxalate). Plante à acides aristolochiques — néphrotoxiques et
+       cancérogènes — donc à fort intérêt pédagogique en pharmacognosie. */
+    'Aristoloche clématite' : {id:19,  base:'Aristolochia macrophylla Spross quer 20x', label:'Aristolochia macrophylla — tige, coupe transversale 20x'},
+    'Tabac'                 : {id:null, species:'Nicotiana tabacum', label:'Nicotiana tabacum'},
+    'Ricin'                 : {id:null, species:'Ricinus communis', label:'Ricinus communis'},
+    'If commun'             : {id:null, species:'Taxus baccata', label:'Taxus baccata'},
+    'Laurier-rose'          : {id:null, species:'Nerium oleander', label:'Nerium oleander'},
+    'Laurier-cerise'        : {id:null, species:'Prunus laurocerasus', label:'Prunus laurocerasus'},
+    'Réglisse'              : {id:null, species:'Glycyrrhiza glabra', label:'Glycyrrhiza glabra'},
+    'Chanvre'               : {id:null, species:'Cannabis sativa', label:'Cannabis sativa'},
+    'Muguet'                : {id:null, species:'Convallaria majalis', label:'Convallaria majalis'},
+    'Gui'                   : {id:null, species:'Viscum album', label:'Viscum album'},
+    'Houblon'               : {id:null, species:'Humulus lupulus', label:'Humulus lupulus'},
+    'Lavande vraie'         : {id:null, species:'Lavandula angustifolia', label:'Lavandula angustifolia'},
+    'Sauge officinale'      : {id:null, species:'Salvia officinalis', label:'Salvia officinalis'}
   },
   'Organites': {
     /* La plasmolyse sur Tradescantia montre membrane et paroi in vivo. */
-    'Membrane Plasmique'    : {id:176, label:'Tradescantia spathacea — épiderme, plasmolyse 20x'},
-    'Vacuole'               : {id:176, label:'Tradescantia spathacea — épiderme, plasmolyse 20x'},
+    'Membrane Plasmique'    : {id:175, base:'Tradescantia spathacea Plasmolyse 1', label:'Tradescantia spathacea — épiderme, plasmolyse 20x'},
+    'Vacuole'               : {id:175, base:'Tradescantia spathacea Plasmolyse 1', label:'Tradescantia spathacea — épiderme, plasmolyse 20x'},
     'Chloroplaste'          : {id:null, species:'Elodea canadensis', label:'Elodea canadensis — chloroplastes'}
   }
 };
@@ -11393,15 +11432,15 @@ function resolveBioslide(m){
   if(e.id && e.base){
     var b = String(e.base).replace(/ /g,'%20');
     var D = ROOT + e.id + '/';
-    /* Les artefacts sont rangés par TYPE dans des sous-dossiers : le fichier
-       EFI est servi depuis data/<id>/EFI/<base>_EFI.tif. Par analogie, le
-       manifeste DeepZoom est cherché d'abord dans data/<id>/DZI/.
-       Le chemin à plat est conservé en second : il renvoie la page d'accueil
-       en HTTP 200, d'où la vérification du contenu dans probe(). */
-    dzi = [ D+'DZI/'+b+'.dzi',
-            D+'DZI/'+b+'.xml',
-            D+b+'.dzi',
-            D+b+'.xml' ];
+    /* Ordre établi par l'observation : l'URL qui fonctionne (Ascaris 375,
+       Bardane 507, Érable 4) est le chemin PLAT « data/<id>/<base>.dzi »,
+       SANS suffixe _EFI et sans sous-dossier — contrairement au fichier EFI,
+       servi lui depuis data/<id>/EFI/<base>_EFI.jpg. On essaie donc le plat
+       en premier, puis les variantes en repli. */
+    dzi = [ D+b+'.dzi',
+            D+b+'.xml',
+            D+b+'_EFI.dzi',
+            D+'DZI/'+b+'.dzi' ];
   }
   /* ATTENTION : la collection filtre CÔTÉ CLIENT. Un paramètre ?species=… est
      ignoré par le serveur et renvoie la collection complète. */
@@ -11491,11 +11530,23 @@ window.initSheetRendererBioslides = function(m, slide){
      est bien un manifeste DZI (« <Image … »). On construit ensuite la source
      de tuiles nous-mêmes, ce qui évite une seconde requête XHR par OSD. */
   function probe(i){
-    if(i>=slide.dzi.length){ fallbackIframe(); return; }
+    /* Résultat mémorisé par lame : sans cela, chaque ouverture de fiche
+       relançait jusqu'à 4 requêtes vers un serveur qui répond lentement,
+       ce qui pénalisait aussi le reste du viewer. */
+    window._bsProbe = window._bsProbe || {};
+    var ck = slide.id || slide.label;
+    if(window._bsProbe[ck]==='fail'){ fallbackIframe(); return; }
+    if(window._bsProbe[ck] && typeof window._bsProbe[ck]==='object'){
+      openOSD(window._bsProbe[ck]); return;
+    }
+    if(i>=slide.dzi.length){ window._bsProbe[ck]='fail'; fallbackIframe(); return; }
     var url=slide.dzi[i];
-    fetch(url,{mode:'cors'})
+    var ctl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+    var to  = setTimeout(function(){ try{ ctl && ctl.abort(); }catch(e){} }, 4000);
+    fetch(url, ctl?{mode:'cors',signal:ctl.signal}:{mode:'cors'})
       .then(function(r){ return r.ok ? r.text() : Promise.reject(r.status); })
       .then(function(txt){
+        clearTimeout(to);
         if(txt.indexOf('<Image')===-1) return Promise.reject('html');
         var g=function(re){ var m=txt.match(re); return m?m[1]:null; };
         var W=+g(/Width=["'](\d+)/), H=+g(/Height=["'](\d+)/);
@@ -11503,11 +11554,13 @@ window.initSheetRendererBioslides = function(m, slide){
         var FMT=g(/Format=["']([a-z]+)/i)||'jpeg';
         if(!W||!H) return Promise.reject('dims');
         var dir=url.replace(/\.(dzi|xml)$/i,'')+'_files/';
-        openOSD({ width:W, height:H, tileSize:TS, tileOverlap:OV,
+        var src={ width:W, height:H, tileSize:TS, tileOverlap:OV,
                   minLevel:0, maxLevel:Math.ceil(Math.log(Math.max(W,H))/Math.LN2),
-                  getTileUrl:function(l,x,y){ return dir+l+'/'+x+'_'+y+'.'+FMT; } });
+                  getTileUrl:function(l,x,y){ return dir+l+'/'+x+'_'+y+'.'+FMT; } };
+        window._bsProbe[ck]=src;
+        openOSD(src);
       })
-      .catch(function(){ probe(i+1); });
+      .catch(function(){ clearTimeout(to); probe(i+1); });
   }
 
   function openOSD(src){

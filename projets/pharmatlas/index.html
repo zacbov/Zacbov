@@ -5514,6 +5514,12 @@ function renderHerbariumViewer(m){
     +'<div class="herbarium-toggle-bar">'
     +'  <button class="herb-toggle-btn active" id="herbBtnHerb" onclick="_herbToggle(\'herb\')">🌿 Planche herbier</button>'
     +'  <button class="herb-toggle-btn" id="herbBtnModel" onclick="_herbToggle(\'3d\')">⬡ Modèle 3D</button>'
+    /* Les Plantes ont leur PROPRE barre d'onglets (indépendante de
+       _paViewerTabs) : c'est pourquoi « Lame » n'y apparaissait pas.
+       On l'ajoute en dernier, seulement si une lame existe pour la fiche. */
+    +((typeof resolveBioslide==='function' && resolveBioslide(m))
+       ? '  <button class="herb-toggle-btn" id="herbBtnSlide" onclick="_herbToggle(\'lame\')">🔬 Lame</button>'
+       : '')
     +'</div>'
     +'<div class="herbarium-stage" id="herbStage">'
     +'  <div class="herbarium-loader" id="herbLoader">'
@@ -5619,6 +5625,18 @@ function _herbToggle(mode){
   var btnModel=document.getElementById('herbBtnModel');
   var stage=document.getElementById('herbStage');
   if(!sv)return;
+
+  if(mode==='lame'){
+    /* La lame remplace tout le viewer (OpenSeadragon a besoin du conteneur
+       entier) ; la barre d'onglets de _paViewerTabs prend alors le relais. */
+    if(sheetAnimId){cancelAnimationFrame(sheetAnimId);sheetAnimId=null;}
+    var _m=_herbActiveModel;
+    if(_m && typeof resolveBioslide==='function' && typeof initSheetRendererBioslides==='function'){
+      var _s=resolveBioslide(_m);
+      if(_s){ _m._paTab='lame'; initSheetRendererBioslides(_m,_s); return; }
+    }
+    return;
+  }
 
   if(mode==='herb'){
     if(btnHerb)btnHerb.classList.add('active');
@@ -11280,7 +11298,12 @@ function _paVisualTabs(m){
   var tabs=[];
   if(m.file) tabs.push({key:'3d', label:'🧬 Modèle 3D',
       run:function(){ m._paTab='3d'; initSheetRenderer(m); }});
-  if(m._cat==='Plantes'||m._cat==='Champignons'||m._cat==='Parasites'||m._cat==='Bacteries'){
+  if(m._cat==='Plantes'){
+    /* Retour vers le viewer herbier (qui a sa propre barre interne). */
+    tabs.push({key:'gbif', label:'🌿 Planches',
+      run:function(){ m._paTab=null; initSheetRenderer(m); }});
+  }
+  else if(m._cat==='Champignons'||m._cat==='Parasites'||m._cat==='Bacteries'){
     /* GBIF ne renvoie des planches d'herbier que pour les végétaux. Pour un
        parasite ou une bactérie, ce sont des photographies d'observation :
        parler de « planches » avec une icône de plante était trompeur. */
@@ -11362,10 +11385,17 @@ function resolveBioslide(m){
   var ROOT='https://bioslides.biologie.uni-due.de/data/';
   /* On n'échappe QUE les espaces : encodeURIComponent transformerait aussi la
      virgule en %2C, alors que les noms de lames en contiennent (« …, Jungner
-     570 ») et que la collection les sert non échappées. */
-  var dzi = (e.id && e.base)
-    ? ROOT + e.id + '/' + String(e.base).replace(/ /g,'%20') + '.dzi'
-    : null;
+     570 ») et que la collection les sert non échappées.
+     Le manifeste peut être servi en .dzi ou en .xml, et parfois sous un
+     dossier « _files » frère : on essaie les variantes dans l'ordre et on ne
+     bascule sur le viewer officiel qu'après échec de toutes. */
+  var dzi = null;
+  if(e.id && e.base){
+    var b = String(e.base).replace(/ /g,'%20');
+    dzi = [ ROOT+e.id+'/'+b+'.dzi',
+            ROOT+e.id+'/'+b+'.xml',
+            ROOT+e.id+'/'+b+'_files.dzi' ];
+  }
   /* ATTENTION : la collection filtre CÔTÉ CLIENT. Un paramètre ?species=… est
      ignoré par le serveur et renvoie la collection complète. */
   return {
@@ -11418,19 +11448,36 @@ window.initSheetRendererBioslides = function(m, slide){
      un viewer vide. */
   function fallbackIframe(msg){
     while(c.firstChild) c.removeChild(c.firstChild);
-    c.innerHTML =
-        '<iframe src="'+escHtml(slide.url)+'" title="'+escHtml(slide.label||'Lame')+'" '
-      + 'style="width:100%;height:calc(100% - 46px);border:none;display:block;margin-top:34px" '
-      + 'loading="lazy" referrerpolicy="no-referrer"></iframe>'
-      + '<div style="position:absolute;left:0;right:0;bottom:0;padding:6px 10px;'
+    /* Le viewer officiel embarque son propre en-tête (logo, drapeau, liens) et
+       un panneau de métadonnées à droite. On le recadre : l'iframe est
+       agrandie et décalée dans un conteneur en overflow:hidden, de sorte que
+       seule la zone d'image reste visible. L'attribution CC BY-SA reste
+       affichée par nos soins juste en dessous — elle est obligatoire. */
+    var wrap=document.createElement('div');
+    wrap.style.cssText='position:absolute;top:34px;left:0;right:0;bottom:46px;overflow:hidden';
+    var f=document.createElement('iframe');
+    f.title=slide.label||'Lame';
+    f.src=slide.url;
+    f.loading='lazy';
+    f.referrerPolicy='no-referrer';
+    /* décalage : ~92px d'en-tête masqués, ~230px de panneau latéral rognés */
+    f.style.cssText='position:absolute;top:-92px;left:0;border:none;'
+      + 'width:calc(100% + 232px);height:calc(100% + 92px);display:block';
+    wrap.appendChild(f);
+    c.appendChild(wrap);
+    var att=document.createElement('div');
+    att.style.cssText='position:absolute;left:0;right:0;bottom:0;padding:6px 10px;'
       + 'background:rgba(8,12,20,.92);border-top:1px solid rgba(255,255,255,.12);'
-      + 'font-size:9.5px;line-height:1.45;color:rgba(255,255,255,.6)">'
-      + '🔬 <strong style="color:rgba(255,255,255,.85)">'+escHtml(slide.label||'')+'</strong><br>'
-      + ATTR + '</div>';
+      + 'font-size:9.5px;line-height:1.45;color:rgba(255,255,255,.6)';
+    att.innerHTML='🔬 <strong style="color:rgba(255,255,255,.85)">'+escHtml(slide.label||'')+'</strong> · '
+      + '<a href="'+escHtml(slide.url)+'" target="_blank" rel="noopener" style="color:#7ec8e3">'
+      + 'vue complète ↗</a><br>' + ATTR;
+    c.appendChild(att);
     tabs();
   }
 
-  if(!slide.dzi){ fallbackIframe(); return; }
+  if(!slide.dzi || !slide.dzi.length){ fallbackIframe(); return; }
+  var _cands = [].concat(slide.dzi), _ci = 0;
 
   var vp=document.createElement('div');
   vp.id='osd-viewport';
@@ -11450,7 +11497,7 @@ window.initSheetRendererBioslides = function(m, slide){
       _osdViewer = OpenSeadragon({
         element: vp,
         prefixUrl: 'vendor/openseadragon/images/',
-        tileSources: slide.dzi,
+        tileSources: _cands[_ci],
         crossOriginPolicy: 'Anonymous',
         showNavigator: true,
         navigatorPosition: 'BOTTOM_RIGHT',
@@ -11465,7 +11512,14 @@ window.initSheetRendererBioslides = function(m, slide){
       /* Chemin DZI injoignable → on bascule sur le viewer officiel plutôt que
          de laisser un cadre noir. */
       _osdViewer.addHandler('open-failed', function(){
-        if(failed) return; failed=true;
+        if(failed) return;
+        _ci++;
+        if(_ci < _cands.length){
+          /* variante suivante du manifeste */
+          try{ _osdViewer.open(_cands[_ci]); }catch(e){ failed=true; try{osdDestroy();}catch(_){} fallbackIframe(); }
+          return;
+        }
+        failed=true;
         try{ osdDestroy(); }catch(e){}
         fallbackIframe();
       });

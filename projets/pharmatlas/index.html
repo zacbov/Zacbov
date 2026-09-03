@@ -11251,8 +11251,39 @@ var HISTO_SLIDE_MAP = {"Épithélium pavimenteux simple":{"study":"2.25.30682414
    (voir initSheetRendererBioslides). Ne pas retirer la mention.
    Ces lames priment sur la galerie GBIF : une coupe histologique montre la
    morphologie diagnostique, là où une photo de terrain ne l'apporte pas. */
+/* Lames applicables aux AUTRES catégories que Parasites.
+   Seuls les identifiants effectivement lus dans la table de la collection sont
+   renseignés ; les autres renvoient à la collection avec l'espèce à filtrer. */
+var BIOSLIDES_MAP_ALL = {
+  /* Note : la lame 430 (Allium cepa, mitose, phases annotées) et la 233 sont
+     d'excellents supports pour le cycle cellulaire, mais AUCUNE fiche de
+     Génétique ne traite la mitose ou la méiose aujourd'hui (les 34 fiches
+     portent sur l'hérédité, les mutations et le diagnostic). L'entrée sera
+     à créer côté contenu avant de câbler ces lames. */
+  'Champignons': {
+    'Agaric champêtre'      : {id:575, label:'Agaricus campestris — carpophore, coupe transversale 20x'},
+    'Cèpe de Bordeaux'      : {id:null, species:'Boletus edulis', label:'Boletus edulis'},
+    'Coprin chevelu'        : {id:null, species:'Coprinus comatus', label:'Coprinus comatus'}
+  },
+  'Plantes': {
+    'Marronnier d\'Inde'   : {id:688, label:'Aesculus hippocastanum — bourgeon, coupe transversale 20x'},
+    'Grande bardane'        : {id:507, label:'Arctium lappa — tige, coupe transversale 20x'},
+    'Oignon'                : {id:208, label:'Allium cepa — épiderme du bulbe 20x'},
+    'Érable sycomore'       : {id:4,   label:'Acer pseudoplatanus — feuille, coupe transversale 20x'}
+  },
+  'Organites': {
+    /* La plasmolyse sur Tradescantia montre membrane et paroi in vivo. */
+    'Membrane Plasmique'    : {id:176, label:'Tradescantia spathacea — épiderme, plasmolyse 20x'},
+    'Vacuole'               : {id:176, label:'Tradescantia spathacea — épiderme, plasmolyse 20x'},
+    'Chloroplaste'          : {id:null, species:'Elodea canadensis', label:'Elodea canadensis — chloroplastes'}
+  }
+};
 var BIOSLIDES_MAP = {
+  /* id : identifiant de lame VÉRIFIÉ dans la table de la collection.
+     species : espèce à saisir dans le filtre de la collection quand aucune
+     lame précise n'a été vérifiée. */
   'Ascaris lumbricoides'   : {id:375, label:'Ascaris lumbricoides — coupe longitudinale 40x'},
+  'Larva migrans cutanée — Ankylostomes animaux': {id:364, label:'Ankylostoma sp. — adultes mâle et femelle, montage total 40x'},
   'Trichinella spiralis'   : {id:null, species:'Trichinella sp.', label:'Trichinella sp. — larve enkystée'},
   'Taenia solium'          : {id:null, species:'Taenia saginata', label:'Taenia saginata — proglottis (genre voisin)'},
   'Echinococcus granulosus': {id:null, species:'Echinococcus sp.', label:'Echinococcus sp.'},
@@ -11266,18 +11297,21 @@ var BIOSLIDES_MAP = {
   'Hirudo medicinalis — Sangsue médicinale': {id:null, species:'Hirudo medicinalis', label:'Hirudo medicinalis — sangsue médicinale'}
 };
 function resolveBioslide(m){
-  if(!m || m._cat!=='Parasites') return null;
-  var e = BIOSLIDES_MAP[m.name];
+  if(!m) return null;
+  var e = (BIOSLIDES_MAP_ALL[m._cat]||{})[m.name] || (m._cat==='Parasites' ? BIOSLIDES_MAP[m.name] : null);
   if(!e) return null;
-  /* Sans id de lame précis, on ouvre la collection filtrée sur l'espèce :
-     les identifiants BioSLiDES n'ont pas été vérifiés un à un, et pointer
-     vers une lame erronée serait pire que de laisser chercher. */
+  /* ATTENTION : la collection BioSLiDES filtre CÔTÉ CLIENT. Un paramètre
+     ?species=… est ignoré par le serveur et renvoie la collection complète.
+     On ne construit donc pas de faux lien filtré : soit on ouvre la lame par
+     son id vérifié, soit on ouvre la collection en indiquant quelle espèce
+     saisir dans le filtre. */
   return {
     id: e.id,
     label: e.label,
+    species: e.species || null,
     url: e.id
       ? 'https://bioslides.biologie.uni-due.de/viewer.html?id='+e.id+'&language=en'
-      : 'https://bioslides.biologie.uni-due.de/collection.php?language=en&species='+encodeURIComponent(e.species||m.name)
+      : 'https://bioslides.biologie.uni-due.de/collection.php?language=en'
   };
 }
 /* Viewer de lame BioSLiDES. Le site fournit son propre visualiseur (zoom et
@@ -11318,11 +11352,14 @@ window.initSheetRendererBioslides = function(m, slide){
       + 'align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center">'
       + '<div style="font-size:34px;opacity:.5">🔬</div>'
       + '<div style="color:rgba(255,255,255,.8);font-size:13px;font-weight:600">'+escHtml(slide.label)+'</div>'
-      + '<div style="color:rgba(255,255,255,.45);font-size:11px;line-height:1.6;max-width:280px">'
-      + 'Lame de microscopie disponible dans la collection UDE BioSLiDES.</div>'
+      + '<div style="color:rgba(255,255,255,.45);font-size:11px;line-height:1.6;max-width:290px">'
+      + 'Lame disponible dans la collection UDE BioSLiDES.'
+      + (slide.species ? '<br>Filtrer sur l\u2019espèce <strong style="color:rgba(255,255,255,.7)">'
+                         + escHtml(slide.species) + '</strong> (le filtre est côté page).' : '')
+      + '</div>'
       + '<a href="'+escHtml(slide.url)+'" target="_blank" rel="noopener" '
       + 'style="border:1px solid rgba(126,200,227,.4);border-radius:6px;padding:7px 16px;'
-      + 'font-size:11.5px;color:#7ec8e3;text-decoration:none">Consulter la lame ↗</a>'
+      + 'font-size:11.5px;color:#7ec8e3;text-decoration:none">Ouvrir la collection ↗</a>'
       + '</div>' + attribution;
   }
 };
@@ -12251,11 +12288,12 @@ function initSheetRenderer(m){
     return;
   }
 
-  // ── Parasites : lame de microscopie (UDE BioSLiDES) AVANT la galerie GBIF ─────
-  //    Pour une espèce parasitaire, la coupe montre la morphologie diagnostique ;
-  //    une photo d'occurrence de terrain ne l'apporte pas. Quand une lame existe,
-  //    elle prime donc sur GBIF, conformément à l'usage pédagogique visé.
-  if(!m._forcePdbOff && m._cat==='Parasites' && typeof resolveBioslide==='function'){
+  // ── Lame de microscopie (UDE BioSLiDES) — prioritaire quand elle existe ───────
+  //    Parasites : la coupe montre la morphologie diagnostique, là où une photo
+  //    d'occurrence GBIF ne l'apporte pas → la lame prime.
+  //    Génétique / Organites / Champignons / Plantes : la lame illustre un
+  //    processus (mitose, plasmolyse) ou une anatomie que rien d'autre ne montre.
+  if(!m._forcePdbOff && typeof resolveBioslide==='function'){
     var _bs = resolveBioslide(m);
     if(_bs && typeof initSheetRendererBioslides==='function'){
       initSheetRendererBioslides(m, _bs);

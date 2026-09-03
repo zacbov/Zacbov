@@ -13596,8 +13596,21 @@ function _relatedCategoriesLinks(m){
       if(w.length>1){
         var r=' '+w.slice(0,2).join(' ')+' ';
         if((r.length-2)>=MIN_LEN && !STOP[r]) myKeys.push(r);
+        /* Racine d'un seul mot : n'a de sens que pour un nom d'entité
+           (« Thym commun » → « thym »). Sur un titre thématique comme
+           « Substances Naturelles et Hémostase », la clé « substances »
+           appariait toutes les fiches de Toxicologie qui emploient ce mot
+           courant — c'est l'origine des 3 renvois toxicologiques erronés.
+           On écarte donc les premiers mots génériques. */
+        var GENERIC={' substances ':1,' principes ':1,' agents ':1,' facteurs ':1,
+                     ' composes ':1,' produits ':1,' medicaments ':1,' molecules ':1,
+                     ' methodes ':1,' techniques ':1,' mecanismes ':1,' generalites ':1,
+                     ' elements ':1,' modeles ':1,' systemes ':1,' formes ':1,
+                     ' voies ':1,' types ':1,' classes ':1,' groupes ':1,' notions ':1,
+                     ' analyses ':1,' donnees ':1,' effets ':1,' reactions ':1,
+                     ' interactions ':1,' proprietes ':1,' structures ':1,' fonctions ':1};
         var r1=' '+w[0]+' ';
-        if((r1.length-2)>=6 && !STOP[r1]) myKeys.push(r1);
+        if((r1.length-2)>=6 && !STOP[r1] && !GENERIC[r1]) myKeys.push(r1);
       }
     })();
     for(var i=0;i<list.length;i++){
@@ -16073,12 +16086,19 @@ var _paLinks=(function(){
       if(m._cat==='Outils' || m.tool_mode || m._outil_render) return;   // outils : jamais
       if(info.querySelector('.pa-related')) return;                     // déjà présent
       if(info.querySelector('iframe')) return;                          // rendu iframe en cours
-      /* Le graphe PA_Graph est désormais le moteur unique (bloc « Fiches liées »).
-         Ce moteur historique tournait EN PLUS de lui : d'où les fiches citées deux fois
-         (colchicine, chloroquine, propranolol, ezetimibe…), les rapprochements aberrants
-         (Math/Stats → Plantes, par appariement de texte brut) et la fuite du cache __hay
-         dans le panneau d'information. On le neutralise sans retirer son code. */
-      if(typeof PA_Graph!=='undefined') return;
+      /* PA_Graph est le moteur principal, mais il ne construit ses arêtes qu'à
+         partir de CHAMPS STRUCTURÉS (interactions, molecules_cles, main_molecule,
+         dci, confusion, famille). Les fiches purement rédactionnelles — comme
+         « Substances Naturelles et Hémostase », qui n'a que desc/definition/
+         pharmacology — n'en produisent aucune et se retrouvaient sans le moindre
+         lien depuis que ce moteur historique était neutralisé.
+         On le rétablit donc en REPLI : il ne s'exécute que si PA_Graph n'a rien
+         rendu pour cette fiche. Les doublons signalés (colchicine, propranolol…)
+         venaient de l'exécution SIMULTANÉE des deux moteurs, pas de celui-ci ;
+         en repli exclusif, ils ne peuvent pas réapparaître. */
+      if(typeof PA_Graph!=='undefined' && PA_Graph.renderRelated){
+        try{ if(PA_Graph.renderRelated(m)) return; }catch(e){ return; }
+      }
       var html=_relatedCategoriesLinks(m);
       if(html) info.insertAdjacentHTML('beforeend', html);
     }catch(e){ /* ne doit jamais bloquer l'ouverture de la fiche */ }

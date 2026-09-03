@@ -11355,61 +11355,101 @@ function _paVisualTabs(m){
    Seuls les identifiants effectivement lus dans la table de la collection sont
    renseignés ; les autres renvoient à la collection avec l'espèce à filtrer. */
 var BIOSLIDES_MAP_ALL = {
-  /* Note : la lame 430 (Allium cepa, mitose, phases annotées) et la 233 sont
-     d'excellents supports pour le cycle cellulaire, mais AUCUNE fiche de
-     Génétique ne traite la mitose ou la méiose aujourd'hui (les 34 fiches
-     portent sur l'hérédité, les mutations et le diagnostic). L'entrée sera
-     à créer côté contenu avant de câbler ces lames. */
-  'Champignons': {
-    'Agaric champêtre'      : {id:575, base:'Psalliota campestris - Fruchtkoerper quer 20x, Jungner 668', label:'Agaricus campestris — carpophore, coupe transversale 20x'},
-    'Cèpe de Bordeaux'      : {id:null, species:'Boletus edulis', label:'Boletus edulis'},
-    'Coprin chevelu'        : {id:null, species:'Coprinus comatus', label:'Coprinus comatus'}
-  },
   'Plantes': {
-    'Marronnier d\'Inde'   : {id:688, base:'Aesculus hippocastanum - Knospe quer 20x, Jungner 1238', label:'Aesculus hippocastanum — bourgeon, coupe transversale 20x'},
-    'Grande bardane'        : {id:507, base:'Arctium lappa, Staengel quer 20x, Jungner 570', label:'Arctium lappa — tige, coupe transversale 20x'},
-    'Oignon'                : {id:206, base:'Allium cepa Epidermis 2', label:'Allium cepa — épiderme du bulbe 20x'},
-    'Érable sycomore'       : {id:4,   base:'Acer pseudoplatanus Blatt quer 20x', label:'Acer pseudoplatanus — feuille, coupe transversale 20x'},
-    /* Aristolochia : coupes de tige annotées (sclérenchyme, cambium, druses
-       d'oxalate). Plante à acides aristolochiques — néphrotoxiques et
-       cancérogènes — donc à fort intérêt pédagogique en pharmacognosie. */
-    'Aristoloche clématite' : {id:19,  base:'Aristolochia macrophylla Spross quer 20x', label:'Aristolochia macrophylla — tige, coupe transversale 20x'},
-    'Tabac'                 : {id:null, species:'Nicotiana tabacum', label:'Nicotiana tabacum'},
-    'Ricin'                 : {id:null, species:'Ricinus communis', label:'Ricinus communis'},
-    'If commun'             : {id:null, species:'Taxus baccata', label:'Taxus baccata'},
-    'Laurier-rose'          : {id:null, species:'Nerium oleander', label:'Nerium oleander'},
-    'Laurier-cerise'        : {id:null, species:'Prunus laurocerasus', label:'Prunus laurocerasus'},
-    'Réglisse'              : {id:null, species:'Glycyrrhiza glabra', label:'Glycyrrhiza glabra'},
-    'Chanvre'               : {id:null, species:'Cannabis sativa', label:'Cannabis sativa'},
-    'Muguet'                : {id:null, species:'Convallaria majalis', label:'Convallaria majalis'},
-    'Gui'                   : {id:null, species:'Viscum album', label:'Viscum album'},
-    'Houblon'               : {id:null, species:'Humulus lupulus', label:'Humulus lupulus'},
-    'Lavande vraie'         : {id:null, species:'Lavandula angustifolia', label:'Lavandula angustifolia'},
-    'Sauge officinale'      : {id:null, species:'Salvia officinalis', label:'Salvia officinalis'}
+    'Airelle rouge (Lingonberry)': {id:714, base:'Vaccinium vitis-idaea - Blatt quer 20x, Jungner 1262', label:'Airelle rouge (Lingonberry)'},
+    'Baie de saule': {id:703, base:'Viburnum lantana - Blatt quer 20x, Jungner 1270', label:'Baie de saule'},
+    'Bouleau verruqueux': {id:611, label:'Bouleau verruqueux'},
+    'Buis commun': {id:12, base:'Buxus sempervirens Blatt quer 20x', label:'Buis commun'},
+    'Capucine': {id:189, base:'Tropaeolum majus  - Trieb quer 20x', label:'Capucine'},
+    'Carotte sauvage': {id:458, base:'Daucus carota - Speicherwurzel 20x, Jungner 520', label:'Carotte sauvage'},
+    'Chanvre': {id:14, base:'Cannabis sativa - Spross quer', label:'Chanvre'},
+    'Charme commun': {id:15, base:'Carpinus betulus Ast quer AP40 20x', label:'Charme commun'},
+    'Châtaignier': {id:108, base:'Castanea sativa Stengel quer 20x', label:'Châtaignier'},
+    'Chêne pédonculé': {id:615, base:'Quercus robur - Holz 20x, Jungner 751', label:'Chêne pédonculé'},
+    'Ciboulette': {id:478, base:'Allium schoenoprasum - Rundblatt quer 20x, Jungner 540', label:'Ciboulette'},
+    'Citrouille': {id:496, base:'Cucurbita pepo - Stamm quer 20x, Jungner 562', label:'Citrouille'},
+    'Clématite des haies': {id:109, base:'Clematis vitalba - Stengel quer 20x', label:'Clématite des haies'},
+    'Coquelicot': {id:178, base:'Papaver rhoeas - Stengel quer 20x 1', label:'Coquelicot'},
+    'Douce-amère': {id:706, base:'Solanum dulcamara - Stamm quer 20x, Jungner 1272', label:'Douce-amère'},
+    'Eucalyptus': {id:49, base:'Eucalyptus globulus Trieb quer AP40 20x 1.1', label:'Eucalyptus'},
+    'Figuier': {id:39, base:'Ficus carica Stengel quer AP40 20x', label:'Figuier'},
+    'Figuier commun': {id:39, base:'Ficus carica Stengel quer AP40 20x', label:'Figuier commun'},
+    'Framboisier': {id:697, base:'Rubus idaeus - Frucht quer 20x, Jungner 1258', label:'Framboisier'},
+    'Frêne élevé': {id:616, base:'Fraxinus excelsior - Holz 20x, Jungner 752', label:'Frêne élevé'},
+    'Fusain d\'Europe': {id:71, base:'Euonymus eruopaeus Stengel quer 20x', label:'Fusain d\'Europe'},
+    'Ginkgo': {id:522, base:'Ginkgo biloba - maennl. Bluete quer 20x, Jungner 595', label:'Ginkgo'},
+    'Gui': {id:32, base:'Viscum album Trieb quer 20x', label:'Gui'},
+    'Hellébore noir': {id:47, base:'Helleborus niger Blatt quer AP40 20x', label:'Hellébore noir'},
+    'Houblon': {id:123, base:'Humulus lupulus Trieb quer 20x', label:'Houblon'},
+    'Houx': {id:30, base:'Ilex aqufolium - Blattstiel quer 20x', label:'Houx'},
+    'Houx commun': {id:30, base:'Ilex aqufolium - Blattstiel quer 20x', label:'Houx commun'},
+    'Hêtre commun': {id:476, base:'Fagus silvatica - Blattknospe quer 20x, Jungner 537', label:'Hêtre commun'},
+    'If commun': {id:664, base:'Taxus  baccata - Frucht quer 20x, Jungner 1221', label:'If commun'},
+    'Laurier-cerise': {id:171, base:'Prunus laurocerasus Zweig 20x', label:'Laurier-cerise'},
+    'Laurier-rose': {id:76, base:'Nerium oleander Samen 20x', label:'Laurier-rose'},
+    'Lavande officinale': {id:137, base:'Lavandula angustifolia Bluetenstiel quer 20x', label:'Lavande officinale'},
+    'Lavande vraie': {id:137, base:'Lavandula angustifolia Bluetenstiel quer 20x', label:'Lavande vraie'},
+    'Lierre grimpant': {id:386, base:'Hedera helix - Blattstiel quer HG 20x', label:'Lierre grimpant'},
+    'Lilas commun': {id:468, base:'Syringa vulgaris - Blatt quer 20x, Jungner 529', label:'Lilas commun'},
+    'Lupin (genre Lupinus)': {id:460, base:'Lupinus sp. - Wurzel quer 20x, Jungner 522', label:'Lupin (genre Lupinus)'},
+    'Luzerne': {id:451, base:'Medicago sativa - Wurzel quer 20x, Jungner 513', label:'Luzerne'},
+    'Maïs': {id:266, base:'Zea mays - quer 40x, Jungner 1015', label:'Maïs'},
+    'Menthe verte': {id:152, base:'Mentha speciosa - Spross quer 20x 1', label:'Menthe verte'},
+    'Molène bouillon-blanc': {id:532, base:'Verbascum thapsus - Blatthaare 20x, Jungner 501', label:'Molène bouillon-blanc'},
+    'Monstera': {id:467, base:'Monstera deliciosa - Luftwurzel quer 20x, Jungner 525', label:'Monstera'},
+    'Muguet': {id:497, base:'Convallaria sp. - Wurzelstock quer 20x, Jungner 557', label:'Muguet'},
+    'Myrtille': {id:715, base:'Vaccinium myrtillus - Frucht quer 20x, Jungner 1263', label:'Myrtille'},
+    'Noisetier commun': {id:538, base:'Corylus sp. - junge Frucht quer 20x, Jungner 606', label:'Noisetier commun'},
+    'Noyer commun': {id:127, base:'Juglans regia - Blattstiel quer 20x', label:'Noyer commun'},
+    'Osmonde royale': {id:28, base:'Osmunda regalis Wedelstiel quer 20x', label:'Osmonde royale'},
+    'Pin sylvestre': {id:7, base:'Pinus sylvestris Nadel quer AP40 20x02', label:'Pin sylvestre'},
+    'Pissenlit officinal': {id:513, base:'Taraxacum sp. - Bluetenknospe quer 20x, Jungner 579', label:'Pissenlit officinal'},
+    'Pomme de Terre': {id:553, base:'Solanum Tuberosum - Knolle 20x, Jungner 488', label:'Pomme de Terre'},
+    'Pommier commun': {id:149, base:'Malus domestica Zweig quer 20x 2', label:'Pommier commun'},
+    'Populage des marais': {id:448, base:'Caltha palustris - tetrarche Wurzel quer 20x, Jungner 510', label:'Populage des marais'},
+    'Prunellier': {id:677, base:'Prunus spinosa - Blatt quer 20x, Jungner 1251', label:'Prunellier'},
+    'Pâquerette vivace': {id:105, base:'Bellis perennis Bluetenstiel 20x', label:'Pâquerette vivace'},
+    'Ricin': {id:637, base:'Ricinus communis - Samen quer 20x, Jungner 1278', label:'Ricin'},
+    'Robinier faux-acacia': {id:685, base:'Robinia pseudoacacia - Blaettchengelenk quer 20x, Jungner 1235', label:'Robinier faux-acacia'},
+    'Ronce': {id:696, base:'Rubus fructicosus - Trieb mit Dorn quer 20x, Junger 1257', label:'Ronce'},
+    'Réglisse': {id:56, base:'Glycyrrhiza glabra - Wurzel quer', label:'Réglisse'},
+    'Sauge officinale': {id:604, base:'Salvia officinalis - Blatt quer 20x, Jungner 721', label:'Sauge officinale'},
+    'Saule blanc': {id:675, base:'Salix sp. - weibl. Bluete quer 20x, Jungner 1248', label:'Saule blanc'},
+    'Soja': {id:336, base:'Sojabohne - Blatt quer 20x, Jungner 1405', label:'Soja'},
+    'Sorbier des oiseleurs': {id:670, base:'Sorbus aucuparia - Frucht quer 20x, Jungner 1244', label:'Sorbier des oiseleurs'},
+    'Sureau noir': {id:377, base:'Sambucus nigra - Stamm 20x, Jungner 567', label:'Sureau noir'},
+    'Tabac': {id:489, base:'Nicotiana tabacum - Blatt quer 20x, Jungner 547', label:'Tabac'},
+    'Tanaisie': {id:174, base:'Tanacetum vulgare - Stengel quer 20x', label:'Tanaisie'},
+    'Tanaisie commune': {id:174, base:'Tanacetum vulgare - Stengel quer 20x', label:'Tanaisie commune'},
+    'Tilleul à grandes feuilles': {id:621, base:'Tilia platyphyllos - Holz 20x, Jungner 757', label:'Tilleul à grandes feuilles'},
+    'Tomate': {id:544, base:'Solanum lycopersicum - Frucht quer 20x, Jungner 612', label:'Tomate'},
+    'Tournesol': {id:288, base:'Sonnenblume - Knospe 20x', label:'Tournesol'},
+    'Vanille': {id:6, base:'Vanilla planifolia - Luftwurzel quer 20x', label:'Vanille'},
+    'Églantier': {id:700, base:'Rosa canina - Frucht quer 20x, Jungner 1264', label:'Églantier'},
+    'Épine-vinette': {id:695, base:'Berberis vulgaris - Blatt quer 20x, Jungner 1256', label:'Épine-vinette'}
+  },
+  'Champignons': {
+    'Coprin chevelu': {id:576, base:'Coprinus sp. - Fruchtkoerper 20x, Jungner 669', label:'Coprin chevelu'},
+    'Cèpe de Bordeaux': {id:574, base:'Boletus edulis - Fruchtkoerper quer 20x, Jungner 667', label:'Cèpe de Bordeaux'}
   },
   'Organites': {
-    /* La plasmolyse sur Tradescantia montre membrane et paroi in vivo. */
-    'Membrane Plasmique'    : {id:175, base:'Tradescantia spathacea Plasmolyse 1', label:'Tradescantia spathacea — épiderme, plasmolyse 20x'},
-    'Vacuole'               : {id:175, base:'Tradescantia spathacea Plasmolyse 1', label:'Tradescantia spathacea — épiderme, plasmolyse 20x'},
-    'Chloroplaste'          : {id:null, species:'Elodea canadensis', label:'Elodea canadensis — chloroplastes'}
+    'Chloroplaste': {id:475, base:'Elodea canadensis - Blattknospe laengs, Jungner 536', label:'Chloroplaste'}
   }
 };
+
 var BIOSLIDES_MAP = {
-  /* id : identifiant de lame VÉRIFIÉ dans la table de la collection.
-     species : espèce à saisir dans le filtre de la collection quand aucune
-     lame précise n'a été vérifiée. */
-  'Ascaris lumbricoides'   : {id:375, base:'Spulwurm laengs 40x 1', label:'Ascaris lumbricoides — coupe longitudinale 40x'},
-  'Larva migrans cutanée — Ankylostomes animaux': {id:364, base:'Ankylostoma - quer 40x, Jungner 464', label:'Ankylostoma sp. — adultes mâle et femelle, montage total 40x'},  'Trichinella spiralis'   : {id:null, species:'Trichinella sp.', label:'Trichinella sp. — larve enkystée'},
-  'Taenia solium'          : {id:null, species:'Taenia saginata', label:'Taenia saginata — proglottis (genre voisin)'},
-  'Echinococcus granulosus': {id:null, species:'Echinococcus sp.', label:'Echinococcus sp.'},
-  'Entamoeba histolytica'  : {id:null, species:'Entamoeba histolytica', label:'Entamoeba histolytica'},
-  'Toxoplasma gondii'      : {id:null, species:'Toxoplasma gondii', label:'Toxoplasma gondii'},
-  'Trypanosoma brucei'     : {id:null, species:'Trypanosoma brucei gambiense', label:'Trypanosoma brucei gambiense — frottis sanguin'},
-  'Leishmania sp.'         : {id:null, species:'Leishmania donovani', label:'Leishmania donovani'},
-  'Plasmodium falciparum'  : {id:null, species:'Plasmodium sp.', label:'Plasmodium sp. — frottis sanguin'},
-  'Plasmodium vivax'       : {id:null, species:'Plasmodium sp.', label:'Plasmodium sp. — frottis sanguin'},
-  'Fasciola hepatica — Douve du Foie': {id:null, species:'Fasciola hepatica', label:'Fasciola hepatica — douve du foie'},
-  'Hirudo medicinalis — Sangsue médicinale': {id:null, species:'Hirudo medicinalis', label:'Hirudo medicinalis — sangsue médicinale'}
+  'Fasciola hepatica — Douve du Foie': {id:357, base:'Fasciola hepatica, quer 40x, Jungner 147', label:'Fasciola hepatica — Douve du Foie'},
+  'Echinococcus granulosus': {id:370, base:'Echinococcus - Zyste 40x, Jungner 471', label:'Echinococcus granulosus'},
+  'Entamoeba histolytica': {id:358, base:'Entamoeba histolytica - 40x, Jungner 468', label:'Entamoeba histolytica'},
+  'Toxoplasma gondii': {id:354, base:'Toxoplasma - Ausstrich 40x, Jungner 480', label:'Toxoplasma gondii'},
+  'Trypanosoma brucei': {id:345, base:'Trypanosoma gambiense - Blutausstrich 40x, Jungner 125', label:'Trypanosoma brucei'},
+  'Trypanosoma cruzi — Maladie de Chagas': {id:344, base:'Trypanosoma equiperdum - Blutausstrich 40x, Jungner 126', label:'Trypanosoma cruzi — Maladie de Chagas'},
+  'Leishmania sp.': {id:372, base:'Leishmania donovani - im Gewebe 40x, Jungner 476', label:'Leishmania sp.'},
+  'Plasmodium falciparum': {id:348, base:'Plasmodium - Blutausstrich 40x, Jungner 127', label:'Plasmodium falciparum'},
+  'Sarcoptes scabiei — Gale': {id:361, base:'Bdellonyssus - total 40x, Jungner 460', label:'Sarcoptes scabiei — Gale'},
+  'Taenia solium': {id:371, base:'Taenia - Glied quer 40x, Jungner 466', label:'Taenia solium'},
+  'Trichinella spiralis': {id:373, base:'Trichinella - im Muskel 40x, Jungner 158', label:'Trichinella spiralis'},
+  'Hirudo medicinalis — Sangsue médicinale': {id:351, base:'Hirudo medicinalis - quer 40x, Jungner 163', label:'Hirudo medicinalis — Sangsue médicinale'}
 };
 function resolveBioslide(m){
   if(!m) return null;

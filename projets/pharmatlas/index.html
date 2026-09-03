@@ -11280,9 +11280,17 @@ function _paVisualTabs(m){
   var tabs=[];
   if(m.file) tabs.push({key:'3d', label:'🧬 Modèle 3D',
       run:function(){ m._paTab='3d'; initSheetRenderer(m); }});
-  if(m._cat==='Plantes'||m._cat==='Champignons'||m._cat==='Parasites'||m._cat==='Bacteries')
-    tabs.push({key:'gbif', label:'🌿 Planches',
+  if(m._cat==='Plantes'||m._cat==='Champignons'||m._cat==='Parasites'||m._cat==='Bacteries'){
+    /* GBIF ne renvoie des planches d'herbier que pour les végétaux. Pour un
+       parasite ou une bactérie, ce sont des photographies d'observation :
+       parler de « planches » avec une icône de plante était trompeur. */
+    var _gl = (m._cat==='Plantes')            ? '🌿 Planches'
+            : (m._cat==='Champignons')        ? '🍄 Photos'
+            : (m._cat==='Parasites')          ? '🪱 Photos'
+            :                                   '🦠 Photos';
+    tabs.push({key:'gbif', label:_gl,
       run:function(){ m._paTab='gbif'; m._forcePdbOff=true; initSheetRendererGBIF(m,null,null); }});
+  }
   if(typeof resolveBioslide==='function' && resolveBioslide(m))
     tabs.push({key:'lame', label:'🔬 Lame',
       run:function(){ m._paTab='lame'; initSheetRendererBioslides(m, resolveBioslide(m)); }});
@@ -11307,15 +11315,15 @@ var BIOSLIDES_MAP_ALL = {
      portent sur l'hérédité, les mutations et le diagnostic). L'entrée sera
      à créer côté contenu avant de câbler ces lames. */
   'Champignons': {
-    'Agaric champêtre'      : {id:575, label:'Agaricus campestris — carpophore, coupe transversale 20x'},
+    'Agaric champêtre'      : {id:575, base:'Psalliota campestris - Fruchtkoerper quer 20x, Jungner 668', label:'Agaricus campestris — carpophore, coupe transversale 20x'},
     'Cèpe de Bordeaux'      : {id:null, species:'Boletus edulis', label:'Boletus edulis'},
     'Coprin chevelu'        : {id:null, species:'Coprinus comatus', label:'Coprinus comatus'}
   },
   'Plantes': {
-    'Marronnier d\'Inde'   : {id:688, label:'Aesculus hippocastanum — bourgeon, coupe transversale 20x'},
-    'Grande bardane'        : {id:507, label:'Arctium lappa — tige, coupe transversale 20x'},
-    'Oignon'                : {id:208, label:'Allium cepa — épiderme du bulbe 20x'},
-    'Érable sycomore'       : {id:4,   label:'Acer pseudoplatanus — feuille, coupe transversale 20x'}
+    'Marronnier d\'Inde'   : {id:688, base:'Aesculus hippocastanum - Knospe quer 20x, Jungner 1238', label:'Aesculus hippocastanum — bourgeon, coupe transversale 20x'},
+    'Grande bardane'        : {id:507, base:'Arctium lappa, Staengel quer 20x, Jungner 570', label:'Arctium lappa — tige, coupe transversale 20x'},
+    'Oignon'                : {id:208, base:'Allium cepa Epidermis 2_01', label:'Allium cepa — épiderme du bulbe 20x'},
+    'Érable sycomore'       : {id:4,   base:'Acer pseudoplatanus Blatt quer 20x', label:'Acer pseudoplatanus — feuille, coupe transversale 20x'}
   },
   'Organites': {
     /* La plasmolyse sur Tradescantia montre membrane et paroi in vivo. */
@@ -11328,9 +11336,8 @@ var BIOSLIDES_MAP = {
   /* id : identifiant de lame VÉRIFIÉ dans la table de la collection.
      species : espèce à saisir dans le filtre de la collection quand aucune
      lame précise n'a été vérifiée. */
-  'Ascaris lumbricoides'   : {id:375, label:'Ascaris lumbricoides — coupe longitudinale 40x'},
-  'Larva migrans cutanée — Ankylostomes animaux': {id:364, label:'Ankylostoma sp. — adultes mâle et femelle, montage total 40x'},
-  'Trichinella spiralis'   : {id:null, species:'Trichinella sp.', label:'Trichinella sp. — larve enkystée'},
+  'Ascaris lumbricoides'   : {id:375, base:'Spulwurm laengs 40x 1', label:'Ascaris lumbricoides — coupe longitudinale 40x'},
+  'Larva migrans cutanée — Ankylostomes animaux': {id:364, base:'Ankylostoma - quer 40x, Jungner 464', label:'Ankylostoma sp. — adultes mâle et femelle, montage total 40x'},  'Trichinella spiralis'   : {id:null, species:'Trichinella sp.', label:'Trichinella sp. — larve enkystée'},
   'Taenia solium'          : {id:null, species:'Taenia saginata', label:'Taenia saginata — proglottis (genre voisin)'},
   'Echinococcus granulosus': {id:null, species:'Echinococcus sp.', label:'Echinococcus sp.'},
   'Entamoeba histolytica'  : {id:null, species:'Entamoeba histolytica', label:'Entamoeba histolytica'},
@@ -11346,13 +11353,25 @@ function resolveBioslide(m){
   if(!m) return null;
   var e = (BIOSLIDES_MAP_ALL[m._cat]||{})[m.name] || (m._cat==='Parasites' ? BIOSLIDES_MAP[m.name] : null);
   if(!e) return null;
-  /* ATTENTION : la collection BioSLiDES filtre CÔTÉ CLIENT. Un paramètre
-     ?species=… est ignoré par le serveur et renvoie la collection complète.
-     On ne construit donc pas de faux lien filtré : soit on ouvre la lame par
-     son id vérifié, soit on ouvre la collection en indiquant quelle espèce
-     saisir dans le filtre. */
+  /* Pyramide DZI : la collection publie, pour chaque lame, un dossier
+     data/<id>/ contenant « <base>_Thumbnail.jpg », « <base>_Gallery.jpg » et
+     le manifeste « <base>.dzi » (motif relevé dans la table de la collection).
+     `base` est le nom de fichier d'origine, en allemand : il doit être copié
+     tel quel depuis la colonne « Image » de la collection.
+     Sans `base`, pas d'URL DZI → le viewer officiel est affiché en repli. */
+  var ROOT='https://bioslides.biologie.uni-due.de/data/';
+  /* On n'échappe QUE les espaces : encodeURIComponent transformerait aussi la
+     virgule en %2C, alors que les noms de lames en contiennent (« …, Jungner
+     570 ») et que la collection les sert non échappées. */
+  var dzi = (e.id && e.base)
+    ? ROOT + e.id + '/' + String(e.base).replace(/ /g,'%20') + '.dzi'
+    : null;
+  /* ATTENTION : la collection filtre CÔTÉ CLIENT. Un paramètre ?species=… est
+     ignoré par le serveur et renvoie la collection complète. */
   return {
     id: e.id,
+    base: e.base || null,
+    dzi: dzi,
     label: e.label,
     species: e.species || null,
     url: e.id
@@ -11369,53 +11388,89 @@ window.initSheetRendererBioslides = function(m, slide){
   if(!c || !slide) return;
   while(c.firstChild) c.removeChild(c.firstChild);
   if(typeof sheetAnimId!=='undefined' && sheetAnimId){ cancelAnimationFrame(sheetAnimId); sheetAnimId=null; }
+  if(typeof sheetRenderer!=='undefined' && sheetRenderer){ try{sheetRenderer.dispose();}catch(e){} sheetRenderer=null; }
   if(typeof _3dmolViewer!=='undefined' && _3dmolViewer){ try{_3dmolViewer.removeAllModels();}catch(e){} _3dmolViewer=null; }
   if(typeof _nglStage!=='undefined' && _nglStage){ try{_nglStage.dispose();}catch(e){} _nglStage=null; }
+  try{ osdDestroy(); }catch(e){}
   c.setAttribute('data-mode','bioslides');
   c.style.cssText='position:relative;overflow:hidden;background:#0a0f14;';
   var _tabs = (typeof _paVisualTabs==='function') ? _paVisualTabs(m) : [];
-  var _th   = 0;
 
-  var attribution =
-      '<div style="position:absolute;left:0;right:0;bottom:0;padding:6px 10px;'
-    + 'background:rgba(8,12,20,.92);border-top:1px solid rgba(255,255,255,.12);'
-    + 'font-size:9.5px;line-height:1.45;color:rgba(255,255,255,.6)">'
-    + '🔬 <strong style="color:rgba(255,255,255,.85)">'+escHtml(slide.label)+'</strong><br>'
-    + 'Michael Kloster, UDE BioSLiDES, University of Duisburg-Essen — '
+  var ATTR = 'Michael Kloster, UDE BioSLiDES, University of Duisburg-Essen — '
     + '<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener" '
-    + 'style="color:#7ec8e3">CC BY-SA 4.0</a> · '
-    + '<a href="'+escHtml(slide.url)+'" target="_blank" rel="noopener" style="color:#7ec8e3">'
-    + 'ouvrir la lame ↗</a></div>';
+    + 'style="color:#7ec8e3">CC BY-SA 4.0</a>';
 
-  if(slide.id){
-    c.innerHTML =
-        '<iframe src="'+escHtml(slide.url)+'" title="'+escHtml(slide.label)+'" '
-      + 'style="width:100%;height:calc(100% - 42px);border:none;display:block" '
-      + 'loading="lazy" referrerpolicy="no-referrer"></iframe>' + attribution;
-  }else{
-    /* Lame non identifiée précisément : on renvoie vers la collection filtrée
-       plutôt que d'afficher une lame potentiellement fausse. */
-    c.innerHTML =
-        '<div style="height:calc(100% - 42px);display:flex;flex-direction:column;'
-      + 'align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center">'
-      + '<div style="font-size:34px;opacity:.5">🔬</div>'
-      + '<div style="color:rgba(255,255,255,.8);font-size:13px;font-weight:600">'+escHtml(slide.label)+'</div>'
-      + '<div style="color:rgba(255,255,255,.45);font-size:11px;line-height:1.6;max-width:290px">'
-      + 'Lame disponible dans la collection UDE BioSLiDES.'
-      + (slide.species ? '<br>Filtrer sur l\u2019espèce <strong style="color:rgba(255,255,255,.7)">'
-                         + escHtml(slide.species) + '</strong> (le filtre est côté page).' : '')
-      + '</div>'
-      + '<a href="'+escHtml(slide.url)+'" target="_blank" rel="noopener" '
-      + 'style="border:1px solid rgba(126,200,227,.4);border-radius:6px;padding:7px 16px;'
-      + 'font-size:11.5px;color:#7ec8e3;text-decoration:none">Ouvrir la collection ↗</a>'
-      + '</div>' + attribution;
+  function legend(){
+    var l=document.createElement('div');
+    l.className='osd-legend';
+    l.innerHTML='<div class="osd-legend-main">🔬 '+escHtml(slide.label||'')+'</div>'
+      + '<div class="osd-note" style="font-size:9.5px;opacity:.72">'+ATTR
+      + ' · <a href="'+escHtml(slide.url)+'" target="_blank" rel="noopener" style="color:#7ec8e3">'
+      + 'fiche de la lame ↗</a></div>';
+    return l;
   }
-  if(_tabs.length>1){
-    _th = _paViewerTabs(m,_tabs,'lame');
-    var first=c.firstElementChild;
-    if(first && first.classList && !first.classList.contains('pa-vtabs'))
-      first.style.marginTop=_th+'px';
+  function tabs(active){
+    if(_tabs.length>1){ try{ _paViewerTabs(m,_tabs,active||'lame'); }catch(e){} }
   }
+
+  /* Repli : le viewer officiel en iframe. Utilisé si la pyramide DZI n'est pas
+     joignable (chemin inconnu, CORS) — on ne laisse jamais l'utilisateur devant
+     un viewer vide. */
+  function fallbackIframe(msg){
+    while(c.firstChild) c.removeChild(c.firstChild);
+    c.innerHTML =
+        '<iframe src="'+escHtml(slide.url)+'" title="'+escHtml(slide.label||'Lame')+'" '
+      + 'style="width:100%;height:calc(100% - 46px);border:none;display:block;margin-top:34px" '
+      + 'loading="lazy" referrerpolicy="no-referrer"></iframe>'
+      + '<div style="position:absolute;left:0;right:0;bottom:0;padding:6px 10px;'
+      + 'background:rgba(8,12,20,.92);border-top:1px solid rgba(255,255,255,.12);'
+      + 'font-size:9.5px;line-height:1.45;color:rgba(255,255,255,.6)">'
+      + '🔬 <strong style="color:rgba(255,255,255,.85)">'+escHtml(slide.label||'')+'</strong><br>'
+      + ATTR + '</div>';
+    tabs();
+  }
+
+  if(!slide.dzi){ fallbackIframe(); return; }
+
+  var vp=document.createElement('div');
+  vp.id='osd-viewport';
+  vp.style.cssText='position:absolute;inset:0;width:100%;height:100%;background:#0b0e14';
+  c.appendChild(vp);
+  c.appendChild(legend());
+  var load=document.createElement('div');
+  load.className='osd-loading';
+  load.innerHTML='<div class="spinner"></div><div class="osd-loading-lbl">Chargement de la lame…</div>';
+  c.appendChild(load);
+  tabs();
+
+  _loadOSD(function(err){
+    if(err || typeof OpenSeadragon==='undefined'){ fallbackIframe(); return; }
+    var failed=false;
+    try{
+      _osdViewer = OpenSeadragon({
+        element: vp,
+        prefixUrl: 'vendor/openseadragon/images/',
+        tileSources: slide.dzi,
+        crossOriginPolicy: 'Anonymous',
+        showNavigator: true,
+        navigatorPosition: 'BOTTOM_RIGHT',
+        maxZoomPixelRatio: 2.5,
+        visibilityRatio: 0.6,
+        constrainDuringPan: true,
+        gestureSettingsTouch: { pinchToZoom:true, flickEnabled:true },
+        springStiffness: 8
+      });
+      window._osdViewer=_osdViewer;
+      _osdViewer.addHandler('open', function(){ if(load.parentNode) load.remove(); });
+      /* Chemin DZI injoignable → on bascule sur le viewer officiel plutôt que
+         de laisser un cadre noir. */
+      _osdViewer.addHandler('open-failed', function(){
+        if(failed) return; failed=true;
+        try{ osdDestroy(); }catch(e){}
+        fallbackIframe();
+      });
+    }catch(e){ fallbackIframe(); }
+  });
 };
 
 function resolveHistoSlide(m){
@@ -12865,6 +12920,13 @@ function _renderOrganiteGLB(m){
       +'font-family:inherit;backdrop-filter:blur(4px);')+v3dToolsPanelHtml('three');
     container.appendChild(_tb);
   }
+  /* Onglets : le viewer 3D n'en posait aucun, donc aucune fiche pourvue d'un
+     .glb ne pouvait atteindre sa lame ni ses planches. Le modèle 3D reste la
+     vue par défaut, les autres sources sont proposées à côté. */
+  try{
+    var _t3 = (typeof _paVisualTabs==='function') ? _paVisualTabs(m) : [];
+    if(_t3.length>1) _paViewerTabs(m,_t3,'3d');
+  }catch(_e){}
   sheetScene=new THREE.Scene();sheetScene.background=new THREE.Color(0xf0f0ee);
   sheetCamera=new THREE.PerspectiveCamera(45,container.clientWidth/container.clientHeight,0.01,1000);
   makeLights(sheetScene);

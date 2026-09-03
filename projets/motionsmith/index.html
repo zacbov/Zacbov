@@ -241,6 +241,23 @@ input[type=range]::-moz-range-thumb{width:11px;height:11px;border:none;border-ra
 .sw .strip i{flex:1}
 .sw b{display:block;padding:5px 7px;font-size:10px;font-weight:500;color:var(--text-dim)}
 .pairs{display:grid;gap:7px;max-height:44vh;overflow-y:auto;padding-right:4px}
+.tplgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  max-height:46vh;overflow-y:auto;padding-right:4px}
+.tplcard{border:1px solid var(--line);border-radius:7px;overflow:hidden;cursor:pointer;
+  background:var(--surface);transition:.12s;text-align:left;padding:0;display:block}
+.tplcard:hover{border-color:var(--amber);transform:translateY(-2px)}
+.tplcard canvas{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;
+  background:#0a0d12;border-bottom:1px solid var(--line)}
+.tplcard .meta{padding:7px 9px 8px}
+.tplcard .nm{font-size:11.5px;color:var(--text);font-weight:550;line-height:1.25}
+.tplcard .ds{font-size:9.5px;color:var(--text-faint);line-height:1.4;margin-top:3px}
+.tplcard .strip{display:flex;height:5px;border-radius:3px;overflow:hidden;margin-top:7px}
+.tplcard .strip i{flex:1}
+.tplcard .fnt{font-size:9px;color:var(--text-dim);margin-top:5px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tplbadge{display:inline-block;font-size:8px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--text-faint);border:1px solid var(--line);border-radius:3px;
+  padding:1px 5px;margin-bottom:5px}
 .swatches{max-height:44vh;overflow-y:auto;padding-right:4px}
 #pairFilter{margin-bottom:9px}
 .pr{border:1px solid var(--line);border-radius:6px;padding:9px 11px;cursor:pointer;
@@ -848,9 +865,9 @@ function dotPattern(ctx, color, cell){
 const SCRAMBLE = "▓▒░#@%&$*?!/\\|<>=+ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789€£☰";
 
 const LOOKS = {
-  none: { label: "Aucun" },
+  none: { types: ["text","shape","button","image"], label: "Aucun" },
 
-  aurora: { label: "Borealis — dégradé aurore", c2: true, c3: true,
+  aurora: { types: ["text"], label: "Borealis — dégradé aurore", c2: true, c3: true,
     paint(ctx, L, t, w, h, base, ox){
       ox = ox || 0;
       const k = cyc(L, t, 7);
@@ -866,7 +883,7 @@ const LOOKS = {
       return g;
     } },
 
-  chrome: { label: "Chromia — métal brossé",
+  chrome: { types: ["text"], label: "Chromia — métal brossé",
     paint(ctx, L, t, w, h, base, ox){
       ox = ox || 0;
       const k = cyc(L, t, 2.8);
@@ -883,7 +900,7 @@ const LOOKS = {
       return g;
     } },
 
-  foil: { label: "Gold-Foil — feuille d'or",
+  foil: { types: ["text"], label: "Gold-Foil — feuille d'or",
     paint(ctx, L, t, w, h, base, ox){
       ox = ox || 0;
       const k = Math.sin(cyc(L, t, 3.1) * Math.PI * 2) * 0.5 + 0.5;
@@ -896,7 +913,7 @@ const LOOKS = {
     },
     stack(L, t){ return [{ dx: 0, dy: 1, color: "rgba(255,244,184,0.45)" }]; } },
 
-  neon: { label: "Neon-Haus — tube instable", c2: true,
+  neon: { types: ["text"], label: "Neon-Haus — tube instable", c2: true,
     glow(L, t){
       const k = cyc(L, t, 3.2);
       let on = 1;
@@ -912,7 +929,7 @@ const LOOKS = {
       return { alpha: a };
     } },
 
-  glitchcore: { label: "Glitchcore — canaux décalés", c2: true, c3: true,
+  glitchcore: { types: ["text"], label: "Glitchcore — canaux décalés", c2: true, c3: true,
     dual(L, t){
       const k = cyc(L, t, 2.6);
       const step = Math.floor(k * 100);
@@ -927,7 +944,7 @@ const LOOKS = {
       return out;
     } },
 
-  hologram: { label: "Holograph — projection", c2: true, c3: true,
+  hologram: { types: ["text","shape","button","image"], label: "Holograph — projection", c2: true, c3: true,
     block(L, t){
       const k = cyc(L, t, 3.8);
       const s = Math.sin(k * Math.PI * 2);
@@ -944,7 +961,7 @@ const LOOKS = {
     },
     post(ctx, L, t, b){ scanlines(ctx, b, 4, 0.30, cyc(L, t, 1.2) * 12); } },
 
-  crt: { label: "Phosphor — écran cathodique",
+  crt: { types: ["text"], label: "Phosphor — écran cathodique",
     unit(L, t){
       const k = cyc(L, t, 3.4);
       let a = 1;
@@ -962,7 +979,7 @@ const LOOKS = {
       scanlines(ctx, b, 4, 0.38, cyc(L, t, 6) * 48);
     } },
 
-  led: { label: "LED-Board — matrice de diodes", c2: true,
+  led: { types: ["text"], label: "LED-Board — matrice de diodes", c2: true,
     paint(ctx, L, t, w, h, base, ox){
       const cell = Math.max(3, (L.cell || 4.5));
       const pat = dotPattern(ctx, L.c2, cell);
@@ -984,13 +1001,13 @@ const LOOKS = {
       return g;
     } },
 
-  wireframe: { label: "Wireframe — contour pointillé", c3: true,
+  wireframe: { types: ["text"], label: "Wireframe — contour pointillé", c3: true,
     stroke(L, t){
       return { color: L.c3, width: Math.max(0.6, 1.2 * (L.amount || 1)),
                dash: [34, 66], offset: -cyc(L, t, 3.2) * 100, fillAlpha: 0.10 };
     } },
 
-  extrude: { label: "Deep-Type — lettres extrudées", c2: true,
+  extrude: { types: ["text","shape"], label: "Deep-Type — lettres extrudées", c2: true,
     block(L, t){
       const k = Math.sin(cyc(L, t, 3) * Math.PI * 2);
       return { rot: k * 3.5, dy: -k * 3 };
@@ -1003,7 +1020,7 @@ const LOOKS = {
       return out;
     } },
 
-  sundial: { label: "Sundial — ombre tournante", c2: true,
+  sundial: { types: ["text","shape"], label: "Sundial — ombre tournante", c2: true,
     stack(L, t){
       const a = cyc(L, t, 5) * Math.PI * 2;
       const A = 4 * (L.amount || 1);
@@ -1012,7 +1029,7 @@ const LOOKS = {
         color: mixHex(L.c2, "#000000", (i-1) * 0.32) }));
     } },
 
-  eclipse: { label: "Eclipse — passage d'ombre", c2: true,
+  eclipse: { types: ["text","shape","button","image"], label: "Eclipse — passage d'ombre", c2: true,
     glow(L, t){ return { color: L.c2, k: 0.7 * (L.amount || 1) }; },
     unit(L, t){
       const k = cyc(L, t, 5);
@@ -1033,7 +1050,7 @@ const LOOKS = {
       ctx.restore();
     } },
 
-  negative: { label: "Negative — barre d'inversion",
+  negative: { types: ["text","shape","button","image"], label: "Negative — barre d'inversion",
     post(ctx, L, t, b){
       const k = cyc(L, t, 4.8);
       const tri = k < 0.5 ? k*2 : 2 - k*2;      // aller-retour, comme alternate
@@ -1046,17 +1063,17 @@ const LOOKS = {
       ctx.restore();
     } },
 
-  mirror: { label: "Still-Water — reflet", mirror: true,
+  mirror: { types: ["text"], label: "Still-Water — reflet", mirror: true,
     block(L, t){ return { dy: -Math.sin(cyc(L, t, 3) * Math.PI * 2) * 6 * (L.amount || 1) }; } },
 
-  lensDrift: { label: "Lens-Drift — mise au point",
+  lensDrift: { types: ["text"], label: "Lens-Drift — mise au point",
     unit(L, t, i){
       const k = cyc(L, t, 2.6) - i * 0.07;
       const s = Math.sin(((k % 1) + 1) % 1 * Math.PI * 2) * 0.5 + 0.5;
       return { blur: s * 7 * (L.amount || 1), alpha: lerp(1, 0.35, s) };
     } },
 
-  bisect: { label: "Bisect — tranche décalée", c2: true, c3: true,
+  bisect: { types: ["text"], label: "Bisect — tranche décalée", c2: true, c3: true,
     hideBase: true,
     dual(L, t){
       const k = cyc(L, t, 3);
@@ -1068,7 +1085,7 @@ const LOOKS = {
               { clip: "bottom", dx: -e * A, dy: 0, color: e > 0.02 ? L.c3 : null, alpha: 1 }];
     } },
 
-  splitFlap: { label: "Split-Flap — palettes d'aéroport", plate: true,
+  splitFlap: { types: ["text"], label: "Split-Flap — palettes d'aéroport", plate: true,
     unit(L, t, i){
       const k = ((cyc(L, t, 3.2) - i * 0.037) % 1 + 1) % 1;
       let sy = 1;
@@ -1079,7 +1096,7 @@ const LOOKS = {
       return { sy };
     } },
 
-  cipher: { label: "Cipher — décodage", c3: true,
+  cipher: { types: ["text"], label: "Cipher — décodage", c3: true,
     unit(L, t, i, n){
       const k = cyc(L, t, 4);
       // Chaque glyphe se fige à son tour, puis tout se re-brouille à la fin.
@@ -1105,8 +1122,49 @@ function scanlines(ctx, b, period, alpha, offset){
   ctx.restore();
 }
 
+/* Un look ne s'applique pas partout : ceux qui peignent les glyphes ou les
+   déplacent un par un n'ont aucun effet sur une forme, une image ou un bouton.
+   Plutôt que de les proposer en vain, on les filtre. */
+function looksFor(type){
+  return Object.entries(LOOKS).filter(([k, v]) =>
+    !v.types || v.types.includes(type));
+}
+
 const LOOK_DEFAULT = { type:"none", speed:1, amount:1, phase:0,
                        c2:"#FF4FD8", c3:"#4FF8FF", cell:4.5 };
+
+/* Ces animations reposent sur l'enchaînement de plusieurs glyphes : sur un
+   calque d'une seule pièce elles dégénèrent en un simple fondu. On ne les
+   propose donc que pour du texte. */
+const PRESETS_TEXT_ONLY = new Set([
+  "typewriter","wave","cascade","ripple","pendulum","scanIn","counter","scramble"
+]);
+/* Regroupement par famille, pour un menu lisible plutôt qu'une liste de 46. */
+const PRESET_GROUPS = [
+  ["Sobres",       ["none","fade","wipeUp","wipeDown","maskUp","maskSlide"]],
+  ["Glissements",  ["slideUp","slideDown","slideLeft","slideRight","dropIn","arcIn",
+                    "slideBlur","smear","stretchIn","rollUp","cascade","ripple"]],
+  ["Échelle",      ["scaleUp","scaleDown","zoomBlur","popRotate","squash","overshoot",
+                    "slam","breathe","perspective","unfold","flipX","flipY"]],
+  ["Rotation",     ["rotateIn","spinIn","swing","pendulum","skewIn"]],
+  ["Glitch",       ["glitch","glitchSlide","jitter","scramble"]],
+  ["Lumière",      ["blurIn","neonOn","bloomIn","scanIn"]],
+  ["Typographie",  ["typewriter","counter"]]
+];
+function presetsFor(type){
+  const isText = type === "text";
+  const seen = new Set();
+  const groups = PRESET_GROUPS.map(([name, keys]) => {
+    const ks = keys.filter(k => PRESETS[k] && (isText || !PRESETS_TEXT_ONLY.has(k)));
+    ks.forEach(k => seen.add(k));
+    return [name, ks];
+  }).filter(g => g[1].length);
+  // filet de sécurité : tout preset oublié d'un groupe reste accessible
+  const rest = Object.keys(PRESETS).filter(k =>
+    !seen.has(k) && (isText || !PRESETS_TEXT_ONLY.has(k)));
+  if (rest.length) groups.push(["Autres", rest]);
+  return groups;
+}
 
 /* Applique le preset d'entrée puis, éventuellement, celui de sortie. */
 function unitDelta(anim, index, count, tLocal, layerDur){
@@ -1740,6 +1798,33 @@ function drawButtonLayer(ctx, l, t){
     else ctx.rect(-w/2, -h/2, w, h);
   };
 
+  // Verre dépoli : le panneau se glisse sous le bouton, avant tout le reste.
+  const st = l.style || (l.style = {});
+  if (st.glass > 0.001) drawGlassPanel(ctx, st, -w/2, -h/2, w, h);
+
+  /* Néon : halo sur le contour et le libellé. C'est le rendu le plus courant
+     des bibliothèques de boutons CSS, il manquait ici. */
+  if (st.neon > 0.001){
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const radii = [30, 16, 7], alphas = [0.28, 0.40, 0.52];
+    for (let i = 0; i < 3; i++){
+      ctx.shadowColor = st.neonColor;
+      ctx.shadowBlur = radii[i] * clamp(st.neon, 0, 2);
+      ctx.globalAlpha = alphas[i] * clamp(st.neon, 0, 1.4);
+      path();
+      ctx.lineWidth = Math.max(1, bw);
+      ctx.strokeStyle = st.neonColor;
+      ctx.stroke();
+      ctx.font = fontString(l, size);
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "center";
+      ctx.fillStyle = st.neonColor;
+      ctx.fillText(label, 0, 1);
+    }
+    ctx.restore();
+  }
+
   // ombre portée dure, dessinée en premier
   if (lift.hard){
     ctx.save();
@@ -1922,6 +2007,31 @@ function makeImageLayer(src, natW, natH, name){
   };
 }
 
+/* Néon sur image : le halo est projeté depuis la silhouette, il n'a donc
+   d'effet que sur un PNG ou un SVG à fond transparent. L'inspecteur le précise.
+   Dessiné avant l'image pour que celle-ci reste nette au-dessus du halo. */
+function drawImageNeon(ctx, l, st, img, w, h){
+  if (!img || !(st.neon > 0.001)) return;
+  const draw = () => {
+    if (l.fit === "stretch") ctx.drawImage(img, -w/2, -h/2, w, h);
+    else {
+      const kr = l.fit === "cover" ? Math.max(w / l.natW, h / l.natH)
+                                   : Math.min(w / l.natW, h / l.natH);
+      ctx.drawImage(img, -l.natW*kr/2, -l.natH*kr/2, l.natW*kr, l.natH*kr);
+    }
+  };
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const radii = [30, 16, 7], alphas = [0.26, 0.38, 0.5];
+  for (let i = 0; i < 3; i++){
+    ctx.shadowColor = st.neonColor;
+    ctx.shadowBlur = radii[i] * clamp(st.neon, 0, 2);
+    ctx.globalAlpha = alphas[i] * clamp(st.neon, 0, 1.4);
+    draw();
+  }
+  ctx.restore();
+}
+
 function drawImageLayer(ctx, l, t){
   const img = ASSETS[l.id];
   const opacity = evalProp(l.opacity, t) / 100;
@@ -1965,6 +2075,9 @@ function drawImageLayer(ctx, l, t){
     ctx.clip();
   }
 
+  const st = l.style || (l.style = {});
+  if (st.glass > 0.001) drawGlassPanel(ctx, st, -w/2, -h/2, w, h);
+
   if (!img){
     // Cadre de substitution : mieux qu'un calque invisible sans explication.
     ctx.strokeStyle = "rgba(240,168,48,0.55)";
@@ -1975,6 +2088,8 @@ function drawImageLayer(ctx, l, t){
     ctx.restore();
     return;
   }
+
+  drawImageNeon(ctx, l, st, img, w, h);
 
   if (l.fit === "cover"){
     const kr = Math.max(w / l.natW, h / l.natH);
@@ -2002,6 +2117,25 @@ function drawImageLayer(ctx, l, t){
   if (K.post) K.post(ctx, L, t, { x: -w/2, y: -h/2, w, h });
   ctx.restore();
 }
+
+/* =========================================================================
+   CAPACITÉS PAR TYPE DE CALQUE
+   Chaque type ne lit qu'une partie des réglages. Cette table est la source
+   unique : le rendu s'y conforme et l'inspecteur n'affiche que ce qui agit
+   réellement. Sans elle, on proposait un dégradé sur une image ou un verre
+   dépoli sur un bouton — des curseurs qui ne faisaient rien.
+   ========================================================================= */
+const CAPS = {
+  text:   { gradient:true,  neon:true, glass:true, rgb:true,  dash:false,
+            stroke:true,  shadow:true,  path:true,  units:true },
+  shape:  { gradient:true,  neon:true, glass:true, rgb:true,  dash:true,
+            stroke:true,  shadow:false, path:false, units:false },
+  button: { gradient:false, neon:true, glass:true, rgb:false, dash:false,
+            stroke:false, shadow:false, path:false, units:false },
+  image:  { gradient:false, neon:true, glass:true, rgb:false, dash:false,
+            stroke:false, shadow:false, path:false, units:false }
+};
+const caps = l => CAPS[l.type] || CAPS.shape;
 
 /* Modes de fusion, empruntés à la logique des calques d'un logiciel de dessin.
    Canvas 2D les gère nativement via globalCompositeOperation. */
@@ -3102,8 +3236,12 @@ function renderInspector(){
       ${numField(l, "tintAmount", "Dose %", { min: 0, max: 100 })}`;
   }
 
-  app += `<div class="subhead">Style</div>
-    <div class="field"><label>Remplissage</label>
+  const C = caps(l);
+
+  app += `<div class="subhead">Style</div>`;
+
+  if (C.gradient){
+    app += `<div class="field"><label>Remplissage</label>
       <select id="sMode">
         <option value="solid" ${st.mode==="solid"?"selected":""}>Uni</option>
         <option value="gradient" ${st.mode==="gradient"?"selected":""}>Dégradé</option>
@@ -3115,15 +3253,24 @@ function renderInspector(){
         <div class="rangewrap">
           <input type="range" id="sGradAngle" min="0" max="360" value="${st.gradAngle}">
           <input type="number" id="sGradAngleN" value="${st.gradAngle}">
-        </div><span></span></div>` : ""}
-    <div class="field"><label>Néon</label>
+        </div><span></span></div>` : ""}`;
+  }
+
+  if (C.neon){
+    app += `<div class="field"><label>Néon</label>
       <div class="rangewrap">
         <input type="range" id="sNeon" min="0" max="1" step="0.01" value="${st.neon}">
         <input type="number" id="sNeonN" value="${st.neon}" step="0.05">
       </div><span></span></div>
     ${st.neon > 0 ? `<div class="field"><label>Couleur néon</label>
-        <input type="color" id="sNeonColor" value="${st.neonColor}"><span></span></div>` : ""}
-    <div class="field"><label>Verre dépoli</label>
+        <input type="color" id="sNeonColor" value="${st.neonColor}"><span></span></div>
+      ${l.type === "image" ? `<p class="hint" style="padding:0 11px 6px">Le halo est
+         projeté depuis la silhouette : il n'a d'effet que sur une image à fond
+         transparent (PNG ou SVG).</p>` : ""}` : ""}`;
+  }
+
+  if (C.glass){
+    app += `<div class="field"><label>Verre dépoli</label>
       <div class="rangewrap">
         <input type="range" id="sGlass" min="0" max="1" step="0.01" value="${st.glass}">
         <input type="number" id="sGlassN" value="${st.glass}" step="0.05">
@@ -3134,25 +3281,37 @@ function renderInspector(){
           <input type="range" id="sGlassBlur" min="0" max="60" step="1" value="${st.glassBlur}">
           <input type="number" id="sGlassBlurN" value="${st.glassBlur}">
         </div><span></span></div>
-      <div class="field"><label>Arrondi</label>
-        <input type="number" id="sGlassRadius" value="${st.glassRadius}" min="0"><span></span></div>
+      ${l.type === "text" ? `
+        <div class="field"><label>Arrondi</label>
+          <input type="number" id="sGlassRadius" value="${st.glassRadius}" min="0"><span></span></div>
+        <div class="field"><label>Marge</label>
+          <input type="number" id="sGlassPad" value="${st.glassPad}" min="0" step="0.05"><span></span></div>` : ""}
       <div class="field"><label>Bordure px</label>
-        <input type="number" id="sGlassBorder" value="${st.glassBorder}" min="0" step="0.5"><span></span></div>
-      ${l.type==="text" ? `<div class="field"><label>Marge</label>
-        <input type="number" id="sGlassPad" value="${st.glassPad}" min="0" step="0.05"><span></span></div>` : ""}` : ""}
-    <div class="field"><label>Écart RVB</label>
+        <input type="number" id="sGlassBorder" value="${st.glassBorder}" min="0" step="0.5"><span></span></div>` : ""}`;
+  }
+
+  if (C.rgb){
+    app += `<div class="field"><label>Écart RVB</label>
       <div class="rangewrap">
         <input type="range" id="sRgb" min="0" max="24" step="0.5" value="${st.rgbSplit}">
         <input type="number" id="sRgbN" value="${st.rgbSplit}" step="0.5">
-      </div><span></span></div>
-    ${l.type==="shape" ? `<div class="field"><label>Pointillés</label>
-      <input type="number" id="sDash" value="${st.dash}" min="0"><span></span></div>` : ""}
+      </div><span></span></div>`;
+  }
 
-    <div class="subhead">Effet en boucle</div>
+  if (C.dash){
+    app += `<div class="field"><label>Pointillés</label>
+      <input type="number" id="sDash" value="${st.dash}" min="0"><span></span></div>`;
+  }
+
+  const availableLooks = looksFor(l.type);
+  app += `<div class="subhead">Effet en boucle</div>
     <div class="field"><label>Effet</label>
-      <select id="kType">${Object.entries(LOOKS).map(([k,v]) =>
+      <select id="kType">${availableLooks.map(([k,v]) =>
         `<option value="${k}" ${LK.type===k?"selected":""}>${v.label}</option>`).join("")}</select>
       <span></span></div>
+    ${l.type !== "text" ? `<p class="hint" style="padding:0 11px 6px">${availableLooks.length}
+       effets sur ${Object.keys(LOOKS).length} : les autres agissent lettre par lettre
+       et n'ont de sens que sur du texte.</p>` : ""}
     ${LK.type !== "none" ? `
       <div class="field"><label>Vitesse</label>
         <div class="rangewrap">
@@ -3176,16 +3335,19 @@ function renderInspector(){
          une police à chasse fixe : avec une police proportionnelle, la largeur
          des glyphes de substitution fait bouger le mot.</p>` : ""}` : ""}`;
 
-  const appActive = st.mode === "gradient" || st.neon > 0 || st.glass > 0
-                 || st.rgbSplit > 0 || LK.type !== "none";
+  const appActive = (C.gradient && st.mode === "gradient") || (C.neon && st.neon > 0)
+                 || (C.glass && st.glass > 0) || (C.rgb && st.rgbSplit > 0)
+                 || (C.dash && st.dash > 0) || LK.type !== "none";
   h += section("apparence", "Apparence", app, { open: true, active: appActive });
 
   /* ========== 4. MOUVEMENT — entrée et sortie réunies ========== */
   const a = l.anim;
   let mvt = `<div class="subhead">Entrée</div>
     <div class="field"><label>Effet</label>
-      <select id="aPreset">${Object.entries(PRESETS).map(([k,v]) =>
-        `<option value="${k}" ${a.preset===k?"selected":""}>${v.label}</option>`).join("")}</select>
+      <select id="aPreset">${presetsFor(l.type).map(([g,keys]) =>
+        `<optgroup label="${g}">` + keys.map(k =>
+          `<option value="${k}" ${a.preset===k?"selected":""}>${PRESETS[k].label}</option>`
+        ).join("") + `</optgroup>`).join("")}</select>
       <span></span></div>
     <div class="field"><label>Accélération</label>
       <select id="aEase">${Object.keys(EASINGS).map(k =>
@@ -3201,7 +3363,9 @@ function renderInspector(){
     <div class="field"><label>Décalage s</label>
       <input type="number" id="aStagger" value="${a.stagger}" step="0.01" min="0"><span></span></div>`;
   }
-  mvt += `<div class="field"><label>Durée s</label>
+  mvt += `${l.type !== "text" ? `<p class="hint" style="padding:0 11px 6px">Les animations
+       qui enchaînent les lettres une à une ne sont proposées que sur du texte.</p>` : ""}
+    <div class="field"><label>Durée s</label>
       <input type="number" id="aDur" value="${a.dur}" step="0.05" min="0.05"><span></span></div>
     <div class="field"><label>Retard s</label>
       <input type="number" id="aDelay" value="${a.delay}" step="0.05" min="0"><span></span></div>
@@ -3213,8 +3377,10 @@ function renderInspector(){
 
     <div class="subhead">Sortie</div>
     <div class="field"><label>Effet</label>
-      <select id="aOutPreset">${Object.entries(PRESETS).map(([k,v]) =>
-        `<option value="${k}" ${a.outPreset===k?"selected":""}>${v.label}</option>`).join("")}</select>
+      <select id="aOutPreset">${presetsFor(l.type).map(([g,keys]) =>
+        `<optgroup label="${g}">` + keys.map(k =>
+          `<option value="${k}" ${a.outPreset===k?"selected":""}>${PRESETS[k].label}</option>`
+        ).join("") + `</optgroup>`).join("")}</select>
       <span></span></div>
     <div class="field"><label>Accélération</label>
       <select id="aOutEase">${Object.keys(EASINGS).map(k =>
@@ -4294,13 +4460,55 @@ const aiCfg = {
   base: localStorage.getItem("ms_ai_base") || AI_DEFAULT_BASE,
   route: localStorage.getItem("ms_ai_route") || "",
   model: localStorage.getItem("ms_ai_model") || AI_MODELS[0].id,
-  provider: localStorage.getItem("ms_ai_provider") || AI_MODELS[0].provider
+  provider: localStorage.getItem("ms_ai_provider") || AI_MODELS[0].provider,
+  secret: localStorage.getItem("ms_ai_secret") || "",
+  auth: localStorage.getItem("ms_ai_auth") || "auto"
 };
 function aiSave(){
   localStorage.setItem("ms_ai_base", aiCfg.base);
   localStorage.setItem("ms_ai_route", aiCfg.route);
   localStorage.setItem("ms_ai_model", aiCfg.model);
   localStorage.setItem("ms_ai_provider", aiCfg.provider);
+  localStorage.setItem("ms_ai_secret", aiCfg.secret);
+  localStorage.setItem("ms_ai_auth", aiCfg.auth);
+}
+
+/* Le worker attend un APP_SECRET, mais sa convention n'est pas connue d'ici.
+   En mode « auto » on présente le secret sous les quatre formes courantes dans
+   la même requête : un serveur ignore les en-têtes qu'il ne connaît pas, donc
+   une seule tentative suffit au lieu d'en multiplier huit par convention. */
+const AUTH_STYLES = {
+  auto:     "Auto — toutes les formes à la fois",
+  bearer:   "En-tête Authorization: Bearer",
+  appsec:   "En-tête X-App-Secret",
+  apikey:   "En-tête X-Api-Key",
+  body:     "Champ dans le corps de la requête",
+  query:    "Paramètre d'URL ?secret="
+};
+
+function aiHeaders(){
+  const h = { "Content-Type": "application/json" };
+  const S = aiCfg.secret;
+  if (!S) return h;
+  const a = aiCfg.auth;
+  if (a === "auto" || a === "bearer") h["Authorization"] = "Bearer " + S;
+  if (a === "auto" || a === "appsec") h["X-App-Secret"]  = S;
+  if (a === "auto" || a === "apikey") h["X-Api-Key"]     = S;
+  return h;
+}
+function aiUrlWithAuth(url){
+  const S = aiCfg.secret;
+  if (!S) return url;
+  if (aiCfg.auth === "auto" || aiCfg.auth === "query")
+    return url + (url.includes("?") ? "&" : "?") + "secret=" + encodeURIComponent(S);
+  return url;
+}
+function aiAuthBody(body){
+  const S = aiCfg.secret;
+  if (!S) return body;
+  if (aiCfg.auth === "auto" || aiCfg.auth === "body")
+    return Object.assign({}, body, { secret: S, app_secret: S, APP_SECRET: S });
+  return body;
 }
 
 /* Formes de route candidates, dans l'ordre où on les essaie. */
@@ -4348,16 +4556,19 @@ function aiExtractText(data){
 async function aiTry(url, body, log){
   const t0 = performance.now();
   try {
-    const r = await fetch(url, {
+    const r = await fetch(aiUrlWithAuth(url), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
+      headers: aiHeaders(),
+      body: JSON.stringify(aiAuthBody(body))
     });
     const raw = await r.text();
     const ms = Math.round(performance.now() - t0);
     if (!r.ok){
-      log("✕ " + r.status + " " + url.replace(aiCfg.base, "") + " (" + ms + " ms) — "
-          + raw.slice(0, 120), "err");
+      const hint = (r.status === 401 || r.status === 403)
+        ? " — secret refusé ou absent"
+        : r.status === 404 ? " — route inexistante" : "";
+      log("✕ " + r.status + " " + url.replace(aiCfg.base, "") + " (" + ms + " ms)" + hint
+          + " — " + raw.slice(0, 140), "err");
       return null;
     }
     let data;
@@ -4388,7 +4599,9 @@ async function aiChat(messages, log, json){
     const t = await aiTry(url, body, log);
     if (t){ aiCfg.route = url; aiSave(); log("Route retenue : " + url, "ok"); return t; }
   }
-  throw new Error("aucune route n'a répondu — vérifie l'adresse du proxy");
+  if (!aiCfg.secret)
+    throw new Error("aucune route n'a répondu — le worker attend sans doute un APP_SECRET");
+  throw new Error("aucune route n'a répondu — vérifie le secret et l'adresse du proxy");
 }
 
 /* --------- génération de scène ---------
@@ -4527,7 +4740,17 @@ function openAI(){
           `<option value="${m.id}|${m.provider}" ${aiCfg.model===m.id?"selected":""}>${m.label}</option>`).join("")}</select></div>
       <div class="field wide" style="margin-top:8px"><label>Adresse du proxy</label>
         <input type="text" id="aiBase" value="${escapeHtml(aiCfg.base)}"></div>
-      <p class="hint">Les clés restent sur le proxy : cette page ne les voit jamais.
+      <div class="field wide" style="margin-top:8px"><label>Secret d'accès (APP_SECRET)</label>
+        <input type="password" id="aiSecret" value="${escapeHtml(aiCfg.secret)}"
+               placeholder="requis par ton worker" autocomplete="off"></div>
+      <div class="field wide" style="margin-top:8px"><label>Transmission du secret</label>
+        <select id="aiAuth">${Object.entries(AUTH_STYLES).map(([k,v]) =>
+          `<option value="${k}" ${aiCfg.auth===k?"selected":""}>${v}</option>`).join("")}</select></div>
+      <p class="hint">Le secret est conservé dans le stockage local de ce navigateur,
+         en clair. Sur un poste partagé, vide le champ après usage. En mode auto il
+         est envoyé sous quatre formes à la fois — un serveur ignore les en-têtes
+         qu'il ne connaît pas, donc une seule requête suffit à trouver la bonne.</p>
+      <p class="hint">Les clés des fournisseurs restent sur le proxy : cette page ne les voit jamais.
          La convention de route du worker n'étant pas connue d'avance, le premier
          appel essaie plusieurs formes courantes et retient celle qui répond.
          ${aiCfg.route ? "Route mémorisée : " + escapeHtml(aiCfg.route.replace(aiCfg.base,"")) : "Aucune route mémorisée pour l'instant."}</p>
@@ -4548,13 +4771,22 @@ function openAI(){
     aiCfg.model = id; aiCfg.provider = prov;
     const nb = $("#aiBase").value.trim();
     if (nb !== aiCfg.base){ aiCfg.base = nb; aiCfg.route = ""; }
+    const ns = $("#aiSecret").value;
+    const na = $("#aiAuth").value;
+    // Changer le secret ou son mode invalide la route mémorisée : elle avait
+    // pu être retenue dans des conditions d'authentification différentes.
+    if (ns !== aiCfg.secret || na !== aiCfg.auth) aiCfg.route = "";
+    aiCfg.secret = ns; aiCfg.auth = na;
     aiSave();
   };
 
   $("#aiProbe").onclick = async () => {
     syncCfg();
     $("#log").innerHTML = "";
-    log("Test avec " + aiCfg.provider + " / " + aiCfg.model + "…");
+    log("Test avec " + aiCfg.provider + " / " + aiCfg.model
+        + (aiCfg.secret ? " · secret " + aiCfg.auth : " · sans secret") + "…");
+    if (!aiCfg.secret) log("Aucun secret renseigné : si le worker en exige un, "
+                         + "toutes les routes répondront 401 ou 403.");
     try {
       const t = await aiChat([{ role: "user", content: "Réponds exactement : OK" }], log);
       log("Réponse : " + t.trim().slice(0, 80), "ok");
@@ -5047,6 +5279,90 @@ const TEMPLATES = [
   }
 ];
 
+/* Vignettes rendues par le moteur lui-même : on construit un document
+   temporaire à petite taille, on le dessine avec render2D, puis on restaure.
+   Ce qu'on voit dans la galerie est donc exactement ce que le modèle produit,
+   pas une illustration approchée. */
+function buildTemplateDoc(tpl, pal, pair, w, h){
+  const saved = doc;
+  const tmp = newDoc(w, h);
+  tmp.duration = saved.duration;
+  tmp.bg = pal.bg; tmp.bg2 = pal.c[2];
+  tmp.bgGrad = saved.bgGrad;
+  tmp.fx = Object.assign({}, FX_DEFAULT, tpl.fx || {});
+  doc = tmp;                                   // les constructeurs lisent doc
+  try {
+    tmp.layers = tpl.build(tmp, pal, pair) || [];
+    tmp.layers.forEach(l => { l.outPoint = tmp.duration; });
+    // application de l'accord typographique, sans passer par applyPair qui
+    // touche à l'historique et à l'interface
+    let first = true;
+    for (const l of tmp.layers){
+      if (l.type !== "text" && l.type !== "button") continue;
+      const spec = first ? pair.t : pair.s;
+      first = false;
+      l.font = spec[0]; l.weight = spec[1];
+      const size = evalProp(l.size, 0);
+      if (l.letterSpacing) l.letterSpacing = P(Math.round(size * spec[2] / 1000 * 100) / 100);
+    }
+  } finally {
+    doc = saved;
+  }
+  return tmp;
+}
+
+async function renderTemplateThumb(cv, tpl, pal, pair){
+  const W = cv.width, H = cv.height;
+  const tmp = buildTemplateDoc(tpl, pal, pair, W, H);
+  const savedDoc = doc, bw = buf.width, bh = buf.height;
+  try {
+    doc = tmp;
+    buf.width = W; buf.height = H;
+    // instant où les animations d'entrée sont retombées
+    render2D(Math.min(tmp.duration * 0.62, 2.4));
+    cv.getContext("2d").drawImage(buf, 0, 0);
+  } catch(e){
+    console.warn("Vignette impossible pour « " + tpl.name + " »", e);
+    const g = cv.getContext("2d");
+    g.fillStyle = pal.bg; g.fillRect(0, 0, W, H);
+    g.fillStyle = pal.c[1]; g.font = "12px sans-serif"; g.textAlign = "center";
+    g.fillText("aperçu indisponible", W/2, H/2);
+  } finally {
+    doc = savedDoc;
+    buf.width = bw; buf.height = bh;
+    renderFrame(time);                          // le buffer principal a été écrasé
+  }
+}
+
+/* Les polices arrivent en asynchrone : sans cette attente, toutes les vignettes
+   se dessineraient en police de repli et l'accord choisi serait invisible. */
+async function loadPairFonts(pair){
+  if (!document.fonts || !document.fonts.load) return;
+  await Promise.all([pair.t, pair.s].map(spec =>
+    document.fonts.load(spec[1] + " 64px " + JSON.stringify(spec[0])).catch(() => {})));
+}
+
+async function refreshTemplateThumbs(){
+  const pal  = PALETTES[+$("#tplPal").value]  || PALETTES[0];
+  const pair = FONT_PAIRS[+$("#tplPair").value] || FONT_PAIRS[0];
+  await loadPairFonts(pair);
+  const cards = $$("#tplGrid .tplcard");
+  for (const card of cards){
+    const tpl = TEMPLATES[+card.dataset.tpl];
+    const cv = card.querySelector("canvas");
+    if (cv) await renderTemplateThumb(cv, tpl, pal, pair);
+    const strip = card.querySelector(".strip");
+    if (strip) strip.innerHTML = `<i style="background:${pal.bg}"></i>`
+      + pal.c.map(c => `<i style="background:${c}"></i>`).join("")
+      + `<i style="background:${pal.a}"></i>`;
+    const fnt = card.querySelector(".fnt");
+    if (fnt) fnt.innerHTML = `<span style="font-family:'${pair.t[0]}',sans-serif;
+      font-weight:${pair.t[1]}">${pair.t[0]}</span>
+      <span style="color:var(--text-faint)">+</span>
+      <span style="font-family:'${pair.s[0]}',sans-serif">${pair.s[0]}</span>`;
+  }
+}
+
 function applyTemplate(tpl, palIdx, pairIdx){
   pushUndo("Appliquer un modèle");
   const pal  = PALETTES[palIdx] || PALETTES[0];
@@ -5072,11 +5388,21 @@ function openTemplates(){
   togglePlay(false);
   const orient = doc.width > doc.height ? "landscape"
                : doc.width < doc.height ? "portrait" : "square";
+  const badge = t => t.ratio === "any" ? "tous formats"
+    : t.ratio === orient ? "adapté au format actuel"
+    : "pensé pour le " + ({landscape:"paysage",portrait:"vertical",square:"carré"}[t.ratio]);
+
+  // Les vignettes gardent les proportions de la composition courante.
+  const TW = 320;
+  const TH = Math.max(90, Math.round(TW * doc.height / doc.width));
+
+  $("#modalCard").style.width = "620px";
   $("#modalCard").innerHTML = `
     <h3>Modèles de composition</h3>
-    <p class="sub">Chaque modèle est proportionnel à la résolution courante
-       (${doc.width} × ${doc.height}) : il se remet à l'échelle tout seul.
-       Les calques existants seront remplacés.</p>
+    <p class="sub">Les aperçus sont rendus par le moteur, aux proportions de ta
+       composition (${doc.width} × ${doc.height}). Change la palette ou la
+       typographie pour les voir se mettre à jour. Les calques existants seront
+       remplacés.</p>
     <div class="body">
       <div class="pair" style="gap:8px">
         <div><label style="display:block;color:var(--text-dim);margin-bottom:4px">Palette</label>
@@ -5086,23 +5412,40 @@ function openTemplates(){
           <select id="tplPair">${FONT_PAIRS.map((p,i) =>
             `<option value="${i}">${p.name}</option>`).join("")}</select></div>
       </div>
-      <div class="pairs" style="margin-top:12px">
-        ${TEMPLATES.map((t,i) => `<button class="pr" data-tpl="${i}">
-            <span class="n">${t.ratio === "any" ? "tous formats"
-              : t.ratio === orient ? "adapté au format actuel" : "pensé pour le " +
-                ({landscape:"paysage",portrait:"vertical",square:"carré"}[t.ratio])}</span>
-            <span class="t" style="font-size:15px">${t.name}</span>
-            <span class="s">${t.desc}</span>
+      <div class="tplgrid" id="tplGrid" style="margin-top:12px">
+        ${TEMPLATES.map((t,i) => `<button class="tplcard" data-tpl="${i}">
+            <canvas width="${TW}" height="${TH}"></canvas>
+            <span class="meta">
+              <span class="tplbadge">${badge(t)}</span>
+              <span class="nm">${t.name}</span>
+              <span class="ds">${t.desc}</span>
+              <span class="strip"></span>
+              <span class="fnt"></span>
+            </span>
           </button>`).join("")}
       </div>
+      <p class="hint" id="tplStat">Génération des aperçus…</p>
     </div>
     <div class="foot"><button class="btn" id="tplClose">Fermer</button></div>`;
   $("#modal").classList.add("show");
-  $("#tplClose").onclick = () => $("#modal").classList.remove("show");
+  $("#tplClose").onclick = () => {
+    $("#modal").classList.remove("show");
+    $("#modalCard").style.width = "";
+  };
   $$("#modalCard [data-tpl]").forEach(b => b.onclick = () => {
     applyTemplate(TEMPLATES[+b.dataset.tpl], +$("#tplPal").value, +$("#tplPair").value);
     $("#modal").classList.remove("show");
+    $("#modalCard").style.width = "";
   });
+  const rerender = () => {
+    $("#tplStat").textContent = "Mise à jour des aperçus…";
+    refreshTemplateThumbs()
+      .then(() => { $("#tplStat").textContent = TEMPLATES.length + " modèles."; })
+      .catch(e => { $("#tplStat").textContent = "Aperçus partiels : " + e.message; });
+  };
+  $("#tplPal").addEventListener("change", rerender);
+  $("#tplPair").addEventListener("change", rerender);
+  rerender();
 }
 
 /* ---------- modale d'export ---------- */
@@ -5441,6 +5784,9 @@ function migrate(d){
   for (const l of d.layers || []){
     l.style = Object.assign({}, def, l.style || {});
     l.look  = Object.assign({}, LOOK_DEFAULT, l.look || {});
+    // Un projet ancien peut porter un look devenu hors de portée pour ce type.
+    const LD = LOOKS[l.look.type];
+    if (LD && LD.types && !LD.types.includes(l.type)) l.look.type = "none";
     if (!l.blend) l.blend = "source-over";
     if (l.type === "text")
       l.path = Object.assign({ type:"none", radius:260, amp:30, freq:1, flip:false }, l.path || {});

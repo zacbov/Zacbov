@@ -114,6 +114,10 @@
    "widget_def": {
     "html": "<div id=\"pa-w\"></div>",
     "init": "var root=container;\nroot.innerHTML='<div style=\"background:#0d0f14;font-family:system-ui,sans-serif;padding:12px;color:#e5e7eb;display:flex;flex-direction:column;gap:10px\">'\n+'<div style=\"font-weight:700;font-size:13px\">⚠️ Nomogramme paracétamol (Rumack-Matthew)</div>'\n+'<div style=\"background:#111827;border:1px solid rgba(58,176,158,.25);border-radius:8px;padding:10px\">'\n+'<canvas id=\"pa-cv\" style=\"width:100%;border-radius:8px;display:block;background:#0a0e1a\"></canvas>'\n+'<div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;margin-top:8px\">Délai post-ingestion <span id=\"pa-t-l\" style=\"color:#3ab09e\">4</span> h</div>'\n+'<input type=\"range\" id=\"pa-t\" min=\"4\" max=\"24\" value=\"4\" step=\"0.5\" style=\"width:100%;accent-color:#3ab09e\">'\n+'<div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;margin-top:6px\">Paracétamolémie <span id=\"pa-c-l\" style=\"color:#3ab09e\">150</span> mg/L</div>'\n+'<input type=\"range\" id=\"pa-c\" min=\"5\" max=\"500\" value=\"150\" step=\"5\" style=\"width:100%;accent-color:#3ab09e\">'\n+'<div id=\"pa-verdict\" style=\"text-align:center;font-size:13px;font-weight:700;padding:8px;border-radius:6px;margin-top:8px\"></div>'\n+'<div style=\"font-size:9px;color:#6b7280;margin-top:6px;line-height:1.5\">Ligne de traitement (200 mg/L à 4h, demi-vie 4h). Au-dessus → N-acétylcystéine (NAC). Dosage fiable seulement ≥ 4h post-ingestion. Référence : ligne « 150 » (UK) plus prudente.</div>'\n+'</div></div>';\nvar cv=root.querySelector('#pa-cv'),ctx=cv.getContext('2d');\n// Treatment line: C(t)=200*2^(-(t-4)/4) [Rumack 200 line]; we also draw 150 line.\nfunction line200(t){return 200*Math.pow(2,-(t-4)/4);}\nfunction line150(t){return 150*Math.pow(2,-(t-4)/4);}\nfunction draw(){\n  var W=cv.offsetWidth||320;cv.width=W;cv.height=190;\n  var t=+root.querySelector('#pa-t').value,c=+root.querySelector('#pa-c').value;\n  root.querySelector('#pa-t-l').textContent=t;root.querySelector('#pa-c-l').textContent=c;\n  ctx.clearRect(0,0,W,190);\n  var padL=34,padB=22,padT=8,padR=8,w=W-padL-padR,h=190-padT-padB;\n  var tmin=4,tmax=24,cmin=5,cmax=500;\n  function px(x){return padL+w*(x-tmin)/(tmax-tmin);}\n  function py(y){var lo=Math.log(cmin),hi=Math.log(cmax);return padT+h*(1-(Math.log(y)-lo)/(hi-lo));}\n  // axes\n  ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=1;\n  ctx.beginPath();ctx.moveTo(padL,padT);ctx.lineTo(padL,padT+h);ctx.lineTo(padL+w,padT+h);ctx.stroke();\n  ctx.fillStyle='#6b7280';ctx.font='8px monospace';ctx.textAlign='right';\n  [10,50,100,200,500].forEach(function(v){if(v>=cmin&&v<=cmax){ctx.fillText(v,padL-3,py(v)+3);ctx.strokeStyle='rgba(255,255,255,.05)';ctx.beginPath();ctx.moveTo(padL,py(v));ctx.lineTo(padL+w,py(v));ctx.stroke();}});\n  ctx.textAlign='center';[4,8,12,16,20,24].forEach(function(v){ctx.fillText(v+'h',px(v),padT+h+12);});\n  // treatment lines\n  function plot(fn,col,dash){ctx.strokeStyle=col;ctx.lineWidth=2;ctx.setLineDash(dash||[]);ctx.beginPath();for(var x=tmin;x<=tmax;x+=0.5){var y=fn(x);if(y<cmin)y=cmin;var X=px(x),Y=py(y);x===tmin?ctx.moveTo(X,Y):ctx.lineTo(X,Y);}ctx.stroke();ctx.setLineDash([]);}\n  plot(line200,'#fbbf24');plot(line150,'#60a5fa',[4,3]);\n  // patient point\n  var X=px(Math.max(tmin,Math.min(tmax,t))),Y=py(Math.max(cmin,Math.min(cmax,c)));\n  var toxic=c>=line200(t);\n  ctx.fillStyle=toxic?'#ef4444':'#3ab09e';ctx.beginPath();ctx.arc(X,Y,5,0,2*Math.PI);ctx.fill();\n  ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();\n  var v=root.querySelector('#pa-verdict');\n  if(t<4){v.textContent='Dosage non interprétable (< 4h)';v.style.background='rgba(156,163,175,.15)';v.style.color='#9ca3af';}\n  else if(toxic){v.textContent='🚨 Au-dessus du seuil → NAC indiquée';v.style.background='rgba(248,113,113,.15)';v.style.color='#f87171';}\n  else if(c>=line150(t)){v.textContent='⚠️ Zone intermédiaire (ligne 150) — discuter NAC';v.style.background='rgba(251,191,36,.15)';v.style.color='#fbbf24';}\n  else{v.textContent='✓ Sous le seuil de traitement';v.style.background='rgba(58,176,158,.15)';v.style.color='#3ab09e';}\n}\nroot.querySelector('#pa-t').addEventListener('input',draw);\nroot.querySelector('#pa-c').addEventListener('input',draw);\nsetTimeout(draw,50);draw();\n"
+   },
+   "snomed": {
+    "code": "70273001",
+    "fsn": "Poisoning caused by paracetamol (disorder)"
    }
   },
   {
@@ -151,7 +155,11 @@
     "lookAtY": 0.8,
     "lookAtZ": 0
    },
-   "level": 3
+   "level": 3,
+   "snomed": {
+    "code": "295315008",
+    "fsn": "Acquired methemoglobinemia (disorder)"
+   }
   },
   {
    "file": "",
@@ -169,7 +177,11 @@
     "lookAtY": 0.8,
     "lookAtZ": 0
    },
-   "level": 3
+   "level": 3,
+   "snomed": {
+    "code": "8260003",
+    "fsn": "Organophosphate poisoning (disorder)"
+   }
   },
   {
    "file": "",
@@ -186,7 +198,11 @@
     "lookAtY": 0.8,
     "lookAtZ": 0
    },
-   "level": 3
+   "level": 3,
+   "snomed": {
+    "code": "212809004",
+    "fsn": "Methyl alcohol causing toxic effect (disorder)"
+   }
   },
   {
    "file": "",
@@ -208,7 +224,11 @@
    "traitements_symptomatiques": "Hospitalisation en réanimation, conditionnement : voie veineuse, scope (FC, ECG, FR, TA, pO₂), intubation + ventilation assistée si coma, oxygénation (masque haute concentration 12-15 L/min), surveillance continue de l'ECG. Réhydratation (glucose + NaCl). EFFET STABILISANT DE MEMBRANE : sels de Na molaire (bicarbonate ou lactate de Na) en perfusion IV lente (250 à 750 mL maximum) + KCl (2 g/250 mL). Torsades de pointes : sulfate de Mg. Collapsus : catécholamines (Nad ou Ad). PRÉCAUTION : en cas de co-intoxication aux BZD, NE PAS administrer de flumazénil (risque convulsif).",
    "traitements_epurateurs": "AUCUN traitement épurateur efficace (fort volume de distribution, forte liaison protéique). Pas de traitement spécifique/antidote.",
    "marqueurs": "Gaz du sang : acidose métabolique et respiratoire. Hyperlactatémie (peu fréquente, non spécifique). ↑ CPK (rhabdomyolyse). Bilan toxicologique : immunochimie sérique en urgence (sans intérêt décisionnel) — dépistage de classe avec nombreuses interférences (phénothiazines) et faux négatifs (maprotiline non détectée) ; confirmation/dosage par HPLC ou CPG (UV, DAD, MS/MS, FID).",
-   "exemples_medicaments": "Tricycliques : imipramine, amitriptyline, clomipramine, trimipramine, doxépine, dosulépine. Tétracycliques : miansérine, amoxapine."
+   "exemples_medicaments": "Tricycliques : imipramine, amitriptyline, clomipramine, trimipramine, doxépine, dosulépine. Tétracycliques : miansérine, amoxapine.",
+   "snomed": {
+    "code": "69434005",
+    "fsn": "Tricyclic antidepressant poisoning (disorder)"
+   }
   },
   {
    "file": "",
@@ -228,7 +248,11 @@
    "physiopathologie": "SYNDROME SÉROTONINERGIQUE (excès de sérotonine) par association des IMAO avec des « pro-sérotoninergiques » : ISRS, lithium, ADT, antimigraineux (triptans), morphinomimétiques. Manifestations : troubles neurologiques (agitation, confusion, hallucinations, tremblements, spasmes, convulsions, coma), neurovégétatifs (fièvre, sueurs, tachycardie, hyperréflexie, myoclonies, hypotension, diarrhées), biologiques (hyperglycémie, hyperleucocytose, hypokaliémie, acidose lactique, rhabdomyolyse). Avec éthanol/stupéfiants : majoration des convulsions, de l'hyperthermie, de la dépression respiratoire. « CHEESE EFFECT » : avec les aliments riches en TYRAMINE (banane, chou, hareng, fromage) → l'IMAO inhibe la dégradation de la tyramine → potentialisation de l'action sympathomimétique hypertensive (poussées hypertensives, même à doses thérapeutiques).",
    "traitements_evacuateurs": "Charbon activé (décontamination dans l'heure suivant l'ingestion).",
    "traitements_symptomatiques": "Arrêt des IMAO : évolution favorable en 24-72 h. Traitement du syndrome sérotoninergique : hyperthermie → antipyrétiques ou refroidissement physique ; convulsions/agitation → BZD ; HTA → antihypertenseurs. Pas de traitement spécifique. Pas de traitement épurateur.",
-   "exemples_medicaments": "Non sélectifs irréversibles : iproniazide (Marsilid®), phénelzine (Nardil®). Sélectif A réversible : moclobémide (Moclamine®)."
+   "exemples_medicaments": "Non sélectifs irréversibles : iproniazide (Marsilid®), phénelzine (Nardil®). Sélectif A réversible : moclobémide (Moclamine®).",
+   "snomed": {
+    "code": "371089000",
+    "fsn": "Serotonin syndrome (disorder)"
+   }
   },
   {
    "file": "",
@@ -248,7 +272,11 @@
    "clinique": "Globalement BÉNIN : pas de pronostic vital engagé si ingestion isolée même massive. Troubles digestifs (nausées, vomissements), neurologiques (somnolence, convulsions), cardiovasculaires mineurs (tachycardie, HTA). Évolution favorable en 24 h. GRAVE en association avec IMAO ou ADT (syndrome sérotoninergique). Particularités : venlafaxine → coma, convulsions, tachycardie, anomalies ECG significatives ; fluoxétine → signes anticholinergiques, si massif allongement QT, élargissement QRS, torsades de pointes ; citalopram → tachycardie, élargissement QRS. Diagnostic différentiel avec le syndrome malin des neuroleptiques.",
    "traitements_evacuateurs": "Charbon activé le plus tôt possible (<1 h).",
    "traitements_symptomatiques": "Arrêt des ISRS : évolution favorable en 24-72 h. Syndrome sérotoninergique : hyperthermie → antipyrétiques/refroidissement physique ; convulsions/agitation → BZD ; HTA → antihypertenseurs. Surveillances cardiovasculaire, respiratoire, neurologique. Pas de traitement spécifique ni épurateur.",
-   "exemples_medicaments": "ISRS : fluoxétine, citalopram, escitalopram, sertraline, paroxétine, fluvoxamine. IRSNa : venlafaxine, milnacipran, duloxétine."
+   "exemples_medicaments": "ISRS : fluoxétine, citalopram, escitalopram, sertraline, paroxétine, fluvoxamine. IRSNa : venlafaxine, milnacipran, duloxétine.",
+   "snomed": {
+    "code": "371089000",
+    "fsn": "Serotonin syndrome (disorder)"
+   }
   },
   {
    "file": "",
@@ -268,7 +296,11 @@
    "clinique": "TROUBLES DIGESTIFS (si surdosage) : diarrhées, nausées, vomissements, douleurs abdominales, anorexie. SIGNES NEUROLOGIQUES (dans tous les cas, +/- retardés) : troubles de la conscience (confusion, troubles mnésiques, coma peu profond agité, convulsions), troubles du tonus (hypertonie, rigidité), mouvements anormaux (myoclonies, tremblements), ataxie. SIGNES RÉNAUX (dans tous les cas) : polyurie par diabète insipide, IRA fonctionnelle sur nécrose tubulaire aiguë, réversibilité parfois incomplète. SIGNES CARDIOVASCULAIRES (peu fréquents) : allongement du QT, arythmies, choc.",
    "traitement": "Hospitalisation en réanimation, conditionnement (voie veineuse, scope, intubation si coma, remplissage modéré si hypovolémie). ① Traitement SYMPTOMATIQUE : réhydratation (glucose + NaCl), BZD si convulsions, alcalinisation par bicarbonate (acidose métabolique), KCl si hypokaliémie. ② PAS D'ANTIDOTE.",
    "traitements_epurateurs": "HÉMODIALYSE = TRAITEMENT DE CHOIX (lithium : faible Vd, 0 % liaison protéique, élimination rénale 90 %). Indications : lithémie >4 mEq/L, troubles de la conscience, troubles du rythme. Séances de 6 h, à RÉPÉTER tant que les signes neurologiques persistent, jusqu'à lithémie <1 mEq/L. Diminution de l'absorption : diurèse saline forcée, irrigation intestinale totale (whole bowel irrigation au macrogol) — CONTRE-INDIQUÉE si troubles de la vigilance (fréquents). Charbon activé SANS intérêt (le lithium n'est pas carboabsorbable).",
-   "marqueurs": "Bilan : insuffisance rénale (créatinine, urée), déshydratation, hypernatrémie, recherche de diabète insipide, NFS (hyperleucocytose/leucopénie), hypercalcémie. Dosage de la lithémie : prélèvement sur héparinate de Li ; méthodes SAA-flamme, ICP-MS (screening), potentiométrie (électrode spécifique), spectrophotométrie. Dosage intra-érythrocytaire sans intérêt."
+   "marqueurs": "Bilan : insuffisance rénale (créatinine, urée), déshydratation, hypernatrémie, recherche de diabète insipide, NFS (hyperleucocytose/leucopénie), hypercalcémie. Dosage de la lithémie : prélèvement sur héparinate de Li ; méthodes SAA-flamme, ICP-MS (screening), potentiométrie (électrode spécifique), spectrophotométrie. Dosage intra-érythrocytaire sans intérêt.",
+   "snomed": {
+    "code": "290802009",
+    "fsn": "Lithium poisoning (disorder)"
+   }
   },
   {
    "file": "",
@@ -307,7 +339,11 @@
    "definition": "Syndrome malin des neuroleptiques : effet indésirable rare (0,5-1 %) mais grave (mortalité importante). Pas de corrélation avec la durée du traitement ni avec un surdosage. Facteurs de risque : doses élevées, passage à la forme parentérale, déshydratation, antécédent de syndrome malin. Dans 2/3 des cas observé dans la 1ʳᵉ semaine de traitement ou après augmentation de dose.",
    "clinique": "TÉTRADE clinique (ordre chronologique) : ① troubles de la conscience (délire, confusion, mutisme, coma) ; ② rigidité musculaire (syndrome extrapyramidal, trismus) ; ③ fièvre élevée (>39 °C), déshydratation aiguë, sueurs abondantes, salivation excessive ; ④ dysautonomie (tachycardie, hypotension). Complications : rhabdomyolyse, IRA, insuffisance respiratoire, arythmies. Diagnostic différentiel : intoxication à la cocaïne, aux amphétamines, syndrome sérotoninergique.",
    "marqueurs": "Recherche de déshydratation extra- et intracellulaire (hypernatrémie, hyperprotidémie). Bilan rénal (IRA : Na urinaire, osmolarité U, urée U/P, créat U/P, FE). Rhabdomyolyse : ↑ CPK, myoglobinurie. Acidose métabolique (gaz du sang, hyperkaliémie). Hyperleucocytose.",
-   "traitement": "Arrêt immédiat du NLP et prise en charge hospitalière rapide. Traitement SYMPTOMATIQUE en réanimation : refroidissement, antibiotiques à visée pulmonaire, diazépam (convulsions), réhydratation ++, antalgie (paracétamol). Traitement SPÉCIFIQUE : myorelaxant DANTROLÈNE (Dantrium®) 2,5 mg/kg IV, sans dépasser 10 mg/kg (sinon hépatotoxicité) — diminue la contraction du muscle strié en inhibant la libération de Ca²⁺ du réticulum sarcoplasmique, corrigeant les perturbations calciques à l'origine de l'hyperthermie ; administration la plus précoce possible. Épuration extra-rénale si IR. Déclaration au CRPV."
+   "traitement": "Arrêt immédiat du NLP et prise en charge hospitalière rapide. Traitement SYMPTOMATIQUE en réanimation : refroidissement, antibiotiques à visée pulmonaire, diazépam (convulsions), réhydratation ++, antalgie (paracétamol). Traitement SPÉCIFIQUE : myorelaxant DANTROLÈNE (Dantrium®) 2,5 mg/kg IV, sans dépasser 10 mg/kg (sinon hépatotoxicité) — diminue la contraction du muscle strié en inhibant la libération de Ca²⁺ du réticulum sarcoplasmique, corrigeant les perturbations calciques à l'origine de l'hyperthermie ; administration la plus précoce possible. Épuration extra-rénale si IR. Déclaration au CRPV.",
+   "snomed": {
+    "code": "15244003",
+    "fsn": "Neuroleptic malignant syndrome (disorder)"
+   }
   },
   {
    "file": "",
@@ -327,7 +363,11 @@
    "physiopathologie": "Phénobarbital : inducteur enzymatique puissant (CYP450, UGT) → interactions ++ : ↑ dégradation hépatique de la vitamine K1 (syndrome hémorragique du nouveau-né de mère traitée → traitement vit K1), interaction phénytoïne/vit D, ↓ efficacité ciclosporine/corticoïdes, potentialisation des phénothiazines/BZD/antihistaminiques. Risque tératogène faible. PRINCIPE DE LA DIURÈSE ALCALINE : les barbituriques (acides faibles) diffusent passivement selon leur état d'ionisation ; alcaliniser les urines augmente leur ionisation → piégeage et ↑ de l'élimination urinaire.",
    "traitement": "Traitement SYMPTOMATIQUE : intubation, ventilation, aspiration bronchique régulière ; adrénergiques + remplissage vasculaire si hypotension. Traitement ÉVACUATEUR : lavage gastrique jusqu'à la 12ᵉ heure, charbon activé. Sevrage : pas d'arrêt brutal (recrudescence des crises convulsives).",
    "traitements_epurateurs": "Diurèse alcaline (alcalinisation des urines → piégeage du barbiturique acide). Épuration extra-rénale (hémodialyse) si pronostic vital engagé, notamment pour le phénobarbital. Charbon activé à doses répétées possible.",
-   "marqueurs": "Dosage du phénobarbital (plasma) par immunochimie/automate de chimie ; dépistage des barbituriques (urines) ; dosage du thiopental et barbituriques (plasma) par CPG-FID, CPG-MS (difficiles dans les screenings LC-MS car molécules acides faibles)."
+   "marqueurs": "Dosage du phénobarbital (plasma) par immunochimie/automate de chimie ; dépistage des barbituriques (urines) ; dosage du thiopental et barbituriques (plasma) par CPG-FID, CPG-MS (difficiles dans les screenings LC-MS car molécules acides faibles).",
+   "snomed": {
+    "code": "44003006",
+    "fsn": "Poisoning caused by barbiturate (disorder)"
+   }
   },
   {
    "file": "",
@@ -348,7 +388,11 @@
    "traitements_evacuateurs": "Charbon activé dans l'heure suivant l'ingestion (dose unique 50 g). Lavage gastrique NON indiqué (absorption digestive rapide).",
    "intoxication_bzd": "ANTIDOTE SPÉCIFIQUE : FLUMAZÉNIL (Anexate®) — imidazo-benzodiazépine, antagoniste compétitif spécifique des récepteurs BZD SANS activité intrinsèque ; déplace BZD, zopiclone et zolpidem de leurs récepteurs. Agit en 30-60 secondes IV. Administration : dose test puis titration 0,3 mg/min puis 0,1 mg/min (sans dépasser 2 mg), jusqu'au réveil avec levée de la dépression respiratoire. INTÉRÊT : garder le patient éveillé pour éviter l'intubation/ventilation (sujet âgé, insuffisant respiratoire). EFFETS INDÉSIRABLES : nausées, vomissements, angoisse, palpitations (si injection rapide). CONTRE-INDICATIONS : prise concomitante de produits convulsivants (ADT), syndrome de sevrage aux BZD (risque de convulsions), hypersensibilité.",
    "traitements_symptomatiques": "Surveillance neurologique (conscience) et cardiorespiratoire. Bradypnée : oxygénothérapie, intubation/ventilation assistée possible. Hospitalisation en unité de surveillance continue si insuffisance respiratoire, personne âgée, coma ou polyintoxication.",
-   "marqueurs": "Concentrations plasmatiques peu corrélées au tableau clinique. Dépistage de classe immunochimique (EMIT, FPIA, CEDIA) ou immunochromatographie urinaire (bandelette) — manque de spécificité/sensibilité, AC spécifiques d'une seule BZD (pas de détection des apparentés). Screening toxicologique par GC/LC couplée à SM (+ dosage des métabolites). Attention aux nouvelles BZD de synthèse (RC benzodiazépines : étizolam, flubromazépam, diclazépam) vendues sur internet."
+   "marqueurs": "Concentrations plasmatiques peu corrélées au tableau clinique. Dépistage de classe immunochimique (EMIT, FPIA, CEDIA) ou immunochromatographie urinaire (bandelette) — manque de spécificité/sensibilité, AC spécifiques d'une seule BZD (pas de détection des apparentés). Screening toxicologique par GC/LC couplée à SM (+ dosage des métabolites). Attention aux nouvelles BZD de synthèse (RC benzodiazépines : étizolam, flubromazépam, diclazépam) vendues sur internet.",
+   "snomed": {
+    "code": "81914009",
+    "fsn": "Poisoning caused by benzodiazepine-based tranquilizer (disorder)"
+   }
   },
   {
    "file": "",
@@ -724,6 +768,10 @@
    "widget_def": {
     "html": "<div style=\"background:#0d0f14;font-family:system-ui,sans-serif;padding:10px;display:flex;flex-direction:column;gap:8px;color:#e5e7eb;user-select:none\"><div style=\"font-weight:700;color:#e5e7eb;font-size:13px;margin-bottom:6px\">🫁 Décroissance de l'HbCO selon l'oxygénothérapie</div><div style=\"background:#111827;border:1px solid rgba(58,176,158,.25);border-radius:8px;padding:10px\"><div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-top:4px\">HbCO initiale (%)</div><input type=\"range\" id=\"co-h\" min=\"1\" max=\"60\" value=\"25\" step=\"1\" style=\"width:100%;accent-color:#3ab09e;cursor:pointer\"><div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-top:4px\">Temps écoulé (h)</div><input type=\"range\" id=\"co-t\" min=\"0\" max=\"12\" value=\"2\" step=\"0.5\" style=\"width:100%;accent-color:#3ab09e;cursor:pointer\"><div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-top:4px\">Modalité d'oxygénation</div><select id=\"co-m\" style=\"width:100%;background:#0b0d12;color:#e5e7eb;border:1px solid rgba(58,176,158,.3);border-radius:6px;padding:5px;font-size:12px\"><option value=\"320\">Air ambiant (t½ ≈ 320 min)</option><option value=\"75\" selected>O₂ normobare 100 % (t½ ≈ 75 min)</option><option value=\"23\">O₂ hyperbare 3 ATA (t½ ≈ 23 min)</option></select><div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-top:4px\">HbCO résiduelle</div><div><span id=\"co-r\" style=\"font-family:ui-monospace,monospace;font-size:15px;color:#3ab09e;font-weight:700\">–</span> <span style=\"font-size:11px;color:#9ca3af\">%</span></div><div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-top:4px\">Temps pour repasser sous 5 %</div><div><span id=\"co-n\" style=\"font-family:ui-monospace,monospace;font-size:15px;color:#3ab09e;font-weight:700\">–</span> <span style=\"font-size:11px;color:#9ca3af\">h</span></div><div id=\"co-msg\" style=\"margin-top:7px;padding:6px 9px;border-radius:6px;font-size:11px;text-align:center;line-height:1.4\"></div></div></div>",
     "init": "function q(i){return container.querySelector('#'+i);}function bind(ids,f){ids.forEach(function(i){var e=q(i);e.addEventListener('input',f);e.addEventListener('change',f);});f();}function u(){var h0=+q('co-h').value,t=+q('co-t').value,th=+q('co-m').value/60;\nvar h=h0*Math.pow(0.5,t/th);q('co-r').textContent=h.toFixed(1);\nq('co-n').textContent=(h0>5)?(th*Math.log(h0/5)/Math.log(2)).toFixed(1):'0';\nvar m=q('co-msg');\nif(h0>=25){m.innerHTML='🚨 Intoxication SÉVÈRE — oxygénothérapie hyperbare à discuter (perte de connaissance, signes neurologiques, atteinte cardiaque, <b>grossesse quel que soit le taux</b>)';m.style.background='rgba(239,68,68,.15)';m.style.color='#ef4444';}\nelse if(h0>=10){m.innerHTML='⚠️ Intoxication modérée — O₂ normobare 100 % au masque haute concentration, <b>au moins 6 à 12 h</b>';m.style.background='rgba(251,191,36,.15)';m.style.color='#fbbf24';}\nelse{m.innerHTML='Taux bas — mais un taux bas <b>n\\'exclut pas</b> l\\'intoxication : interpréter selon le délai et l\\'O₂ déjà reçu';m.style.background='rgba(59,130,246,.15)';m.style.color='#60a5fa';}}\nbind(['co-h','co-t','co-m'],u);"
+   },
+   "snomed": {
+    "code": "17383000",
+    "fsn": "Toxic effect of carbon monoxide (disorder)"
    }
   },
   {
@@ -746,6 +794,10 @@
    "widget_def": {
     "html": "<div style=\"background:#0d0f14;font-family:system-ui,sans-serif;padding:10px;display:flex;flex-direction:column;gap:8px;color:#e5e7eb;user-select:none\"><div style=\"font-weight:700;color:#e5e7eb;font-size:13px;margin-bottom:6px\">🔩 Plombémie — seuils et conduite à tenir</div><div style=\"background:#111827;border:1px solid rgba(58,176,158,.25);border-radius:8px;padding:10px\"><div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-top:4px\">Plombémie (µg/L)</div><input type=\"range\" id=\"pb-p\" min=\"10\" max=\"900\" value=\"80\" step=\"5\" style=\"width:100%;accent-color:#3ab09e;cursor:pointer\"><label style=\"display:flex;align-items:center;gap:6px;font-size:11px;margin-top:5px;cursor:pointer\"><input type=\"checkbox\" id=\"pb-e\" style=\"accent-color:#3ab09e;cursor:pointer\">Patient enfant</label><div id=\"pb-msg\" style=\"margin-top:7px;padding:6px 9px;border-radius:6px;font-size:11px;text-align:center;line-height:1.4\"></div><div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-top:4px\">Seuil de vigilance applicable</div><div><span id=\"pb-s\" style=\"font-family:ui-monospace,monospace;font-size:15px;color:#3ab09e;font-weight:700\">–</span> <span style=\"font-size:11px;color:#9ca3af\">µg/L</span></div></div></div>",
     "init": "function q(i){return container.querySelector('#'+i);}function bind(ids,f){ids.forEach(function(i){var e=q(i);e.addEventListener('input',f);e.addEventListener('change',f);});f();}function u(){var v=+q('pb-p').value,e=q('pb-e').checked;\nq('pb-s').textContent=e?'50':'100';\nvar m=q('pb-msg');\nif(v>=450){m.innerHTML='🚨 <b>CHÉLATION URGENTE</b> (EDTA calcicodisodique, DMSA ; BAL + EDTA si encéphalopathie) + éviction immédiate de la source';m.style.background='rgba(239,68,68,.15)';m.style.color='#ef4444';}\nelse if(v>=250){m.innerHTML='⚠️ Chélation à discuter, enquête environnementale, supplémentation fer et calcium';m.style.background='rgba(251,191,36,.15)';m.style.color='#fbbf24';}\nelse if(v>=(e?50:100)){m.innerHTML='📋 Dépassement du seuil — <b>déclaration obligatoire chez l\\'enfant</b>, enquête environnementale, dépistage de la fratrie, suivi rapproché';m.style.background='rgba(251,191,36,.15)';m.style.color='#fbbf24';}\nelse{m.innerHTML='Sous le seuil de vigilance — mais <b>aucun seuil sans effet</b> n\\'est établi pour la neurotoxicité développementale : la prévention primaire reste la priorité';m.style.background='rgba(59,130,246,.15)';m.style.color='#60a5fa';}}\nbind(['pb-p','pb-e'],u);"
+   },
+   "snomed": {
+    "code": "1145155005",
+    "fsn": "Lead and/or lead compound poisoning (disorder)"
    }
   },
   {
@@ -804,6 +856,10 @@
    "widget_def": {
     "html": "<div style=\"background:#0d0f14;font-family:system-ui,sans-serif;padding:10px;display:flex;flex-direction:column;gap:8px;color:#e5e7eb;user-select:none\"><div style=\"font-weight:700;color:#e5e7eb;font-size:13px;margin-bottom:6px\">💊 Dose ingérée & gravité</div><div style=\"background:#111827;border:1px solid rgba(58,176,158,.25);border-radius:8px;padding:10px\"><div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-top:4px\">Dose ingérée (mg)</div><input type=\"range\" id=\"sa-d\" min=\"500\" max=\"40000\" value=\"8000\" step=\"100\" style=\"width:100%;accent-color:#3ab09e;cursor:pointer\"><div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-top:4px\">Poids (kg)</div><input type=\"range\" id=\"sa-p\" min=\"10\" max=\"100\" value=\"70\" step=\"1\" style=\"width:100%;accent-color:#3ab09e;cursor:pointer\"><div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-top:4px\">Dose rapportée au poids</div><div><span id=\"sa-mg\" style=\"font-family:ui-monospace,monospace;font-size:15px;color:#3ab09e;font-weight:700\">–</span> <span style=\"font-size:11px;color:#9ca3af\">mg/kg</span></div><div style=\"font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-top:4px\">Nombre de comprimés à 500 mg</div><div><span id=\"sa-cp\" style=\"font-family:ui-monospace,monospace;font-size:15px;color:#3ab09e;font-weight:700\">–</span> <span style=\"font-size:11px;color:#9ca3af\">cp</span></div><div id=\"sa-msg\" style=\"margin-top:7px;padding:6px 9px;border-radius:6px;font-size:11px;text-align:center;line-height:1.4\"></div></div></div>",
     "init": "function q(i){return container.querySelector('#'+i);}function bind(ids,f){ids.forEach(function(i){var e=q(i);e.addEventListener('input',f);e.addEventListener('change',f);});f();}function u(){var d=+q('sa-d').value,p=+q('sa-p').value;var mg=d/p;\nq('sa-mg').textContent=mg.toFixed(0);q('sa-cp').textContent=(d/500).toFixed(1);\nvar m=q('sa-msg');\nif(mg>=500){m.innerHTML='🚨 <b>POTENTIELLEMENT MORTELLE</b> — hémodialyse à discuter d\\'emblée. Piège : ne pas intuber sans maintenir la ventilation minute compensatrice';m.style.background='rgba(239,68,68,.15)';m.style.color='#ef4444';}\nelse if(mg>=300){m.innerHTML='⚠️ Intoxication SÉVÈRE — alcalinisation (pH urinaire > 7,5) après correction de l\\'<b>hypokaliémie</b>, charbon activé répété';m.style.background='rgba(239,68,68,.15)';m.style.color='#ef4444';}\nelse if(mg>=150){m.innerHTML='Intoxication symptomatique — acouphènes, hyperventilation. Surveiller le trouble ACIDO-BASIQUE MIXTE (alcalose respiratoire + acidose métabolique)';m.style.background='rgba(251,191,36,.15)';m.style.color='#fbbf24';}\nelse{m.innerHTML='Dose infratoxique — surveillance simple ; attention à l\\'absorption PROLONGÉE des formes gastro-résistantes (jusqu\\'à 12 h)';m.style.background='rgba(58,176,158,.15)';m.style.color='#3ab09e';}}\nbind(['sa-d','sa-p'],u);"
+   },
+   "snomed": {
+    "code": "7248001",
+    "fsn": "Poisoning caused by salicylate (disorder)"
    }
   },
   {
@@ -840,7 +896,11 @@
     "lookAtY": 0.8,
     "lookAtZ": 0
    },
-   "level": 4
+   "level": 4,
+   "snomed": {
+    "code": "295165009",
+    "fsn": "Morphinan opioid overdose (disorder)"
+   }
   },
   {
    "file": "",

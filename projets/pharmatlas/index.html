@@ -1436,7 +1436,95 @@ const fileMap = new Map();
 /* ── Catégorie affichée à l'ouverture de l'application ──────────────────────
    Mettre l'id exact d'une catégorie (ex. 'Pharmacologie', 'Médicaments').
    null  →  première catégorie de CATS (comportement historique : Plantes).   */
+/* ── Journal de diagnostic LOCAL ────────────────────────────────────────────
+   Fonctionne sans Sentry et sans aucune sortie réseau : les erreurs sont
+   conservées en mémoire et consultables via PA_diag() dans la console.
+   Motivation : les bugs rencontrés sur ce projet (erreur de syntaxe dans un
+   widget base64, .glb en 404, tuiles DZI injoignables) sont invisibles côté
+   serveur et n'apparaissent que dans le navigateur de l'étudiant. Ce tampon
+   permet de les faire remonter par simple copier-coller lors d'un signalement,
+   sans dépendre d'un service tiers ni transmettre la moindre donnée. */
+window.PA_DIAG = [];
+function paLogDiag(kind, detail){
+  try{
+    window.PA_DIAG.push({t:new Date().toISOString(), kind:kind, detail:String(detail).slice(0,300)});
+    if(window.PA_DIAG.length>200) window.PA_DIAG.shift();
+    if(typeof Sentry!=='undefined' && Sentry.captureMessage && PA_SENTRY_DSN){
+      Sentry.captureMessage('['+kind+'] '+detail, 'warning');
+    }
+  }catch(e){}
+}
+window.PA_diag=function(){
+  if(!window.PA_DIAG.length){ console.log('PharmAtlas — aucun incident enregistré.'); return []; }
+  console.table(window.PA_DIAG);
+  return window.PA_DIAG;
+};
+window.addEventListener('error', function(e){
+  if(e && e.message) paLogDiag('js', e.message+' @'+(e.filename||'?')+':'+(e.lineno||'?'));
+});
+window.addEventListener('unhandledrejection', function(e){
+  paLogDiag('promise', (e && e.reason && (e.reason.message||e.reason)) || 'rejet non géré');
+});
+
 const PA_HOME_CAT = null;
+
+/* ── Remontée d'erreurs (Sentry) — DÉSACTIVÉE PAR DÉFAUT ────────────────────
+   Renseigner le DSN du projet Sentry pour activer. Organisation existante :
+   « ticepharma », région EU (de.sentry.io) — l'hébergement européen est ce qui
+   rend cette option acceptable au regard du RGPD.
+
+   AVANT D'ACTIVER, trois points à traiter :
+   1. Sentry se charge depuis browser.sentry-cdn.com. Cela contredit l'affirmation
+      « aucun CDN tiers » de la page À propos : soit vendoriser le bundle dans
+      vendor/, soit corriger la page.
+   2. Sentry transmet URL, adresse IP et user-agent = données personnelles.
+      La page À propos affirme « ni traceur, ni outil d'analyse d'audience ».
+      Il faut l'y déclarer explicitement, comme les autres services externes.
+   3. La charte UPCité impose l'information des personnes : mentionner la
+      finalité (correction de bugs), la base légale et la durée de conservation.
+
+   Sans DSN, aucun script n'est chargé et aucune donnée ne sort : le
+   comportement par défaut reste strictement conforme à la page actuelle. */
+const PA_SENTRY_DSN = null;
+
+(function initErrorReporting(){
+  if(!PA_SENTRY_DSN) return;
+  var s=document.createElement('script');
+  s.src='https://browser.sentry-cdn.com/10.73.0/bundle.min.js';
+  s.crossOrigin='anonymous';
+  s.onload=function(){
+    if(typeof Sentry==='undefined') return;
+    Sentry.init({
+      dsn: PA_SENTRY_DSN,
+      /* Pas de traçage de performance ni de Session Replay : on ne veut QUE
+         les erreurs. Le Replay enregistrerait la navigation de l'étudiant. */
+      tracesSampleRate: 0,
+      sendDefaultPii: false,
+      beforeSend: function(event){
+        /* Anonymisation : on retire tout ce qui pourrait identifier
+           l'étudiant avant l'envoi. */
+        delete event.user;
+        if(event.request){
+          delete event.request.cookies;
+          delete event.request.headers;
+          /* L'URL peut contenir la fiche consultée : on ne garde que le chemin. */
+          if(event.request.url) event.request.url=String(event.request.url).split('?')[0].split('#')[0];
+        }
+        return event;
+      },
+      /* Bruit connu et sans valeur diagnostique : extensions de navigateur,
+         erreurs réseau des API externes hors de notre contrôle. */
+      ignoreErrors: [
+        'ResizeObserver loop limit exceeded',
+        'ResizeObserver loop completed',
+        'Non-Error promise rejection captured',
+        /^Failed to fetch$/, /NetworkError/, /Load failed/
+      ],
+      denyUrls: [/extensions\//i, /^chrome:\/\//i, /^moz-extension:\/\//i]
+    });
+  };
+  document.head.appendChild(s);
+})();
 let activeCat='';
 let activeModel=null;
 let activeModelId=null; // unique ID for active model
@@ -1808,6 +1896,12 @@ function _normaliseItemRaw(item,catId,base){
     main_molecule:        item.main_molecule        || null,
     molecules_cles:       item.molecules_cles       || null,
     pk_bridge:            item.pk_bridge            || null,
+    // Lame UDE BioSLiDES ({id, base?, species?}) — Plantes, Parasites, Champignons, Organites
+    bioslide:             item.bioslide             || null,
+    /* Code SNOMED CT ({code, fsn}) : ancre la fiche dans la terminologie
+       médicale de référence. Permet de vérifier qu'un intitulé correspond à un
+       concept actif et d'aligner le vocabulaire entre catégories. */
+    snomed:               item.snomed               || null,
     key_molecules:        item.key_molecules        || null,
     // Champignons
     scientific:item.scientific, edible:item.edible,
@@ -3518,7 +3612,7 @@ function switchVariant(idx){
   });
   // Variante PubChem (3Dmol) → recharger via le viewer moléculaire
   if(_v.cid!=null){
-    if(_3dmolViewer){ try{_3dmolViewer.removeAllModels();_3dmolViewer.removeAllSurfaces();}catch(e){} _3dmolViewer=null; }
+    if(_3dmolViewer){ try{_3dmolViewer.removeAllModels();_3dmolViewer.removeAllSurfaces();_3dmolViewer.removeAllLabels();_3dmolViewer.removeAllShapes();}catch(e){} _3dmolViewer=null; }
     initSheetRenderer3Dmol(activeModel, _v.cid);
     return;
   }
@@ -3526,12 +3620,41 @@ function switchVariant(idx){
   reloadSheetModel(activeModel.file);
 }
 
+/* Libération des ressources GPU d'un objet Three.js.
+   Le code retirait les modèles de la scène (scene.remove) sans jamais appeler
+   dispose() sur les géométries, matériaux et textures : Three.js ne libère PAS
+   automatiquement les WebGLBuffers et shaders associés, ils restent alloués
+   côté GPU. Sur un atlas où l'on enchaîne les fiches, chaque modèle .glb
+   ouvert fuyait ainsi jusqu'au rechargement de la page — d'autant plus
+   sensible sur mobile où la mémoire graphique est limitée.
+   Motif recommandé par la documentation Three.js (traverse + dispose). */
+function paDisposeObject3D(root){
+  if(!root || typeof root.traverse!=='function') return;
+  try{
+    root.traverse(function(o){
+      if(o.geometry && o.geometry.dispose) o.geometry.dispose();
+      var mats = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+      mats.forEach(function(m){
+        if(!m) return;
+        /* Toute propriété de matériau qui est une Texture doit être libérée
+           séparément (map, normalMap, roughnessMap, emissiveMap…). */
+        for(var k in m){
+          var v = m[k];
+          if(v && v.isTexture && v.dispose) v.dispose();
+        }
+        if(m.dispose) m.dispose();
+      });
+    });
+  }catch(e){}
+  if(root.parent) root.parent.remove(root);
+}
+
 function reloadSheetModel(fileUrl){
   const container=document.getElementById('sheetViewer');
   // Stopper l'animation courante
   if(sheetAnimId){cancelAnimationFrame(sheetAnimId);sheetAnimId=null;}
   // Retirer l'ancien modèle
-  if(sheetModelGroup&&sheetScene){sheetScene.remove(sheetModelGroup);sheetModelGroup=null;}
+  if(sheetModelGroup&&sheetScene){paDisposeObject3D(sheetModelGroup);sheetScene.remove(sheetModelGroup);sheetModelGroup=null;}
   // Retirer les éventuels loaders/erreurs précédents
   container.querySelectorAll('.loader,.error-msg,.no-model').forEach(el=>el.remove());
 
@@ -5058,7 +5181,7 @@ function _microToggle(mode){
     if(btnGBIF){btnGBIF.classList.remove('active');btnGBIF.style.background='';btnGBIF.style.color='';btnGBIF.style.borderColor='';}
     if(sheetAnimId){cancelAnimationFrame(sheetAnimId);sheetAnimId=null;}
     if(sheetRenderer){sheetRenderer.dispose();sheetRenderer=null;}
-    if(sheetModelGroup&&sheetScene){sheetScene.remove(sheetModelGroup);sheetModelGroup=null;}
+    if(sheetModelGroup&&sheetScene){paDisposeObject3D(sheetModelGroup);sheetScene.remove(sheetModelGroup);sheetModelGroup=null;}
     stage.innerHTML='<div class="herb-3d-wrap" id="micro3dContainer" style="background:#080c14"></div>';
     var c3d=document.getElementById('micro3dContainer');
     if(c3d&&_microActiveModel&&_microActiveModel.file){
@@ -5662,7 +5785,7 @@ function _herbToggle(mode){
       // Arrêter l'ancien renderer si existant
       if(sheetAnimId){cancelAnimationFrame(sheetAnimId);sheetAnimId=null;}
       if(sheetRenderer){sheetRenderer.dispose();sheetRenderer=null;}
-      if(sheetModelGroup&&sheetScene){sheetScene.remove(sheetModelGroup);sheetModelGroup=null;}
+      if(sheetModelGroup&&sheetScene){paDisposeObject3D(sheetModelGroup);sheetScene.remove(sheetModelGroup);sheetModelGroup=null;}
       // Réinitialiser le renderer 3D dans le nouveau container
       var c3d=document.getElementById('herb3dContainer');
       if(c3d&&_herbActiveModel&&_herbActiveModel.file){
@@ -6047,7 +6170,7 @@ function _fungToggle(mode){
     stage.innerHTML='<div class="herb-3d-wrap" id="fung3dContainer"></div>';
     if(sheetAnimId){cancelAnimationFrame(sheetAnimId);sheetAnimId=null;}
     if(sheetRenderer){sheetRenderer.dispose();sheetRenderer=null;}
-    if(sheetModelGroup&&sheetScene){sheetScene.remove(sheetModelGroup);sheetModelGroup=null;}
+    if(sheetModelGroup&&sheetScene){paDisposeObject3D(sheetModelGroup);sheetScene.remove(sheetModelGroup);sheetModelGroup=null;}
     var c3d=document.getElementById('fung3dContainer');
     if(c3d&&_fungModel&&_fungModel.file)_herbInit3D(c3d,_fungModel);
     else if(c3d)c3d.innerHTML='<div class="herbarium-empty"><div class="ico">⬡</div><div>Aucun modèle 3D disponible</div></div>';
@@ -6068,13 +6191,13 @@ async function openSheet(m){
     while(sv&&sv.firstChild)sv.removeChild(sv.firstChild);
     sheetRenderer.dispose();sheetRenderer=null;
   }
-  if(sheetModelGroup&&sheetScene){sheetScene.remove(sheetModelGroup);sheetModelGroup=null;}
+  if(sheetModelGroup&&sheetScene){paDisposeObject3D(sheetModelGroup);sheetScene.remove(sheetModelGroup);sheetModelGroup=null;}
   // Nettoyer le viewer Gaussian Splat isolé s'il tournait
   try{ if(window._activeSplatViewer&&window._activeSplatViewer.stop) window._activeSplatViewer.stop(); }catch(e){}
   window._activeSplatViewer=null;
   // Nettoyer 3Dmol si actif
   if(_3dmolViewer){
-    try{_3dmolViewer.removeAllModels();_3dmolViewer.removeAllSurfaces();}catch(e){}
+    try{_3dmolViewer.removeAllModels();_3dmolViewer.removeAllSurfaces();_3dmolViewer.removeAllLabels();_3dmolViewer.removeAllShapes();}catch(e){}
     _3dmolViewer=null;
   }
 
@@ -6583,7 +6706,13 @@ async function openSheet(m){
       ? '<div style="display:inline-flex;align-items:center;gap:7px;background:'+sem_col.bg+';color:'+sem_col.color+';padding:5px 14px;border-radius:20px;font-weight:700;font-size:11px;margin-bottom:10px">'+sem_col.icon+' '+escHtml(m.category)+'</div>'
       : '';
 
-    var sem_html = imgHtml + sem_badge
+    /* Code SNOMED CT : ancrage terminologique de la fiche. Affiché
+       discrètement à côté du badge de spécialité, avec lien vers le navigateur
+       officiel pour que l'enseignant relecteur puisse vérifier d'un clic que
+       l'intitulé correspond bien au concept clinique visé. */
+    var sem_snomed = paSnomedBadge(m);
+
+    var sem_html = imgHtml + sem_badge + sem_snomed
       + (m.desc    ? sec('Description', escHtml(m.desc), 'desc') : '')
       + (m.definition ? '<div class="info-section" style="background:#f8f9ff;border-left:4px solid #5a8cdc;border-radius:0 10px 10px 0;padding:12px 14px"><div class="info-label" style="color:#1a3a7a">📖 Définition &amp; Épidémiologie</div><div class="info-value">'+escHtml(m.definition)+'</div></div>' : '')
       + (m.clinique ? '<div class="info-section" style="background:#fff5f5;border:1px solid #ffcdd2;border-radius:10px;padding:12px"><div class="info-label" style="color:#c62828">🩺 Sémiologie clinique</div><div class="info-value">'+escHtml(m.clinique)+'</div></div>' : '')
@@ -6618,8 +6747,11 @@ async function openSheet(m){
         '<strong>$1</strong>');
     };
 
+    /* Badge SNOMED CT — même dispositif que Sémiologie et Pharmacie clinique. */
+    const hemaSnomed = paSnomedBadge(m);
+
     info.innerHTML=imgHtml
-      +cellBadge
+      +cellBadge+hemaSnomed
       +(m.desc?sec('Description',escHtml(m.desc),'desc'):'')
       +`<div class="info-grid">`
         +(m.diameter?`<div class="info-item"><div class="info-item-label">Taille</div><div class="info-item-value">${escHtml(m.diameter)}</div></div>`:'')
@@ -9533,6 +9665,7 @@ else if(wt==='bootstrap_viz'){
     let oncoHtml=imgHtml;
     // Badge classe
     if(m.onco_category) oncoHtml+=`<div style="display:inline-flex;align-items:center;gap:7px;background:${_oc.bg};color:${_oc.color};padding:5px 14px;border-radius:20px;font-weight:700;font-size:12px;margin-bottom:14px">${_oc.icon} ${escHtml(m.onco_category)}</div>`;
+    oncoHtml+=paSnomedBadge(m);
     // Description
     if(m.desc) oncoHtml+=sec('Description',escHtml(m.desc),'desc');
     // Mécanisme
@@ -10455,6 +10588,7 @@ else if(wt==='bootstrap_viz'){
   txH+='<div style="display:inline-flex;align-items:center;gap:6px;background:'+txCol.bg+';color:'+txCol.color
     +';border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;margin-bottom:14px">'
     +txCol.icon+' Toxicologie</div>';
+  txH+=paSnomedBadge(m);
 
   // Description
   if(m.desc) txH+=sec('Description',escHtml(m.desc),'desc');
@@ -10528,6 +10662,11 @@ else if(wt==='bootstrap_viz'){
   pcH+='<div style="display:inline-flex;align-items:center;gap:6px;background:'+pcCol.bg+';color:'+pcCol.color
     +';border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;margin-bottom:14px">'
     +pcCol.icon+' '+(m.phcli_type||'Pharmacie Clinique')+'</div>';
+  /* Badge SNOMED CT — même dispositif qu'en Sémiologie : permet à l'enseignant
+     relecteur de vérifier d'un clic que la fiche vise bien l'entité clinique
+     attendue. Rendu uniquement si la fiche porte un code. */
+  pcH+=paSnomedBadge(m);
+
 
   if(m.desc)                         pcH+=sec('📋 Description',                    escHtml(m.desc),'desc');
   if(m.phcli_definition)             pcH+=sec('📖 Définition / Physiopathologie',  escHtml(m.phcli_definition),'definition');
@@ -10679,7 +10818,7 @@ function closeSheet(){
   document.getElementById('mainViewer').classList.remove('hidden');
   if(sheetAnimId){cancelAnimationFrame(sheetAnimId);sheetAnimId=null;}
   if(_3dmolViewer){
-    try{_3dmolViewer.removeAllModels();_3dmolViewer.removeAllSurfaces();}catch(e){}
+    try{_3dmolViewer.removeAllModels();_3dmolViewer.removeAllSurfaces();_3dmolViewer.removeAllLabels();_3dmolViewer.removeAllShapes();}catch(e){}
     _3dmolViewer=null;
   }
   if(_nglStage){
@@ -10812,6 +10951,7 @@ function doLoad(url,res,rej){
   if(draco) loader.setDRACOLoader(draco);
   loader.load(url, g=>res(g.scene), undefined, e=>{
     console.error('[PharmAtlas] Erreur GLB:', url, e);
+    if(typeof paLogDiag==='function') paLogDiag('glb-404', url);
     rej(new Error(e.message||'Fichier introuvable'));
   });
 }
@@ -10959,7 +11099,7 @@ function initSheetRenderer3Dmol(m, cid) {
     const loadingEl = document.getElementById('dmol-loading');
     if (loadingEl) loadingEl.style.display = 'none';
     if (_3dmolViewer) {
-      try { _3dmolViewer.removeAllModels(); _3dmolViewer.removeAllSurfaces(); } catch(e){}
+      try { _3dmolViewer.removeAllModels(); _3dmolViewer.removeAllSurfaces();_3dmolViewer.removeAllLabels();_3dmolViewer.removeAllShapes(); } catch(e){}
     }
     _3dmolViewer = $3Dmol.createViewer(viewport, {
       backgroundColor: '#0a0a0f', antialias: true, id: 'dmol-canvas'
@@ -11354,107 +11494,17 @@ function _paVisualTabs(m){
 /* Lames applicables aux AUTRES catégories que Parasites.
    Seuls les identifiants effectivement lus dans la table de la collection sont
    renseignés ; les autres renvoient à la collection avec l'espèce à filtrer. */
-var BIOSLIDES_MAP_ALL = {
-  'Plantes': {
-    'Airelle rouge (Lingonberry)': {id:714, base:'Vaccinium vitis-idaea - Blatt quer 20x, Jungner 1262', label:'Airelle rouge (Lingonberry)'},
-    'Baie de saule': {id:703, base:'Viburnum lantana - Blatt quer 20x, Jungner 1270', label:'Baie de saule'},
-    'Bouleau verruqueux': {id:611, label:'Bouleau verruqueux'},
-    'Buis commun': {id:12, base:'Buxus sempervirens Blatt quer 20x', label:'Buis commun'},
-    'Capucine': {id:189, base:'Tropaeolum majus  - Trieb quer 20x', label:'Capucine'},
-    'Carotte sauvage': {id:458, base:'Daucus carota - Speicherwurzel 20x, Jungner 520', label:'Carotte sauvage'},
-    'Chanvre': {id:14, base:'Cannabis sativa - Spross quer', label:'Chanvre'},
-    'Charme commun': {id:15, base:'Carpinus betulus Ast quer AP40 20x', label:'Charme commun'},
-    'Châtaignier': {id:108, base:'Castanea sativa Stengel quer 20x', label:'Châtaignier'},
-    'Chêne pédonculé': {id:615, base:'Quercus robur - Holz 20x, Jungner 751', label:'Chêne pédonculé'},
-    'Ciboulette': {id:478, base:'Allium schoenoprasum - Rundblatt quer 20x, Jungner 540', label:'Ciboulette'},
-    'Citrouille': {id:496, base:'Cucurbita pepo - Stamm quer 20x, Jungner 562', label:'Citrouille'},
-    'Clématite des haies': {id:109, base:'Clematis vitalba - Stengel quer 20x', label:'Clématite des haies'},
-    'Coquelicot': {id:178, base:'Papaver rhoeas - Stengel quer 20x 1', label:'Coquelicot'},
-    'Douce-amère': {id:706, base:'Solanum dulcamara - Stamm quer 20x, Jungner 1272', label:'Douce-amère'},
-    'Eucalyptus': {id:49, base:'Eucalyptus globulus Trieb quer AP40 20x 1.1', label:'Eucalyptus'},
-    'Figuier': {id:39, base:'Ficus carica Stengel quer AP40 20x', label:'Figuier'},
-    'Figuier commun': {id:39, base:'Ficus carica Stengel quer AP40 20x', label:'Figuier commun'},
-    'Framboisier': {id:697, base:'Rubus idaeus - Frucht quer 20x, Jungner 1258', label:'Framboisier'},
-    'Frêne élevé': {id:616, base:'Fraxinus excelsior - Holz 20x, Jungner 752', label:'Frêne élevé'},
-    'Fusain d\'Europe': {id:71, base:'Euonymus eruopaeus Stengel quer 20x', label:'Fusain d\'Europe'},
-    'Ginkgo': {id:522, base:'Ginkgo biloba - maennl. Bluete quer 20x, Jungner 595', label:'Ginkgo'},
-    'Gui': {id:32, base:'Viscum album Trieb quer 20x', label:'Gui'},
-    'Hellébore noir': {id:47, base:'Helleborus niger Blatt quer AP40 20x', label:'Hellébore noir'},
-    'Houblon': {id:123, base:'Humulus lupulus Trieb quer 20x', label:'Houblon'},
-    'Houx': {id:30, base:'Ilex aqufolium - Blattstiel quer 20x', label:'Houx'},
-    'Houx commun': {id:30, base:'Ilex aqufolium - Blattstiel quer 20x', label:'Houx commun'},
-    'Hêtre commun': {id:476, base:'Fagus silvatica - Blattknospe quer 20x, Jungner 537', label:'Hêtre commun'},
-    'If commun': {id:664, base:'Taxus  baccata - Frucht quer 20x, Jungner 1221', label:'If commun'},
-    'Laurier-cerise': {id:171, base:'Prunus laurocerasus Zweig 20x', label:'Laurier-cerise'},
-    'Laurier-rose': {id:76, base:'Nerium oleander Samen 20x', label:'Laurier-rose'},
-    'Lavande officinale': {id:137, base:'Lavandula angustifolia Bluetenstiel quer 20x', label:'Lavande officinale'},
-    'Lavande vraie': {id:137, base:'Lavandula angustifolia Bluetenstiel quer 20x', label:'Lavande vraie'},
-    'Lierre grimpant': {id:386, base:'Hedera helix - Blattstiel quer HG 20x', label:'Lierre grimpant'},
-    'Lilas commun': {id:468, base:'Syringa vulgaris - Blatt quer 20x, Jungner 529', label:'Lilas commun'},
-    'Lupin (genre Lupinus)': {id:460, base:'Lupinus sp. - Wurzel quer 20x, Jungner 522', label:'Lupin (genre Lupinus)'},
-    'Luzerne': {id:451, base:'Medicago sativa - Wurzel quer 20x, Jungner 513', label:'Luzerne'},
-    'Maïs': {id:266, base:'Zea mays - quer 40x, Jungner 1015', label:'Maïs'},
-    'Menthe verte': {id:152, base:'Mentha speciosa - Spross quer 20x 1', label:'Menthe verte'},
-    'Molène bouillon-blanc': {id:532, base:'Verbascum thapsus - Blatthaare 20x, Jungner 501', label:'Molène bouillon-blanc'},
-    'Monstera': {id:467, base:'Monstera deliciosa - Luftwurzel quer 20x, Jungner 525', label:'Monstera'},
-    'Muguet': {id:497, base:'Convallaria sp. - Wurzelstock quer 20x, Jungner 557', label:'Muguet'},
-    'Myrtille': {id:715, base:'Vaccinium myrtillus - Frucht quer 20x, Jungner 1263', label:'Myrtille'},
-    'Noisetier commun': {id:538, base:'Corylus sp. - junge Frucht quer 20x, Jungner 606', label:'Noisetier commun'},
-    'Noyer commun': {id:127, base:'Juglans regia - Blattstiel quer 20x', label:'Noyer commun'},
-    'Osmonde royale': {id:28, base:'Osmunda regalis Wedelstiel quer 20x', label:'Osmonde royale'},
-    'Pin sylvestre': {id:7, base:'Pinus sylvestris Nadel quer AP40 20x02', label:'Pin sylvestre'},
-    'Pissenlit officinal': {id:513, base:'Taraxacum sp. - Bluetenknospe quer 20x, Jungner 579', label:'Pissenlit officinal'},
-    'Pomme de Terre': {id:553, base:'Solanum Tuberosum - Knolle 20x, Jungner 488', label:'Pomme de Terre'},
-    'Pommier commun': {id:149, base:'Malus domestica Zweig quer 20x 2', label:'Pommier commun'},
-    'Populage des marais': {id:448, base:'Caltha palustris - tetrarche Wurzel quer 20x, Jungner 510', label:'Populage des marais'},
-    'Prunellier': {id:677, base:'Prunus spinosa - Blatt quer 20x, Jungner 1251', label:'Prunellier'},
-    'Pâquerette vivace': {id:105, base:'Bellis perennis Bluetenstiel 20x', label:'Pâquerette vivace'},
-    'Ricin': {id:637, base:'Ricinus communis - Samen quer 20x, Jungner 1278', label:'Ricin'},
-    'Robinier faux-acacia': {id:685, base:'Robinia pseudoacacia - Blaettchengelenk quer 20x, Jungner 1235', label:'Robinier faux-acacia'},
-    'Ronce': {id:696, base:'Rubus fructicosus - Trieb mit Dorn quer 20x, Junger 1257', label:'Ronce'},
-    'Réglisse': {id:56, base:'Glycyrrhiza glabra - Wurzel quer', label:'Réglisse'},
-    'Sauge officinale': {id:604, base:'Salvia officinalis - Blatt quer 20x, Jungner 721', label:'Sauge officinale'},
-    'Saule blanc': {id:675, base:'Salix sp. - weibl. Bluete quer 20x, Jungner 1248', label:'Saule blanc'},
-    'Soja': {id:336, base:'Sojabohne - Blatt quer 20x, Jungner 1405', label:'Soja'},
-    'Sorbier des oiseleurs': {id:670, base:'Sorbus aucuparia - Frucht quer 20x, Jungner 1244', label:'Sorbier des oiseleurs'},
-    'Sureau noir': {id:377, base:'Sambucus nigra - Stamm 20x, Jungner 567', label:'Sureau noir'},
-    'Tabac': {id:489, base:'Nicotiana tabacum - Blatt quer 20x, Jungner 547', label:'Tabac'},
-    'Tanaisie': {id:174, base:'Tanacetum vulgare - Stengel quer 20x', label:'Tanaisie'},
-    'Tanaisie commune': {id:174, base:'Tanacetum vulgare - Stengel quer 20x', label:'Tanaisie commune'},
-    'Tilleul à grandes feuilles': {id:621, base:'Tilia platyphyllos - Holz 20x, Jungner 757', label:'Tilleul à grandes feuilles'},
-    'Tomate': {id:544, base:'Solanum lycopersicum - Frucht quer 20x, Jungner 612', label:'Tomate'},
-    'Tournesol': {id:288, base:'Sonnenblume - Knospe 20x', label:'Tournesol'},
-    'Vanille': {id:6, base:'Vanilla planifolia - Luftwurzel quer 20x', label:'Vanille'},
-    'Églantier': {id:700, base:'Rosa canina - Frucht quer 20x, Jungner 1264', label:'Églantier'},
-    'Épine-vinette': {id:695, base:'Berberis vulgaris - Blatt quer 20x, Jungner 1256', label:'Épine-vinette'}
-  },
-  'Champignons': {
-    'Coprin chevelu': {id:576, base:'Coprinus sp. - Fruchtkoerper 20x, Jungner 669', label:'Coprin chevelu'},
-    'Cèpe de Bordeaux': {id:574, base:'Boletus edulis - Fruchtkoerper quer 20x, Jungner 667', label:'Cèpe de Bordeaux'}
-  },
-  'Organites': {
-    'Chloroplaste': {id:475, base:'Elodea canadensis - Blattknospe laengs, Jungner 536', label:'Chloroplaste'}
-  }
-};
-
-var BIOSLIDES_MAP = {
-  'Fasciola hepatica — Douve du Foie': {id:357, base:'Fasciola hepatica, quer 40x, Jungner 147', label:'Fasciola hepatica — Douve du Foie'},
-  'Echinococcus granulosus': {id:370, base:'Echinococcus - Zyste 40x, Jungner 471', label:'Echinococcus granulosus'},
-  'Entamoeba histolytica': {id:358, base:'Entamoeba histolytica - 40x, Jungner 468', label:'Entamoeba histolytica'},
-  'Toxoplasma gondii': {id:354, base:'Toxoplasma - Ausstrich 40x, Jungner 480', label:'Toxoplasma gondii'},
-  'Trypanosoma brucei': {id:345, base:'Trypanosoma gambiense - Blutausstrich 40x, Jungner 125', label:'Trypanosoma brucei'},
-  'Trypanosoma cruzi — Maladie de Chagas': {id:344, base:'Trypanosoma equiperdum - Blutausstrich 40x, Jungner 126', label:'Trypanosoma cruzi — Maladie de Chagas'},
-  'Leishmania sp.': {id:372, base:'Leishmania donovani - im Gewebe 40x, Jungner 476', label:'Leishmania sp.'},
-  'Plasmodium falciparum': {id:348, base:'Plasmodium - Blutausstrich 40x, Jungner 127', label:'Plasmodium falciparum'},
-  'Sarcoptes scabiei — Gale': {id:361, base:'Bdellonyssus - total 40x, Jungner 460', label:'Sarcoptes scabiei — Gale'},
-  'Taenia solium': {id:371, base:'Taenia - Glied quer 40x, Jungner 466', label:'Taenia solium'},
-  'Trichinella spiralis': {id:373, base:'Trichinella - im Muskel 40x, Jungner 158', label:'Trichinella spiralis'},
-  'Hirudo medicinalis — Sangsue médicinale': {id:351, base:'Hirudo medicinalis - quer 40x, Jungner 163', label:'Hirudo medicinalis — Sangsue médicinale'}
-};
+/* Les correspondances Fiche → Lame BioSLiDES vivent désormais dans les
+   fichiers de données (champ `bioslide` par fiche : Plantes.json,
+   Parasites.json, Champignons.json, Organites.json), et non plus ici.
+   index.html ne fait plus qu'APPELER le viewer ; resolveBioslide() lit
+   directement m.bioslide. Ce découplage évite la perte de données
+   constatée quand tout l'inventaire vivait dans un littéral JS unique :
+   une mise à jour partielle du code écrasait alors les entrées qui
+   n'étaient pas réaffirmées dans le même diff. */
 function resolveBioslide(m){
-  if(!m) return null;
-  var e = (BIOSLIDES_MAP_ALL[m._cat]||{})[m.name] || (m._cat==='Parasites' ? BIOSLIDES_MAP[m.name] : null);
-  if(!e) return null;
+  if(!m || !m.bioslide) return null;
+  var e = m.bioslide;   // { id, base?, species? } — porté par la fiche elle-même
   /* Pyramide DZI : la collection publie, pour chaque lame, un dossier
      data/<id>/ contenant « <base>_Thumbnail.jpg », « <base>_Gallery.jpg » et
      le manifeste « <base>.dzi » (motif relevé dans la table de la collection).
@@ -11488,7 +11538,7 @@ function resolveBioslide(m){
     id: e.id,
     base: e.base || null,
     dzi: dzi,
-    label: e.label,
+    label: m.name,   /* la donnée JSON ne duplique plus le libellé : il vient de la fiche */
     species: e.species || null,
     url: e.id
       ? 'https://bioslides.biologie.uni-due.de/viewer.html?id='+e.id+'&language=en'
@@ -11579,7 +11629,9 @@ window.initSheetRendererBioslides = function(m, slide){
     if(window._bsProbe[ck] && typeof window._bsProbe[ck]==='object'){
       openOSD(window._bsProbe[ck]); return;
     }
-    if(i>=slide.dzi.length){ window._bsProbe[ck]='fail'; fallbackIframe(); return; }
+    if(i>=slide.dzi.length){ window._bsProbe[ck]='fail';
+      if(typeof paLogDiag==='function') paLogDiag('dzi-introuvable','lame '+(slide.id||'?')+' — repli viewer officiel');
+      fallbackIframe(); return; }
     var url=slide.dzi[i];
     var ctl = (typeof AbortController!=='undefined') ? new AbortController() : null;
     var to  = setTimeout(function(){ try{ ctl && ctl.abort(); }catch(e){} }, 4000);
@@ -11594,7 +11646,14 @@ window.initSheetRendererBioslides = function(m, slide){
         var FMT=g(/Format=["']([a-z]+)/i)||'jpeg';
         if(!W||!H) return Promise.reject('dims');
         var dir=url.replace(/\.(dzi|xml)$/i,'')+'_files/';
-        var src={ width:W, height:H, tileSize:TS, tileOverlap:OV,
+        /* OpenSeadragon attend `tileWidth`/`tileHeight` sur une source de tuiles
+           personnalisée, PAS `tileSize` (vérifié via la documentation officielle
+           du projet). Avec `tileSize`, OpenSeadragon retombe sur sa valeur par
+           défaut (254px) au lieu de la taille réelle lue dans le manifeste DZI :
+           la grille de tuiles calculée ne correspond alors plus aux tuiles
+           effectivement servies par le serveur, ce qui peut casser l'affichage
+           à certains niveaux de zoom selon l'écart entre les deux valeurs. */
+        var src={ width:W, height:H, tileWidth:TS, tileHeight:TS, tileOverlap:OV,
                   minLevel:0, maxLevel:Math.ceil(Math.log(Math.max(W,H))/Math.LN2),
                   getTileUrl:function(l,x,y){ return dir+l+'/'+x+'_'+y+'.'+FMT; } };
         window._bsProbe[ck]=src;
@@ -11610,6 +11669,10 @@ window.initSheetRendererBioslides = function(m, slide){
         _osdViewer = OpenSeadragon({
           element: vp,
           prefixUrl: 'vendor/openseadragon/images/',
+          /* Le serveur BioSLiDES répond lentement : sans délai explicite, une
+             tuile injoignable laisse le viewer en attente indéfinie plutôt que
+             de déclencher le repli. Option `timeout` documentée par OSD. */
+          timeout: 20000,
           tileSources: src,
           showNavigator: true,
           navigatorPosition: 'BOTTOM_RIGHT',
@@ -13282,7 +13345,7 @@ function render2DScientific(m){
   if(!container) return;
   if(typeof sheetAnimId!=='undefined' && sheetAnimId){cancelAnimationFrame(sheetAnimId);sheetAnimId=null;}
   if(typeof sheetRenderer!=='undefined' && sheetRenderer){try{sheetRenderer.dispose();}catch(_){}sheetRenderer=null;}
-  if(typeof _3dmolViewer!=='undefined' && _3dmolViewer){try{_3dmolViewer.removeAllModels();_3dmolViewer.removeAllSurfaces();}catch(_){}_3dmolViewer=null;}
+  if(typeof _3dmolViewer!=='undefined' && _3dmolViewer){try{_3dmolViewer.removeAllModels();_3dmolViewer.removeAllSurfaces();_3dmolViewer.removeAllLabels();_3dmolViewer.removeAllShapes();}catch(_){}_3dmolViewer=null;}
   var key=_org2dKey(m); if(!key){return;}
   var e=ORG_2D[key];
   var has3D=!!(m && m.file);
@@ -13354,7 +13417,7 @@ function _orgDmolLoad(e, stage){
   var url=_org2dStructUrl(e);
   function _build(data, fmt){
     if(loader) loader.style.display='none';
-    if(_3dmolViewer){try{_3dmolViewer.removeAllModels();_3dmolViewer.removeAllSurfaces();}catch(_){}}
+    if(_3dmolViewer){try{_3dmolViewer.removeAllModels();_3dmolViewer.removeAllSurfaces();_3dmolViewer.removeAllLabels();_3dmolViewer.removeAllShapes();}catch(_){}}
     _3dmolViewer=$3Dmol.createViewer(stage,{backgroundColor:(window._orgDmolDark?'#0a0a0f':'#ffffff'),antialias:true});
     _3dmolViewer.addModel(data, fmt||'pdb');
     _orgDmolApplyStyle();
@@ -16201,6 +16264,21 @@ function paIsConcept(m){
 }
 
 /* ── Typographie : une puce = une ligne ─────────────────────────────────── */
+/* Badge SNOMED CT — rendu unique partagé par toutes les catégories cliniques.
+   Renvoie '' si la fiche n'a pas de code, ce qui permet de le concaténer sans
+   condition. Le lien ouvre le navigateur SNOMED officiel : l'enseignant
+   relecteur vérifie en un clic que la fiche vise bien l'entité attendue. */
+function paSnomedBadge(m){
+  if(!m || !m.snomed || !m.snomed.code) return '';
+  return '<a href="https://browser.ihtsdotools.org/?perspective=full&conceptId1='
+    + encodeURIComponent(m.snomed.code)
+    + '" target="_blank" rel="noopener" title="'+escHtml(m.snomed.fsn||'')+'"'
+    + ' style="display:inline-flex;align-items:center;gap:5px;background:rgba(120,130,150,.10);'
+    + 'color:#5a6478;padding:4px 11px;border-radius:20px;font-size:10px;font-weight:600;'
+    + 'margin-bottom:10px;margin-left:6px;text-decoration:none">🏷️ SNOMED '
+    + escHtml(m.snomed.code)+' ↗</a>';
+}
+
 function paBullets(v){
   if(v==null) return v;
   var t=String(v);
@@ -16397,7 +16475,7 @@ var _paLinks=(function(){
        et la fuite mémoire associée. */
     try{
       if(typeof _3dmolViewer!=='undefined' && _3dmolViewer){
-        try{ _3dmolViewer.removeAllModels(); _3dmolViewer.removeAllSurfaces(); }catch(e){}
+        try{ _3dmolViewer.removeAllModels(); _3dmolViewer.removeAllSurfaces();_3dmolViewer.removeAllLabels();_3dmolViewer.removeAllShapes(); }catch(e){}
         _3dmolViewer=null;
       }
       if(typeof _nglStage!=='undefined' && _nglStage){

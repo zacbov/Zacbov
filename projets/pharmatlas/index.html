@@ -1804,6 +1804,21 @@ function ingestData(raw,base){
   try{ if(typeof PA_Graph!=='undefined'){ PA_Graph.rebuildThrottled(50); } }catch(e){}
 }
 
+/* Badge SNOMED CT — rendu unique partagé par toutes les catégories cliniques.
+   Renvoie '' si la fiche n'a pas de code, ce qui permet de le concaténer sans
+   condition. Le lien ouvre le navigateur SNOMED officiel : l'enseignant
+   relecteur vérifie en un clic que la fiche vise bien l'entité attendue. */
+function paSnomedBadge(m){
+  if(!m || !m.snomed || !m.snomed.code) return '';
+  return '<a href="https://browser.ihtsdotools.org/?perspective=full&conceptId1='
+    + encodeURIComponent(m.snomed.code)
+    + '" target="_blank" rel="noopener" title="'+escHtml(m.snomed.fsn||'')+'"'
+    + ' style="display:inline-flex;align-items:center;gap:5px;background:rgba(120,130,150,.10);'
+    + 'color:#5a6478;padding:4px 11px;border-radius:20px;font-size:10px;font-weight:600;'
+    + 'margin-bottom:10px;margin-left:6px;text-decoration:none">🏷️ SNOMED '
+    + escHtml(m.snomed.code)+' ↗</a>';
+}
+
 function resolvePath(p,base,catId){
   if(!p) return null;
   // Résolution via fileMap (fichiers locaux sélectionnés par l'utilisateur)
@@ -11612,6 +11627,21 @@ window.initSheetRendererBioslides = function(m, slide){
     tabs();
   }
 
+  /* ── CORS : OpenSeadragon est INUTILISABLE sur BioSLiDES ──────────────────
+     Vérifié en production : le serveur ne renvoie AUCUN en-tête
+     Access-Control-Allow-Origin. Le navigateur bloque donc la lecture du
+     manifeste .dzi quel que soit le chemin — les 4 variantes testées
+     échouaient toutes en net::ERR_FAILED, soit 4 requêtes inutiles et
+     bruyantes par ouverture de fiche.
+     On va donc DIRECTEMENT au viewer officiel en iframe, qui fonctionne
+     puisqu'il est servi par le même domaine que ses propres tuiles.
+     Pour réactiver OpenSeadragon il faudrait que l'UDE ajoute l'en-tête CORS
+     (demande possible à bioslides@uni-due.de), ou héberger une copie des
+     lames — la licence CC BY-SA l'autorise, avec attribution. */
+  fallbackIframe();
+  return;
+
+  /* eslint-disable no-unreachable */
   if(!slide.dzi || !slide.dzi.length){ fallbackIframe(); return; }
 
   /* Le serveur BioSLiDES renvoie la PAGE D'ACCUEIL en HTTP 200 pour tout
@@ -16264,21 +16294,6 @@ function paIsConcept(m){
 }
 
 /* ── Typographie : une puce = une ligne ─────────────────────────────────── */
-/* Badge SNOMED CT — rendu unique partagé par toutes les catégories cliniques.
-   Renvoie '' si la fiche n'a pas de code, ce qui permet de le concaténer sans
-   condition. Le lien ouvre le navigateur SNOMED officiel : l'enseignant
-   relecteur vérifie en un clic que la fiche vise bien l'entité attendue. */
-function paSnomedBadge(m){
-  if(!m || !m.snomed || !m.snomed.code) return '';
-  return '<a href="https://browser.ihtsdotools.org/?perspective=full&conceptId1='
-    + encodeURIComponent(m.snomed.code)
-    + '" target="_blank" rel="noopener" title="'+escHtml(m.snomed.fsn||'')+'"'
-    + ' style="display:inline-flex;align-items:center;gap:5px;background:rgba(120,130,150,.10);'
-    + 'color:#5a6478;padding:4px 11px;border-radius:20px;font-size:10px;font-weight:600;'
-    + 'margin-bottom:10px;margin-left:6px;text-decoration:none">🏷️ SNOMED '
-    + escHtml(m.snomed.code)+' ↗</a>';
-}
-
 function paBullets(v){
   if(v==null) return v;
   var t=String(v);

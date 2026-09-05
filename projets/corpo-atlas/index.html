@@ -364,6 +364,29 @@ kbd{font-size:14px;font-family:monospace;background:var(--bg5);border:.5px solid
 .gs-row:hover{background:var(--bg4)}
 .gs-l{display:block;font-size:13px;color:var(--text2)}
 .gs-s{display:block;font-size:11px;color:var(--text4)}
+
+/* Section Lésions (imagerie & histologie pathologiques) */
+.les-row{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:5px 4px;border-bottom:1px solid rgba(255,255,255,.04)}
+.les-name{font-size:13px;color:var(--text2);flex:1}
+.les-actions{display:flex;gap:5px;flex-shrink:0}
+.les-btn{font-size:11px;padding:3px 9px;border-radius:5px;cursor:pointer;
+  white-space:nowrap;transition:all .15s;border:1px solid transparent}
+.les-slide{background:rgba(232,168,124,.14);border-color:rgba(232,168,124,.4);color:var(--gold)}
+.les-slide:hover{background:rgba(232,168,124,.24)}
+.les-scan{background:rgba(126,207,168,.12);border-color:rgba(126,207,168,.4);color:var(--acc)}
+.les-scan:hover{background:rgba(126,207,168,.22)}
+
+/* Listes des panneaux du bas (lames + imagerie par organe) */
+.bp-list{max-height:130px;overflow-y:auto;background:rgba(10,11,14,.6);
+  border-top:1px solid var(--border);flex-shrink:0;padding:3px 0}
+.bp-hd{font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--acc);padding:4px 10px 2px;font-weight:700}
+.bp-row{display:flex;align-items:center;gap:7px;padding:4px 12px;font-size:12px;
+  color:var(--text2);cursor:pointer;transition:background .12s}
+.bp-row:hover{background:rgba(255,255,255,.04)}
+.bp-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.bp-sub{color:var(--text4);font-size:10px;margin-left:auto;padding-left:8px}
 </style>
 <style type="text/css"></style><style>@keyframes bpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}</style></head>
 <body>
@@ -4132,6 +4155,7 @@ kbd{font-size:14px;font-family:monospace;background:var(--bg5);border:.5px solid
         <input type="range" id="hsl" min="0" max="96" value="48" oninput="onHisto(+this.value)" style="flex:1;accent-color:var(--acc2)">
       </div>
       <div id="hfilm" style="height:44px;display:flex;gap:2px;padding:3px 6px;background:#010103;overflow-x:auto;scrollbar-width:thin;flex-shrink:0"></div>
+      <div id="idc-slide-list" class="bp-list" style="display:none"></div>
     </div>
     <div id="lame-histo" style="display:none;flex-direction:column;flex:1;min-height:0">
       <div id="lame-nosel" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;opacity:.5">
@@ -7861,6 +7885,7 @@ function selectMesh(rawName) {
     selectedMeshName = null;
     restoreFocusMats();
     syncIRM(null);
+    if(typeof updateBottomPanels==='function') updateBottomPanels(null);
     return;
   }
   selectedMeshName = rawName;
@@ -7880,6 +7905,7 @@ function selectMesh(rawName) {
   renderInfo(rawName);
   syncIRM(rawName);
   showLames(rawName);
+  if(typeof updateBottomPanels==='function') updateBottomPanels(rawName);
   focusMesh(m);
 }
 
@@ -7934,6 +7960,9 @@ function renderInfo(rawName) {
     h += `<div class="isec"><div class="ist w">Pathologies associées</div><div>`;
     patho.forEach(p => h += `<span class="chip p">${esc(p)}</span>`);
     h += `</div></div>`;
+  }
+  if (typeof renderLesionsSection === 'function') {
+    try { h += renderLesionsSection(rawName); } catch(e){ console.warn('[lesions]',e); }
   }
   if (typeof conditionsSectionForMesh === 'function') {
     try { h += conditionsSectionForMesh(rawName); } catch(e){ console.warn('[fiches]',e); }
@@ -11884,11 +11913,11 @@ if(_origSelectMesh){
    de section (.ist), déjà utilisé par les onglets d'origine. */
 const ITAB_GROUPS = {
   anatomie:    ['Description','Fonctions','Nomenclature','Références','Structure'],
-  pathologies: ['Patholog','Stade','Clinique','Fiches cliniques','Toxicolog'],
+  pathologies: ['Patholog','Stade','Clinique','Fiches cliniques','Toxicolog','Lésions'],
   imagerie:    ['Imagerie','IRM','Scanner'],
-  medic:       ['Médicaments','Pharmacocinétique','Formes galéniques','Pharmacogénétique','Oncologie'],
+  medic:       ['Médicaments','Pharmacocinétique','Formes galéniques','Pharmacogénétique','Oncologie','Hématologie'],
   infect:      ['Agents infectieux','Virus'],
-  micro:       ['Histologie','Lames virtuelles','Physiologie','Hématologie','Immunologie'],
+  micro:       ['Histologie','Lames virtuelles','Physiologie','Immunologie'],
 };
 function _isecMatches(sec, keys){
   const lbl = (sec.querySelector('.ist')||{}).textContent || '';
@@ -11898,15 +11927,7 @@ function switchITab(tab, btn){
   document.querySelectorAll('.itab').forEach(t=>t.classList.remove('on'));
   if(btn) btn.classList.add('on');
   const scont=document.getElementById('scont');
-  const imgTab=document.getElementById('ibody-imagerie');
-  if(tab==='imagerie'){
-    if(scont) scont.style.display='none';
-    if(imgTab){ imgTab.style.display='block';
-      if(typeof drawImagingCanvas==='function'){ try{ drawImagingCanvas(); }catch(e){} } }
-    return;
-  }
   if(scont) scont.style.display='block';
-  if(imgTab) imgTab.style.display='none';
   const keys=ITAB_GROUPS[tab]||ITAB_GROUPS.anatomie;
   let shown=0;
   document.querySelectorAll('#scont .isec').forEach(sec=>{
@@ -14101,6 +14122,116 @@ function radioSectionForMesh(rawName){
   const o=organsForMesh(rawName);
   const o2=(typeof withFallback==='function')?withFallback(o):o;
   return renderRadioSection(o2);
+}
+
+/* ══════════════════════════════════════════════════════
+   SECTION « LÉSIONS » — imagerie & histologie pathologiques
+   Dans l'onglet Pathologies : pour l'organe courant, affiche les
+   lames tumorales (TCGA) et scanners (TCGA) disponibles, chacun
+   ouvrant le visualiseur zoomable INTÉGRÉ (modale, pas d'onglet).
+══════════════════════════════════════════════════════ */
+function renderLesionsSection(rawName){
+  if(typeof organsForMesh!=='function') return '';
+  const organs=(typeof withFallback==='function')
+    ? withFallback(organsForMesh(rawName)) : organsForMesh(rawName);
+  if(!organs.length) return '';
+
+  // Regrouper par pathologie (nom de cancer) : lame + scanner du même organe
+  const seen=new Set();
+  const rows=[];
+  organs.forEach(o=>{
+    // lames pathologiques de l'organe
+    const slides=(typeof HISTOPATH==='object' && HISTOPATH.byOrgan)
+      ? (HISTOPATH.byOrgan[o]||[]).map(i=>HISTOPATH.items[i]) : [];
+    // scanners de l'organe
+    const scans=(typeof RADIO==='object' && RADIO.byOrgan)
+      ? (RADIO.byOrgan[o]||[]).map(i=>RADIO.items[i]) : [];
+    // apparier par nom de pathologie (ex. « Carcinome hépatocellulaire »)
+    const names=new Set([...slides.map(s=>s.name), ...scans.map(s=>s.name)]);
+    names.forEach(nm=>{
+      if(seen.has(nm)) return; seen.add(nm);
+      const slide=slides.find(s=>s.name===nm);
+      const scan=scans.find(s=>s.name===nm);
+      let btns='';
+      if(slide) btns+='<span class="les-btn les-slide" '+
+        'onclick="openPathSlide(\''+slide.series+'\')">🔬 Lame</span>';
+      if(scan)  btns+='<span class="les-btn les-scan" '+
+        'onclick="openRadio(\''+scan.url+'\',\''+nm.replace(/'/g,'')+' — '+scan.mod+'\')">'+
+        (scan.mod==='MR'?'🧲':'🩻')+' '+scan.mod+'</span>';
+      if(btns) rows.push('<div class="les-row"><span class="les-name">'+nm+
+        '</span><span class="les-actions">'+btns+'</span></div>');
+    });
+  });
+  if(!rows.length) return '';
+  return '<div class="isec"><div class="ist g">Lésions — imagerie &amp; histologie ('+rows.length+')</div>'+
+    rows.join('')+
+    '<div style="font-size:10px;color:var(--text4);margin-top:6px">'+
+    'Lames et imagerie de tumeurs · NCI Imaging Data Commons (TCGA) · CC BY · '+
+    'zoom interactif au clic</div></div>';
+}
+
+/* ══════════════════════════════════════════════════════
+   ENRICHISSEMENT DES PANNEAUX DU BAS
+   Au clic sur un organe : sous le viewer IRM (gauche) et sous
+   l'Allen (droite), on liste les imageries et lames NORMALES de
+   l'organe. Le clic ouvre le visualiseur zoomable intégré.
+   (Le pathologique reste dans la fiche, section « Lésions ».)
+══════════════════════════════════════════════════════ */
+
+/* Liste des lames histologiques normales de l'organe → panneau droit */
+function updateBottomSlides(rawName){
+  const host=document.getElementById('idc-slide-list');
+  if(!host) return;
+  const organs=(typeof withFallback==='function' && typeof organsForMesh==='function')
+    ? withFallback(organsForMesh(rawName)) : (organsForMesh?organsForMesh(rawName):[]);
+  const seen=new Set(), slides=[];
+  organs.forEach(o=>{
+    if(typeof HISTOIDC==='object' && HISTOIDC.byOrgan)
+      (HISTOIDC.byOrgan[o]||[]).forEach(i=>{ const s=HISTOIDC.items[i];
+        if(s&&!seen.has(s.series)){seen.add(s.series);slides.push(s);} });
+  });
+  // les lames « générales » (épithéliums, tissus) toujours proposées
+  if(typeof HISTOIDC==='object' && HISTOIDC.byOrgan && HISTOIDC.byOrgan._general)
+    HISTOIDC.byOrgan._general.forEach(i=>{ const s=HISTOIDC.items[i];
+      if(s&&!seen.has(s.series)){seen.add(s.series);slides.push(s);} });
+
+  if(!slides.length){ host.style.display='none'; host.innerHTML=''; return; }
+  host.style.display='block';
+  host.innerHTML='<div class="bp-hd">🔬 Lames zoomables ('+slides.length+')</div>'+
+    slides.slice(0,12).map(s=>
+      '<div class="bp-row" onclick="openIDCSlide(\''+s.series+'\')">'+
+      '<span class="bp-dot" style="background:var(--acc)"></span>'+
+      s.name+(s.anat&&s.anat!=='_general'?' <span class="bp-sub">'+s.anat+'</span>':'')+
+      '</div>').join('');
+}
+
+/* Liste des imageries radiologiques de l'organe → panneau gauche */
+function updateBottomRadio(rawName){
+  const host=document.getElementById('irm-radio-list');
+  if(!host) return;
+  const organs=(typeof withFallback==='function' && typeof organsForMesh==='function')
+    ? withFallback(organsForMesh(rawName)) : (organsForMesh?organsForMesh(rawName):[]);
+  const seen=new Set(), scans=[];
+  organs.forEach(o=>{
+    if(typeof RADIO==='object' && RADIO.byOrgan)
+      (RADIO.byOrgan[o]||[]).forEach(i=>{ const s=RADIO.items[i];
+        if(s&&!seen.has(s.url)){seen.add(s.url);scans.push(s);} });
+  });
+  if(!scans.length){ host.style.display='none'; host.innerHTML=''; return; }
+  host.style.display='block';
+  host.innerHTML='<div class="bp-hd">🩻 Imagerie clinique ('+scans.length+')</div>'+
+    scans.slice(0,8).map(s=>
+      '<div class="bp-row" onclick="openRadio(\''+s.url+'\',\''+s.name.replace(/'/g,'')+
+      ' — '+s.mod+'\')">'+
+      '<span class="bp-dot" style="background:'+(s.mod==='MR'?'#a8c4e8':'var(--acc2)')+'"></span>'+
+      s.name+' <span class="bp-sub">'+s.mod+' · '+s.n+' coupes</span></div>').join('');
+}
+
+function updateBottomPanels(rawName){
+  // Seules les lames histologiques NORMALES vont dans le panneau du bas.
+  // L'imagerie radiologique disponible est tumorale (TCGA) : elle reste
+  // dans la section « Lésions » de la fiche, pas ici.
+  try{ updateBottomSlides(rawName); }catch(e){ console.warn('[panels/slides]',e); }
 }
 
 /* ══════════════════════════════════════════════════════

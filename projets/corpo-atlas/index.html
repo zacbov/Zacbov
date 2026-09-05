@@ -4876,6 +4876,11 @@ function cleanMeshName(rawName) {
      ordre incorrect en français (« cortical noyau » au lieu de « noyau
      cortical »). Ces motifs priment sur le remplacement terme à terme. */
   const PHRASES = [
+    // Abréviations anatomiques en début de nom (le DICT ne les traite pas :
+    // ses clés « ^m. » sont des chaînes littérales jamais trouvées).
+    [/^m\.\s+/i, 'Muscle '], [/^v\.\s+/i, 'Veine '], [/^a\.\s+/i, 'Artère '],
+    [/^n\.\s+/i, 'Nerf '], [/^lig\.\s+/i, 'Ligament '], [/^gl\.\s+/i, 'Glande '],
+    [/\bm\.\s+/gi, 'muscle '], [/\bv\.\s+/gi, 'veine '], [/\ba\.\s+/gi, 'artère '],
     [/\bamygdalohippocampal area\b/gi, 'aire amygdalo-hippocampique'],
     [/\bamygdaloid complex\b/gi,       'complexe amygdalien'],
     [/\bamygdaloid area\b/gi,          'aire amygdalienne'],
@@ -7944,6 +7949,18 @@ function renderInfo(rawName) {
   }
   if (typeof extraSectionsForMesh === 'function') {
     try { h += extraSectionsForMesh(rawName); } catch(e){ console.warn('[modules]',e); }
+  }
+  if (typeof phcliSectionForMesh === 'function') {
+    try { h += phcliSectionForMesh(rawName); } catch(e){ console.warn('[phcli]',e); }
+  }
+  if (typeof histoIDCSectionForMesh === 'function') {
+    try { h += histoIDCSectionForMesh(rawName); } catch(e){ console.warn('[histoidc]',e); }
+  }
+  if (typeof radioSectionForMesh === 'function') {
+    try { h += radioSectionForMesh(rawName); } catch(e){ console.warn('[radio]',e); }
+  }
+  if (typeof histoPathSectionForMesh === 'function') {
+    try { h += histoPathSectionForMesh(rawName); } catch(e){ console.warn('[histopath]',e); }
   }
   if (typeof ouhisSectionForMesh === 'function') {
     try { h += ouhisSectionForMesh(rawName); } catch(e){ console.warn('[ouhis]',e); }
@@ -12798,7 +12815,7 @@ let PHYSIO_BY_ORGAN = {};
 let HISTO_BY_ORGAN = {};
 let PK_BY_ORGAN = {};
 let GALEN_BY_ORGAN = {};
-let INFECT_BY_ORGAN = {};
+var INFECT_BY_ORGAN = {};
 
 /* ── Rendu des sections additionnelles dans la fiche d'organe ── */
 function _sec(title, cls, body){
@@ -12889,7 +12906,7 @@ function extraSectionsForMesh(rawName){
    Construit après le chargement des données (buildReverseDrugIndex).
    Permet : cliquer un médicament → allumer ses organes cibles.
 ══════════════════════════════════════════════════════ */
-let DRUG_TO_ORGANS = {};
+var DRUG_TO_ORGANS = {};
 function buildReverseDrugIndex(){
   DRUG_TO_ORGANS = {};
   if(typeof ORGAN_DRUG_INDEX!=='object') return;
@@ -13125,7 +13142,7 @@ async function loadOntology(){
 }
 
 /* ── Index de recherche : synonyme normalisé → organe ── */
-let SYNONYM_INDEX = {};
+var SYNONYM_INDEX = {};   /* var : évite la zone morte temporelle vue par searchEverything */
 function _n(s){
   return String(s||'').toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
@@ -13153,7 +13170,7 @@ function searchAnatomy(q, limit){
   const k=_n(q);
   if(k.length<2) return [];
   const exact=[], partial=[];
-  for(const [term,organs] of Object.entries(SYNONYM_INDEX)){
+  for(const [term,organs] of Object.entries(SYNONYM_INDEX||{})){
     if(term===k) organs.forEach(o=>exact.push({organ:o,matched:term}));
     else if(term.includes(k)) organs.forEach(o=>partial.push({organ:o,matched:term}));
   }
@@ -13216,7 +13233,7 @@ function ontologySectionForMesh(rawName){
    pathologies) : les corps de texte citent des organes de façon
    incidente et produiraient des faux positifs.
 ══════════════════════════════════════════════════════ */
-let VIRUS_BY_ORGAN = {};
+var VIRUS_BY_ORGAN = {};
 let ONCO_BY_ORGAN = {};
 let HEMATO_BY_ORGAN = {};
 let IMMUNO_BY_ORGAN = {};
@@ -13335,7 +13352,7 @@ async function loadModules2(){
    visualiseur de l'Open University. CorpoAtlas n'est donc pas
    une œuvre dérivée et la clause ShareAlike ne s'y applique pas.
 ══════════════════════════════════════════════════════ */
-let OUHIS = {byOrgan:{}, _meta:{}};
+var OUHIS = {byOrgan:{}, _meta:{}};
 
 async function loadOuhis(){
   try{
@@ -13537,6 +13554,7 @@ const _organLabel = o =>
 
 /* Recherche dans tous les modules — renvoie des résultats groupés */
 function searchEverything(q, perCat){
+ try {
   const k = _sn(q);
   if(k.length < 2) return [];
   const lim = perCat || 6;
@@ -13548,9 +13566,9 @@ function searchEverything(q, perCat){
 
   /* ── Structures anatomiques (noms + synonymes UBERON) ── */
   const structs = [];
-  if(typeof SYNONYM_INDEX === 'object'){
+  if(SYNONYM_INDEX && typeof SYNONYM_INDEX === 'object'){
     const seen = new Set();
-    for(const [term, organs] of Object.entries(SYNONYM_INDEX)){
+    for(const [term, organs] of Object.entries(SYNONYM_INDEX||{})){
       if(!term.includes(k)) continue;
       organs.forEach(o => {
         if(seen.has(o)) return; seen.add(o);
@@ -13563,7 +13581,7 @@ function searchEverything(q, perCat){
   /* ── Médicaments ── */
   const drugs = [];
   if(typeof DRUG_TO_ORGANS === 'object'){
-    for(const [name, d] of Object.entries(DRUG_TO_ORGANS)){
+    for(const [name, d] of Object.entries(DRUG_TO_ORGANS||{})){
       if(!_sn(name).includes(k)) continue;
       drugs.push({label:name.toLowerCase(), sub:(d.cl||'') + ' · ' +
         d.organs.map(_organLabel).join(', '), drug:name, kind:'drug'});
@@ -13574,7 +13592,7 @@ function searchEverything(q, perCat){
   /* ── Agents infectieux (bactéries, parasites, virus) ── */
   const inf = [];
   const scanInf = (idx, tag) => {
-    if(typeof idx !== 'object') return;
+    if(!idx || typeof idx !== 'object') return;
     const seen = new Set();
     for(const [organ, list] of Object.entries(idx)){
       if(organ.startsWith('__')) continue;
@@ -13593,7 +13611,7 @@ function searchEverything(q, perCat){
   /* ── Fiches cliniques ── */
   const fiches = [];
   if(typeof CONDITION_ORGAN_MAP === 'object'){
-    for(const slug of Object.keys(CONDITION_ORGAN_MAP)){
+    for(const slug of Object.keys(CONDITION_ORGAN_MAP||{})){
       if(!_sn(slug).includes(k)) continue;
       fiches.push({label:slug.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()),
                    sub:'fiche de sémiologie', slug, kind:'fiche'});
@@ -13618,6 +13636,7 @@ function searchEverything(q, perCat){
   push('Lames', '🔬', lames);
 
   return out;
+ } catch(e){ console.warn('[search] index pas prêt', e); return []; }
 }
 
 /* ── Rendu du panneau de résultats ── */
@@ -13661,6 +13680,427 @@ function gsGo(kind, arg){
   }
   const host = document.getElementById('gsearch-results');
   if(host){ host.style.display='none'; }
+}
+
+/* ══════════════════════════════════════════════════════
+   PHARMACIE CLINIQUE & MYCÈTES
+   Pharmacie_Clinique : prise en charge par pathologie, rattachée
+   à l'organe atteint. Mycètes : complète bactéries/parasites/virus.
+══════════════════════════════════════════════════════ */
+let PHCLI_BY_ORGAN = {}, FUNGI_BY_ORGAN = {};
+
+async function loadPhcli(){
+  const files = {PHCLI_BY_ORGAN:'data/phcli.json', FUNGI_BY_ORGAN:'data/fungi.json'};
+  const set = {PHCLI_BY_ORGAN:v=>PHCLI_BY_ORGAN=v, FUNGI_BY_ORGAN:v=>FUNGI_BY_ORGAN=v};
+  await Promise.all(Object.entries(files).map(async ([n,u])=>{
+    try{
+      const r=await fetch(u); if(!r.ok) throw new Error(r.status);
+      const p=await r.json(); const o={};
+      for(const [org,idx] of Object.entries(p.byOrgan||{})) o[org]=idx.map(i=>p.items[i]);
+      set[n](o);
+    }catch(e){ console.warn('[phcli]',u,e); }
+  }));
+}
+
+function _collectPh(idx, organs){
+  const seen=new Set(), out=[];
+  (organs||[]).forEach(o=>((idx||{})[o]||[]).forEach(x=>{
+    if(!seen.has(x.n)){ seen.add(x.n); out.push(x); }
+  }));
+  return out;
+}
+
+function renderPhcliSection(organs){
+  const L=_collectPh(PHCLI_BY_ORGAN, organs);
+  if(!L.length) return '';
+  return '<div class="isec"><div class="ist g">Prise en charge clinique ('+L.length+')</div>'+
+    L.slice(0,6).map(x=>
+      '<div style="margin-bottom:8px"><div style="font-size:13px;color:var(--gold)">'+x.n+'</div>'+
+      (x.ty?'<div style="font-size:11px;color:var(--text4)">'+x.ty+'</div>':'')+
+      (x.def?'<div style="font-size:11px;color:var(--text3);line-height:1.6;margin-top:2px">'+x.def+'</div>':'')+
+      (x.strat?'<div style="font-size:11px;color:var(--acc);line-height:1.6;margin-top:3px">💊 '+x.strat+'</div>':'')+
+      (x.comp?'<div style="font-size:11px;color:#d48;margin-top:2px">⚠ '+x.comp+'</div>':'')+
+      '</div>').join('')+'</div>';
+}
+
+function renderFungiSection(organs){
+  const L=_collectPh(FUNGI_BY_ORGAN, organs);
+  if(!L.length) return '';
+  return '<div class="isec"><div class="ist w">Mycètes ('+L.length+')</div>'+
+    L.slice(0,6).map(x=>
+      '<div style="margin-bottom:6px"><div style="font-size:13px;color:#c8b" ><i>'+x.n+'</i>'+
+      (x.fam?' <span style="color:var(--text4);font-size:10px">'+x.fam+'</span>':'')+'</div>'+
+      '<div style="font-size:11px;color:var(--text3);line-height:1.6">'+x.p+'</div>'+
+      (x.ttt?'<div style="font-size:11px;color:var(--acc);margin-top:2px">💊 '+x.ttt+'</div>':'')+
+      '</div>').join('')+'</div>';
+}
+
+function phcliSectionForMesh(rawName){
+  if(typeof organsForMesh!=='function') return '';
+  const o=organsForMesh(rawName);
+  if(!o.length) return '';
+  const o2 = (typeof organHasData==='function' && !o.some(organHasData) &&
+              typeof withFallback==='function') ? withFallback(o) : o;
+  let h='';
+  try{ h+=renderPhcliSection(o2); }catch(e){}
+  try{ h+=renderFungiSection(o2); }catch(e){}
+  return h;
+}
+
+/* ══════════════════════════════════════════════════════
+   LAMES HISTOLOGIQUES IDC — visualiseur zoomable
+   Source : NCI Imaging Data Commons (GTEx, tissus normaux), CC BY.
+   Ces lames sont dans le domaine ouvert : contrairement aux lames
+   OpenScience (ShareAlike), on peut les afficher directement via le
+   proxy DICOMweb public d'IDC, sans ré-hébergement.
+   Mécanisme repris de Pharmatlas (OpenSeadragon + tuiles DICOM).
+══════════════════════════════════════════════════════ */
+let HISTOIDC = {items:[], byOrgan:{}, _meta:{}};
+const IDC_DICOMWEB = 'https://proxy.imaging.datacommons.cancer.gov/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb';
+
+async function loadHistoIDC(){
+  try{
+    const r = await fetch('data/histoidc.json');
+    if(!r.ok) throw new Error(r.status);
+    HISTOIDC = await r.json();
+  }catch(e){ console.warn('[histoidc]', e); }
+}
+
+function _idcSlidesFor(organs){
+  const seen=new Set(), out=[];
+  const add = o => (HISTOIDC.byOrgan[o]||[]).forEach(i=>{
+    const s=HISTOIDC.items[i];
+    if(s && !seen.has(s.series)){ seen.add(s.series); out.push(s); }
+  });
+  (organs||[]).forEach(add);
+  add('_general');   // toujours proposer l'histologie générale (épithéliums, tissus)
+  return out;
+}
+
+/* Métadonnées d'un niveau DICOM (dimensions de tuile, nombre de frames) */
+function _idcLevelMeta(study, series, sop){
+  const url = IDC_DICOMWEB+'/studies/'+study+'/series/'+series+'/instances/'+sop+'/metadata';
+  return fetch(url,{headers:{'Accept':'application/dicom+json'}})
+    .then(r=>{ if(!r.ok) throw new Error('meta '+r.status); return r.json(); })
+    .then(j=>{
+      const d = Array.isArray(j)? j[0] : j;
+      const V = t => { const e=d[t]; return e && e.Value ? e.Value[0] : undefined; };
+      const tileW=+V('00280011'), tileH=+V('00280010');
+      const totW=+V('00480006'), totH=+V('00480007');
+      const nFrames=+V('00280008')||1;
+      return {sop, tileW, tileH, totW, totH, nFrames,
+              cols:Math.ceil(totW/tileW), rows:Math.ceil(totH/tileH)};
+    });
+}
+
+/* Construit la source de tuiles OpenSeadragon (un niveau OSD par instance) */
+function _idcTileSource(study, series, metas){
+  const lvls = metas.slice().reverse();    // petit → grand
+  const maxLevel = lvls.length-1;
+  const big = metas[0];
+  return {
+    width:big.totW, height:big.totH,
+    tileWidth:big.tileW, tileHeight:big.tileH,
+    minLevel:0, maxLevel, tileOverlap:0,
+    getLevelScale:l=>{ const L=lvls[Math.max(0,Math.min(l,maxLevel))]; return L.totW/big.totW; },
+    getNumTiles:l=>{ const L=lvls[Math.max(0,Math.min(l,maxLevel))]; return new OpenSeadragon.Point(L.cols,L.rows); },
+    getTileWidth:l=>lvls[Math.max(0,Math.min(l,maxLevel))].tileW,
+    getTileHeight:l=>lvls[Math.max(0,Math.min(l,maxLevel))].tileH,
+    getTileUrl:(l,x,y)=>{
+      const L=lvls[Math.max(0,Math.min(l,maxLevel))];
+      const col=Math.max(0,Math.min(x,L.cols-1)), row=Math.max(0,Math.min(y,L.rows-1));
+      let frame=row*L.cols+col+1;
+      if(frame<1) frame=1; if(frame>L.nFrames) frame=L.nFrames;
+      return IDC_DICOMWEB+'/studies/'+study+'/series/'+series+
+             '/instances/'+L.sop+'/frames/'+frame+'/rendered';
+    },
+    getTileAjaxHeaders:()=>({'Accept':'image/jpeg'})
+  };
+}
+
+let _idcOSD=null, _idcLoaded=false;
+function _loadOSD(cb){
+  if(_idcLoaded && typeof OpenSeadragon!=='undefined'){ cb(); return; }
+  const s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/openseadragon.min.js';
+  s.onload=()=>{ _idcLoaded=true; cb(); };
+  s.onerror=()=>cb(true);
+  document.head.appendChild(s);
+}
+
+function openIDCSlide(series){
+  const slide = HISTOIDC.items.find(s=>s.series===series);
+  if(!slide) return;
+  let ov=document.getElementById('idc-modal');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='idc-modal';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(6,7,10,.9);z-index:9200;'+
+      'display:flex;align-items:center;justify-content:center;padding:24px';
+    ov.innerHTML='<div style="background:var(--bg2);border:1px solid var(--border2);'+
+      'border-radius:10px;width:min(1200px,95vw);height:min(860px,92vh);display:flex;'+
+      'flex-direction:column;overflow:hidden;position:relative">'+
+      '<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;'+
+      'border-bottom:1px solid var(--border);flex-shrink:0">'+
+      '<span id="idc-title" style="flex:1;font-size:14px;color:var(--text)"></span>'+
+      '<button onclick="closeIDCSlide()" style="background:none;border:none;'+
+      'color:var(--text3);font-size:22px;cursor:pointer;line-height:1">×</button></div>'+
+      '<div id="idc-vp" style="flex:1;background:#000;position:relative"></div>'+
+      '<div id="idc-attr" style="padding:6px 14px;font-size:11px;color:var(--text4);'+
+      'border-top:1px solid var(--border);flex-shrink:0"></div></div>';
+    ov.addEventListener('click',e=>{ if(e.target===ov) closeIDCSlide(); });
+    document.body.appendChild(ov);
+    document.addEventListener('keydown',e=>{
+      if(e.key==='Escape' && ov.style.display!=='none') closeIDCSlide(); });
+  }
+  ov.style.display='flex';
+  document.getElementById('idc-title').textContent =
+    slide.name + (slide.anat ? ' — ' + slide.anat : '') +
+    (slide.gx ? ' · ×' + slide.gx : '');
+  document.getElementById('idc-attr').innerHTML =
+    (HISTOIDC._meta.attribution||'') + ' · ' + (slide.lic||'CC BY 4.0');
+  const vp=document.getElementById('idc-vp');
+  vp.innerHTML='<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);'+
+    'color:var(--text3);font-size:13px">Chargement de la lame DICOM…</div>';
+
+  _loadOSD(err=>{
+    if(err || typeof OpenSeadragon==='undefined'){
+      vp.innerHTML='<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);'+
+        'color:var(--text4);font-size:13px">Visualiseur indisponible (connexion ?)</div>';
+      return;
+    }
+    Promise.all((slide.levels||[]).map(lv=>
+      _idcLevelMeta(slide.study, slide.series, lv.sop).catch(()=>({
+        sop:lv.sop, tileW:256, tileH:256, totW:lv.w, totH:lv.h,
+        cols:Math.ceil(lv.w/256), rows:Math.ceil(lv.h/256),
+        nFrames:Math.ceil(lv.w/256)*Math.ceil(lv.h/256)
+      }))
+    )).then(metas=>{
+      metas.sort((a,b)=>b.totW*b.totH - a.totW*a.totH);
+      vp.innerHTML='';
+      try{
+        _idcOSD=OpenSeadragon({
+          element:vp, prefixUrl:'https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/images/',
+          tileSources:_idcTileSource(slide.study, slide.series, metas),
+          showNavigator:true, navigatorPosition:'BOTTOM_RIGHT',
+          crossOriginPolicy:'Anonymous', loadTilesWithAjax:true,
+          ajaxHeaders:{'Accept':'image/jpeg'},
+          minZoomImageRatio:0.8, maxZoomPixelRatio:2.5,
+          homeFillsViewer:true, visibilityRatio:1, constrainDuringPan:true
+        });
+      }catch(e){
+        vp.innerHTML='<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);'+
+          'color:var(--text4)">Erreur de chargement</div>';
+      }
+    });
+  });
+}
+function closeIDCSlide(){
+  const ov=document.getElementById('idc-modal');
+  if(!ov) return;
+  ov.style.display='none';
+  if(_idcOSD){ try{ _idcOSD.destroy(); }catch(e){} _idcOSD=null; }
+}
+
+function renderHistoIDCSection(organs){
+  const L=_idcSlidesFor(organs);
+  if(!L.length) return '';
+  return '<div class="isec"><div class="ist">Lames histologiques zoomables ('+L.length+')</div>'+
+    L.slice(0,10).map(s=>
+      '<div class="prow" style="cursor:pointer" onclick="openIDCSlide(\''+s.series+'\')">'+
+      '<span class="arr" style="color:var(--acc)">🔬</span>'+
+      '<span style="color:var(--text2);font-size:12px">'+s.name+
+      (s.anat?' <span style="color:var(--text4);font-size:10px">'+s.anat+'</span>':'')+
+      '</span></div>').join('')+
+    '<div style="font-size:10px;color:var(--text4);margin-top:5px">'+
+    (HISTOIDC._meta.source||'')+' · CC BY</div></div>';
+}
+
+function histoIDCSectionForMesh(rawName){
+  if(typeof organsForMesh!=='function') return '';
+  const o=organsForMesh(rawName);
+  const o2=(typeof withFallback==='function')?withFallback(o):o;
+  return renderHistoIDCSection(o2);
+}
+
+/* ══════════════════════════════════════════════════════
+   LAMES HISTOPATHOLOGIQUES (TCGA via IDC)
+   Lames de tumeurs humaines, une par organe, reliées aux
+   fiches de sémiologie quand une condition correspond.
+   Même visualiseur DICOM zoomable que les lames normales.
+══════════════════════════════════════════════════════ */
+let HISTOPATH = {items:[], byOrgan:{}, byPatho:{}, _meta:{}};
+
+async function loadHistoPath(){
+  try{
+    const r=await fetch('data/histopath.json');
+    if(!r.ok) throw new Error(r.status);
+    HISTOPATH=await r.json();
+  }catch(e){ console.warn('[histopath]',e); }
+}
+
+function _pathSlidesFor(organs){
+  const seen=new Set(), out=[];
+  (organs||[]).forEach(o=>(HISTOPATH.byOrgan[o]||[]).forEach(i=>{
+    const s=HISTOPATH.items[i];
+    if(s && !seen.has(s.series)){ seen.add(s.series); out.push(s); }
+  }));
+  return out;
+}
+
+/* Ouvre une lame pathologique dans le même visualiseur que les lames
+   normales (openIDCSlide gère n'importe quelle série IDC). On injecte
+   d'abord la lame dans HISTOIDC.items pour réutiliser le mécanisme. */
+function openPathSlide(series){
+  const s=HISTOPATH.items.find(x=>x.series===series);
+  if(!s) return;
+  if(typeof HISTOIDC==='object' && HISTOIDC.items && !HISTOIDC.items.find(x=>x.series===series)){
+    HISTOIDC.items.push(s);
+  }
+  if(typeof openIDCSlide==='function') openIDCSlide(series);
+}
+
+function renderHistoPathSection(organs){
+  const L=_pathSlidesFor(organs);
+  if(!L.length) return '';
+  return '<div class="isec"><div class="ist g">Lames pathologiques ('+L.length+')</div>'+
+    L.map(s=>{
+      // lien vers la fiche de sémiologie si une condition correspond
+      let ficheLink='';
+      const slug=Object.keys(HISTOPATH.byPatho||{}).find(sl=>
+        (HISTOPATH.byPatho[sl]||[]).some(i=>HISTOPATH.items[i]&&HISTOPATH.items[i].series===s.series));
+      if(slug && typeof CONDITION_ORGAN_MAP==='object' && CONDITION_ORGAN_MAP[slug]){
+        ficheLink='<span style="color:var(--acc2);font-size:10px;cursor:pointer" '+
+          'onclick="event.stopPropagation();openFicheModal(\'conditions/'+slug+'.html\',\''+
+          slug.replace(/_/g,String.fromCharCode(32))+'\')"> · fiche clinique ↗</span>';
+      }
+      return '<div class="prow" style="cursor:pointer" onclick="openPathSlide(\''+s.series+'\')">'+
+        '<span class="arr" style="color:var(--gold)">🔬</span>'+
+        '<span style="color:var(--text2);font-size:12px">'+s.name+
+        ' <span style="color:var(--text4);font-size:10px">'+(s.coll||'')+'</span>'+
+        ficheLink+'</span></div>';
+    }).join('')+
+    '<div style="font-size:10px;color:var(--text4);margin-top:5px">'+
+    (HISTOPATH._meta.source||'')+' · CC BY</div></div>';
+}
+
+function histoPathSectionForMesh(rawName){
+  if(typeof organsForMesh!=='function') return '';
+  const o=organsForMesh(rawName);
+  const o2=(typeof withFallback==='function')?withFallback(o):o;
+  return renderHistoPathSection(o2);
+}
+
+/* ══════════════════════════════════════════════════════
+   IMAGERIE RADIOLOGIQUE (TCGA via IDC)
+   CT / IRM de tumeurs, une par organe. Ferme le trajet
+   clinique (fiche) → imagerie (ici) → microscopie (lame).
+   Affiché dans le visualiseur OHIF officiel d'IDC (iframe).
+══════════════════════════════════════════════════════ */
+let RADIO = {items:[], byOrgan:{}, byPatho:{}, _meta:{}};
+
+async function loadRadio(){
+  try{
+    const r=await fetch('data/radio.json');
+    if(!r.ok) throw new Error(r.status);
+    RADIO=await r.json();
+  }catch(e){ console.warn('[radio]',e); }
+}
+
+function _radioFor(organs){
+  const seen=new Set(), out=[];
+  (organs||[]).forEach(o=>(RADIO.byOrgan[o]||[]).forEach(i=>{
+    const s=RADIO.items[i];
+    if(s && !seen.has(s.url)){ seen.add(s.url); out.push(s); }
+  }));
+  return out;
+}
+
+function openRadio(url, title){
+  let ov=document.getElementById('radio-modal');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='radio-modal';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(6,7,10,.92);z-index:9300;'+
+      'display:flex;align-items:center;justify-content:center;padding:20px';
+    ov.innerHTML='<div style="background:var(--bg2);border:1px solid var(--border2);'+
+      'border-radius:10px;width:min(1300px,96vw);height:min(900px,94vh);display:flex;'+
+      'flex-direction:column;overflow:hidden">'+
+      '<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;'+
+      'border-bottom:1px solid var(--border);flex-shrink:0">'+
+      '<span id="radio-title" style="flex:1;font-size:14px;color:var(--text)"></span>'+
+      '<a id="radio-ext" href="#" target="_blank" rel="noopener" '+
+      'style="font-size:11px;color:var(--text3)">Ouvrir dans un onglet ↗</a>'+
+      '<button onclick="closeRadio()" style="background:none;border:none;'+
+      'color:var(--text3);font-size:22px;cursor:pointer;line-height:1">×</button></div>'+
+      '<iframe id="radio-frame" style="flex:1;width:100%;border:none;background:#000" '+
+      'allow="fullscreen"></iframe>'+
+      '<div style="padding:6px 14px;font-size:11px;color:var(--text4);'+
+      'border-top:1px solid var(--border);flex-shrink:0">'+
+      (RADIO._meta.attribution||'')+' · '+(RADIO._meta.licence||'')+'</div></div>';
+    ov.addEventListener('click',e=>{ if(e.target===ov) closeRadio(); });
+    document.body.appendChild(ov);
+    document.addEventListener('keydown',e=>{
+      if(e.key==='Escape' && ov.style.display!=='none') closeRadio(); });
+  }
+  ov.style.display='flex';
+  document.getElementById('radio-title').textContent=title||'Imagerie';
+  document.getElementById('radio-ext').href=url;
+  document.getElementById('radio-frame').src=url;
+}
+function closeRadio(){
+  const ov=document.getElementById('radio-modal');
+  if(!ov) return;
+  ov.style.display='none';
+  document.getElementById('radio-frame').src='about:blank';
+}
+
+/* Trouve la lame et la fiche correspondant à la même pathologie,
+   pour afficher le trajet complet. */
+function _linkedResources(patho){
+  const out={};
+  if(patho && typeof HISTOPATH==='object' && HISTOPATH.byPatho && HISTOPATH.byPatho[patho]){
+    const i=HISTOPATH.byPatho[patho][0];
+    out.slide=HISTOPATH.items[i];
+  }
+  if(patho && typeof CONDITION_ORGAN_MAP==='object' && CONDITION_ORGAN_MAP[patho]){
+    out.fiche=patho;
+  }
+  return out;
+}
+function _pathoOf(series){
+  for(const [p,idx] of Object.entries(RADIO.byPatho||{}))
+    if(idx.some(i=>RADIO.items[i] && RADIO.items[i].url===series)) return p;
+  return null;
+}
+
+function renderRadioSection(organs){
+  const L=_radioFor(organs);
+  if(!L.length) return '';
+  return '<div class="isec"><div class="ist">Imagerie ('+L.length+')</div>'+
+    L.map(s=>{
+      const patho=_pathoOf(s.url);
+      const linked=_linkedResources(patho);
+      let chips='';
+      if(linked.slide) chips+='<span onclick="event.stopPropagation();openPathSlide(\''+
+        linked.slide.series+'\')" style="color:var(--gold);font-size:10px;cursor:pointer"> · 🔬 lame</span>';
+      if(linked.fiche) chips+='<span onclick="event.stopPropagation();openFicheModal(\'conditions/'+
+        linked.fiche+'.html\',\''+linked.fiche.replace(/_/g,String.fromCharCode(32))+
+        '\')" style="color:var(--acc2);font-size:10px;cursor:pointer"> · 📋 fiche</span>';
+      return '<div class="prow" style="cursor:pointer" onclick="openRadio(\''+s.url+'\',\''+
+        s.name.replace(/'/g,'')+' — '+s.mod+'\')">'+
+        '<span class="arr" style="color:var(--acc)">'+(s.mod==='MR'?'🧲':'🩻')+'</span>'+
+        '<span style="color:var(--text2);font-size:12px">'+s.name+
+        ' <span style="color:var(--text4);font-size:10px">'+s.mod+' · '+s.n+' coupes</span>'+
+        chips+'</span></div>';
+    }).join('')+
+    '<div style="font-size:10px;color:var(--text4);margin-top:5px">'+
+    (RADIO._meta.source||'')+' · CC BY</div></div>';
+}
+
+function radioSectionForMesh(rawName){
+  if(typeof organsForMesh!=='function') return '';
+  const o=organsForMesh(rawName);
+  const o2=(typeof withFallback==='function')?withFallback(o):o;
+  return renderRadioSection(o2);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -13711,6 +14151,10 @@ async function loadAtlasData(){
   await loadOntology();
   await loadModules2();
   await loadOuhis();
+  await loadPhcli();
+  await loadHistoIDC();
+  await loadHistoPath();
+  await loadRadio();
   _dataReady = true;
   try{ buildBlockToggles();
     const st=JSON.parse(localStorage.getItem('ca_blocks')||'{}');

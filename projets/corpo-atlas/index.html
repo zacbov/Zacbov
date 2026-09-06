@@ -7970,9 +7970,7 @@ function renderInfo(rawName) {
   if (typeof ontologySectionForMesh === 'function') {
     try { h += ontologySectionForMesh(rawName); } catch(e){ console.warn('[ontologie]',e); }
   }
-  if (typeof imagingSectionForMesh === 'function') {
-    try { h += imagingSectionForMesh(rawName); } catch(e){ console.warn('[imaging]',e); }
-  }
+  // Ancienne imagerie locale retirée : on ne garde que l'imagerie NIH/IDC.
   if (typeof extraSectionsForMesh2 === 'function') {
     try { h += extraSectionsForMesh2(rawName); } catch(e){ console.warn('[mod2]',e); }
   }
@@ -7991,9 +7989,9 @@ function renderInfo(rawName) {
   if (typeof histoPathSectionForMesh === 'function') {
     try { h += histoPathSectionForMesh(rawName); } catch(e){ console.warn('[histopath]',e); }
   }
-  if (typeof ouhisSectionForMesh === 'function') {
-    try { h += ouhisSectionForMesh(rawName); } catch(e){ console.warn('[ouhis]',e); }
-  }
+  // Lames OpenScience retirées (CC BY-NC-SA / ShareAlike) : remplacées par
+  // les lames normales GTEx (CC BY) du panneau du bas + les lames tumorales
+  // TCGA de la section « Lésions ».
   if (typeof drugsSectionForMesh === 'function') {
     try { h += drugsSectionForMesh(rawName); } catch(e){ console.warn('[drugs]',e); }
   }
@@ -14147,11 +14145,20 @@ function renderLesionsSection(rawName){
     const scans=(typeof RADIO==='object' && RADIO.byOrgan)
       ? (RADIO.byOrgan[o]||[]).map(i=>RADIO.items[i]) : [];
     // apparier par nom de pathologie (ex. « Carcinome hépatocellulaire »)
-    const names=new Set([...slides.map(s=>s.name), ...scans.map(s=>s.name)]);
-    names.forEach(nm=>{
+    // Clé de rapprochement : 1er mot significatif du nom (Glioblastome,
+    // Carcinome…) pour apparier lame et scanner de la même entité.
+    const key=n=>n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .split(/[\s—-]+/).filter(w=>w.length>4)[0]||n.toLowerCase();
+    const byKey={};
+    [...slides.map(s=>['slide',s]), ...scans.map(s=>['scan',s])].forEach(([t,o])=>{
+      const k=key(o.name); (byKey[k]=byKey[k]||{}); byKey[k][t]=o;
+      byKey[k].label=byKey[k].label||o.name;
+    });
+    Object.values(byKey).forEach(entry=>{
+      const nm=entry.label;
       if(seen.has(nm)) return; seen.add(nm);
-      const slide=slides.find(s=>s.name===nm);
-      const scan=scans.find(s=>s.name===nm);
+      const slide=entry.slide;
+      const scan=entry.scan;
       let btns='';
       if(slide) btns+='<span class="les-btn les-slide" '+
         'onclick="openPathSlide(\''+slide.series+'\')">🔬 Lame</span>';

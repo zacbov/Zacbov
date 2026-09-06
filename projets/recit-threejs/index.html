@@ -368,7 +368,7 @@ function blankStory(){
 }
 
 function newChapter(type){
-  const c = { id:uid(), type, name:'', len:180, hold:12, beats:[], spots:[] };
+  const c = { id:uid(), type, name:'', len:180, hold:12, beats:[], spots:[], buttons:[] };
   if(type==='model'){
     Object.assign(c,{ name:'Modèle 3D', asset:null, bg:'#0E1210',
       spin:40, spinScroll:180, zoomScroll:0.15, env:0.9, camDist:3.4, lift:0, splatAlpha:5,
@@ -380,8 +380,7 @@ function newChapter(type){
   }
   if(type==='video'){
     Object.assign(c,{ name:'Vidéo', len:260, asset:null, fit:'cover',
-      loop:true, mute:true, volume:0.9, dim:0.35,
-      nextBtn:false, nextLabel:'Séquence suivante' });
+      loop:true, mute:true, volume:0.9, dim:0.35 });
     c.beats=[ newBeat({text:'Le texte qui accompagne la séquence.', at:0.15}) ];
   }
   if(type==='text'){
@@ -416,6 +415,23 @@ function newBeat(o){
     anim:'slideUp', unit:'block', stagger:60, dur:800,
     ease:'cubic-bezier(.33,1,.68,1)', delay:0, distance:28,
     at:0.15, span:0.55, exit:true
+  }, o);
+}
+
+/* Un bouton de choix : c'est la brique du livre interactif.
+   Il vise un chapitre, se place librement ou sur l'une des neuf ancres,
+   et son habillage est entièrement réglable. */
+function newButton(o){
+  const t=story.theme;
+  return Object.assign({
+    id:uid(), label:'Continuer', target:'next',
+    posMode:'anchor', anchor:'bottom-center', posX:50, posY:88,
+    font:t.body, size:0.95, weight:500, tracking:2, caps:'none',
+    color:t.ink, bg:'#000000', bgAlpha:0, borderC:t.accent, borderW:1,
+    radius:999, padX:1.7, padY:0.75, blur:0,
+    hoverBg:t.accent, hoverColor:t.bg,
+    shadow:0, shadowC:'#000000', css:'',
+    at:0.3, span:0.62, anim:'fade'
   }, o);
 }
 
@@ -668,6 +684,97 @@ function buildBeats(el, ch) {
   });
 }
 
+/* ---------- boutons de choix ---------- */
+const ANCHORS = {
+  'top-left':[8,12],'top-center':[50,12],'top-right':[92,12],
+  'mid-left':[8,50],'mid-center':[50,50],'mid-right':[92,50],
+  'bottom-left':[8,88],'bottom-center':[50,88],'bottom-right':[92,88]
+};
+function currentIndex() {
+  for (let i = 0; i < layers.length; i++) if (layers[i].dataset.on === '1') return i;
+  return 0;
+}
+function goToChapter(id) {
+  let i = id === 'next' ? currentIndex() + 1 : S.chapters.findIndex(c => c.id === id);
+  if (i < 0) i = currentIndex() + 1;
+  const n = document.getElementById('anchor-' + i);
+  if (n) n.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
+}
+
+function styleButton(el, b) {
+  const st = el.style;
+  const pos = b.posMode === 'anchor' ? (ANCHORS[b.anchor] || [50, 88]) : [b.posX, b.posY];
+  st.left = pos[0] + '%';
+  st.top = pos[1] + '%';
+  st.fontFamily = quoteFam(b.font);
+  st.fontSize = 'calc(' + b.size + 'rem * var(--fs))';
+  st.fontWeight = b.weight;
+  st.letterSpacing = (b.tracking / 100) + 'em';
+  st.textTransform = b.caps === 'none' ? 'none' : b.caps;
+  st.color = b.color;
+  st.background = hexA(b.bg, b.bgAlpha);
+  st.border = b.borderW ? b.borderW + 'px solid ' + b.borderC : 'none';
+  st.borderRadius = b.radius + 'px';
+  st.padding = b.padY + 'em ' + b.padX + 'em';
+  st.backdropFilter = b.blur ? 'blur(' + b.blur + 'px)' : 'none';
+  st.boxShadow = b.shadow ? '0 ' + (b.shadow / 3) + 'px ' + b.shadow + 'px ' + hexA(b.shadowC, .5) : 'none';
+  st.setProperty('--hbg', b.hoverBg);
+  st.setProperty('--hcol', b.hoverColor);
+  el.className = 'choice anim-' + (b.anim || 'fade') + (el.dataset.on === '1' ? ' on' : '');
+  /* habillage libre : la règle saisie l'emporte sur tout ce qui précède */
+  if (b.css) { try { st.cssText += ';' + b.css; } catch (e) {} }
+}
+
+function buildButtons(el, ch) {
+  const wrap = el._bwrap;
+  if (!wrap) return;
+  wrap.textContent = '';
+  el._btns = (ch.buttons || []).map(b => {
+    const n = document.createElement('button');
+    n.type = 'button';
+    n.textContent = b.label;
+    n.dataset.on = '0';
+    styleButton(n, b);
+    n.addEventListener('click', () => goToChapter(b.target));
+    wrap.appendChild(n);
+    return n;
+  });
+}
+
+/* Liseré de progression : discret au repos, il déplie le chapitrage au survol. */
+let railFill = null, railDots = [];
+function buildRail() {
+  if (S.chapters.length < 2) return;
+  const nav = document.createElement('nav');
+  nav.className = 'rail';
+  nav.setAttribute('aria-label', 'Chapitres');
+  const line = document.createElement('div');
+  line.className = 'rline';
+  const fill = document.createElement('div');
+  fill.className = 'rfill';
+  line.appendChild(fill);
+  nav.appendChild(line);
+  railFill = fill;
+  railDots = S.chapters.map((ch, i) => {
+    const a = document.createElement('button');
+    a.type = 'button';
+    a.className = 'rdot';
+    a.style.top = ((i + 0.5) / S.chapters.length * 100) + '%';
+    const lab = document.createElement('span');
+    lab.className = 'rlab';
+    lab.textContent = ch.name || 'Chapitre ' + (i + 1);
+    a.appendChild(lab);
+    a.setAttribute('aria-label', lab.textContent);
+    a.addEventListener('click', () => {
+      const n = document.getElementById('anchor-' + i);
+      if (n) n.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
+    });
+    nav.appendChild(a);
+    return a;
+  });
+  document.body.appendChild(nav);
+}
+
 /* ---------- points chauds : pastille, diagonale, trait, texte ---------- */
 function buildSpots(el, ch) {
   const svg = el.querySelector('.spots');
@@ -835,19 +942,16 @@ function mount() {
     wrap.className = 'beats';
     el.appendChild(wrap);
 
-    const btn = document.createElement('button');
-    btn.className = 'nextbtn';
-    btn.addEventListener('click', () => {
-      const n = document.getElementById('anchor-' + (i + 1));
-      if (n) n.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
-    });
-    el.appendChild(btn);
-    el._btn = btn;
+    const bwrap = document.createElement('div');
+    bwrap.className = 'btns';
+    el.appendChild(bwrap);
+    el._bwrap = bwrap;
     el._media = media;
     el._ch = ch;
     root.appendChild(el);
     buildBeats(el, ch);
     buildSpots(el, ch);
+    buildButtons(el, ch);
     return el;
   });
 
@@ -858,6 +962,7 @@ function mount() {
     spacer.appendChild(a);
   });
   applyChapterSettings();
+  buildRail();
   buildGate();
   if (semantic) semantic.hidden = true;   /* le texte brut ne sert qu'aux robots et lecteurs d'écran */
 }
@@ -885,8 +990,6 @@ function applyChapterSettings() {
       el._media.loop = !!ch.loop;
       el._media.muted = ch.mute !== false;
     }
-    el._btn.textContent = ch.nextLabel || 'Suite';
-    el._btn.style.display = ch.nextBtn ? '' : 'none';
     const a = document.getElementById('anchor-' + i);
     if (a) a.style.height = ch.len + 'dvh';
   });
@@ -909,6 +1012,7 @@ function patch(next) {
       if (d._sig !== sig) { d._units = buildUnits(d, b); d._sig = sig; }
     });
     if (ch.type === 'model') buildSpots(el, ch);
+    buildButtons(el, ch);
   });
   applyChapterSettings();
   request();
@@ -1102,6 +1206,11 @@ function frame(now) {
   const vh = innerHeight, y = scrollY;
   let acc = 0;
 
+  if (railFill) {
+    const total = spacer.scrollHeight - vh;
+    railFill.style.height = Math.max(0, Math.min(1, total > 0 ? y / total : 0)) * 100 + '%';
+  }
+
   for (let i = 0; i < layers.length; i++) {
     const el = layers[i], ch = el._ch;
     const start = acc, len = (ch.len / 100) * vh;
@@ -1141,6 +1250,7 @@ function frame(now) {
     if (el._media && el._media.tagName === 'VIDEO' && audioOn && ch.mute === false)
       try { el._media.volume = a * (ch.volume == null ? .9 : ch.volume); } catch (err) {}
     el.style.zIndex = String(10 + i);
+    if (railDots[i]) railDots[i].classList.toggle('here', a > 0.5);
 
     const q = Math.min(1, Math.max(0, p));
     if (a > 0.5 && parent !== window && Math.abs(q - (el._lastQ || -1)) > 0.004) {
@@ -1214,10 +1324,15 @@ function frame(now) {
       }
     }
 
-    if (ch.nextBtn) {
-      const show = q > 0.3 && q < 0.92;
-      el._btn.classList.toggle('on', show);
-      el._btn.tabIndex = show ? 0 : -1;
+    for (let k = 0; k < (el._btns || []).length; k++) {
+      const b = ch.buttons[k], node = el._btns[k];
+      if (!b) continue;
+      const show = q >= b.at && q <= b.at + b.span;
+      if (show !== (node.dataset.on === '1')) {
+        node.dataset.on = show ? '1' : '0';
+        node.classList.toggle('on', show);
+      }
+      node.tabIndex = show ? 0 : -1;
     }
   }
   ticking = false;
@@ -1322,6 +1437,7 @@ body{margin:0;background:${t.bg};color:${t.ink};
 #texte h1{font-family:var(--f-display);font-weight:400;font-size:2.6rem;line-height:1.1}
 #texte h3{font-family:var(--f-display);font-weight:400;font-size:1.6rem;margin-top:2.4em}
 #texte[hidden]{display:none}
+#texte a{color:${t.accent}}
 
 /* portillon : les navigateurs exigent un geste avant tout son */
 .gate{position:fixed;z-index:40;right:max(18px,3vw);bottom:max(18px,3vh);
@@ -1409,15 +1525,47 @@ body.editing .layer-model{cursor:grab}
 .beat.on .u{opacity:1;transform:none;filter:none}
 .beat.on .ui{opacity:1;transform:none}
 
-.nextbtn{position:absolute;z-index:4;bottom:7vh;left:50%;
-  transform:translateX(-50%) translateY(10px);
-  background:transparent;color:${t.ink};border:1px solid ${t.accent};border-radius:999px;
-  padding:.75em 1.7em;font-family:'${t.body}',system-ui,sans-serif;font-size:.92rem;cursor:pointer;
-  opacity:0;pointer-events:none;
-  transition:opacity .5s ease,transform .5s ease,background .25s ease,color .25s ease}
-.nextbtn.on{opacity:1;transform:translateX(-50%);pointer-events:auto}
-.nextbtn:hover{background:${t.accent};color:${t.bg}}
-.nextbtn:focus-visible{outline:2px solid ${t.accent};outline-offset:3px}
+.btns{position:absolute;inset:0;z-index:4;pointer-events:none}
+.choice{position:absolute;transform:translate(-50%,-50%);
+  cursor:pointer;opacity:0;pointer-events:none;line-height:1.2;
+  transition:opacity .5s ease,transform .5s ease,background .25s ease,color .25s ease,
+             border-color .25s ease,box-shadow .25s ease}
+.choice.on{opacity:1;pointer-events:auto}
+.choice:hover{background:var(--hbg)!important;color:var(--hcol)!important;
+  border-color:var(--hbg)!important}
+.choice:focus-visible{outline:2px solid ${t.accent};outline-offset:3px}
+/* les mêmes effets d'apparition que les textes, appliqués au bouton entier */
+.choice.anim-slideUp{transform:translate(-50%,-50%) translateY(26px)}
+.choice.anim-slideDown{transform:translate(-50%,-50%) translateY(-26px)}
+.choice.anim-slideLeft{transform:translate(-50%,-50%) translateX(-26px)}
+.choice.anim-slideRight{transform:translate(-50%,-50%) translateX(26px)}
+.choice.anim-scaleUp{transform:translate(-50%,-50%) scale(.82)}
+.choice.anim-scaleDown{transform:translate(-50%,-50%) scale(1.18)}
+.choice.anim-blurIn{filter:blur(10px)}
+.choice.on{transform:translate(-50%,-50%);filter:none}
+
+/* liseré de chapitrage */
+.rail{position:fixed;z-index:30;right:0;top:0;bottom:0;width:46px;
+  display:flex;align-items:center;pointer-events:auto}
+.rline{position:absolute;right:19px;top:12vh;bottom:12vh;width:1px;
+  background:${t.ink}22}
+.rfill{position:absolute;left:0;top:0;width:100%;background:${t.accent};
+  transition:height .1s linear}
+.rdot{position:absolute;right:12px;width:15px;height:15px;padding:0;
+  transform:translateY(-50%);background:none;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:flex-end}
+.rdot::after{content:'';width:5px;height:5px;border-radius:50%;
+  background:${t.ink};opacity:.35;transition:.3s;margin-right:5px}
+.rdot:hover::after,.rdot.here::after{opacity:1;background:${t.accent};
+  width:7px;height:7px}
+.rlab{position:absolute;right:24px;white-space:nowrap;
+  font-family:var(--f-body);font-size:.78rem;letter-spacing:.02em;
+  color:${t.ink};background:${t.bg}d9;padding:.35em .8em;border-radius:3px;
+  opacity:0;transform:translateX(8px);pointer-events:none;
+  transition:opacity .25s ease,transform .25s ease}
+.rail:hover .rlab,.rdot:focus-visible .rlab{opacity:1;transform:none}
+.rail:hover .rline{background:${t.ink}44}
+@media (max-width:640px){.rail{width:26px}.rlab{display:none}}
 
 @media (max-width:640px){.beat{max-width:84vw!important}}
 @media (prefers-reduced-motion:reduce){
@@ -1617,8 +1765,7 @@ function renderInspector(){
     if(ch.mute===false)
       field(inspBody,'Volume de la vidéo',range(ch,'volume',0,1,0.05,v=>Math.round(v*100)+' %'),
         'Le son suit le fondu du chapitre. Un bouton d\u2019activation apparaît sur la page, les navigateurs interdisant le son automatique.');
-    field(inspBody,'',check(ch,'nextBtn','Bouton vers le chapitre suivant'));
-    if(ch.nextBtn) field(inspBody,'Texte du bouton',txt(ch,'nextLabel'));
+
   }
   if(ch.type==='model'){
     const a=ch.asset&&ASSETS.get(ch.asset);
@@ -1665,6 +1812,7 @@ function renderInspector(){
   }
   if(ch.type!=='video') field(inspBody,'Fond du chapitre',color(ch,'bg'));
   buildTimeline(inspBody,ch);
+  buildButtonPanel(inspBody,ch);
   buildBeatPanel(inspBody,ch);
 }
 
@@ -1852,6 +2000,128 @@ function buildTimeline(parent,ch){
   parent.appendChild(host);
 }
 let timelineHead=null;
+
+/* ---- boutons de choix ---- */
+function buildButtonPanel(parent,ch){
+  ch.buttons=ch.buttons||[];
+  const host=document.createElement('div'); host.className='field';
+  host.innerHTML='<label>Boutons</label>';
+  const list=document.createElement('div');
+
+  ch.buttons.forEach((b,i)=>{
+    const box=document.createElement('div');
+    box.className='beat'+(openBeats.has(b.id)?' open':'');
+    const h=document.createElement('div'); h.className='beat-h';
+    const lbl=document.createElement('b'); lbl.textContent=b.label||'(sans texte)';
+    h.appendChild(lbl);
+    h.appendChild(icon('⧉','Dupliquer',e=>{
+      e.stopPropagation();
+      const c=JSON.parse(JSON.stringify(b)); c.id=uid();
+      if(c.posMode==='anchor') c.anchor='bottom-left';
+      ch.buttons.splice(i+1,0,c); openBeats.add(c.id); renderAll();
+    }));
+    const del=icon('✕','Supprimer',e=>{e.stopPropagation(); ch.buttons.splice(i,1); renderAll();});
+    del.classList.add('del'); h.appendChild(del);
+    h.addEventListener('click',()=>{
+      if(openBeats.has(b.id)) openBeats.delete(b.id); else openBeats.add(b.id);
+      box.classList.toggle('open');
+    });
+    box.appendChild(h);
+
+    const body=document.createElement('div'); body.className='beat-body';
+    const t=document.createElement('input'); t.className='in'; t.value=b.label;
+    t.addEventListener('input',()=>{ b.label=t.value; lbl.textContent=t.value||'(sans texte)'; syncPreview(); });
+    body.appendChild(labelled('Texte du bouton',t));
+
+    /* la destination : c'est ce qui fait le livre à choix */
+    const dest=[['next','Chapitre suivant']].concat(
+      story.chapters.map((c,k)=>[c.id,(k+1)+'. '+(c.name||'Chapitre '+(k+1))]));
+    body.appendChild(labelled('Destination',select(b,'target',dest)));
+
+    let g=group(body,'Placement');
+    g.appendChild(labelled('Mode',select(b,'posMode',
+      [['anchor','Magnétique'],['free','Libre']])));
+    if(b.posMode==='anchor'){
+      g.appendChild(labelled('Ancre',select(b,'anchor',[
+        ['top-left','Haut gauche'],['top-center','Haut centre'],['top-right','Haut droite'],
+        ['mid-left','Milieu gauche'],['mid-center','Centre'],['mid-right','Milieu droite'],
+        ['bottom-left','Bas gauche'],['bottom-center','Bas centre'],['bottom-right','Bas droite']])));
+    }else{
+      g.appendChild(labelled('Horizontale',range(b,'posX',0,100,0.5,v=>v+' %')));
+      g.appendChild(labelled('Verticale',range(b,'posY',0,100,0.5,v=>v+' %')));
+    }
+
+    g=group(body,'Typographie du bouton');
+    g.appendChild(labelled('Police',fontSelect(b,'font')));
+    const r1=document.createElement('div'); r1.className='two';
+    r1.appendChild(labelled('Graisse',weightSelect(b,'weight','font')));
+    r1.appendChild(labelled('Casse',select(b,'caps',
+      [['none','Telle quelle'],['uppercase','Capitales'],['lowercase','Bas de casse']])));
+    g.appendChild(r1);
+    const r2=document.createElement('div'); r2.className='two';
+    r2.appendChild(labelled('Taille',range(b,'size',0.5,3,0.05,v=>v.toFixed(2)+' rem')));
+    r2.appendChild(labelled('Interlettrage',range(b,'tracking',-6,40,0.5,v=>v+'')));
+    g.appendChild(r2);
+
+    g=group(body,'Habillage');
+    const c1=document.createElement('div'); c1.className='two';
+    c1.appendChild(labelled('Texte',color(b,'color')));
+    c1.appendChild(labelled('Fond',color(b,'bg')));
+    g.appendChild(c1);
+    g.appendChild(labelled('Opacité du fond',range(b,'bgAlpha',0,1,0.05,v=>Math.round(v*100)+' %')));
+    const c2=document.createElement('div'); c2.className='two';
+    c2.appendChild(labelled('Bordure',color(b,'borderC')));
+    c2.appendChild(labelled('Épaisseur',range(b,'borderW',0,6,0.5,v=>v+' px')));
+    g.appendChild(c2);
+    const c3=document.createElement('div'); c3.className='two';
+    c3.appendChild(labelled('Arrondi',range(b,'radius',0,999,1,v=>v>=999?'pilule':v+' px')));
+    c3.appendChild(labelled('Flou du fond',range(b,'blur',0,26,1,v=>v?v+' px':'aucun')));
+    g.appendChild(c3);
+    const c4=document.createElement('div'); c4.className='two';
+    c4.appendChild(labelled('Marge horizontale',range(b,'padX',0.2,4,0.1,v=>v.toFixed(1)+' em')));
+    c4.appendChild(labelled('Marge verticale',range(b,'padY',0.1,2.5,0.05,v=>v.toFixed(2)+' em')));
+    g.appendChild(c4);
+    g.appendChild(labelled('Ombre',range(b,'shadow',0,50,1,v=>v?v+' px':'aucune')));
+    if(b.shadow>0) g.appendChild(labelled('Couleur de l\u2019ombre',color(b,'shadowC')));
+    const c5=document.createElement('div'); c5.className='two';
+    c5.appendChild(labelled('Fond au survol',color(b,'hoverBg')));
+    c5.appendChild(labelled('Texte au survol',color(b,'hoverColor')));
+    g.appendChild(c5);
+
+    const css=document.createElement('textarea');
+    css.className='in'; css.rows=3;
+    css.placeholder='text-decoration:underline; box-shadow:4px 4px 0 #000;';
+    css.value=b.css||'';
+    css.addEventListener('input',()=>{ b.css=css.value; syncPreview(); });
+    g.appendChild(labelled('CSS libre',css));
+    const hh=document.createElement('div'); hh.className='hint';
+    hh.textContent='Écrit après tous les réglages ci-dessus, donc prioritaire. Déclarations séparées par un point-virgule.';
+    g.appendChild(hh);
+
+    g=group(body,'Apparition');
+    g.appendChild(labelled('Effet',selectGrouped(b,'anim',PRESET_GROUPS)));
+    g.appendChild(labelled('Apparaît à',range(b,'at',0,0.95,0.01,v=>Math.round(v*100)+' %')));
+    g.appendChild(labelled('Reste visible',range(b,'span',0.05,1,0.01,v=>Math.round(v*100)+' %')));
+
+    box.appendChild(body); list.appendChild(box);
+  });
+
+  const add=document.createElement('button');
+  add.className='btn'; add.style.width='100%';
+  add.textContent='Ajouter un bouton';
+  add.addEventListener('click',()=>{
+    const n=ch.buttons.length;
+    const b=newButton({label:n?'Autre choix':'Continuer',
+      anchor:n===0?'bottom-center':(n===1?'bottom-left':'bottom-right')});
+    ch.buttons.push(b); openBeats.add(b.id); renderAll();
+  });
+  list.appendChild(add);
+  host.appendChild(list);
+  const h2=document.createElement('div'); h2.className='hint';
+  h2.textContent='Plusieurs boutons visant des chapitres différents transforment la page en récit à embranchements.';
+  host.appendChild(h2);
+  parent.appendChild(host);
+}
 
 /* ---- textes ---- */
 function buildBeatPanel(parent,ch){
@@ -2151,10 +2421,10 @@ function buildTheme(parent){
     'Envoyé au worker Cloudflare, jamais à la page exportée. Il n\u2019est pas enregistré dans le projet : à ressaisir à chaque ouverture.');
   const route=document.createElement('input');
   route.className='in'; route.value=V.endpoint||'';
-  route.placeholder='laisser vide pour chercher automatiquement';
+  route.placeholder='hume-tts';
   route.addEventListener('input',()=>{ V.endpoint=route.value.trim(); });
   field(parent,'Route du relais',route,
-    'Par exemple « hume/tts », ou une adresse complète. Le bouton d\u2019essai remplit ce champ tout seul.');
+    'Vide, l\u2019outil emploie « hume-tts », la route du worker qui relaie Hume.');
   field(parent,'Identifiant de voix Hume',txt(V,'voiceId'),
     'La synthèse se fait ici, dans l\u2019éditeur. Le MP3 obtenu devient un média du projet : la page exportée ne contient aucune clé.');
   const vr=document.createElement('div'); vr.className='two';
@@ -2168,8 +2438,7 @@ function buildTheme(parent){
       toast('Essai en cours\u2026');
       const b=await humeSynth('Ceci est un essai de la voix.');
       new Audio(URL.createObjectURL(new Blob([b],{type:'audio/mpeg'}))).play().catch(()=>{});
-      toast('Relais joignable — route « '+story.voice.endpoint+' »');
-      renderInspector();
+      toast('Relais joignable, voix reçue');
     }catch(e){ toast(e.message,'bad'); }
   });
   field(parent,'',test);
@@ -2352,23 +2621,12 @@ function icon(glyph,title,fn){
    La clé n'entre jamais dans la page exportée : on fabrique le MP3 ici,
    il devient un média du projet, et la page finale ne fait que le lire.
    --------------------------------------------------------------- */
-const WORKER = 'https://routeur-ia-proxy.zacharybov.workers.dev/';
-/* Le relais peut exposer la route sous plusieurs formes selon sa configuration.
-   On les essaie l'une après l'autre et on retient celle qui répond. */
-const VOICE_ROUTES = ['hume/tts','hume','tts/hume','v0/tts','tts','api/hume/tts'];
+const WORKER = 'https://routeur-ia-proxy.zacharybov.workers.dev';
+const VOICE_ROUTE = 'hume-tts';
 
-/* Le relais renvoie 401 « Non autorisé » tant qu'il ne reçoit pas le secret.
-   On ne sait pas sous quel en-tête il l'attend : on les envoie tous à la fois,
-   plus une copie dans le corps, ce qui couvre les conventions courantes. */
-function authHeaders(){
-  const k=(story.voice.secret||'').trim();
-  if(!k) return {};
-  return {
-    'X-App-Secret':k, 'x-app-secret':k, 'APP_SECRET':k,
-    'Authorization':'Bearer '+k, 'X-Api-Key':k, 'x-api-key':k, 'X-Auth-Token':k
-  };
-}
-
+/* Le worker n'autorise qu'un seul en-tête d'authentification, X-App-Secret :
+   son CORS ne déclare que « Content-Type, X-App-Secret ». En envoyer d'autres
+   ferait échouer le pré-vol avant même d'atteindre la route. */
 function humeBody(text){
   const v=story.voice;
   return {
@@ -2378,47 +2636,40 @@ function humeBody(text){
       speed:v.speed,
       trailing_silence:v.trailingSilence
     }],
-    format:{ type:'mp3' },
-    num_generations:1,
-    app_secret:(v.secret||'').trim() || undefined,
-    provider:'hume'
+    format:{ type:'mp3' }
   };
 }
 
-function pickAudio(j){
-  if(!j) return null;
-  const g = (j.generations&&j.generations[0]) || j;
-  return g.audio || g.audio_base64 || g.data || null;
-}
-
+/* La route relaie /v0/tts/file, qui renvoie directement les octets du MP3.
+   En cas d'échec le worker répond du JSON : on distingue les deux au type. */
 async function humeSynth(text){
   const v=story.voice;
-  const routes = v.endpoint ? [v.endpoint] : VOICE_ROUTES;
-  const errs=[]; let unauth=0;
   if(!(v.secret||'').trim())
-    throw new Error('Le relais demande un mot de passe : renseignez-le dans Ambiance, section Voix.');
-  for(const r of routes){
-    const url = /^https?:/.test(r) ? r : WORKER.replace(/\/$/,'')+'/'+r.replace(/^\//,'');
-    try{
-      const res=await fetch(url,{
-        method:'POST',
-        headers:Object.assign({'Content-Type':'application/json','Accept':'application/json'},
-                              authHeaders()),
-        body:JSON.stringify(humeBody(text))
-      });
-      const txt=await res.text();
-      if(res.status===401||res.status===403){ unauth++; errs.push(r+' → '+res.status); continue; }
-      if(!res.ok){ errs.push(r+' → '+res.status+' '+txt.slice(0,90)); continue; }
-      let j; try{ j=JSON.parse(txt); }catch(e){ errs.push(r+' → réponse non JSON'); continue; }
-      const b64=pickAudio(j);
-      if(!b64){ errs.push(r+' → pas d\u2019audio dans la réponse'); continue; }
-      story.voice.endpoint=r;          /* on mémorise la route qui marche */
-      return b64ToBytes(b64.replace(/^data:[^,]+,/,''));
-    }catch(e){ errs.push(r+' → '+e.message); }
+    throw new Error('Mot de passe du relais manquant : renseignez-le dans Ambiance, section Voix.');
+  const url = v.endpoint ? (/^https?:/.test(v.endpoint) ? v.endpoint
+                            : WORKER+'/'+v.endpoint.replace(/^\//,''))
+                         : WORKER+'/'+VOICE_ROUTE;
+  let res;
+  try{
+    res = await fetch(url,{
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'X-App-Secret':v.secret.trim() },
+      body:JSON.stringify(humeBody(text))
+    });
+  }catch(e){
+    throw new Error('Relais injoignable : '+e.message);
   }
-  if(unauth===routes.length)
-    throw new Error('Le relais refuse le mot de passe (401). Vérifiez-le, ou dites-moi sous quel en-tête votre worker l\u2019attend.');
-  throw new Error('Aucune route du relais n\u2019a répondu. '+errs.join(' · '));
+  const type = res.headers.get('content-type')||'';
+  if(!res.ok || type.indexOf('json')>=0){
+    let msg;
+    try{ const j=await res.json(); msg=j.error||j.message||JSON.stringify(j).slice(0,140); }
+    catch(e){ msg=(await res.text()).slice(0,140); }
+    if(res.status===401) throw new Error('Mot de passe refusé par le relais.');
+    throw new Error('Hume a répondu '+res.status+' : '+msg);
+  }
+  const buf = await res.arrayBuffer();
+  if(buf.byteLength<512) throw new Error('Audio vide reçu du relais.');
+  return new Uint8Array(buf);
 }
 
 async function generateVoice(beat){
@@ -2596,7 +2847,8 @@ addEventListener('unhandledrejection',e=>{
   a.beats=[ newBeat({kind:'title',text:'Angelica archangelica',at:0.1,span:0.65,
     posY:82,size:3.8,unit:'word',anim:'blur',stagger:80,italic:true}) ];
   a.spots=[ Object.assign(newSpot([0,0.7,0]),{label:'Ombelle',side:1,len:110}) ];
-  const b=newChapter('video'); b.name='Première séquence'; b.nextBtn=true;
+  const b=newChapter('video'); b.name='Première séquence';
+  b.buttons=[ newButton({label:'Poursuivre le récit',target:'next',at:0.55,span:0.4}) ];
   b.beats=[
     newBeat({kind:'title',text:'Elle pousse là où l\u2019eau stagne',at:0.1,span:0.4,
       posX:9,posY:26,align:'left',size:3.2,width:26,unit:'word',anim:'wipe',stagger:70}),

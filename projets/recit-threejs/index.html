@@ -2364,7 +2364,7 @@ function authHeaders(){
   const k=(story.voice.secret||'').trim();
   if(!k) return {};
   return {
-    'X-App-Secret':k,,
+    'X-App-Secret':k, 'x-app-secret':k, 'APP_SECRET':k,
     'Authorization':'Bearer '+k, 'X-Api-Key':k, 'x-api-key':k, 'X-Auth-Token':k
   };
 }

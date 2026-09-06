@@ -366,6 +366,7 @@ function blankStory(){
       display:'Fraunces', body:'Archivo', dispWeight:300, dispTrack:-2,
       bodyWeight:300, bodyTrack:0 },
     music:{ asset:null, volume:0.35, duck:0.35, fade:1.5 },
+    sfxRoute:'',
     voice:{ endpoint:'', secret:'', voiceId:'5b612d83-696a-4089-88a7-da3e8e8126e7',
             provider:'HUME_AI', idMode:'id', description:'',
             speed:1, trailingSilence:0.35 },
@@ -374,7 +375,10 @@ function blankStory(){
 }
 
 function newChapter(type){
-  const c = { id:uid(), type, name:'', len:180, hold:12, beats:[], spots:[], buttons:[] };
+  const c = { id:uid(), type, name:'', len:180, hold:12, beats:[], spots:[], buttons:[],
+    /* son propre au chapitre : musique héritée, remplacée ou coupée */
+    music:{ mode:'inherit', asset:null, volume:0.35, fade:2 },
+    sfx:[] };
   if(type==='model'){
     Object.assign(c,{ name:'Modèle 3D', asset:null, bg:'#0E1210',
       orbit:true, orbitDamp:0.09, orbitLimitX:55, orbitZoom:true,
@@ -433,6 +437,13 @@ function newBeat(o){
     ease:'cubic-bezier(.33,1,.68,1)', delay:0, distance:28,
     at:0.15, span:0.55, exit:true
   }, o);
+}
+
+/* Un bruitage : déclenché à un point du défilement, en parallèle de la voix
+   et sans faire baisser la musique. */
+function newSfx(o){
+  return Object.assign({ id:uid(), asset:null, label:'', prompt:'',
+    at:0.02, volume:0.8, duration:4, influence:0.35 }, o||{});
 }
 
 /* Un bouton de choix : c'est la brique du livre interactif.
@@ -865,6 +876,8 @@ let speaking = null;
 function hasAudio() {
   if (S.music && S.music.src) return true;
   return S.chapters.some(c =>
+    (c.music && c.music.src) ||
+    (c.sfx || []).some(f => f.src) ||
     (c.type === 'video' && c.src && c.mute === false) ||
     (c.beats || []).some(b => b.voiceSrc));
 }
@@ -878,12 +891,7 @@ function buildGate() {
     audioOn = true;
     g.classList.add('off');
     setTimeout(() => g.remove(), 700);
-    if (S.music && S.music.src) {
-      music = new Audio(S.music.src);
-      music.loop = true;
-      music.volume = 0;
-      music.play().then(() => fadeTo(music, S.music.volume, S.music.fade)).catch(() => {});
-    }
+    setMusic(wantedMusic(), true);
     layers.forEach(el => {
       const ch = el._ch;
       if (el._media && el._media.tagName === 'VIDEO' && ch.mute === false) {
@@ -895,6 +903,50 @@ function buildGate() {
   });
   document.body.appendChild(g);
   return g;
+}
+
+/* ---- musique : une piste par chapitre, enchaînées en fondu ---- */
+let musicKey = null, musicVol = 0.35;
+
+function wantedMusic() {
+  const el = layers[currentIndex()];
+  const ch = el && el._ch;
+  const m = ch && ch.music;
+  if (m && m.mode === 'silence') return null;
+  if (m && m.mode === 'own' && m.src) return { src: m.src, vol: m.volume, fade: m.fade };
+  if (S.music && S.music.src) return { src: S.music.src, vol: S.music.volume, fade: S.music.fade };
+  return null;
+}
+
+function setMusic(next, immediate) {
+  const key = next ? next.src : null;
+  if (key === musicKey) {
+    if (next && music) { musicVol = next.vol; fadeTo(music, next.vol, 0.6); }
+    return;
+  }
+  musicKey = key;
+  const old = music;
+  if (old) {
+    const f = (next && next.fade) || 1.5;
+    fadeTo(old, 0, f);
+    setTimeout(() => { try { old.pause(); } catch (e) {} }, f * 1000 + 80);
+  }
+  music = null;
+  if (!next) return;
+  const a = new Audio(next.src);
+  a.loop = true;
+  a.volume = immediate ? 0 : 0;
+  musicVol = next.vol;
+  music = a;
+  a.play().then(() => fadeTo(a, next.vol, next.fade || 1.5)).catch(() => {});
+}
+
+/* ---- bruitages : en parallèle de la voix, sans atténuer la musique ---- */
+function playSfx(f) {
+  if (!audioOn || !f.src) return;
+  const a = new Audio(f.src);
+  a.volume = f.volume == null ? 0.8 : f.volume;
+  a.play().catch(() => {});
 }
 
 function fadeTo(el, target, secs) {
@@ -920,9 +972,9 @@ function speak(b) {
   a.volume = 1;
   speaking = { a: a, b: b };
   a.play().catch(() => {});
-  if (music) fadeTo(music, S.music.volume * (S.music.duck == null ? .35 : S.music.duck), 0.6);
+  if (music) fadeTo(music, musicVol * (S.music.duck == null ? .35 : S.music.duck), 0.6);
   a.addEventListener('ended', () => {
-    if (speaking && speaking.a === a) { speaking = null; if (music) fadeTo(music, S.music.volume, 1.2); }
+    if (speaking && speaking.a === a) { speaking = null; if (music) fadeTo(music, musicVol, 1.2); }
   });
 }
 function hush(secs) {
@@ -931,7 +983,7 @@ function hush(secs) {
   speaking = null;
   fadeTo(a, 0, secs || 0.4);
   setTimeout(() => { try { a.pause(); } catch (e) {} }, (secs || 0.4) * 1000 + 60);
-  if (music) fadeTo(music, S.music.volume, 1.2);
+  if (music) fadeTo(music, musicVol, 1.2);
 }
 
 /* ---------- construction complète ---------- */
@@ -1376,6 +1428,8 @@ function frame(now) {
     if (el.dataset.on !== '1') {
       el.dataset.on = '1';
       el.style.visibility = 'visible';
+      if (audioOn) setMusic(wantedMusic());
+      (ch.sfx || []).forEach(f => { f._done = false; });
       if (el._media && el._media.tagName === 'VIDEO') {
         warm(i);
         try { el._media.currentTime = 0; } catch (err) {}
@@ -1393,6 +1447,14 @@ function frame(now) {
     if (railDots[i]) railDots[i].classList.toggle('here', a > 0.5);
 
     const q = Math.min(1, Math.max(0, p));
+
+    /* bruitages : franchir leur repère les déclenche, une fois par passage */
+    const sfx = ch.sfx || [];
+    for (let k = 0; k < sfx.length; k++) {
+      const f = sfx[k];
+      if (!f._done && q >= f.at) { f._done = true; playSfx(f); }
+      else if (f._done && q < f.at - 0.02) f._done = false;
+    }
 
     if (ch.type === 'image' && el._media) {
       /* lente dérive : l'image respire pendant qu'on lit */
@@ -1522,6 +1584,19 @@ function storyPayload(mode){
     o.src = (!a || mode==='light') ? null
           : mode==='folder' ? 'assets/'+ch.asset+'_'+a.name
           : assetDataURL(ch.asset);
+    if(o.music){
+      const mk=ch.music&&ch.music.asset, mv=mk&&ASSETS.get(mk);
+      o.music.src=(!mv||mode==='light')?null
+        : mode==='folder' ? 'assets/'+mk+'_'+mv.name : assetDataURL(mk);
+      delete o.music.asset;
+    }
+    (o.sfx||[]).forEach((f,fi)=>{
+      const kk=ch.sfx[fi]&&ch.sfx[fi].asset, fv=kk&&ASSETS.get(kk);
+      f.src=(!fv||mode==='light')?null
+        : mode==='folder' ? 'assets/'+kk+'_'+fv.name : assetDataURL(kk);
+      delete f.asset;
+      delete f.prompt;   /* la consigne de génération ne sert qu'à l'éditeur */
+    });
     (o.beats||[]).forEach((b,bi)=>{
       const key = ch.beats[bi] && ch.beats[bi].voice;
       const va = key && ASSETS.get(key);
@@ -2017,6 +2092,7 @@ function renderInspector(){
     buildSpotPanel(inspBody,ch);
   }
   if(ch.type!=='video') field(inspBody,'Fond du chapitre',color(ch,'bg'));
+  buildChapterSound(inspBody,ch);
   buildTimeline(inspBody,ch);
   buildButtonPanel(inspBody,ch);
   buildBeatPanel(inspBody,ch);
@@ -2233,6 +2309,132 @@ function buildTimeline(parent,ch){
   parent.appendChild(host);
 }
 let timelineHead=null;
+
+/* ---- son du chapitre : musique propre et bruitages ---- */
+function buildChapterSound(parent,ch){
+  ch.music=ch.music||{mode:'inherit',asset:null,volume:0.35,fade:2};
+  ch.sfx=ch.sfx||[];
+  const host=document.createElement('div'); host.className='field';
+  host.innerHTML='<label>Son du chapitre</label>';
+
+  const M=ch.music;
+  host.appendChild(labelled('Musique',select(M,'mode',
+    [['inherit','Garder celle du récit'],['own','Une musique propre'],['silence','Silence']])));
+
+  if(M.mode==='own'){
+    const ma=M.asset&&ASSETS.get(M.asset);
+    const box=document.createElement('div');
+    box.className='filebox'+(ma?' has':''); box.tabIndex=0;
+    box.textContent=ma?ma.name+' — '+fmtBytes(ma.bytes.length):'Choisir un fichier audio';
+    const inp=document.createElement('input'); inp.type='file'; inp.hidden=true;
+    inp.accept='audio/*,.mp3,.m4a,.ogg,.wav';
+    const take=async f=>{
+      try{
+        const bytes=await readFile(f); const key=uid();
+        ASSETS.set(key,{name:safeName(f.name),mime:mimeOf(f.name,f.type),kind:'audio',bytes:bytes,b64:null});
+        if(M.asset) ASSETS.delete(M.asset);
+        M.asset=key; renderAll(true); toast(f.name+' — '+fmtBytes(bytes.length));
+      }catch(e){ toast(e.message,'bad'); }
+    };
+    box.addEventListener('click',()=>inp.click());
+    box.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();inp.click();} });
+    box.addEventListener('dragover',e=>{e.preventDefault();box.style.borderColor='var(--accent)';});
+    box.addEventListener('dragleave',()=>{box.style.borderColor='';});
+    box.addEventListener('drop',e=>{e.preventDefault();box.style.borderColor='';
+      if(e.dataTransfer.files[0]) take(e.dataTransfer.files[0]);});
+    inp.addEventListener('change',()=>{ if(inp.files[0]) take(inp.files[0]); });
+    host.appendChild(box); host.appendChild(inp);
+    if(ma){
+      host.appendChild(labelled('Volume',range(M,'volume',0,1,0.05,v=>Math.round(v*100)+' %')));
+      host.appendChild(labelled('Fondu enchaîné',range(M,'fade',0.3,8,0.1,v=>v.toFixed(1)+' s')));
+      const rm=document.createElement('button'); rm.className='btn'; rm.style.width='100%';
+      rm.textContent='Retirer cette musique';
+      rm.addEventListener('click',()=>{ ASSETS.delete(M.asset); M.asset=null; renderAll(true); });
+      host.appendChild(rm);
+    }
+  }else if(M.mode==='silence'){
+    const h=document.createElement('div'); h.className='hint';
+    h.textContent='La musique s\u2019efface en fondu à l\u2019entrée du chapitre et revient au suivant.';
+    host.appendChild(h);
+  }
+
+  /* bruitages */
+  const sub2=document.createElement('div'); sub2.className='sub'; sub2.style.cursor='default';
+  sub2.textContent='Bruitages';
+  host.appendChild(sub2);
+
+  ch.sfx.forEach((f,i)=>{
+    const card=document.createElement('div'); card.className='beat open';
+    const h=document.createElement('div'); h.className='beat-h';
+    const lbl=document.createElement('b');
+    lbl.textContent=(f.label||f.prompt||'Bruitage '+(i+1)).slice(0,24);
+    h.appendChild(lbl);
+    const del=icon('✕','Supprimer',()=>{
+      if(f.asset) ASSETS.delete(f.asset);
+      ch.sfx.splice(i,1); renderAll(true);
+    });
+    del.classList.add('del'); h.appendChild(del);
+    card.appendChild(h);
+
+    const body=document.createElement('div'); body.className='beat-body';
+    const ta=document.createElement('textarea');
+    ta.className='in'; ta.rows=2; ta.value=f.prompt||'';
+    ta.placeholder='froissement de feuilles sèches, très proche';
+    ta.addEventListener('input',()=>{ f.prompt=ta.value; lbl.textContent=(ta.value||'Bruitage').slice(0,24); });
+    body.appendChild(labelled('Description du son',ta));
+
+    const r=document.createElement('div'); r.className='two';
+    r.appendChild(labelled('Durée',range(f,'duration',0.5,22,0.5,v=>v.toFixed(1)+' s')));
+    r.appendChild(labelled('Fidélité à la description',range(f,'influence',0,1,0.05,v=>Math.round(v*100)+' %')));
+    body.appendChild(r);
+
+    const fa=f.asset&&ASSETS.get(f.asset);
+    const row=document.createElement('div'); row.className='two';
+    const gen=document.createElement('button'); gen.className='btn';
+    gen.textContent=fa?'Refaire':'Générer';
+    gen.addEventListener('click',()=>generateSfx(ch,f));
+    const play=document.createElement('button'); play.className='btn';
+    play.textContent='Écouter'; play.disabled=!fa;
+    play.addEventListener('click',()=>{ new Audio(assetDataURL(f.asset)).play().catch(()=>{}); });
+    row.appendChild(gen); row.appendChild(play);
+    body.appendChild(row);
+
+    const imp=document.createElement('input'); imp.type='file'; imp.hidden=true;
+    imp.accept='audio/*';
+    imp.addEventListener('change',async()=>{
+      const file=imp.files[0]; if(!file) return;
+      try{
+        const bytes=await readFile(file); const key=uid();
+        ASSETS.set(key,{name:safeName(file.name),mime:mimeOf(file.name,file.type),kind:'audio',bytes:bytes,b64:null});
+        if(f.asset) ASSETS.delete(f.asset);
+        f.asset=key; if(!f.label) f.label=file.name;
+        renderAll(true);
+      }catch(e){ toast(e.message,'bad'); }
+    });
+    const impb=document.createElement('button'); impb.className='btn';
+    impb.style.width='100%'; impb.style.marginTop='6px';
+    impb.textContent='Ou importer un fichier';
+    impb.addEventListener('click',()=>imp.click());
+    body.appendChild(impb); body.appendChild(imp);
+
+    body.appendChild(labelled('Déclenché à',range(f,'at',0,0.98,0.01,v=>Math.round(v*100)+' %')));
+    body.appendChild(labelled('Volume',range(f,'volume',0,1,0.05,v=>Math.round(v*100)+' %')));
+    if(fa){
+      const hh=document.createElement('div'); hh.className='hint';
+      hh.textContent=fmtBytes(fa.bytes.length)+' · joué en parallèle de la voix, sans faire baisser la musique.';
+      body.appendChild(hh);
+    }
+    card.appendChild(body);
+    host.appendChild(card);
+  });
+
+  const add=document.createElement('button');
+  add.className='btn'; add.style.width='100%';
+  add.textContent='Ajouter un bruitage';
+  add.addEventListener('click',()=>{ ch.sfx.push(newSfx()); renderInspector(); });
+  host.appendChild(add);
+  parent.appendChild(host);
+}
 
 /* ---- boutons de choix ---- */
 function buildButtonPanel(parent,ch){
@@ -2823,7 +3025,12 @@ const TIPS={
  'Cadrage et lecture':'Remplir recadre la vidéo, image entière la montre en totalité.',
  'Fond du chapitre':'Couleur visible derrière le média, et pendant les fondus.',
  'Mot de passe du relais':'Envoyé au worker Cloudflare. Jamais enregistré, jamais exporté.',
- 'Route du relais':'Chemin appelé sur le worker. Vide, deux formes sont essayées.'
+ 'Route du relais':'Chemin appelé sur le worker. Vide, deux formes sont essayées.',
+ 'Musique':'Le chapitre garde la musique du récit, en impose une autre, ou fait silence.',
+ 'Fondu enchaîné':'Temps du passage d\u2019une musique à l\u2019autre entre deux chapitres.',
+ 'Description du son':'Décrivez le bruitage en français ou en anglais : ElevenLabs le fabrique.',
+ 'Fidélité à la description':'Haut, le son colle à la description ; bas, le moteur s\u2019autorise plus de liberté.',
+ 'Déclenché à':'Point du défilement où le bruitage part. Il joue en parallèle de la voix.'
 };
 function tip(el,label){
   const t=TIPS[label];
@@ -3100,6 +3307,67 @@ let convBusy=false;
 const convOpts={ maxW:1920, mbps:2.2, fps:30, keepAudio:true };
 
 /* ---------------------------------------------------------------
+   BRUITAGES — ElevenLabs, via le même relais
+   Le worker doit exposer une route « eleven-sfx » qui relaie
+   https://api.elevenlabs.io/v1/sound-generation avec l'en-tête xi-api-key.
+   Comme pour la voix, le MP3 est fabriqué ici et devient un média du projet.
+   --------------------------------------------------------------- */
+const SFX_ROUTES = ['proxy/eleven-sfx','eleven-sfx'];
+
+async function elevenSfx(prompt, seconds, influence){
+  const v=story.voice;
+  if(!(v.secret||'').trim())
+    throw new Error('Mot de passe du relais manquant : renseignez-le dans Ambiance.');
+  const routes = story.sfxRoute ? [story.sfxRoute] : SFX_ROUTES;
+  const body = JSON.stringify({
+    text: prompt,
+    duration_seconds: Math.max(0.5, Math.min(22, seconds||4)),
+    prompt_influence: influence==null?0.35:influence
+  });
+  const errs=[];
+  for(const r of routes){
+    const url = /^https?:/.test(r) ? r : WORKER+'/'+r.replace(/^\//,'');
+    let res;
+    try{
+      res = await fetch(url,{ method:'POST',
+        headers:{ 'Content-Type':'application/json', 'X-App-Secret':v.secret.trim() },
+        body:body });
+    }catch(e){ errs.push(r+' → réseau : '+e.message); continue; }
+    const type=res.headers.get('content-type')||'';
+    if(res.ok && type.indexOf('json')<0){
+      const buf=await res.arrayBuffer();
+      if(buf.byteLength<512){ errs.push(r+' → audio vide'); continue; }
+      story.sfxRoute=r;
+      return new Uint8Array(buf);
+    }
+    let detail;
+    try{ detail=(await res.text()).slice(0,200); }catch(e){ detail='(corps illisible)'; }
+    errs.push(r+' → '+res.status+' '+detail);
+    if(res.status===401) throw new Error('Mot de passe refusé par le relais.');
+  }
+  const all=errs.join('  |  ');
+  if(all.indexOf('404')>=0)
+    throw new Error('Route absente du worker. Ajoutez-y une branche « eleven-sfx » qui relaie ElevenLabs. '+all);
+  throw new Error('Bruitage non généré. '+all);
+}
+
+async function generateSfx(ch,f){
+  const prompt=(f.prompt||'').trim();
+  if(!prompt){ toast('Décrivez le son à produire','bad'); return; }
+  try{
+    toast('Génération du bruitage\u2026');
+    const bytes=await elevenSfx(prompt,f.duration,f.influence);
+    const key=uid();
+    ASSETS.set(key,{name:'sfx_'+key+'.mp3',mime:'audio/mpeg',kind:'audio',bytes:bytes,b64:null});
+    if(f.asset) ASSETS.delete(f.asset);
+    f.asset=key;
+    if(!f.label) f.label=prompt.slice(0,28);
+    renderAll(true);
+    toast('Bruitage obtenu — '+fmtBytes(bytes.length));
+  }catch(e){ console.error(e); toast(e.message,'bad'); }
+}
+
+/* ---------------------------------------------------------------
    VOIX — Hume, via le relais Cloudflare
    La clé n'entre jamais dans la page exportée : on fabrique le MP3 ici,
    il devient un média du projet, et la page finale ne fait que le lire.
@@ -3234,6 +3502,9 @@ document.getElementById('btnOpen').addEventListener('click',()=>{
       story.chapters.forEach(c=>{
         c.beats=(c.beats||[]).map(b=>newBeat(b));
         c.spots=(c.spots||[]).map(s=>Object.assign(newSpot(s.p),s));
+        c.music=Object.assign({mode:'inherit',asset:null,volume:.35,fade:2},c.music||{});
+        c.sfx=(c.sfx||[]).map(f=>newSfx(f));
+        c.buttons=c.buttons||[];
       });
       document.getElementById('storyTitle').value=story.title;
       selId=story.chapters.length?story.chapters[0].id:null;

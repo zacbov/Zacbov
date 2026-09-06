@@ -362,6 +362,7 @@ function blankStory(){
       bodyWeight:300, bodyTrack:0 },
     music:{ asset:null, volume:0.35, duck:0.35, fade:1.5 },
     voice:{ endpoint:'', secret:'', voiceId:'5b612d83-696a-4089-88a7-da3e8e8126e7',
+            provider:'HUME_AI', idMode:'id', description:'',
             speed:1, trailingSilence:0.35 },
     chapters:[]
   };
@@ -2421,12 +2422,25 @@ function buildTheme(parent){
     'Envoyé au worker Cloudflare, jamais à la page exportée. Il n\u2019est pas enregistré dans le projet : à ressaisir à chaque ouverture.');
   const route=document.createElement('input');
   route.className='in'; route.value=V.endpoint||'';
-  route.placeholder='hume-tts';
+  route.placeholder='proxy/hume-tts';
   route.addEventListener('input',()=>{ V.endpoint=route.value.trim(); });
   field(parent,'Route du relais',route,
-    'Vide, l\u2019outil emploie « hume-tts », la route du worker qui relaie Hume.');
-  field(parent,'Identifiant de voix Hume',txt(V,'voiceId'),
+    'Vide, l\u2019outil essaie « proxy/hume-tts » puis « hume-tts », et retient celle qui aboutit.');
+  const pv=document.createElement('div'); pv.className='two';
+  pv.appendChild(labelled('Provenance',select(V,'provider',
+    [['HUME_AI','Bibliothèque Hume'],['CUSTOM_VOICE','Mes voix enregistrées']])));
+  pv.appendChild(labelled('Désignée par',select(V,'idMode',
+    [['id','Son identifiant'],['name','Son nom']])));
+  field(parent,'Voix',pv,
+    'Une voix trouvée sur le site de Hume appartient à la bibliothèque. « Mes voix » ne contient que celles enregistrées sur votre compte.');
+  field(parent,V.idMode==='name'?'Nom de la voix':'Identifiant de voix',txt(V,'voiceId'),
     'La synthèse se fait ici, dans l\u2019éditeur. Le MP3 obtenu devient un média du projet : la page exportée ne contient aucune clé.');
+  const desc=document.createElement('textarea');
+  desc.className='in'; desc.rows=2; desc.value=V.description||'';
+  desc.placeholder='posée, chaleureuse, un peu confidentielle';
+  desc.addEventListener('input',()=>{ V.description=desc.value; });
+  field(parent,'Consigne de jeu',desc,
+    'Facultatif. Octave module l\u2019interprétation d\u2019après cette description.');
   const vr=document.createElement('div'); vr.className='two';
   vr.appendChild(labelled('Débit',range(V,'speed',0.5,2,0.05,v=>v.toFixed(2)+' ×')));
   vr.appendChild(labelled('Silence final',range(V,'trailingSilence',0,2,0.05,v=>v.toFixed(2)+' s')));
@@ -2622,22 +2636,23 @@ function icon(glyph,title,fn){
    il devient un média du projet, et la page finale ne fait que le lire.
    --------------------------------------------------------------- */
 const WORKER = 'https://routeur-ia-proxy.zacharybov.workers.dev';
-const VOICE_ROUTE = 'hume-tts';
+/* Le worker retire le préfixe /proxy/ ; selon la façon dont la route est
+   déclarée côté Cloudflare, l'une ou l'autre forme aboutit. */
+const VOICE_ROUTES = ['proxy/hume-tts','hume-tts'];
 
 /* Le worker n'autorise qu'un seul en-tête d'authentification, X-App-Secret :
    son CORS ne déclare que « Content-Type, X-App-Secret ». En envoyer d'autres
    ferait échouer le pré-vol avant même d'atteindre la route. */
-function humeBody(text){
+/* Une voix de la bibliothèque Hume se demande avec HUME_AI ; CUSTOM_VOICE ne
+   cherche que parmi les voix enregistrées sur votre compte. Une voix peut aussi
+   être désignée par son nom plutôt que par son identifiant. */
+function humeBody(text, provider){
   const v=story.voice;
-  return {
-    utterances:[{
-      text:text,
-      voice:{ id:v.voiceId, provider:'CUSTOM_VOICE' },
-      speed:v.speed,
-      trailing_silence:v.trailingSilence
-    }],
-    format:{ type:'mp3' }
-  };
+  const voice = v.idMode==='name' ? { name:v.voiceId.trim() } : { id:v.voiceId.trim() };
+  voice.provider = provider || v.provider || 'HUME_AI';
+  const u = { text:text, voice:voice, speed:v.speed, trailing_silence:v.trailingSilence };
+  if((v.description||'').trim()) u.description = v.description.trim();
+  return { utterances:[u], format:{ type:'mp3' } };
 }
 
 /* La route relaie /v0/tts/file, qui renvoie directement les octets du MP3.
@@ -2646,30 +2661,47 @@ async function humeSynth(text){
   const v=story.voice;
   if(!(v.secret||'').trim())
     throw new Error('Mot de passe du relais manquant : renseignez-le dans Ambiance, section Voix.');
-  const url = v.endpoint ? (/^https?:/.test(v.endpoint) ? v.endpoint
-                            : WORKER+'/'+v.endpoint.replace(/^\//,''))
-                         : WORKER+'/'+VOICE_ROUTE;
-  let res;
-  try{
-    res = await fetch(url,{
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', 'X-App-Secret':v.secret.trim() },
-      body:JSON.stringify(humeBody(text))
-    });
-  }catch(e){
-    throw new Error('Relais injoignable : '+e.message);
+  if(!(v.voiceId||'').trim())
+    throw new Error('Aucune voix indiquée.');
+
+  const routes = v.endpoint ? [v.endpoint] : VOICE_ROUTES;
+  /* si la voix n'est pas trouvée, on retente avec l'autre fournisseur */
+  const provs = [v.provider||'HUME_AI'];
+  provs.push(provs[0]==='HUME_AI' ? 'CUSTOM_VOICE' : 'HUME_AI');
+  const errs = [];
+
+  for(const r of routes){
+    const url = /^https?:/.test(r) ? r : WORKER+'/'+r.replace(/^\//,'');
+    for(const prov of provs){
+      let res;
+      try{
+        res = await fetch(url,{
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'X-App-Secret':v.secret.trim() },
+          body:JSON.stringify(humeBody(text, prov))
+        });
+      }catch(e){ errs.push(r+' → réseau : '+e.message); break; }
+
+      const type = res.headers.get('content-type')||'';
+      if(res.ok && type.indexOf('json')<0){
+        const buf = await res.arrayBuffer();
+        if(buf.byteLength<512){ errs.push(r+'/'+prov+' → audio vide'); continue; }
+        story.voice.endpoint = r;
+        story.voice.provider = prov;      /* on retient ce qui a fonctionné */
+        return new Uint8Array(buf);
+      }
+      let detail;
+      try{ detail=(await res.text()).slice(0,200); }catch(e){ detail='(corps illisible)'; }
+      errs.push(prov+' → '+res.status+' '+detail);
+      if(res.status===401) return Promise.reject(new Error('Mot de passe refusé par le relais.'));
+      if(res.status!==404) break;         /* seul un 404 justifie de changer de fournisseur */
+    }
   }
-  const type = res.headers.get('content-type')||'';
-  if(!res.ok || type.indexOf('json')>=0){
-    let msg;
-    try{ const j=await res.json(); msg=j.error||j.message||JSON.stringify(j).slice(0,140); }
-    catch(e){ msg=(await res.text()).slice(0,140); }
-    if(res.status===401) throw new Error('Mot de passe refusé par le relais.');
-    throw new Error('Hume a répondu '+res.status+' : '+msg);
-  }
-  const buf = await res.arrayBuffer();
-  if(buf.byteLength<512) throw new Error('Audio vide reçu du relais.');
-  return new Uint8Array(buf);
+
+  const all=errs.join('  |  ');
+  if(all.indexOf('does not exist')>=0 || all.indexOf('not found')>=0)
+    throw new Error('Voix introuvable. Vérifiez l\u2019identifiant, ou passez en « désignée par son nom ». '+all);
+  throw new Error('Hume n\u2019a pas répondu. '+all);
 }
 
 async function generateVoice(beat){
@@ -2728,6 +2760,7 @@ document.getElementById('btnOpen').addEventListener('click',()=>{
       story.music=Object.assign({asset:null,volume:.35,duck:.35,fade:1.5},j.story.music||{});
       story.voice=Object.assign({endpoint:'',secret:'',
         voiceId:'5b612d83-696a-4089-88a7-da3e8e8126e7',
+        provider:'HUME_AI',idMode:'id',description:'',
         speed:1,trailingSilence:.35},j.story.voice||{});
       story.chapters.forEach(c=>{
         c.beats=(c.beats||[]).map(b=>newBeat(b));

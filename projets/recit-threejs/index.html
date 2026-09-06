@@ -361,7 +361,7 @@ function blankStory(){
       display:'Fraunces', body:'Archivo', dispWeight:300, dispTrack:-2,
       bodyWeight:300, bodyTrack:0 },
     music:{ asset:null, volume:0.35, duck:0.35, fade:1.5 },
-    voice:{ endpoint:'', voiceId:'5b612d83-696a-4089-88a7-da3e8e8126e7',
+    voice:{ endpoint:'', secret:'', voiceId:'5b612d83-696a-4089-88a7-da3e8e8126e7',
             speed:1, trailingSilence:0.35 },
     chapters:[]
   };
@@ -1015,6 +1015,8 @@ addEventListener('click', ev => {
 /* ---------- 3D ---------- */
 async function ensure3D(el) {
   if (gl.has(el)) return gl.get(el);
+  /* aperçu léger, média absent : il n'y a pas de canvas à peindre */
+  if (!el._media || !el._ch.src) return null;
   const box = el.getBoundingClientRect();
   if (!box.width || !box.height) return null;
   gl.set(el, 'pending');
@@ -2140,6 +2142,19 @@ function buildTheme(parent){
 
   /* --- voix --- */
   const V=story.voice;
+  const pw=document.createElement('input');
+  pw.className='in'; pw.type='password'; pw.value=V.secret||'';
+  pw.placeholder='Mot de passe du relais';
+  pw.autocomplete='off';
+  pw.addEventListener('input',()=>{ V.secret=pw.value; });
+  field(parent,'Mot de passe du relais',pw,
+    'Envoyé au worker Cloudflare, jamais à la page exportée. Il n\u2019est pas enregistré dans le projet : à ressaisir à chaque ouverture.');
+  const route=document.createElement('input');
+  route.className='in'; route.value=V.endpoint||'';
+  route.placeholder='laisser vide pour chercher automatiquement';
+  route.addEventListener('input',()=>{ V.endpoint=route.value.trim(); });
+  field(parent,'Route du relais',route,
+    'Par exemple « hume/tts », ou une adresse complète. Le bouton d\u2019essai remplit ce champ tout seul.');
   field(parent,'Identifiant de voix Hume',txt(V,'voiceId'),
     'La synthèse se fait ici, dans l\u2019éditeur. Le MP3 obtenu devient un média du projet : la page exportée ne contient aucune clé.');
   const vr=document.createElement('div'); vr.className='two';
@@ -2342,6 +2357,18 @@ const WORKER = 'https://routeur-ia-proxy.zacharybov.workers.dev/';
    On les essaie l'une après l'autre et on retient celle qui répond. */
 const VOICE_ROUTES = ['hume/tts','hume','tts/hume','v0/tts','tts','api/hume/tts'];
 
+/* Le relais renvoie 401 « Non autorisé » tant qu'il ne reçoit pas le secret.
+   On ne sait pas sous quel en-tête il l'attend : on les envoie tous à la fois,
+   plus une copie dans le corps, ce qui couvre les conventions courantes. */
+function authHeaders(){
+  const k=(story.voice.secret||'').trim();
+  if(!k) return {};
+  return {
+    'X-App-Secret':k, 'x-app-secret':k, 'APP_SECRET':k,
+    'Authorization':'Bearer '+k, 'X-Api-Key':k, 'x-api-key':k, 'X-Auth-Token':k
+  };
+}
+
 function humeBody(text){
   const v=story.voice;
   return {
@@ -2352,7 +2379,9 @@ function humeBody(text){
       trailing_silence:v.trailingSilence
     }],
     format:{ type:'mp3' },
-    num_generations:1
+    num_generations:1,
+    app_secret:(v.secret||'').trim() || undefined,
+    provider:'hume'
   };
 }
 
@@ -2365,16 +2394,20 @@ function pickAudio(j){
 async function humeSynth(text){
   const v=story.voice;
   const routes = v.endpoint ? [v.endpoint] : VOICE_ROUTES;
-  const errs=[];
+  const errs=[]; let unauth=0;
+  if(!(v.secret||'').trim())
+    throw new Error('Le relais demande un mot de passe : renseignez-le dans Ambiance, section Voix.');
   for(const r of routes){
     const url = /^https?:/.test(r) ? r : WORKER.replace(/\/$/,'')+'/'+r.replace(/^\//,'');
     try{
       const res=await fetch(url,{
         method:'POST',
-        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        headers:Object.assign({'Content-Type':'application/json','Accept':'application/json'},
+                              authHeaders()),
         body:JSON.stringify(humeBody(text))
       });
       const txt=await res.text();
+      if(res.status===401||res.status===403){ unauth++; errs.push(r+' → '+res.status); continue; }
       if(!res.ok){ errs.push(r+' → '+res.status+' '+txt.slice(0,90)); continue; }
       let j; try{ j=JSON.parse(txt); }catch(e){ errs.push(r+' → réponse non JSON'); continue; }
       const b64=pickAudio(j);
@@ -2383,6 +2416,8 @@ async function humeSynth(text){
       return b64ToBytes(b64.replace(/^data:[^,]+,/,''));
     }catch(e){ errs.push(r+' → '+e.message); }
   }
+  if(unauth===routes.length)
+    throw new Error('Le relais refuse le mot de passe (401). Vérifiez-le, ou dites-moi sous quel en-tête votre worker l\u2019attend.');
   throw new Error('Aucune route du relais n\u2019a répondu. '+errs.join(' · '));
 }
 
@@ -2414,7 +2449,9 @@ document.getElementById('btnSave').addEventListener('click',()=>{
       if(a.b64===null) a.b64=bytesToB64(a.bytes);
       assets[k]={name:a.name,mime:a.mime,kind:a.kind,b64:a.b64};
     }
-    download(new Blob([JSON.stringify({v:4,story:story,assets:assets})],{type:'application/json'}),
+    const clean=JSON.parse(JSON.stringify(story));
+    if(clean.voice) delete clean.voice.secret;   /* le mot de passe ne quitte pas la session */
+    download(new Blob([JSON.stringify({v:4,story:clean,assets:assets})],{type:'application/json'}),
       slug(story.title)+'.recit.json');
     toast('Projet enregistré');
   }catch(e){ console.error(e); toast('Enregistrement impossible : '+e.message,'bad'); }
@@ -2438,7 +2475,8 @@ document.getElementById('btnOpen').addEventListener('click',()=>{
       story=Object.assign(blank,j.story);
       story.theme=Object.assign(blank.theme,j.story.theme||{});
       story.music=Object.assign({asset:null,volume:.35,duck:.35,fade:1.5},j.story.music||{});
-      story.voice=Object.assign({endpoint:'',voiceId:'5b612d83-696a-4089-88a7-da3e8e8126e7',
+      story.voice=Object.assign({endpoint:'',secret:'',
+        voiceId:'5b612d83-696a-4089-88a7-da3e8e8126e7',
         speed:1,trailingSilence:.35},j.story.voice||{});
       story.chapters.forEach(c=>{
         c.beats=(c.beats||[]).map(b=>newBeat(b));

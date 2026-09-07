@@ -46,7 +46,8 @@
   .grp .btn:last-child{border-radius:0 var(--r) var(--r) 0}
   .grp .btn:hover,.grp .btn.on{position:relative;z-index:1}
 
-  main{display:grid;grid-template-columns:232px 1fr 340px;min-height:0}
+  main{display:grid;grid-template-columns:250px minmax(0,1fr) 384px;min-height:0}
+  @media (max-width:1500px){main{grid-template-columns:222px minmax(0,1fr) 352px}}
   .col{min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .col.rail{background:var(--panel);border-right:1px solid var(--line)}
   .col.insp{background:var(--panel);border-left:1px solid var(--line)}
@@ -111,9 +112,17 @@
   .in:focus{border-color:var(--accent-dim);outline:none}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-  .rangerow{display:flex;align-items:center;gap:9px}
-  input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
-  .num{width:54px;text-align:right;color:var(--ink-dim);font-variant-numeric:tabular-nums;flex:none;font-size:11px}
+  .rangerow{display:flex;align-items:center;gap:8px;min-width:0}
+  input[type=range]{flex:1 1 auto;accent-color:var(--accent);min-width:0;width:100%}
+  .num{min-width:58px;text-align:right;color:var(--ink-dim);
+    font-variant-numeric:tabular-nums;flex:0 0 auto;font-size:11px;white-space:nowrap}
+  /* dans une grille à deux ou trois colonnes, la valeur passe au-dessus
+     du curseur plutôt que de le rogner */
+  .two .rangerow,.three .rangerow{flex-wrap:wrap}
+  .two .rangerow .num,.three .rangerow .num{width:100%;text-align:left;order:-1;min-width:0}
+  .two,.three{min-width:0}
+  .two>*,.three>*{min-width:0}
+  .field,.beat-body,.group{min-width:0}
   input[type=color]{width:100%;height:28px;padding:2px;background:var(--shell);border:1px solid var(--line);border-radius:var(--r)}
   .check{display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:7px}
   .check input{accent-color:var(--accent);width:15px;height:15px}
@@ -127,7 +136,7 @@
   .beat-h{display:flex;align-items:center;gap:6px;padding:8px 9px;cursor:pointer}
   .beat-h b{flex:1;font-weight:500;font-size:11px;color:var(--ink-dim);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .beat-body{padding:0 9px 9px;display:none}
+  .beat-body{padding:0 9px 9px;display:none;min-width:0}
   .beat.open .beat-body{display:block}
   .beat.open .beat-h{border-bottom:1px solid var(--line);margin-bottom:9px}
   .icobtn{background:none;border:1px solid var(--line);border-radius:4px;color:var(--ink-faint);
@@ -523,7 +532,7 @@ const ORN_KINDS = [
     ['veil','Voile dégradé'],['band','Bande latérale'],
     ['grain','Grain de papier'],['vign','Vignettage'],['progress','Progression du chapitre']]],
   ['Repères', [
-    ['folio','Folio'],['margin','Signature en marge'],
+    ['folio','Folio'],['dropcap','Lettrine'],['margin','Signature en marge'],
     ['cropMarks','Repères de coupe'],['ruler','Règle graduée']]]
 ];
 const ORN_LABEL={};
@@ -573,6 +582,7 @@ const ORN_SETS=[
    un objet qu'on peut désigner. */
 function newZone(o){
   return Object.assign({ id:uid(), label:'Zone', target:'next',
+    link:false, url:'', newTab:false, hoverFrost:false, frostAmount:8,
     shape:'rect', x:50, y:50, w:22, h:22,
     at:0.1, span:0.8, outline:0, color:story.theme.accent,
     hoverGlow:true, cursor:'pointer' }, o||{});
@@ -592,6 +602,7 @@ function newButton(o){
   const t=story.theme;
   return Object.assign({
     id:uid(), label:'Continuer', target:'next',
+    link:false, url:'', newTab:false,
     posMode:'anchor', anchor:'bottom-center', posX:50, posY:88,
     font:t.body, size:0.95, weight:500, tracking:2, caps:'none',
     color:t.ink, bg:'#000000', bgAlpha:0, borderC:t.accent, borderW:1,
@@ -1004,6 +1015,13 @@ function ornGeom(o, W, H) {
 
   if (K === 'folio' && o.text) X.push({ x: cx, y: cy, t: o.text, anchor: 'middle' });
 
+  if (K === 'dropcap' && o.text) {
+    /* la lettrine : une capitale tracée au contour, puis son filet d'appui */
+    X.push({ x: cx, y: cy, t: o.text.charAt(0), anchor: 'middle', cap: true });
+    if (o.count > 0)
+      P.push('M' + (cx - w / 2) + ' ' + (cy + h / 2) + ' L' + (cx + w / 2) + ' ' + (cy + h / 2));
+  }
+
   if (K === 'margin' && o.text)
     X.push({ x: cx, y: cy, t: o.text, anchor: 'middle', rot: o.x > 50 ? 90 : -90 });
 
@@ -1094,7 +1112,12 @@ function buildOrns(el, ch) {
       path.setAttribute('stroke-width', o.kind === 'mourning' ? o.width * 3 : o.width);
       path.setAttribute('stroke-linecap', o.cap || 'round');
       path.setAttribute('stroke-linejoin', 'round');
-      if (o.dash) path.setAttribute('stroke-dasharray', o.dash + ' ' + o.dash);
+      /* un pointillé occupe déjà stroke-dasharray, qui sert au tracé :
+         ces ornements se révèlent donc en fondu plutôt qu'au trait */
+      if (o.dash) {
+        path.setAttribute('stroke-dasharray', o.dash + ' ' + (o.dash * 1.6).toFixed(1));
+        g.classList.add('dashed');
+      }
       g.appendChild(path);
     });
     geo.F.forEach(f => {
@@ -1121,9 +1144,16 @@ function buildOrns(el, ch) {
       t.setAttribute('text-anchor', x.anchor || 'start');
       t.setAttribute('dominant-baseline', 'middle');
       t.style.fontFamily = quoteFam(o.font);
-      t.style.fontSize = 'calc(' + o.size + 'rem * var(--fs))';
+      t.style.fontSize = 'calc(' + (x.cap ? o.size * 4 : o.size) + 'rem * var(--fs))';
       t.style.letterSpacing = (o.tracking / 100) + 'em';
       t.style.textTransform = 'uppercase';
+      if (x.cap && o.width > 0) {
+        /* tracée au contour, elle se dessine comme le reste */
+        t.setAttribute('fill', 'none');
+        t.setAttribute('stroke', o.color);
+        t.setAttribute('stroke-width', o.width);
+        t.style.fontFamily = quoteFam(o.font);
+      }
       if (x.rot) t.setAttribute('transform', 'rotate(' + x.rot + ' ' + x.x + ' ' + x.y + ')');
       g.appendChild(t);
     });
@@ -1142,12 +1172,19 @@ function currentIndex() {
   for (let i = 0; i < layers.length; i++) if (layers[i].dataset.on === '1') return i;
   return 0;
 }
-function goToChapter(id) {
-  let i = id === 'next' ? currentIndex() + 1 : S.chapters.findIndex(c => c.id === id);
+/* Une destination est soit un chapitre, soit une adresse web. */
+function goTo(target, newTab) {
+  if (/^(https?:|mailto:|tel:|#|\/)/i.test(target || '')) {
+    if (newTab) window.open(target, '_blank', 'noopener');
+    else location.href = target;
+    return;
+  }
+  let i = target === 'next' ? currentIndex() + 1 : S.chapters.findIndex(c => c.id === target);
   if (i < 0) i = currentIndex() + 1;
   const n = document.getElementById('anchor-' + i);
   if (n) n.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
 }
+function goToChapter(id) { goTo(id); }
 
 function styleButton(el, b) {
   const st = el.style;
@@ -1185,7 +1222,8 @@ function buildZones(el, ch) {
   el._zones = (ch.zones || []).map(z => {
     const n = document.createElement('button');
     n.type = 'button';
-    n.className = 'zone' + (z.hoverGlow ? ' glow' : '');
+    n.className = 'zone' + (z.hoverGlow ? ' glow' : '') + (z.hoverFrost ? ' frost' : '');
+    if (z.hoverFrost) n.style.setProperty('--zb', (z.frostAmount || 8) + 'px');
     n.dataset.on = '0';
     n.setAttribute('aria-label', z.label || 'Zone interactive');
     n.title = z.label || '';
@@ -1197,7 +1235,7 @@ function buildZones(el, ch) {
     st.borderColor = z.color;
     st.cursor = z.cursor || 'pointer';
     st.setProperty('--zc', z.color);
-    n.addEventListener('click', () => goToChapter(z.target));
+    n.addEventListener('click', () => goTo(z.link ? z.url : z.target, z.newTab));
     wrap.appendChild(n);
     return n;
   });
@@ -1213,7 +1251,7 @@ function buildButtons(el, ch) {
     n.textContent = b.label;
     n.dataset.on = '0';
     styleButton(n, b);
-    n.addEventListener('click', () => goToChapter(b.target));
+    n.addEventListener('click', () => goTo(b.link ? b.url : b.target, b.newTab));
     wrap.appendChild(n);
     return n;
   });
@@ -1638,6 +1676,22 @@ addEventListener('pointerdown', ev => {
   if (!el) return;
   const rect = el.getBoundingClientRect();
 
+  /* un ornement sous le pointeur : on le déplace en premier */
+  const orns = el._orns || [];
+  for (let k = orns.length - 1; k >= 0; k--) {
+    const node = orns[k];
+    if (node.dataset.on !== '1') continue;
+    let box;
+    try { box = node.getBoundingClientRect(); } catch (err) { continue; }
+    if (!box.width && !box.height) continue;
+    if (ev.clientX >= box.left && ev.clientX <= box.right &&
+        ev.clientY >= box.top && ev.clientY <= box.bottom) {
+      drag = { kind: 'orn', el: el, rect: rect, id: el._ch.orns[k].id, chapter: el._ch.id };
+      ev.preventDefault();
+      return;
+    }
+  }
+
   /* un texte visible sous le pointeur : on le déplace */
   const beats = el._beats || [];
   for (let k = beats.length - 1; k >= 0; k--) {
@@ -1661,9 +1715,11 @@ addEventListener('pointerdown', ev => {
 
 addEventListener('pointermove', ev => {
   if (!drag) return;
-  if (drag.kind === 'beat') {
+  if (drag.kind === 'beat' || drag.kind === 'orn') {
     const r = drag.rect;
-    parent.postMessage({ type: 'recit:moved', chapter: drag.chapter, id: drag.id,
+    parent.postMessage({
+      type: drag.kind === 'orn' ? 'recit:ornmoved' : 'recit:moved',
+      chapter: drag.chapter, id: drag.id,
       posX: +(((ev.clientX - r.left) / r.width) * 100).toFixed(1),
       posY: +(((ev.clientY - r.top) / r.height) * 100).toFixed(1) }, '*');
   } else {
@@ -1890,6 +1946,15 @@ function attachOrbit(el, st) {
   }
 }
 
+/* Une recherche vidéo est asynchrone : en relancer une avant la fin de la
+   précédente fait vibrer l'image. On attend donc que la première aboutisse. */
+function seekTo(v, t, d) {
+  if (v.seeking) return;
+  const clamped = Math.max(0, Math.min(d - 0.05, t));
+  if (Math.abs(clamped - v.currentTime) < 0.033) return;   /* déjà sur la bonne image */
+  try { v.currentTime = clamped; } catch (e) {}
+}
+
 /* ---------- boucle ---------- */
 let ticking = false, clock = 0, last = performance.now();
 
@@ -1976,20 +2041,20 @@ function frame(now) {
       attachPointerScrub(el, ch);
       const v = el._media, d = v.duration;
       if (d && isFinite(d)) {
-        let target = el._ptr.t * d;
+        const target = el._ptr.t * d;
         const k = ch.pointerSmooth == null ? 0.22 : ch.pointerSmooth;
         if (el._ptr.cur == null) el._ptr.cur = target;
         else if (ch.pointerLoop !== false) {
-          /* le plus court chemin, en passant par la boucle si besoin :
-             tourner à 350° puis 10° ne doit pas rembobiner toute la séquence */
           let diff = target - el._ptr.cur;
           if (diff > d / 2) diff -= d; else if (diff < -d / 2) diff += d;
-          el._ptr.cur = (el._ptr.cur + diff * k + d) % d;
-        } else el._ptr.cur += (target - el._ptr.cur) * k;
-        if (Math.abs(el._ptr.cur - v.currentTime) > 1 / 60) {
-          try { v.currentTime = Math.max(0, Math.min(d - 0.02, el._ptr.cur)); } catch (err) {}
-          request();
+          if (Math.abs(diff) < 0.02) el._ptr.cur = target;
+          else el._ptr.cur = (el._ptr.cur + diff * k + d) % d;
+        } else {
+          const diff = target - el._ptr.cur;
+          el._ptr.cur = Math.abs(diff) < 0.02 ? target : el._ptr.cur + diff * k;
         }
+        seekTo(v, el._ptr.cur, d);
+        if (Math.abs(el._ptr.cur - target) > 0.02) request();
       }
     }
 
@@ -2001,11 +2066,16 @@ function frame(now) {
         const to = ch.scrubTo == null ? 1 : ch.scrubTo;
         const target = (from + (to - from) * q) * d;
         const k = ch.scrubSmooth == null ? 0.18 : ch.scrubSmooth;
-        el._scrub = el._scrub == null ? target : el._scrub + (target - el._scrub) * k;
-        if (Math.abs(el._scrub - v.currentTime) > 1 / 60) {
-          try { v.currentTime = Math.max(0, Math.min(d - 0.02, el._scrub)); } catch (err) {}
-          request();
+        if (el._scrub == null) el._scrub = target;
+        else {
+          const diff = target - el._scrub;
+          /* on colle à la cible dès qu'on en est proche : sans ce seuil,
+             l'approche asymptotique relançait une recherche à chaque image
+             et la vidéo oscillait entre deux images-clés */
+          el._scrub = Math.abs(diff) < 0.02 ? target : el._scrub + diff * k;
         }
+        seekTo(v, el._scrub, d);
+        if (Math.abs(el._scrub - target) > 0.02) request();
       }
     }
 
@@ -2292,6 +2362,9 @@ svg.orns{position:absolute;inset:0;width:100%;height:100%;z-index:2;
 .orn path{stroke-dasharray:1;stroke-dashoffset:1;
   transition:stroke-dashoffset var(--od) var(--oe) var(--oy)}
 .orn.on path{stroke-dashoffset:0}
+.orn.dashed path{stroke-dashoffset:0;opacity:0;
+  transition:opacity var(--od) ease var(--oy)}
+.orn.on.dashed path{opacity:1}
 .orn text{opacity:0;transition:opacity var(--od) ease var(--oy)}
 .orn.on text{opacity:1}
 .orn rect{opacity:0;transition:opacity var(--od) ease var(--oy)}
@@ -2313,6 +2386,9 @@ svg.spots{position:absolute;inset:0;width:100%;height:100%;z-index:2;
 .beat.al-right{transform:translate(-100%,-50%) translateY(var(--par)) rotate(var(--rot)) skewX(var(--skw))}
 /* en mode édition, les blocs deviennent saisissables */
 body.editing .beats{pointer-events:auto}
+body.editing svg.orns{pointer-events:auto}
+body.editing .orn{cursor:move}
+body.editing .orn:hover path{stroke-width:2.5}
 body.editing .beat{cursor:move;outline:1px dashed ${t.accent}66;outline-offset:6px}
 body.editing .layer-model{cursor:grab}
 
@@ -2371,6 +2447,11 @@ body.editing .layer-model{cursor:grab}
 .zone.on{opacity:1;pointer-events:auto}
 .zone.glow:hover,.zone.glow:focus-visible{
   box-shadow:0 0 0 2px var(--zc),0 0 26px var(--zc);outline:none}
+.zone.frost{backdrop-filter:blur(0);transition:backdrop-filter .35s ease,
+  background .35s ease,box-shadow .3s ease,opacity .5s ease}
+.zone.frost:hover,.zone.frost:focus-visible{
+  backdrop-filter:blur(var(--zb)) saturate(1.2);
+  background:rgba(255,255,255,.06);outline:none}
 body.editing .zone{opacity:1;border-width:1px;border-style:dashed;
   border-color:var(--zc);pointer-events:none}
 
@@ -2505,6 +2586,12 @@ addEventListener('message',e=>{
     spotSel=ch.spots.length-1;
     placingSpot=false; frame.classList.remove('placing');
     renderAll(); toast('Point posé');
+  }
+  if(m.type==='recit:ornmoved'){
+    const ch=story.chapters.find(c=>c.id===m.chapter); if(!ch) return;
+    const o=(ch.orns||[]).find(x=>x.id===m.id); if(!o) return;
+    o.x=m.posX; o.y=m.posY; openBeat=o.id;
+    pushPatch(); lazyInspector();
   }
   if(m.type==='recit:moved'){
     const ch=story.chapters.find(c=>c.id===m.chapter); if(!ch) return;
@@ -3130,6 +3217,19 @@ function buildOrnPanel(parent,ch){
     }
     if(K==='cornerFrame'||K==='mat')
       body.appendChild(labelled('Retrait',range(o,'inset',1,30,0.5,v=>v+' %')));
+    if(K==='dropcap'){
+      const t=document.createElement('input'); t.className='in';
+      t.value=o.text||''; t.maxLength=1; t.placeholder='A';
+      t.addEventListener('input',()=>{ o.text=t.value; syncPreview(); });
+      body.appendChild(labelled('Lettre',t));
+      body.appendChild(labelled('Police',fontSelect(o,'font')));
+      body.appendChild(labelled('Taille',range(o,'size',0.5,6,0.05,v=>v.toFixed(2)+' rem')));
+      body.appendChild(labelled('Filet d\u2019appui',range(o,'count',0,1,1,
+        v=>v?'oui':'aucun')));
+      const hh=document.createElement('div'); hh.className='hint';
+      hh.textContent='La lettre est tracée au contour : elle se dessine comme les autres ornements. Une épaisseur nulle la rend pleine.';
+      body.appendChild(hh);
+    }
     if(K==='cartouche'||K==='folio'||K==='margin'){
       const t=document.createElement('input'); t.className='in'; t.value=o.text||'';
       t.addEventListener('input',()=>{ o.text=t.value; syncPreview(); });
@@ -3207,9 +3307,18 @@ function buildZonePanel(parent,ch){
     const t=document.createElement('input'); t.className='in'; t.value=z.label;
     t.addEventListener('input',()=>{ z.label=t.value; lbl.textContent=t.value||'Zone'; syncPreview(); });
     body.appendChild(labelled('Intitulé',t));
-    const dest=[['next','Chapitre suivant']].concat(
-      story.chapters.map((c,k)=>[c.id,(k+1)+'. '+(c.name||'Chapitre '+(k+1))]));
-    body.appendChild(labelled('Destination',select(z,'target',dest)));
+    body.appendChild(check(z,'link','Ouvrir une adresse web'));
+    if(z.link){
+      const u=document.createElement('input'); u.className='in';
+      u.value=z.url||''; u.placeholder='https://…';
+      u.addEventListener('input',()=>{ z.url=u.value; syncPreview(); });
+      body.appendChild(labelled('Adresse',u));
+      body.appendChild(check(z,'newTab','Ouvrir dans un nouvel onglet'));
+    }else{
+      const dest=[['next','Chapitre suivant']].concat(
+        story.chapters.map((c,k)=>[c.id,(k+1)+'. '+(c.name||'Chapitre '+(k+1))]));
+      body.appendChild(labelled('Destination',select(z,'target',dest)));
+    }
     body.appendChild(labelled('Forme',select(z,'shape',
       [['rect','Rectangle'],['ellipse','Ellipse']])));
     const g1=document.createElement('div'); g1.className='two';
@@ -3224,7 +3333,10 @@ function buildZonePanel(parent,ch){
     g3.appendChild(labelled('Contour',range(z,'outline',0,6,0.5,v=>v?v+' px':'invisible')));
     g3.appendChild(labelled('Couleur',color(z,'color')));
     body.appendChild(g3);
-    body.appendChild(check(z,'hoverGlow','Réagit au survol'));
+    body.appendChild(check(z,'hoverGlow','Halo au survol'));
+    body.appendChild(check(z,'hoverFrost','Verre dépoli au survol'));
+    if(z.hoverFrost)
+      body.appendChild(labelled('Intensité du dépoli',range(z,'frostAmount',1,30,1,v=>v+' px')));
     body.appendChild(labelled('Apparaît à',range(z,'at',0,0.95,0.01,v=>Math.round(v*100)+' %')));
     body.appendChild(labelled('Reste visible',range(z,'span',0.05,1,0.01,v=>Math.round(v*100)+' %')));
     card.appendChild(body);
@@ -3403,10 +3515,19 @@ function buildButtonPanel(parent,ch){
     t.addEventListener('input',()=>{ b.label=t.value; lbl.textContent=t.value||'(sans texte)'; syncPreview(); });
     body.appendChild(labelled('Texte du bouton',t));
 
-    /* la destination : c'est ce qui fait le livre à choix */
-    const dest=[['next','Chapitre suivant']].concat(
-      story.chapters.map((c,k)=>[c.id,(k+1)+'. '+(c.name||'Chapitre '+(k+1))]));
-    body.appendChild(labelled('Destination',select(b,'target',dest)));
+    /* la destination : un chapitre, ou une adresse web */
+    body.appendChild(check(b,'link','Ouvrir une adresse web'));
+    if(b.link){
+      const u=document.createElement('input'); u.className='in';
+      u.value=b.url||''; u.placeholder='https://…';
+      u.addEventListener('input',()=>{ b.url=u.value; syncPreview(); });
+      body.appendChild(labelled('Adresse',u));
+      body.appendChild(check(b,'newTab','Ouvrir dans un nouvel onglet'));
+    }else{
+      const dest=[['next','Chapitre suivant']].concat(
+        story.chapters.map((c,k)=>[c.id,(k+1)+'. '+(c.name||'Chapitre '+(k+1))]));
+      body.appendChild(labelled('Destination',select(b,'target',dest)));
+    }
 
     let g=group(body,'Placement');
     g.appendChild(labelled('Mode',select(b,'posMode',
@@ -4057,7 +4178,11 @@ const TIPS={
  'Nombre':'Quantité de feuilles, de rameaux ou de graduations.',
  'Pointillé':'Longueur des tirets. Zéro donne un trait plein.',
  'Extrémités':'Aspect du bout des traits.',
- 'Forme':'Choisie dans la bibliothèque. Vous pouvez en ajouter dans Ambiance.'
+ 'Forme':'Choisie dans la bibliothèque. Vous pouvez en ajouter dans Ambiance.',
+ 'Adresse':'Une adresse complète, commençant par https://.',
+ 'Lettre':'Le premier caractère seulement : c\u2019est une lettrine.',
+ 'Filet d\u2019appui':'Trait horizontal sous la lettrine.',
+ 'Intensité du dépoli':'Force du flou appliqué au fond pendant le survol.'
 };
 function tip(el,label){
   const t=TIPS[label];

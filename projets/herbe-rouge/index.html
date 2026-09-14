@@ -1,0 +1,2911 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>L’Herbe rouge — La Guerre des mondes</title>
+<style>
+:root{
+  --encre:#efe2c6; --encre-pale:#bda884; --or:#d8b464; --or-sombre:#8a6c2c;
+  --sang:#a8241c; --sang-vif:#d4402c; --acier:#7fc8ff; --fond:#171410;
+  --serif:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;background:var(--fond);
+  color:var(--encre);font-family:var(--serif);user-select:none}
+#scene{display:block;width:100vw;height:100vh;touch-action:none}
+
+.panneau{position:fixed;background:rgba(20,16,12,.62);border:1px solid rgba(216,180,100,.35);
+  backdrop-filter:blur(3px);padding:9px 12px}
+.etiquette{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--encre-pale)}
+
+/* jauges */
+#ath{top:12px;left:12px;width:212px}
+.jauge{height:9px;border:1px solid rgba(216,180,100,.4);margin:3px 0 9px;position:relative;
+  background:rgba(0,0,0,.35)}
+.jauge i{position:absolute;left:0;top:0;bottom:0;display:block;transition:width .12s linear}
+#coque i{background:linear-gradient(90deg,#8e2f22,#d4402c)}
+#sang i{background:linear-gradient(90deg,#5c0f12,#a8241c)}
+#chaleur i{background:linear-gradient(90deg,#8a6c2c,#ffcf6a)}
+#chaleur.brule i{background:#ff7a3c}
+.jauge:last-child{margin-bottom:0}
+
+/* objectif */
+#objectif{top:12px;left:50%;transform:translateX(-50%);width:min(360px,52vw);text-align:center}
+#objectif .jauge{height:12px;margin-bottom:4px}
+#couverture i{background:linear-gradient(90deg,#6e1414,#c8342a)}
+#pourcentage{font-family:var(--mono);font-size:13px;color:var(--or)}
+
+#maladie i{background:linear-gradient(90deg,#3d5c2a,#8fe06a)}
+#maladie.grave i{background:linear-gradient(90deg,#8fe06a,#e2f06a)}
+#soute{font-family:var(--mono);color:var(--sang-vif);letter-spacing:.12em}
+#soute.pleine{color:var(--or)}
+#consigne{position:fixed;top:214px;left:12px;width:212px;font-size:13.5px;font-style:italic;
+  color:var(--or);text-shadow:0 1px 4px #000;line-height:1.35}
+#menace{top:12px;right:12px;font-family:var(--mono);font-size:11.5px;color:var(--acier);
+  letter-spacing:.06em}
+
+#messages{position:fixed;left:16px;bottom:186px;max-width:min(420px,70vw);
+  font-size:15px;line-height:1.5;text-shadow:0 1px 4px #000}
+#messages div{margin-top:3px}
+
+#carte-cadre{right:12px;bottom:12px;padding:7px}
+#carte{display:block;width:154px;height:154px;image-rendering:pixelated}
+
+#aide{left:12px;bottom:12px;font-family:var(--mono);font-size:11px;line-height:1.85;
+  color:var(--encre-pale)}
+#aide b{color:var(--or);font-weight:400}
+body.tactile #aide{display:none}
+
+/* manette tactile */
+#manette{position:fixed;inset:auto 0 0 0;height:0;pointer-events:none}
+body.tactile #manette{height:auto}
+#joystick{position:fixed;left:18px;bottom:24px;width:122px;height:122px;border-radius:50%;
+  border:1px solid rgba(216,180,100,.4);background:rgba(20,16,12,.5);pointer-events:auto;
+  display:none;touch-action:none}
+#pouce{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;
+  border-radius:50%;background:rgba(216,180,100,.35);border:1px solid rgba(216,180,100,.6)}
+#boutons{position:fixed;right:14px;bottom:120px;display:none;flex-direction:column;gap:8px;
+  pointer-events:auto}
+body.tactile #joystick{display:block}
+body.tactile #boutons{display:flex}
+.bouton-rond{width:64px;height:64px;border-radius:50%;border:1px solid rgba(216,180,100,.45);
+  background:rgba(20,16,12,.6);color:var(--encre-pale);font-family:var(--mono);font-size:11px;
+  letter-spacing:.08em;display:grid;place-items:center;padding:0}
+.bouton-rond.possible{border-color:var(--sang-vif);color:var(--encre)}
+#b-rayon{background:rgba(120,40,20,.55);color:var(--encre)}
+
+#b-son{position:fixed;right:12px;top:44px;font-family:var(--mono);font-size:11px;
+  background:rgba(20,16,12,.6);border:1px solid rgba(216,180,100,.35);color:var(--encre-pale);
+  padding:4px 9px;cursor:pointer}
+
+/* écrans */
+.voile{position:fixed;inset:0;display:grid;place-items:center;text-align:center;
+  background:radial-gradient(circle at 50% 42%, rgba(30,22,14,.55), rgba(10,8,6,.93) 72%);
+  padding:24px;z-index:10}
+.voile[hidden]{display:none}
+.voile h1{font-size:clamp(34px,8vw,74px);margin:0;letter-spacing:.2em;text-indent:.2em;
+  font-weight:400;color:var(--sang-vif);text-shadow:0 2px 18px rgba(200,50,30,.35)}
+.voile .sur{font-family:var(--mono);font-size:12px;letter-spacing:.3em;color:var(--encre-pale);margin:0 0 6px}
+.voile p{max-width:46ch;margin:18px auto;color:var(--encre-pale);line-height:1.65}
+.voile h2{font-size:clamp(26px,5vw,44px);font-weight:400;margin:0 0 8px;letter-spacing:.06em}
+.gros{background:none;border:1px solid var(--or);color:var(--encre);font-family:var(--serif);
+  font-size:17px;letter-spacing:.1em;padding:12px 30px;cursor:pointer;margin-top:10px}
+.gros:hover{background:rgba(216,180,100,.14)}
+.chiffres{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin:18px 0 4px;
+  font-family:var(--mono);font-size:12.5px;color:var(--or)}
+.consignes{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px 26px;
+  max-width:620px;margin:22px auto 0;font-family:var(--mono);font-size:12px;
+  color:var(--encre-pale);text-align:left}
+.consignes b{color:var(--or);font-weight:400}
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div id="ath" class="panneau">
+  <div class="etiquette">coque</div><div class="jauge" id="coque"><i style="width:100%"></i></div>
+  <div class="etiquette">sang recueilli</div><div class="jauge" id="sang"><i style="width:28%"></i></div>
+  <div class="etiquette">chauffe du rayon</div><div class="jauge" id="chaleur"><i style="width:0"></i></div>
+  <div class="etiquette">contamination bactérienne</div><div class="jauge" id="maladie"><i style="width:0"></i></div>
+  <div class="etiquette" style="margin-top:7px">soute <span id="soute">◇◇◇◇◇◇</span>
+    &nbsp;·&nbsp; araignées <span id="araignees">0 / 0</span></div>
+  <div class="etiquette">sérum <span id="serum">0 / 9</span></div>
+  <div class="etiquette" id="machines">1 machine</div>
+</div>
+<div id="consigne"></div>
+
+<div id="objectif" class="panneau">
+  <div class="etiquette">l’herbe rouge sur la vallée</div>
+  <div class="jauge" id="couverture"><i style="width:2%"></i></div>
+  <span id="pourcentage">2 %</span>
+</div>
+
+<div id="menace" class="panneau">3 pièces en batterie</div>
+<button id="b-son">son ▯</button>
+
+<div id="messages"></div>
+
+<div id="carte-cadre" class="panneau"><canvas id="carte" width="154" height="154"></canvas></div>
+
+<div id="aide" class="panneau">
+  <b>clic</b> marcher &nbsp; <b>ZQSD</b> piloter<br>
+  <b>clic droit</b> ou <b>espace</b> rayon ardent<br>
+  <b>E</b> spores &nbsp; <b>F</b> fumée noire &nbsp; <b>C</b> cuve<br>
+  <b>G</b> araignée au curseur &nbsp; <b>P</b> pause<br>
+  <b>N</b> nouvelle machine (sérum) &nbsp; <b>Tab</b> changer de machine<br>
+  <b>H</b> ordre permanent : moisson / suivre / tenir<br>
+  <b>← →</b> pivoter &nbsp; <b>molette</b> hauteur
+</div>
+
+<div id="manette">
+  <div id="joystick"><div id="pouce"></div></div>
+  <div id="boutons">
+    <button class="bouton-rond" id="b-rayon">RAYON</button>
+    <button class="bouton-rond" id="b-spores">SPORES</button>
+    <button class="bouton-rond" id="b-fumee">FUMÉE</button>
+    <button class="bouton-rond" id="b-cuve">CUVE</button>
+    <button class="bouton-rond" id="b-drone">ARAIGNÉE</button>
+    <button class="bouton-rond" id="b-machine">MACHINE</button>
+    <button class="bouton-rond" id="b-bascule">PILOTER</button>
+  </div>
+</div>
+
+<div id="accueil" class="voile" hidden>
+  <div>
+    <p class="sur">surrey, été 1898</p>
+    <h1>L’HERBE ROUGE</h1>
+    <p>Le cylindre s’est ouvert dans la lande. Vous marchez sur trois pattes, plus haut
+      que les clochers, et la vallée n’a rien qui puisse vous répondre — sauf les canons,
+      qui apprennent vite.</p>
+    <p>Le sang des habitants nourrit la graine que vous crachez, et l’herbe rouge est votre
+      réseau : elle vous donne la vue, ressoude vos pattes et refroidit le rayon. Hors d’elle,
+      vous n’êtes qu’une machine lente sous le feu.</p>
+    <p>Mais les bactéries de cette planète travaillent déjà dans vos veines. Seuls des vivants
+      ramenés au cylindre donnent le sérum. Couvrez la moitié de la vallée avant qu’une des
+      deux ne vous emporte.</p>
+    <div class="consignes">
+      <span><b>clic</b> marcher jusqu’au point</span>
+      <span><b>ZQSD</b> piloter à la main</span>
+      <span><b>clic droit / espace</b> rayon ardent</span>
+      <span><b>E</b> cracher des spores (20 de sang)</span>
+      <span><b>F</b> fumée noire (45 de sang)</span>
+      <span><b>C</b> cuve de traitement (45 de sang)</span>
+      <span><b>N</b> dresser une machine (9 sérums)</span>
+      <span><b>Tab</b> changer de machine, <b>H</b> leur ordre</span>
+      <span><b>G</b> envoyer une araignée planter</span>
+      <span>marchez sur les civils pour les cueillir vivants</span>
+      <span>ramenez-les au cylindre : c’est le sérum</span>
+      <span><b>← →</b> pivoter, <b>molette</b> hauteur</span>
+    </div>
+    <button class="gros" id="b-commencer">Se dresser</button>
+  </div>
+</div>
+
+<div id="fin" class="voile" hidden>
+  <div>
+    <h2></h2>
+    <p></p>
+    <div class="chiffres"></div>
+    <button class="gros" id="b-rejouer">Un autre cylindre</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+/* ===========================================================================
+   L'HERBE ROUGE — noyau logique
+   Aucune dépendance : ni THREE, ni DOM. Testable tel quel sous Node.
+   =========================================================================== */
+
+function alea(g) {
+  return function () {
+    g |= 0; g = (g + 0x6D2B79F5) | 0;
+    var t = Math.imul(g ^ (g >>> 15), 1 | g);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+var MONDE = 520;            // le terrain va de -260 à +260
+var N = 130;                // cellules d'herbe par côté
+var CELL = MONDE / N;       // 4 unités par cellule
+var OBJECTIF = 0.48;        // couverture à atteindre
+
+var REGLES = {
+  tripodePv: 260,
+  tripodeVitesse: 15,
+  tripodeRotation: 1.9,
+  rayonPortee: 78,
+  rayonDegatsBati: 70,      // par seconde
+  rayonChauffe: 0.34,       // par seconde de tir
+  rayonRefroidit: 0.26,
+  saisiePortee: 11,
+  saisieRepos: 1.6,
+  sangCivil: 14, sangSoldat: 9,
+  coutSpores: 16, coutFumee: 45,
+  rayonSpores: 9,
+  rayonFumee: 26, dureeFumee: 9,
+  regenHerbe: 2.3,          // pv/s en se nourrissant dans l'herbe dense
+  cargoMax: 6, portaitCylindre: 24, sangParLivraison: 16, serumParLivraison: 0.055,
+  maladieParSeconde: 1 / 285, maladieSeuil: 0.55, maladieDegats: 9,
+  soldatPortee: 42, soldatDps: 0.95, soldatPv: 3,
+  canonPortee: 112, canonDegats: 10, canonRecharge: 4.2, canonPv: 110,
+  batimentPv: 100,
+  // l'ennemi s'adapte
+  incendiaireRayon: 15, incendiaireChance: 0.22,
+  bunkerPv: 300, bunkerPortee: 62, bunkerDps: 2.2,
+  navirePv: 380, navirePortee: 122, navireDegats: 15, navireRecharge: 4.4,
+  // nos moyens
+  tripodeMax: 3, coutTripode: 9, dureeEclosion: 32,
+  droneMax: 3, droneCadence: 26, droneVitesse: 26, dronePv: 14, droneVision: 34,
+  droneSemis: 7, droneRepos: 14,
+  coutCuve: 45, cuvePv: 190, cuveVision: 46, cuveAura: 62, cuveMax: 3
+};
+
+/* ------------------------------------------------------------------ OUTILS */
+function borne(v, a, b) { return v < a ? a : (v > b ? b : v); }
+function dist2(ax, az, bx, bz) { var dx = ax - bx, dz = az - bz; return dx * dx + dz * dz; }
+function dist(ax, az, bx, bz) { return Math.sqrt(dist2(ax, az, bx, bz)); }
+function angleVers(ax, az, bx, bz) { return Math.atan2(bx - ax, bz - az); }
+function ecartAngle(a, b) { return Math.atan2(Math.sin(b - a), Math.cos(b - a)); }
+function idx(i, j) { return j * N + i; }
+function cellDe(x, z) {
+  return [borne(Math.floor((x + MONDE / 2) / CELL), 0, N - 1),
+          borne(Math.floor((z + MONDE / 2) / CELL), 0, N - 1)];
+}
+function centreCell(i, j) { return [(i + 0.5) * CELL - MONDE / 2, (j + 0.5) * CELL - MONDE / 2]; }
+
+/* ----------------------------------------------------- RELIEF ET RIVIÈRE
+   Le même relief doit être calculé par la logique et par l'affichage :
+   une seule fonction, appelée des deux côtés.
+---------------------------------------------------------------------------- */
+function riviereX(z) { return 96 + Math.sin(z * 0.016) * 46 + Math.sin(z * 0.0055 + 1.3) * 22; }
+function hauteur(x, z) {
+  var h = Math.sin(x * 0.015) * 4.6 + Math.cos(z * 0.017) * 4.0
+        + Math.sin((x + z) * 0.0075) * 3.2
+        + Math.sin(x * 0.041 + 1.7) * 1.5 + Math.cos(z * 0.037) * 1.3
+        + Math.sin((x - z) * 0.0031) * 5.5;
+  // la crête de Horsell, au nord-ouest
+  var cr = Math.exp(-Math.pow((x + 150) / 90, 2) - Math.pow((z + 140) / 120, 2));
+  h += cr * 16;
+  // le plateau de bruyère, à l'est
+  var pl = Math.exp(-Math.pow((x - 185) / 110, 2) - Math.pow((z - 120) / 95, 2));
+  h += pl * 9;
+  var d = Math.abs(x - riviereX(z));
+  if (d < 24) h -= (1 - d / 24) * (1 - d / 24) * 9;     // la vallée creuse
+  var r = distRoute(x, z);
+  if (r < 5) h = h * (1 - (1 - r / 5) * 0.35);          // la route s'aplanit
+  return h;
+}
+
+/* Le réseau de chemins : sert au relief, au sol et à l'affichage. */
+var ROUTES = [
+  [[-215, -150], [-120, -110], [-30, -80], [55, -70], [120, -35]],
+  [[55, -70], [40, 20], [25, 100], [10, 185]],
+  [[120, -35], [175, 30], [195, 120], [160, 205]],
+  [[-200, 60], [-110, 55], [-20, 60], [40, 20]],
+  [[10, 185], [95, 195], [160, 205]]
+];
+function distSegment(px, pz, ax, az, bx, bz) {
+  var dx = bx - ax, dz = bz - az;
+  var l2 = dx * dx + dz * dz;
+  var t = l2 ? ((px - ax) * dx + (pz - az) * dz) / l2 : 0;
+  t = t < 0 ? 0 : (t > 1 ? 1 : t);
+  var qx = ax + dx * t, qz = az + dz * t;
+  return Math.sqrt((px - qx) * (px - qx) + (pz - qz) * (pz - qz));
+}
+function distRoute(x, z) {
+  var best = 1e9;
+  for (var i = 0; i < ROUTES.length; i++) {
+    var r = ROUTES[i];
+    for (var j = 0; j < r.length - 1; j++) {
+      var d = distSegment(x, z, r[j][0], r[j][1], r[j + 1][0], r[j + 1][1]);
+      if (d < best) best = d;
+      if (best < 2) return best;
+    }
+  }
+  return best;
+}
+function dansRiviere(x, z) { return Math.abs(x - riviereX(z)) < 7.5; }
+
+/* --------------------------------------------------------------- LE MONDE */
+function creerMonde(graine) {
+  var R = alea(graine >>> 0), i, j, k;
+  var M = {
+    t: 0, graine: graine, rng: R, fini: null, cause: '',
+    herbe: new Float32Array(N * N),
+    humidite: new Float32Array(N * N),
+    sol: new Uint8Array(N * N),        // 0 champ, 1 route/pierre, 2 eau, 3 cendres
+    tripodes: [], tripode: null, eclosion: 0,
+    cylindre: { x: -150, z: -140 },
+    connu: new Uint8Array(N * N), visible: new Uint8Array(N * N),
+    sang: 45, serum: 0, maladie: 0, livraisons: 0,
+    drones: [], cuves: [], bunkers: [], navire: null,
+    rayonUtilise: 0, bunkersEnvoyes: 0, droneCd: 8,
+    humains: [], batiments: [], canons: [], fumees: [], feux: [], evenements: [],
+    couverture: 0, vagues: 0, prochaineVague: 95, tues: 0, batisDetruits: 0
+  };
+
+  M.tripodes.push(creerTripode(-150, -140, 0.9));
+  M.tripode = M.tripodes[0];
+
+  // sol et humidité
+  for (j = 0; j < N; j++) for (i = 0; i < N; i++) {
+    var c = centreCell(i, j), x = c[0], z = c[1];
+    var d = Math.abs(x - riviereX(z));
+    if (d < 8.5) { M.sol[idx(i, j)] = 2; M.humidite[idx(i, j)] = 0.2; }
+    else {
+      M.humidite[idx(i, j)] = borne(1.45 - d / 130, 0.45, 1.45);
+      if (distRoute(x, z) < 6) { M.sol[idx(i, j)] = 1; M.humidite[idx(i, j)] *= 0.5; }
+    }
+  }
+
+  // trois bourgs le long de la vallée
+  var bourgs = [
+    { x: 55, z: -70, n: 16, eglise: true, nom: 'Shepperton' },
+    { x: 175, z: 30, n: 13, eglise: false, nom: 'Weybridge' },
+    { x: 25, z: 100, n: 18, eglise: true, nom: 'Woking' },
+    { x: -110, z: 55, n: 12, eglise: false, nom: 'Byfleet' },
+    { x: 160, z: 205, n: 15, eglise: true, nom: 'Chertsey' }
+  ];
+  bourgs.forEach(function (b) {
+    for (k = 0; k < b.n; k++) {
+      var a = R() * Math.PI * 2, r = 6 + R() * 26;
+      var bx = b.x + Math.cos(a) * r, bz = b.z + Math.sin(a) * r * 0.8;
+      if (dansRiviere(bx, bz)) continue;
+      M.batiments.push({
+        x: bx, z: bz, cap: R() * Math.PI * 2, type: 'maison',
+        l: 5 + R() * 3, p: 4 + R() * 2.5, h: 4.5 + R() * 2.5,
+        pv: REGLES.batimentPv, feu: 0, detruit: false, bourg: b.nom
+      });
+      // habitants
+      var n = 1 + Math.floor(R() * 3);
+      for (var q = 0; q < n; q++) {
+        M.humains.push(creerHumain('civil', bx + (R() - 0.5) * 8, bz + (R() - 0.5) * 8, R));
+      }
+    }
+    if (b.eglise) {
+      M.batiments.push({ x: b.x, z: b.z, cap: 0, type: 'eglise', l: 9, p: 14, h: 9,
+        pv: REGLES.batimentPv * 2.2, feu: 0, detruit: false, bourg: b.nom });
+    }
+    // une pierre sous les bourgs : l'herbe y pousse mal
+    for (j = 0; j < N; j++) for (i = 0; i < N; i++) {
+      var cc = centreCell(i, j);
+      if (dist(cc[0], cc[1], b.x, b.z) < 30) {
+        M.sol[idx(i, j)] = M.sol[idx(i, j)] === 2 ? 2 : 1;
+        M.humidite[idx(i, j)] *= 0.55;
+      }
+    }
+  });
+
+  // garnison de départ
+  for (k = 0; k < 11; k++) {
+    var a2 = R() * Math.PI * 2;
+    M.humains.push(creerHumain('soldat', 55 + Math.cos(a2) * 44, -70 + Math.sin(a2) * 44, R));
+  }
+  poserBatterie(M, 120, -110);
+  poserBatterie(M, -60, 140);
+
+  // le cylindre a atterri : premier foyer d'herbe
+  semer(M, M.tripode.x, M.tripode.z, 12, 1);
+  M.couverture = mesurerCouverture(M);
+  return M;
+}
+
+function creerTripode(x, z, cap) {
+  return {
+    x: x, z: z, cap: cap || 0, pv: REGLES.tripodePv, pvMax: REGLES.tripodePv,
+    chaleur: 0, tire: false, viseX: 0, viseZ: 0,
+    butX: null, butZ: null, saisieCd: 0, proie: null, vx: 0, vz: 0,
+    cargo: 0, livres: 0, effondre: false, dansHerbe: true, livraisonCd: 0, abattu: false,
+    mode: 'moisson', minuteur: 0,
+    pattes: [{ pv: 115, pvMax: 115 }, { pv: 115, pvMax: 115 }, { pv: 115, pvMax: 115 }]
+  };
+}
+function tripodeProche(M, x, z) {
+  var best = null, bd = 1e18;
+  for (var i = 0; i < M.tripodes.length; i++) {
+    var T = M.tripodes[i];
+    if (T.abattu) continue;
+    var d = dist2(x, z, T.x, T.z);
+    if (d < bd) { bd = d; best = T; }
+  }
+  return best;
+}
+function eclore(M) {
+  if (M.eclosion > 0) return false;
+  if (M.tripodes.filter(function (t) { return !t.abattu; }).length >= REGLES.tripodeMax) return false;
+  if (M.serum < REGLES.coutTripode) return false;
+  M.serum -= REGLES.coutTripode;
+  M.eclosion = REGLES.dureeEclosion;
+  journal(M, 'Le sérum est versé dans une cuve de croissance. Une machine s’y forme.');
+  return true;
+}
+
+/* Ordre permanent des machines qu'on ne pilote pas : moissonner, tenir, suivre. */
+function ordreAuto(M, T, dt) {
+  var cmd = {}, i;
+  T.minuteur -= dt;
+
+  // se replier dans l'herbe quand la coque faiblit
+  if (T.pv < T.pvMax * 0.45) {
+    var refuge = herbeProche(M, T.x, T.z);
+    if (refuge) { T.butX = refuge[0]; T.butZ = refuge[1]; T.tire = false; return cmd; }
+  }
+  // rentrer la moisson
+  if (T.cargo >= REGLES.cargoMax - 1) {
+    var quai = pointLivraison(M);
+    T.butX = quai.x; T.butZ = quai.z; T.tire = false;
+    return cmd;
+  }
+  if (T.mode === 'tenir') { T.butX = null; T.butZ = null; }
+  else if (T.mode === 'suivre') {
+    var chef = M.tripode;
+    if (chef && !chef.abattu) {
+      T.butX = chef.x - Math.sin(chef.cap) * 34;
+      T.butZ = chef.z - Math.cos(chef.cap) * 34;
+    }
+  } else {
+    // moisson : le civil vivant le plus proche
+    var proie = null, pd = 1e18;
+    for (i = 0; i < M.humains.length; i++) {
+      var h = M.humains[i];
+      if (h.mort || h.type !== 'civil') continue;
+      var d = dist2(T.x, T.z, h.x, h.z);
+      if (d < pd) { pd = d; proie = h; }
+    }
+    if (proie) { T.butX = proie.x; T.butZ = proie.z; }
+    else if (T.minuteur <= 0) {
+      T.minuteur = 6;
+      T.butX = borne(T.x + (M.rng() - 0.5) * 110, -MONDE / 2 + 20, MONDE / 2 - 20);
+      T.butZ = borne(T.z + (M.rng() - 0.5) * 110, -MONDE / 2 + 20, MONDE / 2 - 20);
+    }
+  }
+  // elle se défend seule : soldats et canons à portée
+  var menace = null, md = REGLES.rayonPortee * REGLES.rayonPortee;
+  for (i = 0; i < M.humains.length; i++) {
+    var s2 = M.humains[i];
+    if (s2.mort || s2.type !== 'soldat') continue;
+    var d2 = dist2(T.x, T.z, s2.x, s2.z);
+    if (d2 < md) { md = d2; menace = s2; }
+  }
+  for (i = 0; i < M.canons.length; i++) {
+    var c = M.canons[i];
+    if (c.detruit) continue;
+    var d3 = dist2(T.x, T.z, c.x, c.z);
+    if (d3 < md) { md = d3; menace = c; }
+  }
+  if (menace && T.chaleur < 0.8) { T.viseX = menace.x; T.viseZ = menace.z; T.tire = true; }
+  else T.tire = false;
+  return cmd;
+}
+function herbeProche(M, x, z) {
+  var best = null, bd = 1e18;
+  var c = cellDe(x, z), r = 16, i, j;
+  for (j = c[1] - r; j <= c[1] + r; j++) for (i = c[0] - r; i <= c[0] + r; i++) {
+    if (i < 0 || j < 0 || i >= N || j >= N) continue;
+    if (M.herbe[idx(i, j)] < 0.65) continue;
+    var cc = centreCell(i, j), d = dist2(x, z, cc[0], cc[1]);
+    if (d < bd) { bd = d; best = cc; }
+  }
+  return best;
+}
+
+function creerHumain(type, x, z, R) {
+  return {
+    type: type, x: x, z: z, cap: (R ? R() : 0) * Math.PI * 2,
+    pv: type === 'soldat' ? REGLES.soldatPv : 1,
+    etat: 'vaque', vitesse: type === 'soldat' ? 7.5 : 5.5,
+    cd: (R ? R() : 0) * 2, ancreX: x, ancreZ: z, mort: false, saisi: false, panique: 0
+  };
+}
+function poserCanon(M, x, z) {
+  M.canons.push({ x: x, z: z, cap: 0, pv: REGLES.canonPv, cd: 2 + M.rng() * 3, detruit: false, tir: 0 });
+}
+function poserBatterie(M, x, z) {
+  var a = M.rng() * Math.PI * 2;
+  for (var i = 0; i < 3; i++) {
+    poserCanon(M, x + Math.cos(a) * (i - 1) * 13, z + Math.sin(a) * (i - 1) * 13);
+  }
+  for (var k = 0; k < 4; k++) {
+    M.humains.push(creerHumain('soldat', x + (M.rng() - 0.5) * 26, z + (M.rng() - 0.5) * 26, M.rng));
+  }
+}
+
+/* ------------------------------------------------------------------ HERBE */
+function semer(M, x, z, rayon, force) {
+  var c = cellDe(x, z), r = Math.ceil(rayon / CELL);
+  for (var j = c[1] - r; j <= c[1] + r; j++) for (var i = c[0] - r; i <= c[0] + r; i++) {
+    if (i < 0 || j < 0 || i >= N || j >= N) continue;
+    var cc = centreCell(i, j), d = dist(cc[0], cc[1], x, z);
+    if (d > rayon) continue;
+    if (M.sol[idx(i, j)] === 2) continue;
+    var v = force * (1 - d / rayon);
+    if (v > M.herbe[idx(i, j)]) M.herbe[idx(i, j)] = Math.min(1, v);
+  }
+}
+
+function propager(M, dt) {
+  var h = M.herbe, sang = borne(M.sang / 120, 0, 1);
+  var vigueur = 0.14 + 1.15 * sang;
+  var i, j, k, d;
+  var neuf = M._tampon || (M._tampon = new Float32Array(N * N));
+  neuf.set(h);
+  var cuves = M.cuves.filter(function (c) { return !c.detruite; });
+  for (j = 0; j < N; j++) {
+    for (i = 0; i < N; i++) {
+      k = idx(i, j);
+      d = h[k];
+      if (d <= 0.02) continue;
+      if (d < 1) neuf[k] = Math.min(1, d + 0.12 * dt * M.humidite[k] * vigueur);
+      if (d < 0.34) continue;                       // trop maigre pour essaimer
+      var bonus = 1;
+      if (cuves.length) {
+        var cc2 = centreCell(i, j);
+        for (var q = 0; q < cuves.length; q++) {
+          if (dist(cc2[0], cc2[1], cuves[q].x, cuves[q].z) < REGLES.cuveAura) { bonus = 1.45; break; }
+        }
+      }
+      var pousse = 0.041 * dt * vigueur * bonus * (0.45 + d * 0.75);
+      if (i > 0) essaimer(M, neuf, idx(i - 1, j), pousse);
+      if (i < N - 1) essaimer(M, neuf, idx(i + 1, j), pousse);
+      if (j > 0) essaimer(M, neuf, idx(i, j - 1), pousse);
+      if (j < N - 1) essaimer(M, neuf, idx(i, j + 1), pousse);
+    }
+  }
+  h.set(neuf);
+}
+function essaimer(M, neuf, k, pousse) {
+  if (M.sol[k] === 2) return;                       // l'eau arrête l'herbe
+  var f = M.humidite[k] * (M.sol[k] === 1 ? 0.45 : 1) * (M.sol[k] === 3 ? 1.25 : 1);
+  var v = neuf[k] + pousse * f;
+  if (v > neuf[k]) neuf[k] = Math.min(1, v);
+}
+function pointLivraison(M) {
+  var best = M.cylindre, bd = dist(M.tripode.x, M.tripode.z, M.cylindre.x, M.cylindre.z);
+  for (var i = 0; i < M.cuves.length; i++) {
+    var c = M.cuves[i];
+    if (c.detruite) continue;
+    var d = dist(M.tripode.x, M.tripode.z, c.x, c.z);
+    if (d < bd) { bd = d; best = c; }
+  }
+  return best;
+}
+function poserCuve(M) {
+  var T = M.tripode;
+  if (M.sang < REGLES.coutCuve) return false;
+  if (M.cuves.filter(function (c) { return !c.detruite; }).length >= REGLES.cuveMax) return false;
+  if (herbeEn(M, T.x, T.z) < 0.5) return false;
+  var a = T.cap + Math.PI, x = T.x + Math.sin(a) * 20, z = T.z + Math.cos(a) * 20;
+  M.sang -= REGLES.coutCuve;
+  M.cuves.push({ x: x, z: z, pv: REGLES.cuvePv, pvMax: REGLES.cuvePv, detruite: false, pulse: 0 });
+  journal(M, 'Une cuve de traitement pousse hors de l’herbe.');
+  return true;
+}
+function envoyerDrone(M, x, z) {
+  for (var i = 0; i < M.drones.length; i++) {
+    var d = M.drones[i];
+    if (d.mort || d.etat === 'va') continue;
+    d.etat = 'va'; d.versX = x; d.versZ = z;
+    return true;
+  }
+  return false;
+}
+
+function majVision(M) {
+  var i, j, k;
+  M.visible.fill(0);
+  for (var m = 0; m < M.tripodes.length; m++) {
+    if (!M.tripodes[m].abattu) marquerVu(M, M.tripodes[m].x, M.tripodes[m].z, 58);
+  }
+  // l'herbe rouge voit pour nous : c'est le réseau qui donne la carte
+  for (k = 0; k < N * N; k++) {
+    if (M.herbe[k] > 0.28) { M.visible[k] = 1; M.connu[k] = 1; }
+  }
+  for (var q = 0; q < M.drones.length; q++) {
+    var dr = M.drones[q];
+    if (dr.mort) continue;
+    marquerVu(M, dr.x, dr.z, REGLES.droneVision);
+  }
+  for (var w = 0; w < M.cuves.length; w++) {
+    if (!M.cuves[w].detruite) marquerVu(M, M.cuves[w].x, M.cuves[w].z, REGLES.cuveVision);
+  }
+  // le cylindre veille sur ses abords
+  var cz = cellDe(M.cylindre.x, M.cylindre.z), rc = Math.ceil(34 / CELL);
+  for (j = cz[1] - rc; j <= cz[1] + rc; j++) for (i = cz[0] - rc; i <= cz[0] + rc; i++) {
+    if (i < 0 || j < 0 || i >= N || j >= N) continue;
+    M.visible[idx(i, j)] = 1; M.connu[idx(i, j)] = 1;
+  }
+}
+function marquerVu(M, x, z, rayon) {
+  var c = cellDe(x, z), r = Math.ceil(rayon / CELL), i, j;
+  for (j = c[1] - r; j <= c[1] + r; j++) for (i = c[0] - r; i <= c[0] + r; i++) {
+    if (i < 0 || j < 0 || i >= N || j >= N) continue;
+    var cc = centreCell(i, j);
+    if (dist(cc[0], cc[1], x, z) < rayon) { M.visible[idx(i, j)] = 1; M.connu[idx(i, j)] = 1; }
+  }
+}
+function vuEn(M, x, z) { var c = cellDe(x, z); return M.visible[idx(c[0], c[1])]; }
+function connuEn(M, x, z) { var c = cellDe(x, z); return M.connu[idx(c[0], c[1])]; }
+
+function mesurerCouverture(M) {
+  var n = 0, total = 0;
+  for (var k = 0; k < N * N; k++) {
+    if (M.sol[k] === 2) continue;
+    total++;
+    if (M.herbe[k] > 0.5) n++;
+  }
+  return n / total;
+}
+function herbeEn(M, x, z) { var c = cellDe(x, z); return M.herbe[idx(c[0], c[1])]; }
+
+/* ---------------------------------------------------------- JAMBES (IK) */
+/* Deux segments, un genou qui plie vers l'extérieur. Renvoie le point du genou. */
+function genou(hx, hy, hz, fx, fy, fz, L1, L2, ox, oy, oz) {
+  var dx = fx - hx, dy = fy - hy, dz = fz - hz;
+  var d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.0001;
+  var dmax = (L1 + L2) * 0.999, dmin = Math.abs(L1 - L2) * 1.001 + 0.001;
+  var dc = borne(d, dmin, dmax);
+  var ux = dx / d, uy = dy / d, uz = dz / d;
+  var a = (dc * dc + L1 * L1 - L2 * L2) / (2 * dc);
+  var hh = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+  // composante perpendiculaire : on projette l'indice « vers l'extérieur »
+  var pd = ox * ux + oy * uy + oz * uz;
+  var px = ox - ux * pd, py = oy - uy * pd, pz = oz - uz * pd;
+  var pl = Math.sqrt(px * px + py * py + pz * pz);
+  if (pl < 1e-6) { px = 0; py = 1; pz = 0; pl = 1; }
+  px /= pl; py /= pl; pz /= pl;
+  return { x: hx + ux * a + px * hh, y: hy + uy * a + py * hh, z: hz + uz * a + pz * hh };
+}
+
+/* Démarche : trois appuis, un seul pied en l'air à la fois. */
+function creerDemarche() {
+  var pieds = [];
+  for (var i = 0; i < 3; i++) pieds.push({ x: 0, y: 0, z: 0, deX: 0, deZ: 0, versX: 0, versZ: 0, pas: 1, phase: 0 });
+  return { pieds: pieds, enVol: -1, init: false };
+}
+function majDemarche(d, corpsX, corpsZ, cap, vx, vz, dt, rayon, hauteurSol) {
+  var i, p, cible;
+  if (!d.init) {
+    for (i = 0; i < 3; i++) {
+      cible = pointRepos(corpsX, corpsZ, cap, i, rayon, 0, 0);
+      p = d.pieds[i];
+      p.x = cible[0]; p.z = cible[1]; p.y = hauteurSol(p.x, p.z);
+      p.deX = p.x; p.deZ = p.z; p.versX = p.x; p.versZ = p.z; p.pas = 1;
+    }
+    d.init = true;
+    return;
+  }
+  // avancement du pied en vol
+  if (d.enVol >= 0) {
+    p = d.pieds[d.enVol];
+    p.pas = Math.min(1, p.pas + dt * 3.2);
+    var e = p.pas;
+    p.x = p.deX + (p.versX - p.deX) * e;
+    p.z = p.deZ + (p.versZ - p.deZ) * e;
+    p.y = hauteurSol(p.x, p.z) + Math.sin(e * Math.PI) * 7.5;
+    if (p.pas >= 1) { p.y = hauteurSol(p.x, p.z); d.enVol = -1; d.vientDePoser = { x: p.x, y: p.y, z: p.z }; }
+  }
+  for (i = 0; i < 3; i++) {                        // un pied trop loin est raccroché d'office
+    p = d.pieds[i];
+    if (dist(p.x, p.z, corpsX, corpsZ) > rayon * 2.2) {
+      cible = pointRepos(corpsX, corpsZ, cap, i, rayon, 0, 0);
+      p.x = cible[0]; p.z = cible[1]; p.y = hauteurSol(p.x, p.z);
+      p.deX = p.x; p.deZ = p.z; p.versX = p.x; p.versZ = p.z; p.pas = 1;
+      if (d.enVol === i) d.enVol = -1;
+    }
+  }
+  if (d.enVol < 0) {
+    var pire = -1, pireD = 0;
+    for (i = 0; i < 3; i++) {
+      cible = pointRepos(corpsX, corpsZ, cap, i, rayon, vx, vz);
+      var dd = dist(d.pieds[i].x, d.pieds[i].z, cible[0], cible[1]);
+      if (dd > pireD) { pireD = dd; pire = i; }
+    }
+    if (pireD > rayon * 0.42) {
+      cible = pointRepos(corpsX, corpsZ, cap, pire, rayon, vx, vz);
+      p = d.pieds[pire];
+      p.deX = p.x; p.deZ = p.z; p.versX = cible[0]; p.versZ = cible[1];
+      p.pas = 0; d.enVol = pire;
+    }
+  }
+}
+function pointRepos(x, z, cap, i, rayon, vx, vz) {
+  var a = cap + i * (Math.PI * 2 / 3) + Math.PI / 6;
+  return [x + Math.sin(a) * rayon + vx * 0.3, z + Math.cos(a) * rayon + vz * 0.3];
+}
+
+/* ------------------------------------------------------------ COMMANDES */
+function ordonnerDeplacement(M, x, z) { M.tripode.butX = x; M.tripode.butZ = z; }
+function viser(M, x, z) { M.tripode.viseX = x; M.tripode.viseZ = z; }
+function cracherSpores(M) {
+  var T = M.tripode;
+  if (M.sang < REGLES.coutSpores) return false;
+  M.sang -= REGLES.coutSpores;
+  semer(M, T.x, T.z, REGLES.rayonSpores, 1);
+  journal(M, 'Les spores mordent la terre.');
+  return true;
+}
+function lacherFumee(M, x, z) {
+  var T = M.tripode;
+  if (M.sang < REGLES.coutFumee) return false;
+  M.sang -= REGLES.coutFumee;
+  M.fumees.push({ x: x, z: z, r: REGLES.rayonFumee, t: REGLES.dureeFumee });
+  journal(M, 'La fumée noire roule au ras du sol.');
+  return true;
+}
+function journal(M, txt) {
+  M.evenements.push({ t: M.t, txt: txt });
+  if (M.evenements.length > 40) M.evenements.shift();
+}
+
+/* ------------------------------------------------------------------- PAS */
+function majUnTripode(M, T, dt, commandes) {
+  var i, h;
+  commandes = commandes || {};
+  /* --- déplacement du tripode --- */
+  T.dansHerbe = herbeEn(M, T.x, T.z) > 0.35;
+
+  var but = null;
+  if (T.effondre) { T.vx = T.vz = 0; T.butX = null; }
+  else if (commandes.dirX !== undefined && (commandes.dirX || commandes.dirZ)) {
+    but = [T.x + commandes.dirX * 40, T.z + commandes.dirZ * 40];
+    T.butX = null;
+  } else if (T.butX !== null) but = [T.butX, T.butZ];
+
+  if (but && !T.effondre) {
+    var aVoulu = angleVers(T.x, T.z, but[0], but[1]);
+    var e = ecartAngle(T.cap, aVoulu);
+    var vir = borne(e, -REGLES.tripodeRotation * dt, REGLES.tripodeRotation * dt);
+    T.cap += vir;
+    var reste = dist(T.x, T.z, but[0], but[1]);
+    var allure = REGLES.tripodeVitesse * borne(1 - Math.abs(e) / 1.6, 0.15, 1);
+    if (reste < 3 && T.butX !== null) { T.butX = null; allure = 0; }
+    var nx = T.x + Math.sin(T.cap) * allure * dt;
+    var nz = T.z + Math.cos(T.cap) * allure * dt;
+    if (Math.abs(nx) < MONDE / 2 - 12 && Math.abs(nz) < MONDE / 2 - 12) {
+      T.vx = (nx - T.x) / dt; T.vz = (nz - T.z) / dt; T.x = nx; T.z = nz;
+    } else { T.vx = T.vz = 0; }
+  } else { T.vx *= 0.7; T.vz *= 0.7; }
+
+  /* --- rayon ardent --- */
+  if (T.tire && T.chaleur < 1) {
+    T.chaleur = Math.min(1, T.chaleur + REGLES.rayonChauffe * dt * (T.dansHerbe ? 1 : 1.4));
+    var px = T.viseX, pz = T.viseZ;
+    if (dist(T.x, T.z, px, pz) > REGLES.rayonPortee) {
+      var a = angleVers(T.x, T.z, px, pz);
+      px = T.x + Math.sin(a) * REGLES.rayonPortee; pz = T.z + Math.cos(a) * REGLES.rayonPortee;
+    }
+    T.impactX = px; T.impactZ = pz;
+    brulerZone(M, px, pz, 7.5, dt);
+  } else {
+    T.chaleur = Math.max(0, T.chaleur - REGLES.rayonRefroidit * dt * (T.dansHerbe ? 1 : 0.55));
+    T.impactX = undefined;
+  }
+
+  /* --- saisir et dévorer --- */
+  T.saisieCd -= dt;
+  if (T.proie) {
+    T.proie.t -= dt;
+    if (T.proie.t <= 0) {
+      if (T.cargo < REGLES.cargoMax && T.proie.type === 'civil') {
+        T.cargo++;                                   // vivant : il ira au cylindre
+        M.sang = Math.min(160, M.sang + 5);
+      } else {
+        M.sang = Math.min(160, M.sang + (T.proie.type === 'soldat' ? REGLES.sangSoldat : REGLES.sangCivil));
+      }
+      M.tues++;
+      T.proie = null;
+    }
+  } else if (T.saisieCd <= 0) {
+    var proche = null, pd = REGLES.saisiePortee * REGLES.saisiePortee;
+    for (i = 0; i < M.humains.length; i++) {
+      h = M.humains[i];
+      if (h.mort || h.saisi) continue;
+      var dd = dist2(T.x, T.z, h.x, h.z);
+      if (dd < pd) { pd = dd; proche = h; }
+    }
+    if (proche) {
+      proche.saisi = true; proche.mort = true;
+      T.proie = { x: proche.x, z: proche.z, type: proche.type, t: REGLES.saisieRepos };
+      T.saisieCd = REGLES.saisieRepos + 0.5;
+      affoler(M, proche.x, proche.z, 55);
+    }
+  }
+
+  /* --- livrer la moisson --- */
+  T.livraisonCd -= dt;
+  var quai = pointLivraison(M);
+  if (T.cargo > 0 && dist(T.x, T.z, quai.x, quai.z) < REGLES.portaitCylindre && T.livraisonCd <= 0) {
+    T.cargo--; T.livres++; M.livraisons++;
+    T.livraisonCd = 0.7;
+    M.sang = Math.min(160, M.sang + REGLES.sangParLivraison);
+    M.maladie = Math.max(0, M.maladie - REGLES.serumParLivraison);
+    M.serum++;
+    journal(M, 'Un vivant descend dans le cylindre. Le sérum coule.');
+  }
+
+  /* --- les bactéries travaillent dans cette machine-ci --- */
+  if (M.maladie > REGLES.maladieSeuil) {
+    T.pv -= (M.maladie - REGLES.maladieSeuil) * REGLES.maladieDegats * dt;
+  }
+
+  /* --- les pattes se ressoudent dans l'herbe --- */
+  var repare = T.dansHerbe ? 16 : 5.5;
+  var toutesDebout = true;
+  for (i = 0; i < 3; i++) {
+    var p = T.pattes[i];
+    if (p.pv < p.pvMax) p.pv = Math.min(p.pvMax, p.pv + repare * dt);
+    if (p.pv < p.pvMax * 0.3) toutesDebout = false;
+  }
+  if (T.effondre && toutesDebout) {
+    T.effondre = false;
+    journal(M, 'La machine se redresse.');
+  }
+
+  /* --- se nourrir dans l'herbe --- */
+  if (T.dansHerbe && herbeEn(M, T.x, T.z) > 0.6 && M.sang > 1 && T.pv < T.pvMax) {
+    var soin = Math.min(REGLES.regenHerbe * dt, T.pvMax - T.pv);
+    T.pv += soin; M.sang -= soin * 1.5;
+  }
+
+
+  if (T.pv <= 0 && !T.abattu) {
+    T.abattu = true; T.pv = 0;
+    journal(M, 'Une machine s’abat dans un hurlement de métal.');
+  }
+}
+
+function pas(M, dt, commandes) {
+  var T = M.tripode, i, h, d;
+  M.t += dt;
+  commandes = commandes || {};
+
+  /* --- une machine sort du cylindre --- */
+  if (M.eclosion > 0) {
+    M.eclosion -= dt;
+    if (M.eclosion <= 0) {
+      M.eclosion = 0;
+      var neuf = creerTripode(M.cylindre.x + 18, M.cylindre.z + 18, 0.9);
+      M.tripodes.push(neuf);
+      journal(M, 'Le capot s’ouvre : une seconde machine se dresse.');
+    }
+  }
+
+  /* --- chaque machine joue son tour --- */
+  M.maladie = Math.min(1.3, M.maladie + REGLES.maladieParSeconde * dt);
+  for (i = 0; i < M.tripodes.length; i++) {
+    var U = M.tripodes[i];
+    if (U.abattu) continue;
+    majUnTripode(M, U, dt, U === M.tripode ? commandes : ordreAuto(M, U, dt));
+  }
+
+  /* --- fumée noire --- */
+  for (i = M.fumees.length - 1; i >= 0; i--) {
+    var f = M.fumees[i];
+    f.t -= dt;
+    for (var q = 0; q < M.humains.length; q++) {
+      h = M.humains[q];
+      if (h.mort) continue;
+      if (dist2(f.x, f.z, h.x, h.z) < f.r * f.r) { h.pv -= 4 * dt; if (h.pv <= 0) tuer(M, h); }
+    }
+    for (var q2 = 0; q2 < M.canons.length; q2++) {
+      var cn = M.canons[q2];
+      if (!cn.detruit && dist2(f.x, f.z, cn.x, cn.z) < f.r * f.r) {
+        cn.pv -= 7 * dt;
+        if (cn.pv <= 0) { cn.detruit = true; journal(M, 'Une batterie tousse et se tait.'); }
+      }
+    }
+    if (f.t <= 0) M.fumees.splice(i, 1);
+  }
+
+  /* --- incendies --- */
+  for (i = 0; i < M.batiments.length; i++) {
+    var b = M.batiments[i];
+    if (b.feu > 0 && !b.detruit) {
+      b.pv -= 16 * dt;
+      if (b.pv <= 0) effondrer(M, b);
+    }
+  }
+
+  /* --- humains --- */
+  majHumains(M, dt);
+  majCanons(M, dt);
+  majDrones(M, dt);
+  majBunkers(M, dt);
+  majNavire(M, dt);
+  for (i = M.feux.length - 1; i >= 0; i--) { M.feux[i].t -= dt; if (M.feux[i].t <= 0) M.feux.splice(i, 1); }
+  if (T.tire) M.rayonUtilise += dt;
+
+  /* --- l'herbe --- */
+  M._horloge = (M._horloge || 0) + dt;
+  if (M._horloge >= 0.2) {
+    propager(M, M._horloge);
+    M._horloge = 0;
+    M.couverture = mesurerCouverture(M);
+    majVision(M);
+  }
+
+  /* --- renforts --- */
+  if (M.t > M.prochaineVague) {
+    M.vagues++;
+    M.prochaineVague = M.t + Math.max(58, 100 - M.vagues * 6);
+    envoyerRenforts(M);
+  }
+
+  if (M.tripode && M.tripode.abattu) {
+    var suivant = M.tripodes.find(function (t) { return !t.abattu; });
+    if (suivant) M.tripode = suivant;
+  }
+
+  /* --- issue --- */
+  if (!M.fini) {
+    if (M.maladie >= 1) { M.fini = 'bacteries'; M.cause = 'Les plus humbles créatures de cette planète ont eu raison de vous.'; }
+    else if (M.tripodes.every(function (t) { return t.abattu; })) {
+      M.fini = 'humains';
+      M.cause = 'Les capots sont éventrés. Plus une machine debout dans la vallée.';
+    }
+    else if (M.couverture >= OBJECTIF) { M.fini = 'mars'; M.cause = 'La vallée entière respire l’herbe rouge.'; }
+  }
+  return M;
+}
+
+function encaisser(M, T, montant, viseLesPattes) {
+  if (!T || T.abattu) return;
+  if (!T.dansHerbe) montant *= 1.25;          // hors du réseau, les boucliers faiblissent
+  if (viseLesPattes && M.rng() < 0.55) {
+    var p = T.pattes[Math.floor(M.rng() * 3)];
+    p.pv -= montant;
+    if (p.pv <= 0) {
+      p.pv = 0;
+      if (!T.effondre) {
+        T.effondre = true;
+        journal(M, 'Une patte cède. La machine s’affaisse sur le flanc.');
+      }
+    }
+  } else T.pv -= montant;
+}
+
+function brulerZone(M, x, z, r, dt) {
+  var i, h, b;
+  for (i = 0; i < M.humains.length; i++) {
+    h = M.humains[i];
+    if (h.mort) continue;
+    if (dist2(x, z, h.x, h.z) < r * r) { tuer(M, h); affoler(M, x, z, 70); }
+  }
+  for (i = 0; i < M.batiments.length; i++) {
+    b = M.batiments[i];
+    if (b.detruit) continue;
+    if (dist2(x, z, b.x, b.z) < (r + b.l) * (r + b.l)) {
+      b.pv -= REGLES.rayonDegatsBati * dt;
+      if (b.feu <= 0) b.feu = 1;
+      if (b.pv <= 0) effondrer(M, b);
+    }
+  }
+  for (i = 0; i < M.canons.length; i++) {
+    var c = M.canons[i];
+    if (c.detruit) continue;
+    if (dist2(x, z, c.x, c.z) < (r + 3) * (r + 3)) {
+      c.pv -= REGLES.rayonDegatsBati * dt;
+      if (c.pv <= 0) { c.detruit = true; journal(M, 'Une batterie part en éclats.'); }
+    }
+  }
+  for (i = 0; i < M.bunkers.length; i++) {
+    var bk = M.bunkers[i];
+    if (bk.detruit) continue;
+    if (dist2(x, z, bk.x, bk.z) < (r + 7) * (r + 7)) {
+      bk.pv -= REGLES.rayonDegatsBati * 0.5 * dt;     // le béton tient mieux
+      if (bk.pv <= 0) { bk.detruit = true; journal(M, 'Le blockhaus s’ouvre comme une noix.'); }
+    }
+  }
+  if (M.navire && !M.navire.detruit && dist2(x, z, M.navire.x, M.navire.z) < (r + 12) * (r + 12)) {
+    M.navire.pv -= REGLES.rayonDegatsBati * 0.8 * dt;
+    if (M.navire.pv <= 0) {
+      M.navire.detruit = true;
+      journal(M, 'Le cuirassé se casse en deux et coule.');
+    }
+  }
+  for (i = 0; i < M.cuves.length; i++) { /* nos cuves ne craignent pas notre rayon */ }
+  // la terre brûlée nourrit l'herbe
+  var cc = cellDe(x, z);
+  var k = idx(cc[0], cc[1]);
+  if (M.sol[k] !== 2) { M.sol[k] = 3; M.humidite[k] = Math.max(M.humidite[k], 1.1); }
+}
+function tuer(M, h) {
+  h.mort = true; h.pv = 0; M.tues++;
+  // le sang nourrit la cellule
+  var c = cellDe(h.x, h.z), k = idx(c[0], c[1]);
+  if (M.sol[k] !== 2) M.herbe[k] = Math.min(1, M.herbe[k] + 0.25);
+}
+function effondrer(M, b) {
+  b.detruit = true; b.feu = 0; M.batisDetruits++;
+  semer(M, b.x, b.z, 7, 0.55);
+  affoler(M, b.x, b.z, 60);
+  if (b.type === 'eglise') journal(M, 'Le clocher s’abat. Le bourg se vide.');
+}
+function affoler(M, x, z, r) {
+  for (var i = 0; i < M.humains.length; i++) {
+    var h = M.humains[i];
+    if (h.mort) continue;
+    if (dist2(x, z, h.x, h.z) < r * r) { h.panique = Math.max(h.panique, 9); }
+  }
+}
+
+function majHumains(M, dt) {
+  for (var i = 0; i < M.humains.length; i++) {
+    var h = M.humains[i];
+    if (h.mort) continue;
+    var T = tripodeProche(M, h.x, h.z);
+    if (!T) { h.etat = 'vaque'; continue; }
+    var dT = dist(h.x, h.z, T.x, T.z);
+    if (h.panique > 0) h.panique -= dt;
+
+    if (h.type === 'soldat' && h.panique <= 0 && dT < 110) {
+      // le soldat tient sa ligne et tire
+      h.etat = 'tire';
+      var but = REGLES.soldatPortee * 0.85;
+      var dir = dT > but ? 1 : (dT < but * 0.7 ? -1 : 0);
+      if (dir) avancer(h, T.x, T.z, dir, h.vitesse * 0.55, dt);
+      h.cap = angleVers(h.x, h.z, T.x, T.z);
+      if (dT < REGLES.soldatPortee) {
+        encaisser(M, T, REGLES.soldatDps * dt, false);
+        h.tir = 1;
+      }
+      if (herbeEn(M, h.x, h.z) > 0.7) { h.pv -= 0.5 * dt; if (h.pv <= 0) tuer(M, h); }
+    } else if (dT < 85 || h.panique > 0) {
+      h.etat = 'fuit';
+      avancer(h, T.x, T.z, -1, h.vitesse * (h.type === 'civil' ? 1.25 : 1), dt);
+      h.cap = angleVers(T.x, T.z, h.x, h.z);
+    } else {
+      h.etat = 'vaque';
+      h.cd -= dt;
+      if (h.cd <= 0) {
+        h.cd = 2 + M.rng() * 4;
+        h.versX = h.ancreX + (M.rng() - 0.5) * 22;
+        h.versZ = h.ancreZ + (M.rng() - 0.5) * 22;
+      }
+      if (h.versX !== undefined) {
+        var dd = dist(h.x, h.z, h.versX, h.versZ);
+        if (dd > 1.5) {
+          h.cap = angleVers(h.x, h.z, h.versX, h.versZ);
+          h.x += Math.sin(h.cap) * h.vitesse * 0.35 * dt;
+          h.z += Math.cos(h.cap) * h.vitesse * 0.35 * dt;
+        }
+      }
+    }
+    h.x = borne(h.x, -MONDE / 2 + 4, MONDE / 2 - 4);
+    h.z = borne(h.z, -MONDE / 2 + 4, MONDE / 2 - 4);
+  }
+}
+function avancer(h, cx, cz, sens, vitesse, dt) {
+  var a = angleVers(h.x, h.z, cx, cz);
+  h.x += Math.sin(a) * sens * vitesse * dt;
+  h.z += Math.cos(a) * sens * vitesse * dt;
+}
+
+function majDrones(M, dt) {
+  var T = (M.tripode && !M.tripode.abattu) ? M.tripode : tripodeProche(M, M.cylindre.x, M.cylindre.z);
+  var i;
+  if (!T) T = { x: M.cylindre.x, z: M.cylindre.z, cap: 0 };
+  M.droneCd -= dt;
+  var vivants = M.drones.filter(function (d) { return !d.mort; }).length;
+  if (M.droneCd <= 0 && vivants < REGLES.droneMax) {
+    M.droneCd = REGLES.droneCadence;
+    M.drones.push({ x: M.cylindre.x + 12, z: M.cylindre.z + 12, cap: 0, pv: REGLES.dronePv,
+      etat: 'suit', versX: 0, versZ: 0, mort: false, repos: 0, bob: M.rng() * 6 });
+    journal(M, 'Une araignée de manœuvre sort du cylindre.');
+  }
+  for (i = 0; i < M.drones.length; i++) {
+    var d = M.drones[i];
+    if (d.mort) continue;
+    if (d.repos > 0) d.repos -= dt;
+    var bx, bz;
+    if (d.etat === 'va') { bx = d.versX; bz = d.versZ; }
+    else { bx = T.x - Math.sin(T.cap) * 22; bz = T.z - Math.cos(T.cap) * 22; }
+    var reste = dist(d.x, d.z, bx, bz);
+    if (reste > 2.5) {
+      d.cap = angleVers(d.x, d.z, bx, bz);
+      d.x += Math.sin(d.cap) * REGLES.droneVitesse * dt;
+      d.z += Math.cos(d.cap) * REGLES.droneVitesse * dt;
+    } else if (d.etat === 'va') {
+      if (d.repos <= 0) {
+        semer(M, d.x, d.z, REGLES.droneSemis, 0.85);
+        d.repos = REGLES.droneRepos;
+        journal(M, 'L’araignée plante une bouture.');
+      }
+      d.etat = 'suit';
+    }
+    // les soldats tirent sur ce qui passe à leur portée
+    for (var q = 0; q < M.humains.length; q++) {
+      var h = M.humains[q];
+      if (h.mort || h.type !== 'soldat') continue;
+      if (dist2(h.x, h.z, d.x, d.z) < 34 * 34) { d.pv -= 1.5 * dt; }
+    }
+    if (d.pv <= 0) { d.mort = true; journal(M, 'Une araignée est abattue.'); }
+  }
+}
+
+function majBunkers(M, dt) {
+  var T = M.tripode;
+  for (var i = 0; i < M.bunkers.length; i++) {
+    var b = M.bunkers[i];
+    if (b.detruit) continue;
+    var vise = tripodeProche(M, b.x, b.z);
+    if (vise && dist(b.x, b.z, vise.x, vise.z) < REGLES.bunkerPortee) encaisser(M, vise, REGLES.bunkerDps * dt, false);
+  }
+}
+
+function majNavire(M, dt) {
+  var T = M.tripode && !M.tripode.abattu ? M.tripode : tripodeProche(M, riviereX(0), 0);
+  if (!T) return;
+  // le Thunder Child remonte la rivière quand l'herbe gagne
+  if (!M.navire && (M.couverture > 0.26 || M.t > 235)) {
+    M.navire = { z: -MONDE / 2 + 10, x: riviereX(-MONDE / 2 + 10), pv: REGLES.navirePv,
+      pvMax: REGLES.navirePv, cd: 6, tir: 0, detruit: false };
+    journal(M, 'Une fumée noire descend la rivière : un cuirassé remonte le courant.');
+  }
+  var n = M.navire;
+  if (!n || n.detruit) return;
+  var voulu = borne(T.z, -MONDE / 2 + 14, MONDE / 2 - 14);
+  n.z += borne(voulu - n.z, -13 * dt, 13 * dt);
+  n.x = riviereX(n.z);
+  n.cap = angleVers(n.x, n.z, T.x, T.z);
+  n.tir = Math.max(0, n.tir - dt);
+  n.cd -= dt;
+  if (n.cd <= 0 && dist(n.x, n.z, T.x, T.z) < REGLES.navirePortee) {
+    n.cd = REGLES.navireRecharge;
+    n.tir = 0.4;
+    encaisser(M, T, REGLES.navireDegats, true);
+    journal(M, 'Le cuirassé tire de la rivière.');
+  }
+}
+
+function majCanons(M, dt) {
+  for (var i = 0; i < M.canons.length; i++) {
+    var c = M.canons[i];
+    if (c.detruit) continue;
+    var T = tripodeProche(M, c.x, c.z);
+    if (!T) continue;
+    var cible = T;
+    c.tir = Math.max(0, c.tir - dt);
+    var d = dist(c.x, c.z, T.x, T.z);
+    c.cap = angleVers(c.x, c.z, T.x, T.z);
+    if (d > REGLES.canonPortee) continue;
+    c.cd -= dt;
+    if (c.cd <= 0) {
+      c.cd = REGLES.canonRecharge;
+      c.tir = 0.35;
+      // la précision tombe avec la distance et si l'on bouge vite
+      var vit = Math.sqrt(T.vx * T.vx + T.vz * T.vz);
+      // obus incendiaire : on brûle le réseau plutôt que la machine
+      if (M.vagues > 0 && M.rng() < REGLES.incendiaireChance && herbeEn(M, T.x, T.z) > 0.4) {
+        incendier(M, T.x + (M.rng() - 0.5) * 34, T.z + (M.rng() - 0.5) * 34);
+        continue;
+      }
+      var chance = borne(0.92 - d / REGLES.canonPortee * 0.35 - vit / 60, 0.25, 0.92);
+      if (M.rng() < chance) {
+        encaisser(M, cible, REGLES.canonDegats, true);
+        c.touche = 1;
+        journal(M, 'Un obus frappe le capot.');
+      } else c.touche = 0;
+    }
+  }
+}
+
+function incendier(M, x, z) {
+  var c = cellDe(x, z), r = Math.ceil(REGLES.incendiaireRayon / CELL), i, j, n = 0;
+  for (j = c[1] - r; j <= c[1] + r; j++) for (i = c[0] - r; i <= c[0] + r; i++) {
+    if (i < 0 || j < 0 || i >= N || j >= N) continue;
+    var cc = centreCell(i, j);
+    if (dist(cc[0], cc[1], x, z) > REGLES.incendiaireRayon) continue;
+    var k = idx(i, j);
+    if (M.herbe[k] > 0.05) { M.herbe[k] = 0; M.humidite[k] *= 0.8; n++; }
+  }
+  if (n > 4) journal(M, 'Un obus incendiaire ouvre une plaie dans l’herbe.');
+  M.feux.push({ x: x, z: z, r: REGLES.incendiaireRayon, t: 4 });
+  if (M.feux.length > 30) M.feux.shift();
+}
+
+function envoyerRenforts(M) {
+  var R = M.rng, bord = Math.floor(R() * 3);
+  var bx = [ -220, 220, 0 ][bord], bz = [ 0, -60, 225 ][bord];
+  var n = 5 + M.vagues * 2;
+  for (var i = 0; i < n; i++) {
+    M.humains.push(creerHumain('soldat', bx + (R() - 0.5) * 40, bz + (R() - 0.5) * 40, R));
+  }
+  if (M.vagues % 2 === 0) {            // une batterie une vague sur deux, sinon l'étau se referme trop vite
+    poserBatterie(M, bx + (R() - 0.5) * 70, bz + (R() - 0.5) * 70);
+  }
+  journal(M, 'Nouvelle batterie en position. Les canons s’installent.');
+  // plus on a brûlé, plus ils s'enterrent
+  if (M.rayonUtilise > 26 + M.bunkersEnvoyes * 34) {
+    M.bunkersEnvoyes++;
+    var cible = M.batiments.filter(function (b) { return !b.detruit; });
+    var ancre = cible.length ? cible[Math.floor(R() * cible.length)] : { x: 0, z: 0 };
+    M.bunkers.push({ x: ancre.x + (R() - 0.5) * 30, z: ancre.z + (R() - 0.5) * 30,
+      pv: REGLES.bunkerPv, pvMax: REGLES.bunkerPv, detruit: false });
+    journal(M, 'Ils coulent du béton : un blockhaus sort de terre.');
+  }
+}
+
+var LOGIQUE = { alea: alea, MONDE: MONDE, N: N, CELL: CELL, OBJECTIF: OBJECTIF, REGLES: REGLES,
+  hauteur: hauteur, riviereX: riviereX, dansRiviere: dansRiviere, creerMonde: creerMonde, pas: pas,
+  semer: semer, propager: propager, mesurerCouverture: mesurerCouverture, herbeEn: herbeEn,
+  cellDe: cellDe, centreCell: centreCell, idx: idx, genou: genou, creerDemarche: creerDemarche,
+  majDemarche: majDemarche, ordonnerDeplacement: ordonnerDeplacement, viser: viser,
+  cracherSpores: cracherSpores, lacherFumee: lacherFumee, dist: dist, borne: borne,
+  majVision: majVision, vuEn: vuEn, connuEn: connuEn, encaisser: encaisser,
+  poserCuve: poserCuve, envoyerDrone: envoyerDrone, pointLivraison: pointLivraison,
+  incendier: incendier, eclore: eclore, creerTripode: creerTripode, tripodeProche: tripodeProche,
+  ROUTES: ROUTES, distRoute: distRoute };
+if (typeof module !== 'undefined' && module.exports) module.exports = LOGIQUE;
+if (typeof window !== 'undefined') window.LOGIQUE = LOGIQUE;
+
+</script>
+<script>
+'use strict';
+/* ===========================================================================
+   L'HERBE ROUGE — construction de la scène (Three.js r128)
+   Tout est procédural : aucun modèle, aucune texture externe.
+   =========================================================================== */
+var VUE = {};
+
+/* -------------------------------------------------------------- TEXTURES
+   Tout est peint au canvas : pas un octet d'image externe.
+---------------------------------------------------------------------------- */
+VUE._tex = {};
+VUE.toile = function (T, cle, taille, peintre, rx, ry) {
+  if (VUE._tex[cle]) return VUE._tex[cle];
+  var c = document.createElement('canvas');
+  c.width = c.height = taille;
+  peintre(c.getContext('2d'), taille);
+  var t = new T.CanvasTexture(c);
+  t.wrapS = t.wrapT = T.RepeatWrapping;
+  if (rx) t.repeat.set(rx, ry || rx);
+  VUE._tex[cle] = t;
+  return t;
+};
+VUE.bruit = function (x, n, coul, taille, mini, maxi) {
+  for (var i = 0; i < n; i++) {
+    var s = mini + Math.random() * (maxi - mini);
+    x.fillStyle = coul;
+    x.fillRect(Math.random() * taille, Math.random() * taille, s, s);
+  }
+};
+
+VUE.texTerre = function (T) {
+  return VUE.toile(T, 'terre', 128, function (x, n) {
+    x.fillStyle = '#ffffff'; x.fillRect(0, 0, n, n);
+    VUE.bruit(x, 900, 'rgba(0,0,0,.06)', n, 1, 3);
+    VUE.bruit(x, 500, 'rgba(255,255,255,.07)', n, 1, 2);
+    x.strokeStyle = 'rgba(0,0,0,.05)'; x.lineWidth = 1;
+    for (var i = 0; i < n; i += 7) { x.beginPath(); x.moveTo(0, i); x.lineTo(n, i + 3); x.stroke(); }
+  }, 26, 26);
+};
+VUE.texMur = function (T) {
+  return VUE.toile(T, 'mur', 128, function (x, n) {
+    x.fillStyle = '#e6dcc4'; x.fillRect(0, 0, n, n);          // torchis
+    VUE.bruit(x, 700, 'rgba(120,100,70,.10)', n, 1, 3);
+    x.fillStyle = '#4a3527';                                   // colombages
+    x.fillRect(0, 0, n, 7); x.fillRect(0, n - 9, n, 9);
+    x.fillRect(0, 0, 7, n); x.fillRect(n - 7, 0, 7, n);
+    x.fillRect(n / 2 - 4, 0, 8, n);
+    x.save(); x.translate(n / 4, n / 2); x.rotate(0.62);
+    x.fillRect(-3, -n / 2, 6, n); x.restore();
+    x.fillStyle = '#2b2620';                                   // fenêtre
+    x.fillRect(n * 0.62, n * 0.34, n * 0.22, n * 0.26);
+    x.strokeStyle = '#e6dcc4'; x.lineWidth = 2;
+    x.beginPath(); x.moveTo(n * 0.73, n * 0.34); x.lineTo(n * 0.73, n * 0.6); x.stroke();
+  });
+};
+VUE.texTuile = function (T) {
+  return VUE.toile(T, 'tuile', 128, function (x, n) {
+    x.fillStyle = '#6b3a2a'; x.fillRect(0, 0, n, n);
+    for (var j = 0; j < n; j += 9) {
+      x.fillStyle = j % 18 === 0 ? 'rgba(0,0,0,.16)' : 'rgba(255,255,255,.07)';
+      x.fillRect(0, j, n, 4);
+      for (var i = (j % 18 === 0 ? 0 : 7); i < n; i += 14) {
+        x.fillStyle = 'rgba(0,0,0,.13)'; x.fillRect(i, j, 2, 9);
+      }
+    }
+    VUE.bruit(x, 300, 'rgba(0,0,0,.08)', n, 1, 3);
+  }, 2, 2);
+};
+VUE.texMetal = function (T) {
+  return VUE.toile(T, 'metal', 128, function (x, n) {
+    x.fillStyle = '#8d8a74'; x.fillRect(0, 0, n, n);
+    for (var j = 0; j < n; j += 32) {                          // tôles rivetées
+      x.strokeStyle = 'rgba(0,0,0,.28)'; x.lineWidth = 2;
+      x.beginPath(); x.moveTo(0, j); x.lineTo(n, j); x.stroke();
+      x.beginPath(); x.moveTo(j, 0); x.lineTo(j, n); x.stroke();
+      for (var i = 4; i < n; i += 11) {
+        x.fillStyle = 'rgba(255,255,255,.20)'; x.fillRect(i, j + 2, 2, 2);
+        x.fillStyle = 'rgba(0,0,0,.22)'; x.fillRect(i, j + 4, 2, 1);
+      }
+    }
+    for (var k = 0; k < 26; k++) {                             // coulures de vert-de-gris
+      x.fillStyle = 'rgba(72,104,86,' + (0.1 + Math.random() * 0.22) + ')';
+      x.fillRect(Math.random() * n, Math.random() * n, 2 + Math.random() * 5, 10 + Math.random() * 40);
+    }
+    VUE.bruit(x, 500, 'rgba(0,0,0,.10)', n, 1, 3);
+  }, 3, 3);
+};
+VUE.texEau = function (T) {
+  return VUE.toile(T, 'eau', 128, function (x, n) {
+    x.fillStyle = '#36454e'; x.fillRect(0, 0, n, n);
+    for (var i = 0; i < 60; i++) {
+      x.strokeStyle = 'rgba(190,215,225,' + (0.05 + Math.random() * 0.13) + ')';
+      x.lineWidth = 1 + Math.random();
+      var y = Math.random() * n, l = 8 + Math.random() * 30, sx = Math.random() * n;
+      x.beginPath(); x.moveTo(sx, y);
+      x.quadraticCurveTo(sx + l / 2, y - 3, sx + l, y); x.stroke();
+    }
+  }, 5, 9);
+};
+VUE.texBeton = function (T) {
+  return VUE.toile(T, 'beton', 64, function (x, n) {
+    x.fillStyle = '#8a8377'; x.fillRect(0, 0, n, n);
+    VUE.bruit(x, 600, 'rgba(0,0,0,.11)', n, 1, 3);
+    VUE.bruit(x, 200, 'rgba(255,255,255,.10)', n, 1, 2);
+  }, 3, 3);
+};
+
+/* ------------------------------------------------------------------ CIEL */
+VUE.ciel = function (T) {
+  var L2 = 1024, H2 = 512;
+  var c = document.createElement('canvas');
+  c.width = L2; c.height = H2;
+  var x = c.getContext('2d');
+  var g = x.createLinearGradient(0, 0, 0, H2);
+  g.addColorStop(0.00, '#4c4638');
+  g.addColorStop(0.34, '#8a7856');
+  g.addColorStop(0.58, '#b78f5c');
+  g.addColorStop(0.78, '#c9a069');
+  g.addColorStop(1.00, '#7d6244');
+  x.fillStyle = g; x.fillRect(0, 0, L2, H2);
+
+  // le soleil, noyé de poussière
+  var sx = L2 * 0.26, sy = H2 * 0.42;
+  var halo = x.createRadialGradient(sx, sy, 4, sx, sy, 180);
+  halo.addColorStop(0, 'rgba(255,236,190,.95)');
+  halo.addColorStop(0.18, 'rgba(255,206,130,.45)');
+  halo.addColorStop(1, 'rgba(255,190,110,0)');
+  x.fillStyle = halo; x.fillRect(sx - 200, sy - 200, 400, 400);
+
+  // bancs de nuages étirés
+  for (var n = 0; n < 90; n++) {
+    var cx = Math.random() * L2, cy = H2 * (0.14 + Math.random() * 0.52);
+    var lg = 60 + Math.random() * 260, ht = 8 + Math.random() * 22;
+    var op = 0.05 + Math.random() * 0.16;
+    var nu = x.createRadialGradient(cx, cy, 0, cx, cy, lg);
+    nu.addColorStop(0, 'rgba(240,226,198,' + op + ')');
+    nu.addColorStop(1, 'rgba(240,226,198,0)');
+    x.save(); x.translate(cx, cy); x.scale(1, ht / lg); x.translate(-cx, -cy);
+    x.fillStyle = nu; x.beginPath(); x.arc(cx, cy, lg, 0, Math.PI * 2); x.fill();
+    x.restore();
+  }
+  // fumées lointaines des incendies, à l'horizon
+  for (var f = 0; f < 5; f++) {
+    var fx = L2 * (0.1 + Math.random() * 0.8);
+    var fu = x.createLinearGradient(fx, H2 * 0.8, fx, H2 * 0.42);
+    fu.addColorStop(0, 'rgba(40,32,26,.4)');
+    fu.addColorStop(1, 'rgba(40,32,26,0)');
+    x.fillStyle = fu;
+    x.beginPath();
+    x.moveTo(fx - 8, H2 * 0.82); x.lineTo(fx + 8, H2 * 0.82);
+    x.lineTo(fx + 34, H2 * 0.42); x.lineTo(fx - 20, H2 * 0.42);
+    x.closePath(); x.fill();
+  }
+  var t = new T.CanvasTexture(c);
+  t.magFilter = T.LinearFilter;
+  return t;
+};
+VUE.dome = function (T, L) {
+  var g = new T.SphereGeometry(L.MONDE * 1.35, 24, 16);
+  var m = new T.MeshBasicMaterial({ map: VUE.ciel(T), side: T.BackSide, fog: false, depthWrite: false });
+  var mesh = new T.Mesh(g, m);
+  mesh.renderOrder = -1;
+  return mesh;
+};
+
+/* --------------------------------------------------------------- TERRAIN */
+VUE.terrain = function (T, L) {
+  var seg = 176, g = new T.PlaneGeometry(L.MONDE, L.MONDE, seg, seg);
+  g.rotateX(-Math.PI / 2);
+  var pos = g.attributes.position, n = pos.count;
+  var col = new Float32Array(n * 3);
+  var R = L.alea(4242);
+  for (var i = 0; i < n; i++) {
+    var x = pos.getX(i), z = pos.getZ(i);
+    var h = L.hauteur(x, z);
+    pos.setY(i, h);
+    var bruit = R() * 0.16;
+    var r, v, b;
+    if (L.dansRiviere(x, z)) { r = 0.20; v = 0.26; b = 0.28; }
+    else if (L.distRoute(x, z) < 5.5) {                       // chemin de terre battue
+      var u = L.distRoute(x, z) / 5.5;
+      r = 0.52 - u * 0.12; v = 0.44 - u * 0.12; b = 0.30 - u * 0.08;
+    }
+    else {
+      // damier de champs à l'anglaise
+      var champ = (Math.floor((x + 500) / 34) + Math.floor((z + 500) / 29)) % 4;
+      if (champ === 0) { r = 0.38; v = 0.33; b = 0.17; }       // chaume coupé
+      else if (champ === 1) { r = 0.21; v = 0.27; b = 0.14; }  // prairie
+      else if (champ === 2) { r = 0.28; v = 0.22; b = 0.14; }  // labour
+      else { r = 0.31; v = 0.30; b = 0.18; }                   // jachère
+      var pente = Math.abs(L.hauteur(x + 2, z) - h) + Math.abs(L.hauteur(x, z + 2) - h);
+      r += pente * 0.05; v += pente * 0.04;
+    }
+    col[i * 3] = (r + bruit * 0.36) * 1.18; col[i * 3 + 1] = (v + bruit * 0.34) * 1.18;
+    col[i * 3 + 2] = (b + bruit * 0.22) * 1.18;
+  }
+  g.computeVertexNormals();
+  g.setAttribute('color', new T.BufferAttribute(col, 3));
+  var m = new T.MeshPhongMaterial({ vertexColors: true, flatShading: true, shininess: 0, specular: 0x0a0a0a });
+  var mesh = new T.Mesh(g, m);
+  mesh.name = 'terrain';
+  return mesh;
+};
+
+VUE.horizon = function (T, L) {
+  var g = new T.PlaneGeometry(L.MONDE * 4, L.MONDE * 4, 1, 1);
+  g.rotateX(-Math.PI / 2);
+  var m = new T.Mesh(g, new T.MeshBasicMaterial({ color: 0x9a7f56 }));
+  m.position.y = -7;
+  return m;
+};
+
+VUE.riviere = function (T, L) {
+  var pts = [], i, larg = 8.5;
+  var sommets = [], indices = [], n = 64;
+  for (i = 0; i <= n; i++) {
+    var z = -L.MONDE / 2 + (i / n) * L.MONDE;
+    var x = L.riviereX(z);
+    var y = L.hauteur(x, z) + 0.9;
+    sommets.push(x - larg, y, z, x + larg, y, z);
+  }
+  for (i = 0; i < n; i++) {
+    var a = i * 2;
+    indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+  }
+  var uvs = [];
+  for (i = 0; i <= n; i++) { uvs.push(0, i / 4, 1, i / 4); }
+  var g = new T.BufferGeometry();
+  g.setAttribute('position', new T.Float32BufferAttribute(sommets, 3));
+  g.setAttribute('uv', new T.Float32BufferAttribute(uvs, 2));
+  g.setIndex(indices);
+  g.computeVertexNormals();
+  var eau = VUE.texEau(T);
+  var mesh = new T.Mesh(g, new T.MeshPhongMaterial({ color: 0x9fb0b8, map: eau,
+    specular: 0x88a0b0, shininess: 70, transparent: true, opacity: 0.94 }));
+  mesh._eau = eau;
+  return mesh;
+};
+
+/* ------------------------------------------------------------- LES BOURGS */
+VUE.ponts = function (T, L) {
+  var g = new T.Group();
+  var bois = new T.MeshPhongMaterial({ color: 0xb99a72, flatShading: true, shininess: 3,
+    map: VUE.texMur(T) });
+  var pierre = new T.MeshPhongMaterial({ color: 0xcfc6b4, flatShading: true, shininess: 2,
+    map: VUE.texBeton(T) });
+  L.ROUTES.forEach(function (route) {
+    for (var i = 0; i < route.length - 1; i++) {
+      var a = route[i], b = route[i + 1];
+      var precedent = null;
+      for (var t = 0; t <= 1; t += 0.02) {
+        var x = a[0] + (b[0] - a[0]) * t, z = a[1] + (b[1] - a[1]) * t;
+        var signe = x - L.riviereX(z);
+        if (precedent !== null && precedent * signe < 0) {
+          var pont = new T.Group();
+          var tablier = new T.Mesh(new T.BoxGeometry(30, 1.4, 11), bois);
+          tablier.position.y = 3.2;
+          pont.add(tablier);
+          for (var k = -1; k <= 1; k += 2) {
+            var parapet = new T.Mesh(new T.BoxGeometry(30, 2.2, 1), pierre);
+            parapet.position.set(0, 4.8, k * 5);
+            pont.add(parapet);
+            var pile = new T.Mesh(new T.BoxGeometry(3, 7, 9), pierre);
+            pile.position.set(k * 9, 0.2, 0);
+            pont.add(pile);
+          }
+          var ang = Math.atan2(b[0] - a[0], b[1] - a[1]);
+          pont.position.set(L.riviereX(z), L.hauteur(x, z) + 1.2, z);
+          pont.rotation.y = ang + Math.PI / 2;
+          g.add(pont);
+        }
+        precedent = signe;
+      }
+    }
+  });
+  return g;
+};
+
+VUE.bourgs = function (T, L, M) {
+  var groupe = new T.Group();
+  var maisons = M.batiments.filter(function (b) { return b.type === 'maison'; });
+  var eglises = M.batiments.filter(function (b) { return b.type === 'eglise'; });
+
+  var murs = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1),
+    new T.MeshPhongMaterial({ flatShading: true, shininess: 0, specular: 0x0a0a0a,
+      map: VUE.texMur(T) }), Math.max(1, maisons.length));
+  var toits = new T.InstancedMesh(new T.ConeGeometry(0.78, 1, 4),
+    new T.MeshPhongMaterial({ flatShading: true, shininess: 2, specular: 0x141414,
+      map: VUE.texTuile(T) }), Math.max(1, maisons.length));
+  var cheminees = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1),
+    new T.MeshPhongMaterial({ color: 0x7d5b45, flatShading: true, shininess: 0 }), Math.max(1, maisons.length));
+  murs.castShadow = toits.castShadow = true;
+  murs.receiveShadow = toits.receiveShadow = true;
+  var d = new T.Object3D(), coul = new T.Color();
+  maisons.forEach(function (b, i) {
+    b._i = i;
+    var y = L.hauteur(b.x, b.z);
+    d.position.set(b.x, y + b.h / 2, b.z); d.rotation.set(0, b.cap, 0);
+    d.scale.set(b.l, b.h, b.p); d.updateMatrix();
+    murs.setMatrixAt(i, d.matrix);
+    coul.setHSL(0.09, 0.10, 0.80 + (i % 5) * 0.04); murs.setColorAt(i, coul);
+    d.position.set(b.x, y + b.h + b.h * 0.28, b.z);
+    d.scale.set(b.l * 1.55, b.h * 0.75, b.p * 1.55); d.updateMatrix();
+    toits.setMatrixAt(i, d.matrix);
+    coul.setHSL(0.045, 0.30, 0.62 + (i % 4) * 0.05); toits.setColorAt(i, coul);
+    d.position.set(b.x + Math.sin(b.cap) * b.l * 0.3, y + b.h + b.h * 0.62, b.z + Math.cos(b.cap) * b.l * 0.3);
+    d.rotation.set(0, b.cap, 0); d.scale.set(1.2, b.h * 0.7, 1.2); d.updateMatrix();
+    cheminees.setMatrixAt(i, d.matrix);
+  });
+  cheminees.instanceMatrix.needsUpdate = true;
+  groupe.add(cheminees);
+  murs.instanceMatrix.needsUpdate = true; toits.instanceMatrix.needsUpdate = true;
+  groupe.add(murs); groupe.add(toits);
+
+  eglises.forEach(function (b) {
+    var e = new T.Group();
+    var y = L.hauteur(b.x, b.z);
+    var nef = new T.Mesh(new T.BoxGeometry(b.l, b.h, b.p),
+      new T.MeshPhongMaterial({ color: 0x9c9483, flatShading: true, shininess: 0, specular: 0x0a0a0a }));
+    nef.position.set(0, b.h / 2, 0);
+    var comble = new T.Mesh(new T.ConeGeometry(b.l * 0.82, b.h * 0.6, 4),
+      new T.MeshPhongMaterial({ color: 0x4a3b33, flatShading: true, shininess: 0, specular: 0x0a0a0a }));
+    comble.position.set(0, b.h + b.h * 0.28, 0); comble.rotation.y = Math.PI / 4;
+    var tour = new T.Mesh(new T.BoxGeometry(b.l * 0.5, b.h * 1.7, b.l * 0.5),
+      new T.MeshPhongMaterial({ color: 0x9c9483, flatShading: true, shininess: 0, specular: 0x0a0a0a }));
+    tour.position.set(0, b.h * 0.85, -b.p / 2 - 1);
+    var fleche = new T.Mesh(new T.ConeGeometry(b.l * 0.38, b.h * 1.5, 4),
+      new T.MeshPhongMaterial({ color: 0x4a3b33, flatShading: true, shininess: 0, specular: 0x0a0a0a }));
+    fleche.position.set(0, b.h * 1.7 + b.h * 0.75, -b.p / 2 - 1);
+    e.add(nef, comble, tour, fleche);
+    e.position.set(b.x, y, b.z);
+    b._mesh = e;
+    groupe.add(e);
+  });
+  groupe._murs = murs; groupe._toits = toits; groupe._cheminees = cheminees; groupe._maisons = maisons; groupe._eglises = eglises;
+  return groupe;
+};
+
+VUE.majBourgs = function (T, L, groupe, M) {
+  var d = new T.Object3D(), change = false;
+  groupe._maisons.forEach(function (b, i) {
+    var connu = L.connuEn(M, b.x, b.z);
+    var visible = connu && !b.detruit;
+    var etat = connu ? (b.detruit ? 'ruine' : 'debout') : 'inconnu';
+    if (b._etat === etat) return;
+    b._etat = etat; b._visible = visible; change = true;
+    var y = L.hauteur(b.x, b.z);
+    if (etat === 'ruine') {
+      d.position.set(b.x, y + 0.8, b.z); d.rotation.set(0, b.cap, 0);
+      d.scale.set(b.l * 1.05, 1.6, b.p * 1.05); d.updateMatrix();
+      groupe._murs.setMatrixAt(i, d.matrix);
+      var noir = new T.Color(0x2a241e);
+      groupe._murs.setColorAt(i, noir);
+      if (groupe._murs.instanceColor) groupe._murs.instanceColor.needsUpdate = true;
+      d.position.set(b.x, -999, b.z); d.scale.set(0.001, 0.001, 0.001); d.updateMatrix();
+      groupe._toits.setMatrixAt(i, d.matrix);
+      return;
+    }
+    if (!visible) {
+      d.position.set(b.x, -999, b.z); d.scale.set(0.001, 0.001, 0.001); d.rotation.set(0, 0, 0);
+      d.updateMatrix();
+      groupe._murs.setMatrixAt(i, d.matrix); groupe._toits.setMatrixAt(i, d.matrix);
+    } else {
+      d.position.set(b.x, y + b.h / 2, b.z); d.rotation.set(0, b.cap, 0);
+      d.scale.set(b.l, b.h, b.p); d.updateMatrix();
+      groupe._murs.setMatrixAt(i, d.matrix);
+      d.position.set(b.x, y + b.h + b.h * 0.28, b.z);
+      d.scale.set(b.l * 1.55, b.h * 0.75, b.p * 1.55); d.updateMatrix();
+      groupe._toits.setMatrixAt(i, d.matrix);
+    }
+  });
+  groupe._eglises.forEach(function (b) {
+    if (b._mesh) b._mesh.visible = L.connuEn(M, b.x, b.z) && !b.detruit;
+  });
+  if (change) { groupe._murs.instanceMatrix.needsUpdate = true; groupe._toits.instanceMatrix.needsUpdate = true; }
+};
+
+VUE.cultures = function (T, L, M) {
+  var R = L.alea(5150);
+  var im = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1),
+    new T.MeshPhongMaterial({ flatShading: true, shininess: 0, specular: 0x060606 }), 1500);
+  var d = new T.Object3D(), c = new T.Color(), n = 0;
+  for (var essai = 0; essai < 9000 && n < 1500; essai++) {
+    var x = (R() - 0.5) * L.MONDE * 0.96, z = (R() - 0.5) * L.MONDE * 0.96;
+    if (L.dansRiviere(x, z) || L.distRoute(x, z) < 7) continue;
+    var champ = (Math.floor((x + 500) / 34) + Math.floor((z + 500) / 29)) % 4;
+    if (champ !== 0 && champ !== 2) continue;                  // seulement chaume et labour
+    var horiz = champ === 0;
+    d.position.set(x, L.hauteur(x, z) + 0.2, z);
+    d.rotation.set(0, horiz ? 0 : Math.PI / 2, 0);
+    d.scale.set(horiz ? 14 + R() * 10 : 1.5, 0.34 + R() * 0.2, horiz ? 1.5 : 14 + R() * 10);
+    d.updateMatrix();
+    im.setMatrixAt(n, d.matrix);
+    c.setHSL(0.11 + R() * 0.04, 0.34, champ === 0 ? 0.46 + R() * 0.08 : 0.3 + R() * 0.06);
+    im.setColorAt(n, c);
+    n++;
+  }
+  im.count = n;
+  im.instanceMatrix.needsUpdate = true;
+  return im;
+};
+
+VUE.haies = function (T, L, M) {
+  var R = L.alea(31337), i, j;
+  var geo = new T.BoxGeometry(1, 1, 1);
+  var mat = new T.MeshPhongMaterial({ flatShading: true, shininess: 0, specular: 0x080808 });
+  var im = new T.InstancedMesh(geo, mat, 2600);
+  var d = new T.Object3D(), c = new T.Color(), n = 0;
+  function poser(x, z, ax) {
+    if (n >= 2600) return;
+    if (Math.abs(x) > L.MONDE / 2 - 4 || Math.abs(z) > L.MONDE / 2 - 4) return;
+    if (L.dansRiviere(x, z) || L.distRoute(x, z) < 7) return;
+    for (var k = 0; k < M.batiments.length; k++) {
+      if (L.dist(M.batiments[k].x, M.batiments[k].z, x, z) < 14) return;
+    }
+    if (R() < 0.14) return;                 // le bocage a ses trouées
+    var h = 1.9 + R() * 1.1;
+    d.position.set(x, L.hauteur(x, z) + h / 2, z);
+    d.rotation.set(0, ax + (R() - 0.5) * 0.2, 0);
+    d.scale.set(ax === 0 ? 11.5 : 1.3 + R() * 0.6, h, ax === 0 ? 1.3 + R() * 0.6 : 11.5);
+    d.updateMatrix();
+    im.setMatrixAt(n, d.matrix);
+    c.setHSL(0.25 + R() * 0.05, 0.26, 0.11 + R() * 0.05);
+    im.setColorAt(n, c);
+    n++;
+  }
+  for (i = -L.MONDE / 2; i < L.MONDE / 2; i += 34) {
+    for (j = -L.MONDE / 2; j < L.MONDE / 2; j += 9.5) poser(i, j + (R() - 0.5) * 3, Math.PI / 2);
+  }
+  for (j = -L.MONDE / 2; j < L.MONDE / 2; j += 29) {
+    for (i = -L.MONDE / 2; i < L.MONDE / 2; i += 9.5) poser(i + (R() - 0.5) * 3, j, 0);
+  }
+  im.count = n;
+  im.instanceMatrix.needsUpdate = true;
+  im.castShadow = true;
+  return im;
+};
+
+VUE.arbres = function (T, L, M) {
+  var R = L.alea(9090), n = 620, i;
+  var troncs = new T.InstancedMesh(new T.CylinderGeometry(0.35, 0.5, 1, 5),
+    new T.MeshPhongMaterial({ color: 0x40342a, flatShading: true, shininess: 0, specular: 0x0a0a0a }), n);
+  var feuilles = new T.InstancedMesh(new T.ConeGeometry(1, 1, 7),
+    new T.MeshPhongMaterial({ flatShading: true, shininess: 0, specular: 0x0a0a0a }), n);
+  var couronnes = new T.InstancedMesh(new T.ConeGeometry(1, 1, 7),
+    new T.MeshPhongMaterial({ flatShading: true, shininess: 0, specular: 0x0a0a0a }), n);
+  var d = new T.Object3D(), c = new T.Color(), place = 0;
+  for (i = 0; i < n * 4 && place < n; i++) {
+    var x = (R() - 0.5) * L.MONDE * 0.94, z = (R() - 0.5) * L.MONDE * 0.94;
+    if (L.dansRiviere(x, z)) continue;
+    var proche = M.batiments.some(function (b) { return L.dist(b.x, b.z, x, z) < 16; });
+    if (proche) continue;
+    var y = L.hauteur(x, z), h = 5 + R() * 6;
+    d.position.set(x, y + h * 0.25, z); d.scale.set(1, h * 0.5, 1); d.rotation.set(0, 0, 0); d.updateMatrix();
+    troncs.setMatrixAt(place, d.matrix);
+    d.position.set(x, y + h * 0.78, z); d.scale.set(2.6 + R() * 1.4, h * 0.95, 2.6 + R() * 1.4);
+    d.rotation.set(0, R() * 3, 0); d.updateMatrix();
+    feuilles.setMatrixAt(place, d.matrix);
+    c.setHSL(0.22 + R() * 0.07, 0.30, 0.13 + R() * 0.07); feuilles.setColorAt(place, c);
+    d.position.set(x, y + h * 1.12, z);
+    d.scale.set(1.7 + R() * 0.9, h * 0.6, 1.7 + R() * 0.9);
+    d.rotation.set((R() - 0.5) * 0.16, R() * 3, (R() - 0.5) * 0.16);
+    d.updateMatrix();
+    couronnes.setMatrixAt(place, d.matrix);
+    c.setHSL(0.23 + R() * 0.06, 0.32, 0.17 + R() * 0.07); couronnes.setColorAt(place, c);
+    place++;
+  }
+  troncs.count = place; feuilles.count = place; couronnes.count = place;
+  troncs.instanceMatrix.needsUpdate = true;
+  feuilles.instanceMatrix.needsUpdate = true;
+  couronnes.instanceMatrix.needsUpdate = true;
+  feuilles.castShadow = couronnes.castShadow = true;
+  var g = new T.Group(); g.add(troncs, feuilles, couronnes);
+  return g;
+};
+
+/* ---------------------------------------------------------- HERBE ROUGE */
+VUE.herbe = function (T, L) {
+  var taille = 384;
+  var c = document.createElement('canvas');
+  c.width = c.height = taille;
+  var ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, taille, taille);
+  var tex = new T.CanvasTexture(c);
+  var seg = 132, g = new T.PlaneGeometry(L.MONDE, L.MONDE, seg, seg);
+  g.rotateX(-Math.PI / 2);
+  var pos = g.attributes.position;
+  for (var i = 0; i < pos.count; i++) pos.setY(i, L.hauteur(pos.getX(i), pos.getZ(i)) + 0.35);
+  g.computeVertexNormals();
+  var m = new T.MeshLambertMaterial({ map: tex, transparent: true, depthWrite: false });
+  var mesh = new T.Mesh(g, m);
+  mesh.renderOrder = 1;
+
+  var touffes = new T.InstancedMesh(new T.ConeGeometry(1, 1, 5),
+    new T.MeshPhongMaterial({ flatShading: true, shininess: 0, specular: 0x0a0a0a }), 3200);
+  // instanceColor doit être alloué à pleine capacité AVANT de rabattre count à zéro :
+  // setColorAt dimensionne sinon le tableau sur le count du moment (ici 0).
+  touffes.instanceColor = new T.InstancedBufferAttribute(new Float32Array(3200 * 3).fill(1), 3);
+  touffes.count = 0;
+  var groupe = new T.Group(); groupe.add(mesh, touffes);
+  groupe._canvas = c; groupe._ctx = ctx; groupe._tex = tex; groupe._touffes = touffes;
+  groupe._taille = taille;
+  return groupe;
+};
+
+VUE.majHerbe = function (T, L, groupe, M) {
+  var ctx = groupe._ctx, taille = groupe._taille, N = L.N;
+  var e = taille / N;
+  ctx.clearRect(0, 0, taille, taille);
+  for (var j = 0; j < N; j++) for (var i = 0; i < N; i++) {
+    var k0 = L.idx(i, j), d = M.herbe[k0];
+    if (M.sol[k0] === 3 && d < 0.3) {                 // terre brûlée
+      ctx.fillStyle = 'rgba(26,20,16,0.55)';
+      ctx.fillRect(i * e - 0.5, j * e - 0.5, e + 1, e + 1);
+    }
+    if (d <= 0.04) continue;
+    var a = Math.min(0.92, d * 1.05);
+    var lum = 26 + d * 20;
+    ctx.fillStyle = 'rgba(' + Math.round(96 + d * 74) + ',' + Math.round(12 + d * 16) + ',' +
+      Math.round(18 + d * 12) + ',' + a.toFixed(3) + ')';
+    ctx.fillRect(i * e - 0.5, j * e - 0.5, e + 1, e + 1);
+  }
+  try {                                  // ctx.filter manque sur les Safari anciens
+    ctx.filter = 'blur(2.5px)';
+    ctx.drawImage(groupe._canvas, 0, 0);
+    ctx.filter = 'none';
+  } catch (e) { ctx.filter = 'none'; }
+  groupe._tex.needsUpdate = true;
+};
+
+VUE.majTouffes = function (T, L, groupe, M) {
+  var touffes = groupe._touffes, d = new T.Object3D(), c = new T.Color();
+  var place = 0, max = touffes.instanceMatrix.count, i, j;
+  var R = L.alea(1234);
+  for (j = 0; j < L.N && place < max; j++) for (i = 0; i < L.N && place < max; i++) {
+    var dens = M.herbe[L.idx(i, j)];
+    if (dens < 0.55) continue;
+    if (R() > 0.55) continue;
+    var cc = L.centreCell(i, j);
+    var x = cc[0] + (R() - 0.5) * L.CELL, z = cc[1] + (R() - 0.5) * L.CELL;
+    var h = 1.1 + dens * 3.1 * (0.6 + R() * 0.8);
+    d.position.set(x, L.hauteur(x, z) + h * 0.45, z);
+    d.rotation.set((R() - 0.5) * 0.5, R() * 3, (R() - 0.5) * 0.5);
+    d.scale.set(1.3 + R() * 1.6, h, 1.3 + R() * 1.6);
+    d.updateMatrix();
+    touffes.setMatrixAt(place, d.matrix);
+    c.setHSL(0.99 + R() * 0.02, 0.62, 0.17 + dens * 0.16);
+    touffes.setColorAt(place, c);
+    place++;
+  }
+  touffes.count = place;
+  touffes.instanceMatrix.needsUpdate = true;
+  if (touffes.instanceColor) touffes.instanceColor.needsUpdate = true;
+};
+
+/* ------------------------------------------------------------- LE CYLINDRE */
+VUE.cylindre = function (T, L, M) {
+  var g = new T.Group();
+  var metal = new T.MeshPhongMaterial({ color: 0xcfc7a8, specular: 0xb8b090, shininess: 44,
+    flatShading: true, map: VUE.texMetal(T) });
+  var corps = new T.Mesh(new T.CylinderGeometry(9, 9, 26, 18), metal);
+  corps.rotation.z = Math.PI / 2 - 0.22;
+  corps.position.y = 5.5;
+  var couvercle = new T.Mesh(new T.CylinderGeometry(9.4, 9.4, 1.6, 16),
+    new T.MeshPhongMaterial({ color: 0x3a352c, flatShading: true }));
+  couvercle.rotation.z = Math.PI / 2 - 0.22;
+  couvercle.position.set(13, 8.5, 0);
+  var cratere = new T.Mesh(new T.CylinderGeometry(24, 19, 2.6, 20),
+    new T.MeshPhongMaterial({ color: 0x3b3226, flatShading: true, shininess: 0 }));
+  cratere.position.y = -0.6;
+  var lueur = new T.Mesh(new T.SphereGeometry(4.4, 10, 8),
+    new T.MeshBasicMaterial({ color: 0x8fe06a, transparent: true, opacity: 0.5,
+      blending: T.AdditiveBlending, depthWrite: false }));
+  lueur.position.set(13.5, 8.5, 0);
+  g.add(cratere, corps, couvercle, lueur);
+  g.position.set(M.cylindre.x, L.hauteur(M.cylindre.x, M.cylindre.z), M.cylindre.z);
+  g._lueur = lueur;
+  return g;
+};
+
+/* --------------------------------------------------------- BROUILLARD */
+VUE.brouillard = function (T, L) {
+  var taille = 192;
+  var c = document.createElement('canvas');
+  c.width = c.height = taille;
+  var ctx = c.getContext('2d');
+  ctx.fillStyle = 'rgba(6,5,4,.94)'; ctx.fillRect(0, 0, taille, taille);
+  var tex = new T.CanvasTexture(c);
+  var seg = 96, g = new T.PlaneGeometry(L.MONDE, L.MONDE, seg, seg);
+  g.rotateX(-Math.PI / 2);
+  var pos = g.attributes.position;
+  for (var i = 0; i < pos.count; i++) pos.setY(i, L.hauteur(pos.getX(i), pos.getZ(i)) + 0.75);
+  var m = new T.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false });
+  var mesh = new T.Mesh(g, m);
+  mesh.renderOrder = 3;
+  mesh._canvas = c; mesh._ctx = ctx; mesh._tex = tex; mesh._taille = taille;
+  return mesh;
+};
+VUE.majBrouillard = function (T, L, mesh, M) {
+  var ctx = mesh._ctx, taille = mesh._taille, e = taille / L.N;
+  ctx.clearRect(0, 0, taille, taille);
+  for (var j = 0; j < L.N; j++) for (var i = 0; i < L.N; i++) {
+    var k = L.idx(i, j);
+    var a = M.visible[k] ? 0 : (M.connu[k] ? 0.2 : 0.88);
+    if (a === 0) continue;
+    ctx.fillStyle = 'rgba(7,6,5,' + a + ')';
+    ctx.fillRect(i * e - 0.5, j * e - 0.5, e + 1, e + 1);
+  }
+  try {
+    ctx.filter = 'blur(2px)';
+    ctx.drawImage(mesh._canvas, 0, 0);
+    ctx.filter = 'none';
+  } catch (err) { ctx.filter = 'none'; }
+  mesh._tex.needsUpdate = true;
+};
+
+/* ------------------------------------------------------------- LE TRIPODE */
+VUE.tripode = function (T, L) {
+  var g = new T.Group();
+  var metal = new T.MeshPhongMaterial({ color: 0xd7dcc0, specular: 0xd8d2a0, shininess: 52,
+    flatShading: true, map: VUE.texMetal(T) });
+  var sombre = new T.MeshPhongMaterial({ color: 0x8b9686, specular: 0x9aa898, shininess: 26,
+    flatShading: true, map: VUE.texMetal(T) });
+
+  // capot : profil tourné
+  var profil = [];
+  for (var i = 0; i <= 12; i++) {
+    var u = i / 12;
+    var r = Math.sin(u * Math.PI * 0.92) * 9.2 + 0.6;
+    profil.push(new T.Vector2(r, u * 9.5));
+  }
+  var capot = new T.Mesh(new T.LatheGeometry(profil, 18), metal);
+  capot.position.y = 30;
+  capot.castShadow = true;
+  g.add(capot);
+
+  // hublots : trois yeux verts autour du capot
+  g._hublots = [];
+  for (var hb = 0; hb < 3; hb++) {
+    var ang = hb * (Math.PI * 2 / 3) + 0.4;
+    var hublot = new T.Mesh(new T.SphereGeometry(1.05, 8, 6),
+      new T.MeshBasicMaterial({ color: 0x9ff06a }));
+    hublot.position.set(Math.sin(ang) * 8.4, 33.4, Math.cos(ang) * 8.4);
+    g.add(hublot); g._hublots.push(hublot);
+  }
+
+  // la cage de moisson, dans le dos
+  var cage = new T.Group();
+  var cercle = new T.Mesh(new T.TorusGeometry(3.6, 0.32, 5, 12), sombre);
+  cercle.rotation.x = Math.PI / 2; cercle.position.y = -3.6;
+  cage.add(cercle);
+  var cercle2 = cercle.clone(); cercle2.position.y = 0.4; cage.add(cercle2);
+  for (var bar = 0; bar < 7; bar++) {
+    var a3 = bar / 7 * Math.PI * 2;
+    var barreau = new T.Mesh(new T.CylinderGeometry(0.16, 0.16, 4.4, 4), sombre);
+    barreau.position.set(Math.sin(a3) * 3.6, -1.6, Math.cos(a3) * 3.6);
+    cage.add(barreau);
+  }
+  cage.position.set(0, 27.5, -8.4);
+  g.add(cage);
+  g._cage = cage;
+  g._captifs = [];
+  for (var cp = 0; cp < 6; cp++) {
+    var homme = new T.Mesh(new T.CylinderGeometry(0.32, 0.46, 1.7, 5),
+      new T.MeshPhongMaterial({ color: 0xb99a6e, flatShading: true }));
+    homme.position.set((cp % 3 - 1) * 1.5, -2.6, (Math.floor(cp / 3) - 0.5) * 1.6);
+    homme.visible = false;
+    cage.add(homme); g._captifs.push(homme);
+  }
+
+  // repère au-dessus des machines qu'on ne pilote pas
+  var marque = new T.Mesh(new T.ConeGeometry(1.9, 3.4, 4),
+    new T.MeshBasicMaterial({ color: 0xd8b464 }));
+  marque.rotation.x = Math.PI;
+  marque.position.y = 46;
+  marque.visible = false;
+  g.add(marque);
+  g._marque = marque;
+
+  // bourrelet et hublot
+  var anneau = new T.Mesh(new T.TorusGeometry(8.4, 0.9, 6, 18), sombre);
+  anneau.rotation.x = Math.PI / 2; anneau.position.y = 31.5;
+  g.add(anneau);
+  g._oeil = g._hublots[0];               // les hublots tiennent lieu d'œil
+
+  // jambes : cuisse, tibia, pied
+  g._jambes = [];
+  for (var k = 0; k < 3; k++) {
+    var cuisse = new T.Mesh(new T.CylinderGeometry(1.45, 1.05, 1, 8), metal);
+    var tibia = new T.Mesh(new T.CylinderGeometry(1.0, 0.6, 1, 8), metal);
+    var pied = new T.Mesh(new T.SphereGeometry(1.9, 9, 7), sombre);
+    var hanche = new T.Mesh(new T.SphereGeometry(2.1, 10, 7), sombre);
+    cuisse.castShadow = tibia.castShadow = true;
+    g.add(cuisse, tibia, pied, hanche);
+    g._jambes.push({ cuisse: cuisse, tibia: tibia, pied: pied, hanche: hanche });
+  }
+
+  // tentacules : chaînes de segments
+  g._tentacules = [];
+  for (var q = 0; q < 3; q++) {
+    var chaine = [];
+    for (var s = 0; s < 7; s++) {
+      var seg = new T.Mesh(new T.CylinderGeometry(0.62 - s * 0.06, 0.52 - s * 0.06, 1, 6), sombre);
+      g.add(seg); chaine.push(seg);
+    }
+    g._tentacules.push(chaine);
+  }
+
+  // rayon ardent : bras, lentille, faisceau
+  var bras = new T.Mesh(new T.CylinderGeometry(0.8, 0.6, 7, 7), metal);
+  var lentille = new T.Mesh(new T.SphereGeometry(1.5, 10, 8),
+    new T.MeshBasicMaterial({ color: 0xffe08a }));
+  g.add(bras, lentille);
+  g._bras = bras; g._lentille = lentille;
+
+  var faisceau = new T.Mesh(new T.CylinderGeometry(0.42, 1.15, 1, 8, 1, true),
+    new T.MeshBasicMaterial({ color: 0xffd36b, transparent: true, opacity: 0.62,
+      blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+  faisceau.visible = false;
+  g.add(faisceau);
+  g._faisceau = faisceau;
+
+  var impact = new T.Mesh(new T.SphereGeometry(3.2, 10, 8),
+    new T.MeshBasicMaterial({ color: 0xffca5e, transparent: true, opacity: 0.8,
+      blending: T.AdditiveBlending, depthWrite: false }));
+  impact.visible = false;
+  g.add(impact);
+  g._impact = impact;
+
+  g._demarche = L.creerDemarche();
+  return g;
+};
+
+/* Place une pièce cylindrique entre deux points (le cylindre est en Y). */
+VUE.tendre = function (T, mesh, ax, ay, az, bx, by, bz, epaisseur) {
+  var dx = bx - ax, dy = by - ay, dz = bz - az;
+  var l = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.001;
+  mesh.position.set((ax + bx) / 2, (ay + by) / 2, (az + bz) / 2);
+  mesh.scale.set(epaisseur || 1, l, epaisseur || 1);
+  var axe = VUE._v1 || (VUE._v1 = new T.Vector3());
+  axe.set(dx / l, dy / l, dz / l);
+  var haut = VUE._v2 || (VUE._v2 = new T.Vector3(0, 1, 0));
+  haut.set(0, 1, 0);
+  mesh.quaternion.setFromUnitVectors(haut, axe);
+};
+
+VUE.majTripode = function (T, L, g, M, Tr, dt) {
+  var solY = L.hauteur(Tr.x, Tr.z);
+  var rayonPied = 17;
+  L.majDemarche(g._demarche, Tr.x, Tr.z, Tr.cap, Tr.vx, Tr.vz, dt, rayonPied, L.hauteur);
+
+  // le corps flotte au-dessus de la moyenne des pieds
+  var moy = 0;
+  g._demarche.pieds.forEach(function (p) { moy += p.y; });
+  moy /= 3;
+  var hauteurCorps = moy + (Tr.effondre ? 13 : 26) + Math.sin(M.t * 2.4) * 0.5;
+  g.position.set(Tr.x, hauteurCorps - 30, Tr.z);
+  g.rotation.y = Tr.cap;
+  g.rotation.z = Tr.effondre ? 0.26 : 0;
+  g.updateMatrixWorld(true);        // sans quoi worldToLocal travaille sur une matrice périmée
+
+  var cosC = Math.cos(Tr.cap), sinC = Math.sin(Tr.cap);
+  for (var i = 0; i < 3; i++) {
+    var J = g._jambes[i], p = g._demarche.pieds[i];
+    var a = i * (Math.PI * 2 / 3) + Math.PI / 6;
+    // hanche en coordonnées locales du groupe (le groupe tourne déjà de cap)
+    var hlx = Math.sin(a) * 7.5, hlz = Math.cos(a) * 7.5, hly = 30;
+    // monde
+    var hwx = Tr.x + (hlx * cosC + hlz * sinC), hwz = Tr.z + (-hlx * sinC + hlz * cosC);
+    var hwy = g.position.y + hly;
+    var gen = L.genou(hwx, hwy, hwz, p.x, p.y, p.z, 18, 22,
+      hwx - Tr.x, 3, hwz - Tr.z);
+    // en local
+    var lh = VUE.versLocal(g, hwx, hwy, hwz), lg = VUE.versLocal(g, gen.x, gen.y, gen.z),
+        lp = VUE.versLocal(g, p.x, p.y, p.z);
+    J.hanche.position.set(lh.x, lh.y, lh.z);
+    VUE.tendre(T, J.cuisse, lh.x, lh.y, lh.z, lg.x, lg.y, lg.z, 1);
+    VUE.tendre(T, J.tibia, lg.x, lg.y, lg.z, lp.x, lp.y, lp.z, 1);
+    J.pied.position.set(lp.x, lp.y + 0.6, lp.z);
+  }
+
+  // tentacules : ils pendent et ondulent, l'un happe la proie
+  for (var q = 0; q < 3; q++) {
+    var chaine = g._tentacules[q];
+    var base = { x: Math.sin(q * 2.1) * 5.5, y: 29.5, z: Math.cos(q * 2.1) * 5.5 };
+    var bout;
+    if (Tr.proie && q === 0) {
+      var lp2 = VUE.versLocal(g, Tr.proie.x, L.hauteur(Tr.proie.x, Tr.proie.z) + 2, Tr.proie.z);
+      var av = 1 - Math.max(0, Tr.proie.t) / 1.6;
+      bout = { x: lp2.x * (1 - av * 0.85), y: lp2.y + av * 22, z: lp2.z * (1 - av * 0.85) };
+    } else {
+      bout = { x: base.x * 2.1 + Math.sin(M.t * 1.7 + q) * 2.4, y: 17 + Math.sin(M.t * 2.1 + q) * 1.6,
+               z: base.z * 2.1 + Math.cos(M.t * 1.4 + q) * 2.4 };
+    }
+    for (var s = 0; s < chaine.length; s++) {
+      var u0 = s / chaine.length, u1 = (s + 1) / chaine.length;
+      var p0 = VUE.courbe(base, bout, u0, M.t + q), p1 = VUE.courbe(base, bout, u1, M.t + q);
+      VUE.tendre(T, chaine[s], p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, 1);
+    }
+  }
+
+  // bras du rayon ardent
+  var viseL = VUE.versLocal(g, Tr.viseX, L.hauteur(Tr.viseX, Tr.viseZ) + 1, Tr.viseZ);
+  var dir = Math.atan2(viseL.x, viseL.z);
+  var epaule = { x: Math.sin(dir) * 4.5, y: 28, z: Math.cos(dir) * 4.5 };
+  var canon = { x: Math.sin(dir) * 11, y: 26.5, z: Math.cos(dir) * 11 };
+  VUE.tendre(T, g._bras, epaule.x, epaule.y, epaule.z, canon.x, canon.y, canon.z, 1);
+  g._lentille.position.set(canon.x, canon.y, canon.z);
+
+  if (Tr.tire && Tr.impactX !== undefined) {
+    var imp = VUE.versLocal(g, Tr.impactX, L.hauteur(Tr.impactX, Tr.impactZ) + 0.8, Tr.impactZ);
+    g._faisceau.visible = true;
+    VUE.tendre(T, g._faisceau, canon.x, canon.y, canon.z, imp.x, imp.y, imp.z, 1);
+    g._faisceau.material.opacity = 0.45 + Math.random() * 0.35;
+    g._impact.visible = true;
+    g._impact.position.set(imp.x, imp.y, imp.z);
+    g._impact.scale.setScalar(0.8 + Math.random() * 0.5);
+    g._lentille.material.color.setHex(0xfff2b0);
+  } else {
+    g._faisceau.visible = false; g._impact.visible = false;
+    g._lentille.material.color.setHex(0xffe08a);
+  }
+  g._oeil.material.color.setHSL(0.18 - Tr.chaleur * 0.15, 0.85, 0.55);
+};
+VUE.majCage = function (T, g, U) {
+  for (var i = 0; i < g._captifs.length; i++) {
+    var v = i < U.cargo;
+    g._captifs[i].visible = v;
+    if (v) g._captifs[i].rotation.z = Math.sin(Date.now() * 0.004 + i) * 0.22;
+  }
+  for (var h = 0; h < g._hublots.length; h++) {
+    g._hublots[h].material.color.setHSL(0.28 - U.chaleur * 0.26, 0.9, 0.5 + U.chaleur * 0.15);
+  }
+};
+
+/* Carcasse laissée sur place quand une machine tombe. */
+VUE.ruine = function (T, L, scene, U) {
+  var g = new T.Group();
+  var metal = new T.MeshPhongMaterial({ color: 0x4a4c42, specular: 0x55503c, shininess: 10,
+    flatShading: true, map: VUE.texMetal(T) });
+  var capot = new T.Mesh(new T.SphereGeometry(8.6, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), metal);
+  capot.rotation.set(1.9, 0.6, 0.3);
+  capot.position.y = 5;
+  g.add(capot);
+  for (var i = 0; i < 3; i++) {
+    var patte = new T.Mesh(new T.CylinderGeometry(1, 0.6, 20, 6), metal);
+    var a = i * 2.3 + 0.7;
+    patte.position.set(Math.sin(a) * 9, 1.6, Math.cos(a) * 9);
+    patte.rotation.set(Math.PI / 2 - 0.25 + i * 0.2, a, 0.4);
+    g.add(patte);
+  }
+  g.position.set(U.x, L.hauteur(U.x, U.z), U.z);
+  g.rotation.y = U.cap;
+  scene.add(g);
+  return g;
+};
+
+VUE.courbe = function (a, b, u, t) {
+  // une corde molle entre deux points, avec un peu de vie
+  var x = a.x + (b.x - a.x) * u;
+  var z = a.z + (b.z - a.z) * u;
+  var y = a.y + (b.y - a.y) * u - Math.sin(u * Math.PI) * 6.5 + Math.sin(t * 2 + u * 5) * 0.7 * u;
+  return { x: x, y: y, z: z };
+};
+VUE.versLocal = function (g, x, y, z) {
+  var v = VUE._v3 || (VUE._v3 = new THREE.Vector3());
+  v.set(x, y, z);
+  g.worldToLocal(v);
+  return { x: v.x, y: v.y, z: v.z };
+};
+
+/* -------------------------------------------------- NOS AUTRES MACHINES */
+VUE.drone = function (T) {
+  var g = new T.Group();
+  var metal = new T.MeshPhongMaterial({ color: 0xc6c2a4, specular: 0x9a9278, shininess: 34,
+    flatShading: true, map: VUE.texMetal(T) });
+  var corps = new T.Mesh(new T.SphereGeometry(1.7, 10, 7), metal);
+  corps.scale.set(1.5, 0.85, 1.2); corps.position.y = 3.4;
+  var oeil = new T.Mesh(new T.SphereGeometry(0.5, 8, 6), new T.MeshBasicMaterial({ color: 0x9ff06a }));
+  oeil.position.set(0, 3.6, 1.9);
+  g.add(corps, oeil);
+  g._pattes = [];
+  for (var i = 0; i < 3; i++) {
+    var p = new T.Mesh(new T.CylinderGeometry(0.2, 0.12, 1, 5), metal);
+    g.add(p); g._pattes.push(p);
+  }
+  return g;
+};
+VUE.majDrone = function (T, L, g, d, t) {
+  var y = L.hauteur(d.x, d.z);
+  g.position.set(d.x, y + Math.sin(t * 5 + d.bob) * 0.35, d.z);
+  g.rotation.y = d.cap;
+  for (var i = 0; i < 3; i++) {
+    var a = i * (Math.PI * 2 / 3) + Math.PI / 6 + Math.sin(t * 6 + i) * 0.15;
+    var px = Math.sin(a) * 3.2, pz = Math.cos(a) * 3.2;
+    VUE.tendre(T, g._pattes[i], Math.sin(a) * 1.1, 3.2, Math.cos(a) * 1.1, px, 0.2, pz, 1);
+  }
+};
+
+VUE.cuve = function (T, L, c) {
+  var g = new T.Group();
+  var chair = new T.MeshPhongMaterial({ color: 0x7a1f18, specular: 0xc06a4a, shininess: 40, flatShading: true });
+  var poche = new T.Mesh(new T.SphereGeometry(6.5, 12, 9), chair);
+  poche.scale.set(1, 0.78, 1); poche.position.y = 4.6;
+  var col = new T.Mesh(new T.CylinderGeometry(2.2, 4.4, 4, 9), chair);
+  col.position.y = 1.8;
+  var bouche = new T.Mesh(new T.TorusGeometry(2.4, 0.7, 6, 12),
+    new T.MeshPhongMaterial({ color: 0x3a0f0c, flatShading: true }));
+  bouche.rotation.x = Math.PI / 2; bouche.position.y = 9.2;
+  var lueur = new T.Mesh(new T.SphereGeometry(2.6, 10, 8),
+    new T.MeshBasicMaterial({ color: 0xd4502c, transparent: true, opacity: 0.45,
+      blending: T.AdditiveBlending, depthWrite: false }));
+  lueur.position.y = 6;
+  g.add(col, poche, bouche, lueur);
+  g.position.set(c.x, L.hauteur(c.x, c.z), c.z);
+  g._lueur = lueur;
+  return g;
+};
+
+VUE.bunker = function (T, L, b) {
+  var g = new T.Group();
+  var beton = new T.MeshPhongMaterial({ color: 0xdcd6c6, specular: 0x222222, shininess: 4,
+    flatShading: true, map: VUE.texBeton(T) });
+  var bloc = new T.Mesh(new T.BoxGeometry(13, 5.5, 10), beton);
+  bloc.position.y = 2.6;
+  var toit = new T.Mesh(new T.BoxGeometry(14.5, 1.4, 11.5), beton);
+  toit.position.y = 5.8;
+  var fente = new T.Mesh(new T.BoxGeometry(9, 1, 0.8),
+    new T.MeshBasicMaterial({ color: 0x100e0c }));
+  fente.position.set(0, 3.6, 5.1);
+  g.add(bloc, toit, fente);
+  g.position.set(b.x, L.hauteur(b.x, b.z), b.z);
+  return g;
+};
+
+VUE.navire = function (T) {
+  var g = new T.Group();
+  var coque = new T.MeshPhongMaterial({ color: 0x9aa6b4, specular: 0xa8b6c4, shininess: 50,
+    flatShading: true, map: VUE.texMetal(T) });
+  var pont = new T.MeshPhongMaterial({ color: 0x4a4238, flatShading: true });
+  var corps = new T.Mesh(new T.BoxGeometry(9, 5, 34), coque);
+  corps.position.y = 2.2;
+  var proue = new T.Mesh(new T.ConeGeometry(4.5, 10, 4), coque);
+  proue.rotation.x = -Math.PI / 2; proue.rotation.y = Math.PI / 4;
+  proue.position.set(0, 2.2, 21);
+  var superstructure = new T.Mesh(new T.BoxGeometry(6.5, 4.5, 11), pont);
+  superstructure.position.set(0, 6.6, -2);
+  var chem1 = new T.Mesh(new T.CylinderGeometry(1.5, 1.7, 7, 8), pont);
+  chem1.position.set(0, 11, -1);
+  var chem2 = chem1.clone(); chem2.position.z = -7;
+  var tourelle = new T.Mesh(new T.CylinderGeometry(2.6, 3, 2.4, 8), coque);
+  tourelle.position.set(0, 5.6, 10);
+  var tube = new T.Mesh(new T.CylinderGeometry(0.55, 0.6, 9, 7), coque);
+  tube.rotation.x = Math.PI / 2 - 0.1; tube.position.set(0, 6.4, 14);
+  var flash = new T.Mesh(new T.SphereGeometry(2.2, 8, 6),
+    new T.MeshBasicMaterial({ color: 0xffd48a, transparent: true, opacity: 0.9,
+      blending: T.AdditiveBlending, depthWrite: false }));
+  flash.position.set(0, 6.6, 19); flash.visible = false;
+  g.add(corps, proue, superstructure, chem1, chem2, tourelle, tube, flash);
+  g._flash = flash; g._cheminees = [chem1, chem2];
+  return g;
+};
+
+/* ----------------------------------------------------- HUMAINS ET CANONS */
+VUE.humains = function (T, L, capacite) {
+  var g = new T.CylinderGeometry(0.42, 0.62, 2.6, 5);
+  var m = new T.MeshPhongMaterial({ flatShading: true, shininess: 0, specular: 0x0a0a0a });
+  var im = new T.InstancedMesh(g, m, capacite);
+  im.instanceColor = new T.InstancedBufferAttribute(new Float32Array(capacite * 3).fill(1), 3);
+  im.count = 0;
+  im.frustumCulled = false;
+  return im;
+};
+VUE.majHumains = function (T, L, im, M) {
+  var d = VUE._o || (VUE._o = new T.Object3D()), c = VUE._c || (VUE._c = new T.Color());
+  var place = 0, max = im.instanceMatrix.count;
+  for (var i = 0; i < M.humains.length && place < max; i++) {
+    var h = M.humains[i];
+    if (h.mort) continue;
+    if (!L.vuEn(M, h.x, h.z)) continue;        // brouillard de guerre
+    var y = L.hauteur(h.x, h.z);
+    var pasA = Math.sin(M.t * 9 + i) * (h.etat === 'vaque' ? 0.25 : 0.6);
+    d.position.set(h.x, y + 1.35, h.z);
+    d.rotation.set(h.etat === 'fuit' ? 0.22 : 0.05, h.cap, pasA * 0.14);
+    d.scale.set(1, 1 + Math.abs(pasA) * 0.06, 1);
+    d.updateMatrix();
+    im.setMatrixAt(place, d.matrix);
+    if (h.type === 'soldat') c.setHSL(0.60, 0.28, 0.30 + (i % 3) * 0.02);
+    else c.setHSL(0.09, 0.30, 0.44 + (i % 5) * 0.04);
+    im.setColorAt(place, c);
+    place++;
+  }
+  im.count = place;
+  im.instanceMatrix.needsUpdate = true;
+  if (im.instanceColor) im.instanceColor.needsUpdate = true;
+};
+
+VUE.canon = function (T) {
+  var g = new T.Group();
+  var m = new T.MeshPhongMaterial({ color: 0x4a4f45, flatShading: true, shininess: 0, specular: 0x0a0a0a });
+  var socle = new T.Mesh(new T.BoxGeometry(3.4, 1.1, 4.6), m);
+  socle.position.y = 0.9;
+  var tube = new T.Mesh(new T.CylinderGeometry(0.42, 0.5, 6.4, 7), m);
+  tube.rotation.x = Math.PI / 2 - 0.16; tube.position.set(0, 2.1, 2.4);
+  var roueG = new T.Mesh(new T.CylinderGeometry(1.5, 1.5, 0.35, 10), m);
+  roueG.rotation.z = Math.PI / 2; roueG.position.set(-1.9, 1.4, 0);
+  var roueD = roueG.clone(); roueD.position.x = 1.9;
+  g.add(socle, tube, roueG, roueD);
+  var flash = new T.Mesh(new T.SphereGeometry(1.5, 8, 6),
+    new T.MeshBasicMaterial({ color: 0xffd48a, transparent: true, opacity: 0.9,
+      blending: T.AdditiveBlending, depthWrite: false }));
+  flash.position.set(0, 2.2, 5.6); flash.visible = false;
+  g.add(flash); g._flash = flash;
+  return g;
+};
+
+/* ------------------------------------------------------------- EFFETS */
+VUE.effets = function (T) {
+  var g = new T.Group();
+  var flammes = new T.InstancedMesh(new T.PlaneGeometry(1, 1),
+    new T.MeshBasicMaterial({ color: 0xff9a3c, transparent: true, opacity: 0.8,
+      blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }), 260);
+  flammes.count = 0; flammes.frustumCulled = false;
+  var fumees = new T.InstancedMesh(new T.PlaneGeometry(1, 1),
+    new T.MeshBasicMaterial({ color: 0x1b1a18, transparent: true, opacity: 0.5,
+      depthWrite: false, side: T.DoubleSide }), 340);
+  fumees.count = 0; fumees.frustumCulled = false;
+  g.add(flammes, fumees);
+  g._flammes = flammes; g._fumees = fumees;
+  g._particules = [];
+  return g;
+};
+VUE.ajouterParticule = function (g, type, x, y, z, vy, vie, taille) {
+  if (g._particules.length > 560) return;
+  g._particules.push({ type: type, x: x, y: y, z: z, vy: vy, t: 0, vie: vie, taille: taille,
+    dx: (Math.random() - 0.5) * 2, dz: (Math.random() - 0.5) * 2, rot: Math.random() * 3 });
+};
+VUE.majEffets = function (T, L, g, M, dt, camera) {
+  var i, p;
+  // naissance : incendies, fumée noire, impacts
+  for (i = 0; i < M.batiments.length; i++) {
+    var b = M.batiments[i];
+    if (b.feu > 0 && !b.detruit && Math.random() < dt * 9) {
+      VUE.ajouterParticule(g, 'flamme', b.x + (Math.random() - 0.5) * b.l, L.hauteur(b.x, b.z) + b.h * 0.7,
+        b.z + (Math.random() - 0.5) * b.p, 5 + Math.random() * 5, 1.1, 3 + Math.random() * 3);
+      if (Math.random() < 0.5) VUE.ajouterParticule(g, 'fumee', b.x + (Math.random() - 0.5) * b.l,
+        L.hauteur(b.x, b.z) + b.h, b.z + (Math.random() - 0.5) * b.p, 7 + Math.random() * 6, 3.4, 5 + Math.random() * 6);
+    }
+    if (b.detruit && b._mesh && b._mesh.visible) b._mesh.visible = false;
+  }
+  for (i = 0; i < M.fumees.length; i++) {
+    var f = M.fumees[i];
+    if (Math.random() < dt * 28) {
+      var a = Math.random() * Math.PI * 2, r = Math.random() * f.r;
+      VUE.ajouterParticule(g, 'fumee', f.x + Math.cos(a) * r, L.hauteur(f.x, f.z) + 1 + Math.random() * 4,
+        f.z + Math.sin(a) * r, 0.4, 3.2, 9 + Math.random() * 7);
+    }
+  }
+
+  // avancement
+  var dF = VUE._o || (VUE._o = new T.Object3D());
+  var nf = 0, nfu = 0;
+  var flammes = g._flammes, fumees = g._fumees;
+  for (i = g._particules.length - 1; i >= 0; i--) {
+    p = g._particules[i];
+    p.t += dt;
+    if (p.t >= p.vie) { g._particules.splice(i, 1); continue; }
+    var u = p.t / p.vie;
+    p.y += p.vy * dt; p.x += p.dx * dt; p.z += p.dz * dt;
+    var taille = p.taille * (p.type === 'fumee' ? (0.6 + u * 1.7) : (1 - u * 0.55));
+    dF.position.set(p.x, p.y, p.z);
+    dF.scale.set(taille, taille, taille);
+    dF.quaternion.copy(camera.quaternion);
+    dF.updateMatrix();
+    if (p.type === 'flamme') { if (nf < flammes.instanceMatrix.count) flammes.setMatrixAt(nf++, dF.matrix); }
+    else { if (nfu < fumees.instanceMatrix.count) fumees.setMatrixAt(nfu++, dF.matrix); }
+  }
+  flammes.count = nf; fumees.count = nfu;
+  flammes.instanceMatrix.needsUpdate = true; fumees.instanceMatrix.needsUpdate = true;
+};
+
+</script>
+<script>
+'use strict';
+/* ===========================================================================
+   L'HERBE ROUGE — boucle, commandes, affichage de bord
+   =========================================================================== */
+var JEU = {
+  camYaw: 0.6, camPitch: 0.86, camDist: 110, camCible: null,
+  souris: { x: 0, z: 0 }, touches: {}, tireSouris: false,
+  horlogeHerbe: 0, horlogeTouffes: 0, horlogeAth: 0, horlogeCarte: 0,
+  messages: [], son: false, joystick: { actif: false, x: 0, y: 0 }
+};
+
+function $(s) { return document.querySelector(s); }
+
+JEU.demarrer = function (graine) {
+  var T = THREE, L = LOGIQUE;
+  JEU.M = L.creerMonde(graine || (Date.now() % 100000));
+  var M = JEU.M;
+
+  var renderer = JEU.renderer;
+  if (!renderer) {
+    renderer = JEU.renderer = new T.WebGLRenderer({ antialias: true, canvas: $('#scene') });
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.outputEncoding = T.sRGBEncoding;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = T.PCFSoftShadowMap;
+  }
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+
+  var scene = JEU.scene = new T.Scene();
+  scene.add(VUE.dome(T, L));
+  scene.fog = new T.FogExp2(0x9a7f56, 0.0031);
+
+  var camera = JEU.camera = new T.PerspectiveCamera(46, window.innerWidth / window.innerHeight, 1, 1600);
+  JEU.camCible = new T.Vector3(M.tripode.x, 0, M.tripode.z);
+
+  scene.add(new T.HemisphereLight(0xe0c89a, 0x3a3f2e, 0.92));
+  var soleil = JEU.soleil = new T.DirectionalLight(0xffe2b4, 0.95);
+  soleil.position.set(-90, 120, 60);
+  soleil.castShadow = true;
+  soleil.shadow.mapSize.width = soleil.shadow.mapSize.height = 1024;
+  soleil.shadow.camera.near = 20; soleil.shadow.camera.far = 420;
+  soleil.shadow.camera.left = -150; soleil.shadow.camera.right = 150;
+  soleil.shadow.camera.top = 150; soleil.shadow.camera.bottom = -150;
+  soleil.shadow.bias = -0.0016;
+  scene.add(soleil);
+  scene.add(soleil.target);
+  // une lumière d'appoint froide, pour décoller les silhouettes du fond
+  var appoint = new T.DirectionalLight(0x8fa6bd, 0.22);
+  appoint.position.set(110, 60, -90);
+  scene.add(appoint);
+
+  scene.add(VUE.horizon(T, L));
+  scene.add(VUE.ponts(T, L));
+  scene.add(VUE.terrain(T, L));
+  JEU.riviere = VUE.riviere(T, L); scene.add(JEU.riviere);
+  JEU.bourgs = VUE.bourgs(T, L, M); scene.add(JEU.bourgs);
+  scene.add(VUE.arbres(T, L, M));
+  scene.add(VUE.haies(T, L, M));
+  scene.add(VUE.cultures(T, L, M));
+  JEU.herbe = VUE.herbe(T, L); scene.add(JEU.herbe);
+  JEU.meshTripodes = [];
+  JEU.cylindre = VUE.cylindre(T, L, M); scene.add(JEU.cylindre);
+  JEU.humains = VUE.humains(T, L, 460); scene.add(JEU.humains);
+  JEU.brouillard = VUE.brouillard(T, L); scene.add(JEU.brouillard);
+  JEU.effets = VUE.effets(T); scene.add(JEU.effets);
+  JEU.meshCanons = []; JEU.meshDrones = []; JEU.meshCuves = []; JEU.meshBunkers = [];
+  JEU.meshNavire = null;
+
+  L.majVision(M);
+  VUE.majHerbe(T, L, JEU.herbe, M);
+  VUE.majTouffes(T, L, JEU.herbe, M);
+  VUE.majBrouillard(T, L, JEU.brouillard, M);
+  VUE.majBourgs(T, L, JEU.bourgs, M);
+
+  JEU.plan = new T.Plane(new T.Vector3(0, 1, 0), 0);
+  JEU.ray = new T.Raycaster();
+  JEU.messages = [];
+  JEU.finAffichee = false;
+  $('#fin').hidden = true;
+  JEU.dire('La vallée dort encore. Le capot s’ouvre.');
+  JEU.dernier = 0;
+  if (!JEU.tourne) { JEU.tourne = true; requestAnimationFrame(JEU.tour); }
+};
+
+/* ------------------------------------------------------------- COMMANDES */
+JEU.brancher = function () {
+  var c = $('#scene');
+  c.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  c.addEventListener('pointerdown', function (e) {
+    JEU.reveillerSon();
+    var p = JEU.pointSol(e);
+    if (!p) return;
+    if (e.button === 2) { JEU.tireSouris = true; }
+    else if (JEU.touches['KeyF']) { LOGIQUE.lacherFumee(JEU.M, p.x, p.z); }
+    else { LOGIQUE.ordonnerDeplacement(JEU.M, p.x, p.z); JEU.marqueur(p); }
+  });
+  window.addEventListener('pointerup', function (e) { if (e.button === 2) JEU.tireSouris = false; });
+  c.addEventListener('pointermove', function (e) {
+    var p = JEU.pointSol(e);
+    if (p) { JEU.souris.x = p.x; JEU.souris.z = p.z; }
+  });
+  window.addEventListener('keydown', function (e) {
+    JEU.touches[e.code] = true;
+    if (e.code === 'Space') e.preventDefault();
+    if (e.code === 'KeyE') LOGIQUE.cracherSpores(JEU.M);
+    if (e.code === 'KeyC') {
+      if (!LOGIQUE.poserCuve(JEU.M)) JEU.dire('Il faut 45 de sang et de l’herbe dense sous les pieds.');
+    }
+    if (e.code === 'KeyG') {
+      if (!LOGIQUE.envoyerDrone(JEU.M, JEU.souris.x, JEU.souris.z)) JEU.dire('Aucune araignée disponible.');
+    }
+    if (e.code === 'KeyP' || e.code === 'Escape') JEU.pause = !JEU.pause;
+    if (e.code === 'Tab') { e.preventDefault(); JEU.changerMachine(); }
+    if (e.code === 'KeyN') {
+      if (!LOGIQUE.eclore(JEU.M)) JEU.dire('Il faut ' + LOGIQUE.REGLES.coutTripode + ' sérums — donc autant de vivants livrés.');
+    }
+    if (e.code === 'KeyH') JEU.changerOrdre();
+    if (e.code === 'KeyF') LOGIQUE.lacherFumee(JEU.M, JEU.souris.x, JEU.souris.z);
+    JEU.reveillerSon();
+  });
+  window.addEventListener('keyup', function (e) { JEU.touches[e.code] = false; });
+  window.addEventListener('wheel', function (e) {
+    JEU.camDist = LOGIQUE.borne(JEU.camDist + e.deltaY * 0.12, 55, 300);
+  }, { passive: true });
+  window.addEventListener('resize', function () {
+    JEU.renderer.setSize(window.innerWidth, window.innerHeight, false);
+    JEU.camera.aspect = window.innerWidth / window.innerHeight;
+    JEU.camera.updateProjectionMatrix();
+  });
+
+  // manette tactile
+  var socle = $('#joystick'), pouce = $('#pouce');
+  function majPouce(e) {
+    var r = socle.getBoundingClientRect();
+    var dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    var l = Math.min(1, Math.hypot(dx, dy) / (r.width / 2));
+    var a = Math.atan2(dy, dx);
+    JEU.joystick.x = Math.cos(a) * l; JEU.joystick.y = Math.sin(a) * l;
+    pouce.style.transform = 'translate(' + (Math.cos(a) * l * r.width / 2.6) + 'px,' +
+      (Math.sin(a) * l * r.width / 2.6) + 'px)';
+  }
+  socle.addEventListener('pointerdown', function (e) {
+    JEU.joystick.actif = true; socle.setPointerCapture(e.pointerId); majPouce(e); JEU.reveillerSon();
+  });
+  socle.addEventListener('pointermove', function (e) { if (JEU.joystick.actif) majPouce(e); });
+  socle.addEventListener('pointerup', function () {
+    JEU.joystick.actif = false; JEU.joystick.x = JEU.joystick.y = 0; pouce.style.transform = '';
+  });
+  $('#b-rayon').addEventListener('pointerdown', function () { JEU.tireSouris = true; JEU.reveillerSon(); });
+  $('#b-rayon').addEventListener('pointerup', function () { JEU.tireSouris = false; });
+  $('#b-spores').addEventListener('click', function () { LOGIQUE.cracherSpores(JEU.M); });
+  $('#b-fumee').addEventListener('click', function () {
+    var T = JEU.M.tripode;
+    LOGIQUE.lacherFumee(JEU.M, T.x + Math.sin(T.cap) * 30, T.z + Math.cos(T.cap) * 30);
+  });
+  $('#b-cuve').addEventListener('click', function () {
+    if (!LOGIQUE.poserCuve(JEU.M)) JEU.dire('Il faut 45 de sang et de l’herbe dense sous les pieds.');
+  });
+  $('#b-drone').addEventListener('click', function () {
+    var T = JEU.M.tripode;
+    LOGIQUE.envoyerDrone(JEU.M, T.x + Math.sin(T.cap) * 70, T.z + Math.cos(T.cap) * 70);
+  });
+  $('#b-machine').addEventListener('click', function () {
+    if (!LOGIQUE.eclore(JEU.M)) JEU.dire('Il faut ' + LOGIQUE.REGLES.coutTripode + ' sérums — donc autant de vivants livrés.');
+  });
+  $('#b-bascule').addEventListener('click', JEU.changerMachine);
+  $('#b-son').addEventListener('click', JEU.basculerSon);
+  $('#b-rejouer').addEventListener('click', function () { JEU.demarrer(); });
+  $('#b-commencer').addEventListener('click', function () {
+    $('#accueil').hidden = true; JEU.reveillerSon(); JEU.demarrer();
+  });
+};
+
+JEU.changerMachine = function () {
+  var M = JEU.M, debout = M.tripodes.filter(function (t) { return !t.abattu; });
+  if (debout.length < 2) { JEU.dire('Vous n’avez qu’une machine debout.'); return; }
+  var i = debout.indexOf(M.tripode);
+  M.tripode = debout[(i + 1) % debout.length];
+  JEU.camCible.set(M.tripode.x, 0, M.tripode.z);
+  JEU.dire('Vous passez aux commandes d’une autre machine.');
+};
+JEU.changerOrdre = function () {
+  var M = JEU.M, ordres = ['moisson', 'suivre', 'tenir'];
+  var libres = M.tripodes.filter(function (t) { return !t.abattu && t !== M.tripode; });
+  if (!libres.length) { JEU.dire('Aucune autre machine à commander.'); return; }
+  var suivant = ordres[(ordres.indexOf(libres[0].mode) + 1) % 3];
+  libres.forEach(function (t) { t.mode = suivant; });
+  JEU.dire('Ordre permanent aux autres machines : ' + suivant + '.');
+};
+
+JEU.pointSol = function (e) {
+  var T = THREE;
+  var r = JEU.renderer.domElement.getBoundingClientRect();
+  var v = new T.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  JEU.ray.setFromCamera(v, JEU.camera);
+  JEU.plan.constant = -LOGIQUE.hauteur(JEU.M.tripode.x, JEU.M.tripode.z);
+  var p = new T.Vector3();
+  if (!JEU.ray.ray.intersectPlane(JEU.plan, p)) return null;
+  return { x: LOGIQUE.borne(p.x, -155, 155), z: LOGIQUE.borne(p.z, -155, 155) };
+};
+JEU.marqueur = function (p) {
+  VUE.ajouterParticule(JEU.effets, 'flamme', p.x, LOGIQUE.hauteur(p.x, p.z) + 1, p.z, 1, 0.5, 2.2);
+};
+
+/* ------------------------------------------------------------------ TOUR */
+JEU.tour = function (t) {
+  requestAnimationFrame(JEU.tour);
+  var T = THREE, L = LOGIQUE, M = JEU.M;
+  if (!M) return;
+  if (!JEU.dernier) JEU.dernier = t;
+  var dt = Math.min(0.05, (t - JEU.dernier) / 1000);
+  JEU.dernier = t;
+
+  /* --- commandes --- */
+  var cmd = {};
+  var av = 0, la = 0;
+  if (JEU.touches['KeyW'] || JEU.touches['KeyZ'] || JEU.touches['ArrowUp']) av += 1;
+  if (JEU.touches['KeyS'] || JEU.touches['ArrowDown']) av -= 1;
+  if (JEU.touches['KeyA'] || JEU.touches['KeyQ']) la -= 1;
+  if (JEU.touches['KeyD']) la += 1;
+  if (JEU.joystick.x || JEU.joystick.y) { la = JEU.joystick.x; av = -JEU.joystick.y; }
+  if (av || la) {
+    // dans le repère de la caméra
+    var s = Math.sin(JEU.camYaw), c2 = Math.cos(JEU.camYaw);
+    cmd.dirX = la * c2 + av * s;
+    cmd.dirZ = -la * s + av * c2;
+  }
+  if (JEU.touches['ArrowLeft']) JEU.camYaw += 1.6 * dt;
+  if (JEU.touches['ArrowRight']) JEU.camYaw -= 1.6 * dt;
+
+  var tire = JEU.tireSouris || !!JEU.touches['Space'];
+  M.tripode.tire = tire && !M.fini;
+  if (JEU.joystick.actif || JEU.tactile) {
+    // au doigt, on vise ce qui est devant
+    var T2 = M.tripode, meilleur = null, md = 1e9;
+    for (var i = 0; i < M.humains.length; i++) {
+      var h = M.humains[i];
+      if (h.mort) continue;
+      var d = L.dist(T2.x, T2.z, h.x, h.z);
+      if (d < md && d < L.REGLES.rayonPortee) { md = d; meilleur = h; }
+    }
+    if (meilleur) L.viser(M, meilleur.x, meilleur.z);
+    else L.viser(M, T2.x + Math.sin(T2.cap) * 45, T2.z + Math.cos(T2.cap) * 45);
+  } else L.viser(M, JEU.souris.x, JEU.souris.z);
+
+  /* --- logique --- */
+  var avantPv = M.tripode.pv, avantTues = M.tues, avantEv = M.evenements.length;
+  if (!M.fini && !JEU.pause) L.pas(M, dt, cmd);
+  if (M.evenements.length > avantEv) {
+    for (var k = avantEv; k < M.evenements.length; k++) JEU.dire(M.evenements[k].txt);
+  }
+  if (M.tripode.pv < avantPv - 1) { JEU.secousse = 0.5; JEU.bruit('obus'); }
+  if (M.tues > avantTues) JEU.bruit('happe');
+
+  /* --- affichage --- */
+  JEU.majTripodes(dt);
+  VUE.majHumains(T, L, JEU.humains, M);
+  JEU.majCanons();
+  JEU.majMachines(dt);
+  VUE.majEffets(T, L, JEU.effets, M, dt, JEU.camera);
+
+  JEU.horlogeHerbe += dt;
+  if (JEU.horlogeHerbe > 0.25) {
+    VUE.majHerbe(T, L, JEU.herbe, M);
+    VUE.majBrouillard(T, L, JEU.brouillard, M);
+    VUE.majBourgs(T, L, JEU.bourgs, M);
+    JEU.horlogeHerbe = 0;
+  }
+  JEU.horlogeTouffes += dt;
+  if (JEU.horlogeTouffes > 1.4) { VUE.majTouffes(T, L, JEU.herbe, M); JEU.horlogeTouffes = 0; }
+
+  if (JEU.scene.children[0] && JEU.scene.children[0].renderOrder === -1) {
+    JEU.scene.children[0].position.set(JEU.camera.position.x, 0, JEU.camera.position.z);
+  }
+
+  /* --- soleil, ombres et rivière --- */
+  if (JEU.soleil) {
+    JEU.soleil.position.set(M.tripode.x - 90, 120, M.tripode.z + 60);
+    JEU.soleil.target.position.set(M.tripode.x, 0, M.tripode.z);
+    JEU.soleil.target.updateMatrixWorld();
+  }
+  if (JEU.riviere && JEU.riviere._eau) {
+    JEU.riviere._eau.offset.y -= dt * 0.06;
+    JEU.riviere._eau.offset.x = Math.sin(M.t * 0.2) * 0.02;
+  }
+
+  /* --- caméra --- */
+  var cible = JEU.camCible;
+  cible.x += (M.tripode.x - cible.x) * Math.min(1, dt * 4);
+  cible.z += (M.tripode.z - cible.z) * Math.min(1, dt * 4);
+  cible.y = L.hauteur(cible.x, cible.z);
+  var cp = Math.cos(JEU.camPitch), sp = Math.sin(JEU.camPitch);
+  var sec = (JEU.secousse || 0);
+  JEU.camera.position.set(
+    cible.x + Math.sin(JEU.camYaw) * cp * JEU.camDist + (Math.random() - 0.5) * sec * 4,
+    cible.y + sp * JEU.camDist + 6 + (Math.random() - 0.5) * sec * 4,
+    cible.z + Math.cos(JEU.camYaw) * cp * JEU.camDist);
+  JEU.camera.lookAt(cible.x, cible.y + 16, cible.z);
+  JEU.secousse = Math.max(0, sec - dt * 1.6);
+
+  /* --- bord --- */
+  JEU.horlogeAth += dt;
+  if (JEU.horlogeAth > 0.1) { JEU.majAth(); JEU.horlogeAth = 0; }
+  JEU.horlogeCarte += dt;
+  if (JEU.horlogeCarte > 0.3) { JEU.majCarte(); JEU.horlogeCarte = 0; }
+  if (M.fini && !JEU.finAffichee) JEU.afficherFin();
+
+  JEU.renderer.render(JEU.scene, JEU.camera);
+};
+
+JEU.majCanons = function () {
+  var T = THREE, M = JEU.M;
+  for (var i = 0; i < M.canons.length; i++) {
+    var c = M.canons[i], mesh = JEU.meshCanons[i];
+    if (!mesh) { mesh = VUE.canon(T); JEU.meshCanons[i] = mesh; JEU.scene.add(mesh); }
+    if (c.detruit || !LOGIQUE.connuEn(M, c.x, c.z)) { mesh.visible = false; continue; }
+    mesh.visible = true;
+    mesh.position.set(c.x, LOGIQUE.hauteur(c.x, c.z), c.z);
+    mesh.rotation.y = c.cap;
+    mesh._flash.visible = c.tir > 0;
+    if (c.tir > 0.3) {
+      VUE.ajouterParticule(JEU.effets, 'fumee', c.x + Math.sin(c.cap) * 6,
+        LOGIQUE.hauteur(c.x, c.z) + 3, c.z + Math.cos(c.cap) * 6, 3, 1.6, 4);
+      JEU.bruit('canon');
+    }
+  }
+};
+
+JEU.majTripodes = function (dt) {
+  var T = THREE, L = LOGIQUE, M = JEU.M;
+  for (var i = 0; i < M.tripodes.length; i++) {
+    var U = M.tripodes[i], g = JEU.meshTripodes[i];
+    if (!g) {
+      g = VUE.tripode(T, L); JEU.meshTripodes[i] = g; JEU.scene.add(g);
+      g.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
+    }
+    if (U.abattu) {
+      if (g.visible) { g.visible = false; VUE.ruine(T, L, JEU.scene, U); }
+      continue;
+    }
+    VUE.majTripode(T, L, g, M, U, dt);
+    VUE.majCage(T, g, U);
+    g._marque.visible = (U !== M.tripode);
+  }
+  JEU.tripode = JEU.meshTripodes[M.tripodes.indexOf(M.tripode)] || JEU.meshTripodes[0];
+};
+
+JEU.majMachines = function (dt) {
+  var T = THREE, L = LOGIQUE, M = JEU.M, i;
+
+  // araignées
+  for (i = 0; i < M.drones.length; i++) {
+    var d = M.drones[i], g = JEU.meshDrones[i];
+    if (!g) { g = VUE.drone(T); JEU.meshDrones[i] = g; JEU.scene.add(g); }
+    g.visible = !d.mort;
+    if (!d.mort) VUE.majDrone(T, L, g, d, M.t);
+  }
+  // cuves
+  for (i = 0; i < M.cuves.length; i++) {
+    var c = M.cuves[i], gc = JEU.meshCuves[i];
+    if (!gc) { gc = VUE.cuve(T, L, c); JEU.meshCuves[i] = gc; JEU.scene.add(gc); }
+    gc.visible = !c.detruite;
+    if (!c.detruite) {
+      var b = 1 + Math.sin(M.t * 1.8) * 0.06;
+      gc.scale.set(b, 1 / b, b);
+      gc._lueur.material.opacity = 0.32 + Math.sin(M.t * 2.4) * 0.14;
+    }
+  }
+  // blockhaus
+  for (i = 0; i < M.bunkers.length; i++) {
+    var bk = M.bunkers[i], gb = JEU.meshBunkers[i];
+    if (!gb) { gb = VUE.bunker(T, L, bk); JEU.meshBunkers[i] = gb; JEU.scene.add(gb); }
+    gb.visible = !bk.detruit && L.connuEn(M, bk.x, bk.z);
+  }
+  // cuirassé
+  if (M.navire) {
+    if (!JEU.meshNavire) { JEU.meshNavire = VUE.navire(T); JEU.scene.add(JEU.meshNavire); }
+    var n = M.navire, gn = JEU.meshNavire;
+    gn.visible = !n.detruit && L.connuEn(M, n.x, n.z);
+    if (gn.visible) {
+      gn.position.set(n.x, L.hauteur(n.x, n.z) + 1.4, n.z);
+      gn.rotation.y = n.z > 0 ? Math.PI : 0;
+      gn.rotation.z = Math.sin(M.t * 1.3) * 0.03;
+      gn._flash.visible = n.tir > 0;
+      if (Math.random() < dt * 14) {
+        gn._cheminees.forEach(function (ch) {
+          VUE.ajouterParticule(JEU.effets, 'fumee', n.x + (Math.random() - 0.5) * 3,
+            L.hauteur(n.x, n.z) + 16, n.z + ch.position.z, 6, 3.4, 5 + Math.random() * 5);
+        });
+      }
+    }
+  }
+  // feux d'obus incendiaires
+  for (i = 0; i < M.feux.length; i++) {
+    var f = M.feux[i];
+    if (Math.random() < dt * 26) {
+      var a2 = Math.random() * Math.PI * 2, r2 = Math.random() * f.r;
+      VUE.ajouterParticule(JEU.effets, 'flamme', f.x + Math.cos(a2) * r2,
+        L.hauteur(f.x, f.z) + 1, f.z + Math.sin(a2) * r2, 6 + Math.random() * 6, 1.2, 3 + Math.random() * 4);
+    }
+  }
+  // poussière sous les pieds
+  var dem = JEU.tripode._demarche;
+  if (dem && dem.vientDePoser) {
+    for (var q = 0; q < 4; q++) {
+      VUE.ajouterParticule(JEU.effets, 'fumee', dem.vientDePoser.x + (Math.random() - 0.5) * 5,
+        dem.vientDePoser.y + 1, dem.vientDePoser.z + (Math.random() - 0.5) * 5, 2.5, 1.5, 3 + Math.random() * 3);
+    }
+    JEU.secousse = Math.max(JEU.secousse || 0, 0.12);
+    dem.vientDePoser = null;
+  }
+  // le ciel rougit à mesure que l'herbe gagne
+  JEU._teinte = (JEU._teinte || 0) + dt;
+  if (JEU._teinte > 1) {
+    JEU._teinte = 0;
+    var k = Math.min(1, M.couverture / LOGIQUE.OBJECTIF);
+    JEU.scene.fog.color.setHSL(0.09 - k * 0.055, 0.32 + k * 0.28, 0.45 - k * 0.1);
+  }
+};
+
+/* ---------------------------------------------------------------- L'ATH */
+JEU.dire = function (txt) {
+  JEU.messages.unshift({ txt: txt, t: 5 });
+  if (JEU.messages.length > 4) JEU.messages.pop();
+  var h = $('#messages');
+  h.innerHTML = JEU.messages.map(function (m, i) {
+    return '<div style="opacity:' + (1 - i * 0.26).toFixed(2) + '">' + m.txt + '</div>';
+  }).join('');
+};
+JEU.majAth = function () {
+  var M = JEU.M, T = M.tripode, L = LOGIQUE;
+  $('#coque i').style.width = Math.max(0, T.pv / T.pvMax * 100) + '%';
+  $('#sang i').style.width = Math.min(100, M.sang / 160 * 100) + '%';
+  $('#serum').textContent = M.serum + ' / ' + L.REGLES.coutTripode +
+    (M.eclosion > 0 ? ' — éclosion dans ' + Math.ceil(M.eclosion) + ' s' : '');
+  $('#chaleur i').style.width = (T.chaleur * 100) + '%';
+  $('#chaleur').classList.toggle('brule', T.chaleur > 0.85);
+  var c = M.couverture / L.OBJECTIF;
+  $('#couverture i').style.width = Math.min(100, c * 100) + '%';
+  $('#pourcentage').textContent = (M.couverture * 100).toFixed(0) + ' %';
+  $('#maladie i').style.width = Math.min(100, M.maladie * 100) + '%';
+  $('#maladie').classList.toggle('grave', M.maladie > L.REGLES.maladieSeuil);
+  var pips = '';
+  for (var q = 0; q < L.REGLES.cargoMax; q++) pips += q < T.cargo ? '◆' : '◇';
+  $('#soute').textContent = pips;
+  $('#soute').classList.toggle('pleine', T.cargo >= L.REGLES.cargoMax);
+  var loin = L.dist(T.x, T.z, M.cylindre.x, M.cylindre.z);
+  $('#consigne').textContent = T.effondre ? 'une patte est brisée — regagnez l’herbe pour la ressouder'
+    : (T.cargo > 0 && loin > L.REGLES.portaitCylindre ? 'ramenez les vivants au cylindre'
+    : (M.maladie > 0.5 && T.cargo === 0 ? 'la fièvre monte : capturez des vivants' : ''));
+  var canons = M.canons.filter(function (k) { return !k.detruit && L.connuEn(M, k.x, k.z); }).length;
+  $('#menace').textContent = canons + (canons > 1 ? ' pièces repérées' : ' pièce repérée');
+  var libres = M.drones.filter(function (d) { return !d.mort && d.etat !== 'va'; }).length;
+  $('#b-drone').classList.toggle('possible', libres > 0);
+  $('#b-cuve').classList.toggle('possible', M.sang >= L.REGLES.coutCuve && L.herbeEn(M, T.x, T.z) > 0.5);
+  var autres = M.tripodes.filter(function (u) { return !u.abattu; }).length;
+  $('#machines').textContent = autres + (autres > 1 ? ' machines' : ' machine') +
+    (autres > 1 ? ' · ' + (M.tripodes.indexOf(M.tripode) + 1) + ' pilotée' : '');
+  $('#araignees').textContent = libres + ' / ' + M.drones.filter(function (d) { return !d.mort; }).length;
+  $('#b-spores').classList.toggle('possible', M.sang >= L.REGLES.coutSpores);
+  $('#b-machine').classList.toggle('possible', M.serum >= L.REGLES.coutTripode && M.eclosion <= 0);
+  $('#b-fumee').classList.toggle('possible', T.sang >= L.REGLES.coutFumee);
+};
+JEU.majCarte = function () {
+  var M = JEU.M, L = LOGIQUE, cv = $('#carte'), x = cv.getContext('2d');
+  var n = L.N, e = cv.width / n, i, j;
+  x.fillStyle = '#100e0b'; x.fillRect(0, 0, cv.width, cv.height);
+  for (j = 0; j < n; j++) for (i = 0; i < n; i++) {
+    var k = L.idx(i, j), d = M.herbe[k];
+    if (!M.connu[k]) continue;
+    var voile = M.visible[k] ? 1 : 0.55;
+    x.fillStyle = M.sol[k] === 2 ? 'rgba(45,59,68,' + voile + ')' : 'rgba(43,42,34,' + voile + ')';
+    x.fillRect(i * e, j * e, e + 1, e + 1);
+    if (d > 0.08) {
+      x.fillStyle = 'rgba(150,26,26,' + (Math.min(1, d * 1.2) * voile).toFixed(2) + ')';
+      x.fillRect(i * e, j * e, e + 1, e + 1);
+    }
+  }
+  function pt(px, pz, coul, r) {
+    x.fillStyle = coul;
+    x.fillRect((px + L.MONDE / 2) / L.MONDE * cv.width - r, (pz + L.MONDE / 2) / L.MONDE * cv.height - r, r * 2, r * 2);
+  }
+  M.batiments.forEach(function (b) { if (!b.detruit && L.connuEn(M, b.x, b.z)) pt(b.x, b.z, '#8a8272', 1); });
+  M.canons.forEach(function (c) { if (!c.detruit && L.connuEn(M, c.x, c.z)) pt(c.x, c.z, '#7fc8ff', 2); });
+  pt(M.cylindre.x, M.cylindre.z, '#8fe06a', 3);
+  M.bunkers.forEach(function (b) { if (!b.detruit && L.connuEn(M, b.x, b.z)) pt(b.x, b.z, '#c9d6e2', 2); });
+  M.cuves.forEach(function (c) { if (!c.detruite) pt(c.x, c.z, '#d4502c', 2); });
+  M.drones.forEach(function (d) { if (!d.mort) pt(d.x, d.z, '#9ff06a', 1); });
+  if (M.navire && !M.navire.detruit && L.connuEn(M, M.navire.x, M.navire.z)) pt(M.navire.x, M.navire.z, '#ffffff', 2);
+  M.tripodes.forEach(function (u) {
+    if (u.abattu) return;
+    pt(u.x, u.z, u === M.tripode ? '#ffe6a0' : '#c08a3c', u === M.tripode ? 3 : 2);
+  });
+};
+
+JEU.afficherFin = function () {
+  var M = JEU.M;
+  JEU.finAffichee = true;
+  var gagne = M.fini === 'mars';
+  var titre = gagne ? 'La vallée est à nous.'
+    : (M.fini === 'bacteries' ? 'Les bactéries ont gagné.' : 'La machine est tombée.');
+  $('#fin').hidden = false;
+  $('#fin h2').textContent = titre;
+  $('#fin h2').style.color = gagne ? '#d8b464' : '#a83c2a';
+  $('#fin p').textContent = M.cause;
+  $('#fin .chiffres').innerHTML =
+    '<span>' + (M.couverture * 100).toFixed(0) + ' % de la vallée sous l’herbe</span>' +
+    '<span>' + M.tues + ' vies prises</span>' +
+    '<span>' + M.batisDetruits + ' toits abattus</span>' +
+    '<span>' + M.livraisons + ' vivants livrés au cylindre</span>' +
+    '<span>' + M.tripodes.length + (M.tripodes.length > 1 ? ' machines dressées' : ' machine dressée') + '</span>' +
+    '<span>' + Math.floor(M.t / 60) + ' min ' + Math.floor(M.t % 60) + ' s</span>';
+};
+
+/* ------------------------------------------------------------------- SON */
+JEU.reveillerSon = function () {
+  if (JEU.AC) { if (JEU.AC.state === 'suspended') JEU.AC.resume(); return; }
+  try { JEU.AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+  JEU.son = true;
+  $('#b-son').textContent = 'son ▮';
+  var g = JEU.AC.createGain(); g.gain.value = 0.12; g.connect(JEU.AC.destination);
+  JEU.sortie = g;
+  // la sirène des martiens, très loin
+  JEU.ulla();
+};
+JEU.basculerSon = function () {
+  if (!JEU.AC) { JEU.reveillerSon(); return; }
+  JEU.son = !JEU.son;
+  JEU.sortie.gain.value = JEU.son ? 0.12 : 0;
+  $('#b-son').textContent = JEU.son ? 'son ▮' : 'son ▯';
+};
+JEU.ulla = function () {
+  if (!JEU.AC) return;
+  var t = JEU.AC.currentTime + 6 + Math.random() * 16;
+  var o = JEU.AC.createOscillator(), g = JEU.AC.createGain();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(96, t);
+  o.frequency.linearRampToValueAtTime(132, t + 0.7);
+  o.frequency.linearRampToValueAtTime(88, t + 1.9);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.22, t + 0.4);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 2.1);
+  var f = JEU.AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 420;
+  o.connect(f); f.connect(g); g.connect(JEU.sortie);
+  o.start(t); o.stop(t + 2.2);
+  setTimeout(JEU.ulla, 9000 + Math.random() * 16000);
+};
+JEU.bruit = function (type) {
+  if (!JEU.AC || !JEU.son) return;
+  var t = JEU.AC.currentTime;
+  if (JEU._dernierBruit && t - JEU._dernierBruit[type] < 0.12) return;
+  JEU._dernierBruit = JEU._dernierBruit || {};
+  JEU._dernierBruit[type] = t;
+  var o = JEU.AC.createOscillator(), g = JEU.AC.createGain();
+  if (type === 'canon') { o.type = 'square'; o.frequency.setValueAtTime(70, t);
+    o.frequency.exponentialRampToValueAtTime(30, t + 0.3); }
+  else if (type === 'obus') { o.type = 'sawtooth'; o.frequency.setValueAtTime(160, t);
+    o.frequency.exponentialRampToValueAtTime(40, t + 0.4); }
+  else { o.type = 'triangle'; o.frequency.setValueAtTime(240, t);
+    o.frequency.exponentialRampToValueAtTime(90, t + 0.25); }
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(type === 'canon' ? 0.3 : 0.16, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+  o.connect(g); g.connect(JEU.sortie); o.start(t); o.stop(t + 0.5);
+};
+
+window.addEventListener('DOMContentLoaded', function () {
+  JEU.tactile = matchMedia('(pointer:coarse)').matches;
+  if (JEU.tactile) document.body.classList.add('tactile');
+  JEU.brancher();
+  if (!window.__TEST__) {
+    // aperçu au ralenti derrière l'écran d'accueil
+    JEU.demarrer(1898);
+    $('#accueil').hidden = false;
+  }
+});
+
+</script>
+</body>
+</html>

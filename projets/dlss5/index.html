@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DLSS 5 WebP Enhancer</title>
+<style>
+:root{font-family:Inter,Segoe UI,Arial,sans-serif;background:#0b0d10;color:#f4f6f8}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 0,#1b222b,transparent 38%),#0b0d10}.wrap{max-width:1100px;margin:0 auto;padding:38px 22px}.top{display:flex;justify-content:space-between;align-items:end;margin-bottom:24px}.eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;opacity:.6}.title{font-size:36px;font-weight:750;margin:7px 0}.sub{opacity:.65}.badge{border:1px solid #2b333d;padding:8px 11px;border-radius:999px;font-size:12px}.grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px}.card{background:#12161b;border:1px solid #252c34;border-radius:18px;padding:18px;box-shadow:0 15px 45px #0004}.drop{min-height:310px;border:1.5px dashed #3a444f;border-radius:14px;display:flex;align-items:center;justify-content:center;text-align:center;padding:25px;cursor:pointer;transition:.2s}.drop.over,.drop.has{border-color:#7d8b99;background:#171c22}.drop input{display:none}.big{font-size:20px;font-weight:700}.muted{opacity:.55;font-size:13px}.preview{margin-top:16px;background:#080a0d;border-radius:12px;overflow:hidden;display:none}.preview img{width:100%;display:block;max-height:520px;object-fit:contain}.row{display:flex;justify-content:space-between;gap:15px;align-items:center;margin:16px 0 7px}.row label{font-size:13px}.row output{font-variant-numeric:tabular-nums;opacity:.7}.control select,.control input[type=range]{width:100%}select{background:#0b0e12;color:#fff;border:1px solid #303842;border-radius:9px;padding:10px}.range{accent-color:#d9e0e7}.checks{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.check{background:#0c1014;border:1px solid #262d35;border-radius:10px;padding:10px;font-size:13px}.actions{display:flex;gap:10px;margin-top:18px}.btn{border:0;border-radius:11px;padding:13px 16px;font-weight:750;cursor:pointer}.primary{background:#f2f4f6;color:#0b0d10;flex:1}.secondary{background:#242b33;color:#fff}.btn:disabled{opacity:.35;cursor:not-allowed}.status{margin-top:15px}.bar{height:8px;background:#080a0d;border-radius:99px;overflow:hidden}.fill{height:100%;width:0;background:#dce2e7;transition:width .2s}.stat{display:flex;justify-content:space-between;font-size:12px;margin-top:9px;opacity:.7}.success{margin-top:15px;display:none}.download{display:block;text-align:center;text-decoration:none;background:#f2f4f6;color:#0b0d10;border-radius:11px;padding:13px;font-weight:750}.note{font-size:12px;line-height:1.5;opacity:.55;margin-top:16px}.error{color:#ff9b9b;white-space:pre-wrap;font-size:12px;margin-top:12px}.footer{margin-top:20px;text-align:center;font-size:11px;opacity:.4}@media(max-width:800px){.grid{grid-template-columns:1fr}.title{font-size:28px}.top{align-items:start;gap:12px;flex-direction:column}}
+</style></head>
+<body><div class="wrap">
+<div class="top"><div><div class="eyebrow">Local GPU tool</div><div class="title">DLSS 5 WebP Enhancer</div><div class="sub">Neural Rendering image par image, directement sur votre GPU NVIDIA.</div></div><div class="badge">Windows · D3D12 · NVIDIA</div></div>
+<div class="grid">
+<section class="card"><div id="drop" class="drop"><input id="file" type="file" accept=".webp,.webm,.mp4,.mkv,.mov,image/webp,video/webm,video/mp4,video/x-matroska,video/quicktime"><div><div class="big">Déposez un WebP animé ou une vidéo (WebM…) ici</div><div class="muted">ou cliquez pour choisir un fichier</div><div id="fileinfo" class="muted" style="margin-top:13px"></div></div></div>
+<div id="preview" class="preview"><img id="img"><video id="vid" controls muted loop style="display:none;width:100%;max-height:520px"></video></div>
+<div id="previewDlss" class="preview"><div class="muted" style="padding:8px 10px 0">Aperçu en direct (1ère image, avec les réglages actuels)</div><img id="previewImg"><div id="previewMsg" class="muted" style="padding:6px 10px">—</div></div></section>
+<section class="card">
+<div class="eyebrow">Neural Rendering</div>
+<div class="row"><label>Preset</label><select id="preset"><option value="0">Default</option><option value="1">Preset 1</option><option value="2">Preset 2</option><option value="3">Preset 3</option></select></div>
+<div class="row"><label>Style</label><select id="style"><option value="0">Natural</option><option value="2">Cinematic</option></select></div>
+<div class="control"><div class="row"><label>Intensity</label><output id="intensityOut">1.00</output></div><input id="intensity" class="range" type="range" min="0" max="2" step="0.05" value="1"></div>
+<div class="control"><div class="row"><label>Structure</label><output id="structureOut">1.00</output></div><input id="structure" class="range" type="range" min="0" max="2" step="0.05" value="1"></div>
+<div class="control"><div class="row"><label>Skin</label><output id="skinOut">-1.00</output></div><input id="skin" class="range" type="range" min="-1" max="1" step="0.05" value="-1"></div>
+<div class="row"><label>Passes</label><select id="passes"><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
+<div class="control"><div class="row"><label>Denoise</label><output id="denoiseOut">1.00</output></div><input id="denoise" class="range" type="range" min="0" max="4" step="0.05" value="1"></div>
+<div class="checks"><label class="check"><input id="denoiseEnabled" type="checkbox" checked> Denoise activé</label><label class="check"><input id="autoMask" type="checkbox" checked> Auto mask</label><label class="check"><input id="uiCorrection" type="checkbox"> UI correction</label><label class="check"><input id="linearInput" type="checkbox"> Linear input</label></div>
+<div class="row"><label>Format de sortie</label><select id="outputFormat"><option value="auto">Auto (WebP→WebP, vidéo→WebM)</option><option value="webp">WebP animé</option><option value="webm">WebM (VP9)</option></select></div>
+<div class="actions"><button id="run" class="btn primary" disabled>APPLIQUER DLSS 5</button><button id="cancel" class="btn secondary" disabled>Annuler</button></div>
+<div id="status" class="status" style="display:none"><div class="bar"><div id="fill" class="fill"></div></div><div class="stat"><span id="msg">—</span><span id="pct">0%</span></div></div>
+<div id="success" class="success"><a id="download" class="download">Télécharger le WebP DLSS 5</a></div><div id="error" class="error"></div>
+<div class="note">Le fichier reste sur votre PC. Le navigateur sert uniquement d'interface; le calcul est effectué par le moteur DLSS 5 fourni dans le dossier <b>runtime</b>.</div>
+</section></div><div class="footer">DLSS 5 WebP Tool · runtime NVIDIA fourni séparément dans ce package</div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const VIDEO_RE=/\.(webm|mp4|mkv|mov)$/i;
+let selected=null,job=null,previewTimer=null,previewInFlight=false,previewDirty=false,previewUrl=null;
+
+$('drop').onclick=()=>$('file').click();$('file').onchange=e=>pick(e.target.files[0]);
+['dragenter','dragover'].forEach(x=>$('drop').addEventListener(x,e=>{e.preventDefault();$('drop').classList.add('over')}));
+['dragleave','drop'].forEach(x=>$('drop').addEventListener(x,e=>{e.preventDefault();$('drop').classList.remove('over')}));
+$('drop').addEventListener('drop',e=>pick(e.dataTransfer.files[0]));
+
+function pick(f){
+  if(!f)return;
+  if(!/\.webp$/i.test(f.name)&&!VIDEO_RE.test(f.name)){alert('Choisissez un .webp animé ou une vidéo (.webm, .mp4, .mkv, .mov)');return}
+  selected=f;
+  $('drop').classList.add('has');
+  $('fileinfo').textContent=f.name+' · '+(f.size/1048576).toFixed(2)+' MB';
+  $('run').disabled=false;
+  $('error').textContent='';
+  $('success').style.display='none';
+  $('preview').style.display='block';
+  const url=URL.createObjectURL(f);
+  if(VIDEO_RE.test(f.name)){
+    $('img').style.display='none';
+    $('vid').style.display='block';
+    $('vid').src=url;
+  }else{
+    $('vid').style.display='none';
+    $('img').style.display='block';
+    $('img').src=url;
+  }
+  $('previewDlss').style.display='block';
+  schedulePreview();
+}
+
+function currentOptions(){
+  return {
+    preset:+$('preset').value,style:+$('style').value,intensity:+$('intensity').value,
+    structure:+$('structure').value,skin:+$('skin').value,passes:+$('passes').value,
+    denoiseEnabled:$('denoiseEnabled').checked,denoiseStrength:+$('denoise').value,
+    denoiseAmount:1,denoiseQuality:1,autoMask:$('autoMask').checked,
+    uiCorrection:$('uiCorrection').checked,linearInput:$('linearInput').checked,
+    outputFormat:$('outputFormat').value==='auto'?undefined:$('outputFormat').value
+  };
+}
+
+for(const id of ['intensity','structure','skin','denoise'])
+  $(id).oninput=()=>{$(id+'Out').textContent=Number($(id).value).toFixed(2);schedulePreview()};
+for(const id of ['preset','style','passes','denoiseEnabled','autoMask','uiCorrection','linearInput','outputFormat'])
+  $(id).addEventListener('change',schedulePreview);
+
+// Aperçu en direct : une seule image traitée par le moteur DLSS 5, avec
+// anti-rebond (debounce) pendant que l'utilisateur bouge un curseur, et
+// une nouvelle requête relancée automatiquement si les réglages ont
+// encore changé pendant qu'une requête était en cours.
+function schedulePreview(){
+  if(!selected)return;
+  clearTimeout(previewTimer);
+  previewTimer=setTimeout(runPreview,180);
+}
+
+async function runPreview(){
+  if(!selected)return;
+  if(previewInFlight){previewDirty=true;return}
+  previewInFlight=true;previewDirty=false;
+  $('previewMsg').textContent='Calcul de l’aperçu…';
+  try{
+    const fd=new FormData();
+    fd.append('file',selected);
+    fd.append('options',JSON.stringify(currentOptions()));
+    const r=await fetch('/api/preview',{method:'POST',body:fd});
+    if(!r.ok){
+      const j=await r.json().catch(()=>({}));
+      throw Error(j.error||'Erreur aperçu');
+    }
+    const blob=await r.blob();
+    if(previewUrl)URL.revokeObjectURL(previewUrl);
+    previewUrl=URL.createObjectURL(blob);
+    $('previewImg').src=previewUrl;
+    $('previewMsg').textContent='Aperçu à jour.';
+  }catch(e){
+    $('previewMsg').textContent='Aperçu indisponible : '+(e.message||e);
+  }finally{
+    previewInFlight=false;
+    if(previewDirty)runPreview();
+  }
+}
+
+$('run').onclick=async()=>{
+  if(!selected)return;
+  const fd=new FormData();
+  fd.append('file',selected);
+  fd.append('options',JSON.stringify(currentOptions()));
+  $('run').disabled=true;$('cancel').disabled=false;$('status').style.display='block';
+  $('error').textContent='';$('fill').style.width='1%';
+  try{
+    const r=await fetch('/api/process',{method:'POST',body:fd});
+    const j=await r.json();
+    if(!r.ok)throw Error(j.error||'Erreur');
+    job=j.id;poll();
+  }catch(e){fail(e)}
+};
+$('cancel').onclick=()=>job&&fetch('/api/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:job})});
+async function poll(){
+  if(!job)return;
+  const r=await fetch('/api/status?id='+job);
+  const j=await r.json();
+  $('fill').style.width=(j.progress||0)+'%';$('pct').textContent=(j.progress||0)+'%';$('msg').textContent=j.message||j.state;
+  if(j.state==='done'){$('cancel').disabled=true;$('run').disabled=false;$('success').style.display='block';$('download').href='/api/download?id='+job;return}
+  if(j.state==='error'){fail(Error(j.message||'Erreur DLSS5'));return}
+  setTimeout(poll,500);
+}
+function fail(e){$('run').disabled=!selected;$('cancel').disabled=true;$('error').textContent=String(e.message||e);$('status').style.display='block'}
+</script></body></html>

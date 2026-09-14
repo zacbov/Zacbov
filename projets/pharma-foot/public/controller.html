@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#06110b">
+<title>PHARMA-FOOT · Manette</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{width:100%;height:100%;overflow:hidden;background:#06110b;color:#fff;
+    font-family:'Trebuchet MS',system-ui,-apple-system,sans-serif;user-select:none;touch-action:none}
+  .screen{position:fixed;inset:0;display:none;flex-direction:column;padding:16px;overflow-y:auto}
+  .screen.on{display:flex}
+  h1{font-size:30px;letter-spacing:3px;text-align:center;margin:6px 0 2px;
+    background:linear-gradient(180deg,#eafff2,#5ce39a);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{text-align:center;opacity:.45;font-size:11px;letter-spacing:3px;margin-bottom:14px}
+  .lbl{font-size:10px;letter-spacing:2px;opacity:.5;margin:14px 0 6px}
+  input{width:100%;padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.18);
+    background:rgba(255,255,255,.06);color:#fff;font-size:17px;font-family:inherit}
+  #code{text-align:center;letter-spacing:10px;font-size:28px;font-weight:bold;text-transform:uppercase}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .sw{width:38px;height:38px;border-radius:10px;border:2px solid transparent;cursor:pointer}
+  .sw.sel{border-color:#3ce68b;transform:scale(1.08)}
+  .opt{padding:9px 13px;border-radius:9px;border:1px solid rgba(255,255,255,.16);
+    background:rgba(255,255,255,.05);font-size:13px}
+  .opt.sel{background:#2ecb7a;color:#04180d;font-weight:bold;border-color:#2ecb7a}
+  .btn{width:100%;padding:15px;border:0;border-radius:12px;background:linear-gradient(180deg,#3ce68b,#18a95e);
+    color:#03170c;font-size:17px;font-weight:bold;letter-spacing:2px;margin-top:16px;font-family:inherit}
+  .btn.ghost{background:rgba(255,255,255,.08);color:#fff}
+  .flex{display:flex;gap:10px;align-items:center}
+  #shirt{border-radius:12px;background:rgba(255,255,255,.05)}
+  #cam{width:120px;height:120px;border-radius:50%;object-fit:cover;background:#000;transform:scaleX(-1)}
+  #shot{width:120px;height:120px;border-radius:50%;object-fit:cover;background:#111;display:none}
+  .small{font-size:11px;opacity:.45;line-height:1.5;margin-top:8px}
+
+  /* ---------- MANETTE ---------- */
+  #pad{position:fixed;inset:0;display:none}
+  #pad.on{display:block}
+  #stickZone{position:absolute;left:0;top:0;width:52%;height:100%}
+  #stickBase{position:absolute;width:150px;height:150px;border-radius:50%;
+    border:2px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);
+    left:70px;bottom:60px;transform:translate(-50%,50%);pointer-events:none}
+  #stickKnob{position:absolute;width:70px;height:70px;border-radius:50%;
+    background:rgba(60,230,139,.75);box-shadow:0 4px 18px rgba(0,0,0,.4);
+    left:70px;bottom:60px;transform:translate(-50%,50%);pointer-events:none}
+  .abtn{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-weight:bold;letter-spacing:1px;color:#04180d;box-shadow:0 6px 20px rgba(0,0,0,.45)}
+  #bShoot{width:132px;height:132px;right:26px;bottom:40px;background:linear-gradient(180deg,#ffd166,#f0932b);font-size:19px}
+  #bPass{width:88px;height:88px;right:168px;bottom:118px;background:linear-gradient(180deg,#7ee6ff,#2f9bd6);font-size:15px}
+  #bTackle{width:88px;height:88px;right:168px;bottom:20px;background:linear-gradient(180deg,#ff8a8a,#d63447);font-size:15px}
+  .abtn.down{filter:brightness(1.25);transform:scale(.94)}
+  #chargeBar{position:absolute;right:26px;bottom:184px;width:132px;height:9px;border-radius:5px;
+    background:rgba(255,255,255,.12);overflow:hidden}
+  #chargeFill{height:100%;width:0%;background:linear-gradient(90deg,#ffe066,#ff6b35)}
+  #topBar{position:absolute;top:0;left:0;right:0;padding:8px 14px;display:flex;justify-content:space-between;
+    font-size:12px;opacity:.6;letter-spacing:1px}
+  #rotate{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+    background:#06110b;z-index:50;font-size:16px;letter-spacing:2px;text-align:center;padding:30px}
+  @media (orientation:portrait){ #pad.on ~ #rotate{display:flex} }
+</style>
+</head>
+<body>
+
+<!-- ============ 1. CONNEXION ============ -->
+<div class="screen on" id="s1">
+  <h1>PHARMA-FOOT</h1>
+  <div class="sub">MANETTE</div>
+  <div class="lbl">CODE AFFICHÉ SUR L'ÉCRAN</div>
+  <input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="ABCD">
+  <div class="lbl">TON PSEUDO</div>
+  <input id="pseudo" maxlength="12" placeholder="Joueur">
+  <div class="lbl">NUMÉRO</div>
+  <input id="num" type="number" min="1" max="99" value="9">
+  <button class="btn" id="next1">SUIVANT</button>
+  <div class="small">Astuce : ouvre l'adresse affichée sur l'écran, le code se remplit tout seul.</div>
+</div>
+
+<!-- ============ 2. PERSONNALISATION ============ -->
+<div class="screen" id="s2">
+  <h1>TON JOUEUR</h1>
+  <div class="sub">PERSONNALISATION</div>
+  <div class="flex" style="justify-content:center;gap:18px">
+    <canvas id="shirt" width="120" height="140"></canvas>
+    <div style="text-align:center">
+      <video id="cam" autoplay playsinline muted></video>
+      <img id="shot" alt="">
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn ghost" id="snap" style="margin:0;padding:9px 10px;font-size:12px">PHOTO</button>
+        <button class="btn ghost" id="retake" style="margin:0;padding:9px 10px;font-size:12px;display:none">REPRENDRE</button>
+      </div>
+      <input type="file" id="filePick" accept="image/*" capture="user" style="display:none">
+    </div>
+  </div>
+
+  <div class="lbl">MOTIF DU MAILLOT</div>
+  <div class="row" id="patRow"></div>
+  <div class="lbl">COULEUR SECONDAIRE</div>
+  <div class="row" id="accRow"></div>
+  <div class="lbl">SHORT</div>
+  <div class="row" id="shoRow"></div>
+  <div class="lbl">PEAU</div>
+  <div class="row" id="skinRow"></div>
+  <div class="lbl">CHEVEUX</div>
+  <div class="row" id="hairRow"></div>
+  <div class="lbl">CHAUSSURES</div>
+  <div class="row" id="shoeRow"></div>
+
+  <button class="btn" id="ready">PRÊT !</button>
+  <button class="btn ghost" id="back2" style="margin-top:8px">RETOUR</button>
+  <div class="small" id="st2">…</div>
+</div>
+
+<!-- ============ 3. ATTENTE ============ -->
+<div class="screen" id="s3">
+  <h1 id="waitTitle">EN ATTENTE</h1>
+  <div class="sub" id="waitSub">LE COUP D'ENVOI VA ÊTRE DONNÉ</div>
+  <button class="btn" id="startBtn">LANCER LE MATCH</button>
+  <button class="btn ghost" id="edit3">MODIFIER MON JOUEUR</button>
+  <div class="small" id="st3">…</div>
+</div>
+
+<!-- ============ 4. MANETTE ============ -->
+<div id="pad">
+  <div id="topBar"><span id="padName">—</span><span id="padStat">connecté</span></div>
+  <div id="stickZone"></div>
+  <div id="stickBase"></div>
+  <div id="stickKnob"></div>
+  <div id="chargeBar"><div id="chargeFill"></div></div>
+  <div class="abtn" id="bShoot">TIR</div>
+  <div class="abtn" id="bPass">PASSE</div>
+  <div class="abtn" id="bTackle">TACLE</div>
+</div>
+<div id="rotate">Tourne ton téléphone<br>en mode paysage 📱↻</div>
+
+<script>
+'use strict';
+const RELAY = 'wss://pharmafoot.zacharybov.workers.dev/ws';
+
+/* ---------- identité persistante ---------- */
+let MYID = localStorage.getItem('pf_pid');
+if (!MYID) {
+  MYID = 'p' + Math.random().toString(36).slice(2, 10);
+  localStorage.setItem('pf_pid', MYID);
+}
+
+const S = {
+  room: '', name: localStorage.getItem('pf_name') || '', num: +(localStorage.getItem('pf_num') || 9),
+  custom: JSON.parse(localStorage.getItem('pf_custom') || 'null') || {
+    skin: '#e0b48a', hair: '#2b1d16', accent: '#ffffff', shorts: '#ffffff', shoes: '#111111', pattern: 'plain'
+  },
+  photo: localStorage.getItem('pf_photo') || null,
+  teamColor: '#2f6bff', joined: false
+};
+
+const $ = id => document.getElementById(id);
+function show(id) { for (const s of ['s1', 's2', 's3']) $(s).classList.toggle('on', s === id); $('pad').classList.remove('on'); }
+function showPad() { for (const s of ['s1', 's2', 's3']) $(s).classList.remove('on'); $('pad').classList.add('on'); }
+
+/* ---------- réseau ---------- */
+let ws = null, wsOpen = false, tries = 0;
+function connect() {
+  const url = RELAY + '?room=' + encodeURIComponent(S.room) + '&role=ctrl&id=' + encodeURIComponent(MYID);
+  try { ws = new WebSocket(url); } catch (e) { retry(); return; }
+  ws.onopen = () => {
+    wsOpen = true; tries = 0; stat('connecté');
+    sendJoin();
+  };
+  ws.onclose = () => { wsOpen = false; stat('reconnexion…'); retry(); };
+  ws.onerror = () => stat('erreur réseau');
+  ws.onmessage = e => {
+    let m; try { m = JSON.parse(e.data); } catch (err) { return; }
+    onMsg(m);
+  };
+}
+function retry() { tries++; setTimeout(connect, Math.min(5000, 600 * tries)); }
+function send(o) { if (wsOpen) { try { ws.send(JSON.stringify(o)); } catch (e) {} } }
+function stat(s) { $('st2').textContent = s; $('st3').textContent = s; $('padStat').textContent = s; }
+
+function sendJoin() {
+  send({ t: 'join', name: S.name || 'Joueur', num: S.num, custom: S.custom });
+  if (S.photo) setTimeout(() => send({ t: 'photo', d: S.photo }), 250);
+}
+
+function onMsg(m) {
+  if (m.t === 'hello') { stat(m.screen ? 'écran détecté' : 'écran absent…'); return; }
+  if (m.t === 'ok') {
+    S.joined = true;
+    S.teamColor = m.color || S.teamColor;
+    drawShirt();
+    $('padName').textContent = (S.name || 'Joueur') + ' #' + S.num;
+    if (m.phase === 'play') showPad(); else show('s3');
+    return;
+  }
+  if (m.t === 'phase') {
+    if (m.p === 'play') showPad();
+    else if (m.p === 'lobby') show('s3');
+    else if (m.p === 'end') {
+      show('s3');
+      $('waitTitle').textContent = 'FIN DU MATCH';
+      $('waitSub').textContent = (m.a + ' - ' + m.b);
+    }
+    return;
+  }
+  if (m.t === 'buzz') { if (navigator.vibrate) navigator.vibrate(m.ms || 40); return; }
+  if (m.t === 'goal') {
+    if (navigator.vibrate) navigator.vibrate(m.me ? [60, 50, 60, 50, 160] : [30, 40, 30]);
+    return;
+  }
+}
+
+/* ---------- écran 1 ---------- */
+(function initS1() {
+  const h = (location.hash || '').replace('#', '').toUpperCase().slice(0, 4);
+  if (h) $('code').value = h;
+  $('pseudo').value = S.name;
+  $('num').value = S.num;
+  $('code').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ''); });
+  $('next1').onclick = () => {
+    const c = $('code').value.trim().toUpperCase();
+    if (c.length !== 4) { alert('Code à 4 lettres'); return; }
+    S.room = c;
+    S.name = ($('pseudo').value || 'Joueur').slice(0, 12);
+    S.num = Math.max(1, Math.min(99, parseInt($('num').value) || 9));
+    localStorage.setItem('pf_name', S.name);
+    localStorage.setItem('pf_num', S.num);
+    show('s2');
+    buildCustom();
+    startCam();
+  };
+})();
+
+/* ---------- écran 2 : personnalisation ---------- */
+const SKINS = ['#f7ddc2', '#e0b48a', '#c98d5f', '#9c6238', '#6b422a', '#4a2c1a'];
+const HAIRS = ['#1a1210', '#4a2c17', '#8a5a2b', '#c9a227', '#d94f2b', '#e8e8e8', '#2f6bff'];
+const COLORS = ['#ffffff', '#111111', '#e0353f', '#2f6bff', '#f2c94c', '#2ecb7a', '#f76707', '#9b59b6'];
+const PATS = [['plain', 'Uni'], ['stripes', 'Rayures'], ['hoops', 'Cercles'], ['sash', 'Écharpe'], ['half', 'Bicolore']];
+
+function swatchRow(rowId, colors, key) {
+  const row = $(rowId); row.innerHTML = '';
+  colors.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'sw' + (S.custom[key] === c ? ' sel' : '');
+    d.style.background = c;
+    d.onclick = () => { S.custom[key] = c; buildCustom(); saveCustom(); };
+    row.appendChild(d);
+  });
+}
+function buildCustom() {
+  swatchRow('accRow', COLORS, 'accent');
+  swatchRow('shoRow', COLORS, 'shorts');
+  swatchRow('skinRow', SKINS, 'skin');
+  swatchRow('hairRow', HAIRS, 'hair');
+  swatchRow('shoeRow', COLORS, 'shoes');
+  const row = $('patRow'); row.innerHTML = '';
+  PATS.forEach(p => {
+    const d = document.createElement('div');
+    d.className = 'opt' + (S.custom.pattern === p[0] ? ' sel' : '');
+    d.textContent = p[1];
+    d.onclick = () => { S.custom.pattern = p[0]; buildCustom(); saveCustom(); };
+    row.appendChild(d);
+  });
+  drawShirt();
+}
+function saveCustom() {
+  localStorage.setItem('pf_custom', JSON.stringify(S.custom));
+  if (S.joined) send({ t: 'join', name: S.name, num: S.num, custom: S.custom });
+}
+function drawShirt() {
+  const c = $('shirt'), x = c.getContext('2d');
+  x.clearRect(0, 0, 120, 140);
+  const base = S.teamColor, acc = S.custom.accent;
+  x.save();
+  x.beginPath();
+  x.moveTo(30, 24); x.lineTo(48, 16); x.lineTo(72, 16); x.lineTo(90, 24);
+  x.lineTo(106, 44); x.lineTo(92, 56); x.lineTo(92, 112); x.lineTo(28, 112);
+  x.lineTo(28, 56); x.lineTo(14, 44); x.closePath();
+  x.clip();
+  x.fillStyle = base; x.fillRect(0, 0, 120, 140);
+  x.fillStyle = acc;
+  const p = S.custom.pattern;
+  if (p === 'stripes') { for (let i = 8; i < 120; i += 26) x.fillRect(i, 0, 12, 140); }
+  else if (p === 'hoops') { for (let i = 20; i < 140; i += 26) x.fillRect(0, i, 120, 12); }
+  else if (p === 'sash') { x.save(); x.translate(60, 65); x.rotate(-0.7); x.fillRect(-100, -11, 200, 22); x.restore(); }
+  else if (p === 'half') { x.fillRect(60, 0, 60, 140); }
+  else { x.fillRect(0, 100, 120, 8); }
+  x.restore();
+  x.strokeStyle = 'rgba(0,0,0,.5)'; x.lineWidth = 2;
+  x.beginPath();
+  x.moveTo(30, 24); x.lineTo(48, 16); x.lineTo(72, 16); x.lineTo(90, 24);
+  x.lineTo(106, 44); x.lineTo(92, 56); x.lineTo(92, 112); x.lineTo(28, 112);
+  x.lineTo(28, 56); x.lineTo(14, 44); x.closePath(); x.stroke();
+  // short
+  x.fillStyle = S.custom.shorts; x.fillRect(34, 114, 52, 20);
+  x.strokeRect(34, 114, 52, 20);
+  x.fillStyle = 'rgba(255,255,255,.85)';
+  x.font = 'bold 26px Arial'; x.textAlign = 'center';
+  x.fillText(String(S.num), 60, 90);
+}
+
+/* ---------- photo ---------- */
+let stream = null;
+async function startCam() {
+  if (S.photo) { $('shot').src = S.photo; $('shot').style.display = 'block'; $('cam').style.display = 'none'; $('retake').style.display = 'block'; $('snap').style.display = 'none'; return; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 480 }, audio: false });
+    $('cam').srcObject = stream;
+  } catch (e) {
+    $('cam').style.display = 'none';
+    $('snap').textContent = 'CHOISIR UNE PHOTO';
+    $('snap').onclick = () => $('filePick').click();
+  }
+}
+function stopCam() { if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } }
+function setPhoto(dataUrl) {
+  S.photo = dataUrl;
+  try { localStorage.setItem('pf_photo', dataUrl); } catch (e) {}
+  $('shot').src = dataUrl; $('shot').style.display = 'block';
+  $('cam').style.display = 'none'; $('snap').style.display = 'none'; $('retake').style.display = 'block';
+  if (S.joined) send({ t: 'photo', d: dataUrl });
+}
+function shrink(src, cb) {
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement('canvas'); c.width = c.height = 160;
+    const x = c.getContext('2d');
+    const side = Math.min(img.width, img.height);
+    x.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 160, 160);
+    cb(c.toDataURL('image/jpeg', 0.62));
+  };
+  img.src = src;
+}
+$('snap').onclick = () => {
+  const v = $('cam');
+  if (!v.videoWidth) { $('filePick').click(); return; }
+  const c = document.createElement('canvas'); c.width = c.height = 160;
+  const x = c.getContext('2d');
+  const side = Math.min(v.videoWidth, v.videoHeight);
+  x.translate(160, 0); x.scale(-1, 1); // miroir
+  x.drawImage(v, (v.videoWidth - side) / 2, (v.videoHeight - side) / 2, side, side, 0, 0, 160, 160);
+  setPhoto(c.toDataURL('image/jpeg', 0.62));
+  stopCam();
+};
+$('retake').onclick = () => {
+  S.photo = null; localStorage.removeItem('pf_photo');
+  $('shot').style.display = 'none'; $('cam').style.display = 'block';
+  $('snap').style.display = 'block'; $('retake').style.display = 'none';
+  startCam();
+};
+$('filePick').onchange = e => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => shrink(r.result, setPhoto);
+  r.readAsDataURL(f);
+};
+
+$('back2').onclick = () => { stopCam(); show('s1'); };
+$('ready').onclick = () => {
+  stopCam();
+  saveCustom();
+  show('s3');
+  if (!ws) connect(); else sendJoin();
+};
+$('edit3').onclick = () => { show('s2'); buildCustom(); startCam(); };
+$('startBtn').onclick = () => send({ t: 'start' });
+
+/* =====================================================================
+   MANETTE
+   ===================================================================== */
+const IN = { x: 0, y: 0, s: 0, k: 0, p: 0 };
+let stickId = null, baseX = 0, baseY = 0;
+const RAD = 62;
+
+function setKnob(dx, dy) {
+  const k = $('stickKnob');
+  k.style.left = (baseX + dx) + 'px';
+  k.style.top = (baseY + dy) + 'px';
+  k.style.bottom = 'auto';
+  k.style.transform = 'translate(-50%,-50%)';
+}
+function placeBase(x, y) {
+  baseX = x; baseY = y;
+  const b = $('stickBase');
+  b.style.left = x + 'px'; b.style.top = y + 'px';
+  b.style.bottom = 'auto'; b.style.transform = 'translate(-50%,-50%)';
+  setKnob(0, 0);
+}
+function resetStick() {
+  const h = window.innerHeight;
+  placeBase(110, h - 110);
+  IN.x = 0; IN.y = 0;
+}
+addEventListener('resize', resetStick);
+
+const zone = $('stickZone');
+zone.addEventListener('touchstart', e => {
+  const t = e.changedTouches[0];
+  stickId = t.identifier;
+  placeBase(t.clientX, t.clientY);
+  e.preventDefault();
+}, { passive: false });
+zone.addEventListener('touchmove', e => {
+  for (const t of e.changedTouches) {
+    if (t.identifier !== stickId) continue;
+    let dx = t.clientX - baseX, dy = t.clientY - baseY;
+    const d = Math.hypot(dx, dy);
+    if (d > RAD) { dx = dx / d * RAD; dy = dy / d * RAD; }
+    setKnob(dx, dy);
+    IN.x = dx / RAD; IN.y = dy / RAD;
+  }
+  e.preventDefault();
+}, { passive: false });
+function endStick(e) {
+  for (const t of e.changedTouches) {
+    if (t.identifier === stickId) { stickId = null; resetStick(); }
+  }
+}
+zone.addEventListener('touchend', endStick);
+zone.addEventListener('touchcancel', endStick);
+
+function bindBtn(el, onDown, onUp) {
+  el.addEventListener('touchstart', e => { el.classList.add('down'); onDown(); e.preventDefault(); }, { passive: false });
+  const up = e => { el.classList.remove('down'); onUp && onUp(); };
+  el.addEventListener('touchend', up);
+  el.addEventListener('touchcancel', up);
+}
+let chargeStart = 0;
+bindBtn($('bShoot'), () => { IN.s = 1; chargeStart = performance.now(); if (navigator.vibrate) navigator.vibrate(12); },
+  () => { IN.s = 0; chargeStart = 0; $('chargeFill').style.width = '0%'; });
+bindBtn($('bPass'), () => { IN.p = 1; if (navigator.vibrate) navigator.vibrate(15); });
+bindBtn($('bTackle'), () => { IN.k = 1; if (navigator.vibrate) navigator.vibrate(30); });
+
+/* envoi des inputs */
+let lastSent = 0, lastKey = '';
+function loop() {
+  requestAnimationFrame(loop);
+  if (chargeStart) {
+    const c = Math.min(1, (performance.now() - chargeStart) / 950);
+    $('chargeFill').style.width = (c * 100) + '%';
+  }
+  const t = performance.now();
+  const key = IN.x.toFixed(2) + ',' + IN.y.toFixed(2) + ',' + IN.s;
+  if (t - lastSent > 33 && (key !== lastKey || IN.k || IN.p || t - lastSent > 250)) {
+    lastSent = t; lastKey = key;
+    send({ t: 'in', x: IN.x, y: IN.y, s: IN.s, k: IN.k, p: IN.p });
+    IN.k = 0; IN.p = 0;
+  }
+}
+resetStick();
+loop();
+
+/* auto-reprise si code déjà connu */
+(function auto() {
+  const h = (location.hash || '').replace('#', '').toUpperCase().slice(0, 4);
+  if (h.length === 4 && S.name) {
+    S.room = h;
+    show('s2'); buildCustom(); startCam();
+  }
+})();
+</script>
+</body>
+</html>

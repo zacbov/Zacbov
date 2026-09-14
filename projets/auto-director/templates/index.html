@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Auto-Director</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+  :root {
+    --bg: #0e1117; --panel: #161b22; --border: #2a3140;
+    --text: #e6edf3; --muted: #8b949e; --accent: #3fb950;
+    --danger: #f85149; --warn: #d29922;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    margin: 0; padding: 24px;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px;
+  }
+  .panel h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 14px; }
+  .status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 13px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--danger); }
+  .dot.on { background: var(--accent); }
+  .mic-row {
+    display: grid; grid-template-columns: 20px 140px 1fr 90px;
+    align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .mic-row:last-child { border-bottom: none; }
+  .mic-dot { width: 10px; height: 10px; border-radius: 50%; background: #3a4152; transition: background .1s; }
+  .mic-dot.active { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .bar-bg { background: #0a0d12; border-radius: 4px; height: 10px; overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--warn)); width: 0%; transition: width .1s; }
+  .scene-name { color: var(--muted); font-size: 12px; text-align: right; }
+  button {
+    background: #21262d; color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 7px 12px; font-size: 12px; cursor: pointer;
+  }
+  button:hover { background: #2d333b; }
+  button.active-override { background: var(--danger); border-color: var(--danger); }
+  .override-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; }
+  input[type=text], input[type=number], select {
+    background: #0a0d12; border: 1px solid var(--border); color: var(--text);
+    border-radius: 5px; padding: 5px 8px; font-size: 12px; width: 100%;
+  }
+  .save-bar { margin-top: 14px; display: flex; gap: 8px; align-items: center; }
+  .hint { color: var(--muted); font-size: 11px; margin-top: 4px; }
+  .flash { color: var(--accent); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>🎬 Auto-Director</h1>
+<div class="sub">Switch caméra automatique basé sur la détection de parole — mapping micro ↔ scène OBS</div>
+
+<div class="grid">
+
+  <div class="panel">
+    <h2>Statut en direct</h2>
+    <div class="status-row">
+      <div class="dot" id="obs-dot"></div>
+      <span id="obs-status">OBS: vérification...</span>
+      <span style="flex:1"></span>
+      <span id="override-status" style="color: var(--warn);"></span>
+    </div>
+    <div class="status-row">
+      <span id="vad-status" class="hint">Moteur VAD: ...</span>
+    </div>
+    <div id="mic-list"></div>
+
+    <div class="override-row" id="override-buttons">
+      <!-- boutons générés dynamiquement -->
+    </div>
+
+    <div class="override-row" style="margin-top:10px;">
+      <button onclick="runCalibration()">🎚️ Calibrer les seuils (silence 4s)</button>
+      <span id="calib-status" class="hint"></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>🎹 Clavier MIDI (override manuel)</h2>
+    <div class="status-row">
+      <div class="dot" id="midi-dot"></div>
+      <span id="midi-status">MIDI: vérification...</span>
+    </div>
+    <table id="midi-table">
+      <thead><tr><th>Touche</th><th>Action</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="override-row" style="margin-top:10px;">
+      <select id="midi-new-action" style="width:220px;"></select>
+      <button onclick="learnMidi()">🎧 Apprendre une touche</button>
+      <span id="midi-learn-status" class="hint"></span>
+    </div>
+    <div class="hint">Appuie sur "Apprendre", puis presse la touche/pad du clavier MIDI à associer à l'action choisie. Chaque touche déclenche instantanément l'override correspondant (ou le retour en mode auto).</div>
+  </div>
+
+  <div class="panel">
+    <h2>Configuration des mappings</h2>
+    <table id="mapping-table">
+      <thead>
+        <tr><th>Index micro</th><th>Nom (libre)</th><th>Scène OBS</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="hint">Périphériques détectés : <span id="device-hint">chargement...</span></div>
+
+    <h2 style="margin-top:20px;">Seuils de détection</h2>
+    <table>
+      <tr><td>Seuil RMS (sensibilité)</td><td><input type="number" step="0.001" id="rms_threshold"></td></tr>
+      <tr><td>Hangover (ms)</td><td><input type="number" id="hangover_ms"></td></tr>
+      <tr><td>Durée min. de parole (ms)</td><td><input type="number" id="min_speak_ms"></td></tr>
+      <tr><td>Cooldown entre switches (ms)</td><td><input type="number" id="switch_cooldown_ms"></td></tr>
+      <tr><td>Retour plan large après (ms)</td><td><input type="number" id="silence_to_wide_ms"></td></tr>
+      <tr><td>Scène par défaut (plan large)</td><td><input type="text" id="default_scene"></td></tr>
+    </table>
+
+    <div class="save-bar">
+      <button onclick="saveConfig()">💾 Enregistrer</button>
+      <span class="flash" id="save-flash"></span>
+    </div>
+    <div class="hint">⚠️ Un changement de mapping micro nécessite un redémarrage du service (`python3 app.py`).<br>Les seuils, eux, ne sont appliqués qu'après redémarrage également dans cette version simple — redémarre après avoir sauvegardé.</div>
+  </div>
+
+</div>
+
+<script>
+const socket = io();
+let currentConfig = null;
+
+async function loadStatus() {
+  const res = await fetch('/api/status');
+  const data = await res.json();
+  renderStatus(data);
+}
+
+function renderStatus(data) {
+  document.getElementById('obs-dot').classList.toggle('on', data.obs_connected);
+  document.getElementById('obs-status').textContent = 'OBS: ' + (data.obs_connected ? 'connecté' : 'déconnecté');
+  document.getElementById('override-status').textContent = data.manual_override
+    ? ('⚠ Override manuel: ' + data.manual_override)
+    : (data.current_split ? '🔀 Split-screen actif' : '');
+  document.getElementById('vad-status').textContent =
+    'Moteur VAD: ' + (data.vad_engine === 'silero' ? '🚀 Silero (GPU/CPU neuronal)' : '📊 RMS (niveau simple)')
+    + (data.calibrating ? ' — 🎚️ calibration en cours...' : '');
+
+  const list = document.getElementById('mic-list');
+  list.innerHTML = '';
+  data.mics.forEach(m => {
+    const row = document.createElement('div');
+    row.className = 'mic-row';
+    row.innerHTML = `
+      <div class="mic-dot ${m.speaking ? 'active' : ''}" id="dot-${m.mic_index}"></div>
+      <div>${m.mic_name}<br><span class="hint">seuil: ${m.threshold}</span></div>
+      <div class="bar-bg"><div class="bar-fill" id="bar-${m.mic_index}" style="width:${Math.min(m.level*100/(m.threshold*2||1),100)}%"></div></div>
+      <div class="scene-name">${m.scene_name}</div>
+    `;
+    list.appendChild(row);
+  });
+
+  const overrideDiv = document.getElementById('override-buttons');
+  overrideDiv.innerHTML = '';
+  data.mics.forEach(m => {
+    const b = document.createElement('button');
+    b.textContent = '→ ' + m.scene_name;
+    if (data.manual_override === m.scene_name) b.classList.add('active-override');
+    b.onclick = () => setOverride(m.scene_name);
+    overrideDiv.appendChild(b);
+  });
+  const autoBtn = document.createElement('button');
+  autoBtn.textContent = '🔄 Mode auto';
+  autoBtn.onclick = () => setOverride(null);
+  overrideDiv.appendChild(autoBtn);
+}
+
+async function setOverride(scene) {
+  await fetch('/api/override', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({scene_name: scene})
+  });
+  loadStatus();
+}
+
+async function runCalibration() {
+  const statusEl = document.getElementById('calib-status');
+  statusEl.textContent = '🤫 Garde le silence 4 secondes...';
+  await fetch('/api/calibrate', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({duration_s: 4.0})
+  });
+  const poll = setInterval(async () => {
+    const statusRes = await fetch('/api/status');
+    const status = await statusRes.json();
+    if (!status.calibrating) {
+      clearInterval(poll);
+      const res = await fetch('/api/calibrate/result');
+      const result = await res.json();
+      await fetch('/api/calibrate/save', {method: 'POST'});
+      statusEl.textContent = '✓ Seuils calibrés et enregistrés (' + Object.keys(result).length + ' micros)';
+      setTimeout(() => statusEl.textContent = '', 5000);
+      loadStatus();
+    }
+  }, 500);
+}
+
+// ---------------- MIDI ----------------
+
+async function loadMidiDevices() {
+  const res = await fetch('/api/midi/devices');
+  const devices = await res.json();
+  const dot = document.getElementById('midi-dot');
+  const status = document.getElementById('midi-status');
+  dot.classList.toggle('on', devices.length > 0);
+  status.textContent = devices.length > 0
+    ? 'MIDI: ' + devices.join(', ')
+    : 'MIDI: aucun périphérique détecté';
+}
+
+async function populateMidiActionSelect() {
+  const sel = document.getElementById('midi-new-action');
+  sel.innerHTML = '';
+  const autoOpt = document.createElement('option');
+  autoOpt.value = '__auto__'; autoOpt.textContent = '🔄 Retour mode auto';
+  sel.appendChild(autoOpt);
+  (currentConfig?.mappings || []).forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.scene_name; opt.textContent = '→ ' + m.scene_name;
+    sel.appendChild(opt);
+  });
+}
+
+async function loadMidiMappings() {
+  const res = await fetch('/api/midi/mappings');
+  const mappings = await res.json();
+  const tbody = document.querySelector('#midi-table tbody');
+  tbody.innerHTML = '';
+  mappings.forEach(m => {
+    const tr = document.createElement('tr');
+    const actionLabel = m.action === '__auto__' ? '🔄 Retour mode auto' : '→ ' + m.action;
+    tr.innerHTML = `<td>${m.key}</td><td>${actionLabel}</td>
+      <td><button onclick="deleteMidiMapping('${m.key}')">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function deleteMidiMapping(key) {
+  await fetch('/api/midi/mappings/delete', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({key})
+  });
+  loadMidiMappings();
+}
+
+async function learnMidi() {
+  const action = document.getElementById('midi-new-action').value;
+  const statusEl = document.getElementById('midi-learn-status');
+  const startRes = await fetch('/api/midi/learn/start', {method: 'POST'});
+  if (!startRes.ok) {
+    statusEl.textContent = '⚠ MIDI désactivé côté serveur';
+    return;
+  }
+  statusEl.textContent = '⏳ En attente d\'une touche...';
+  const poll = setInterval(async () => {
+    const res = await fetch('/api/midi/learn/poll');
+    const data = await res.json();
+    if (data.key) {
+      clearInterval(poll);
+      await fetch('/api/midi/mappings', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({key: data.key, action})
+      });
+      statusEl.textContent = `✓ ${data.key} → ${action}`;
+      loadMidiMappings();
+      setTimeout(() => statusEl.textContent = '', 3000);
+    }
+  }, 400);
+  setTimeout(() => clearInterval(poll), 15000); // timeout de sécurité 15s
+}
+
+socket.on('midi_devices', (d) => {
+  const dot = document.getElementById('midi-dot');
+  const status = document.getElementById('midi-status');
+  dot.classList.toggle('on', d.devices.length > 0);
+  status.textContent = d.devices.length > 0
+    ? 'MIDI: ' + d.devices.join(', ')
+    : 'MIDI: aucun périphérique détecté';
+});
+
+socket.on('midi_triggered', (d) => {
+  const statusEl = document.getElementById('midi-learn-status');
+  statusEl.textContent = `🎹 ${d.key} déclenché → ${d.action}`;
+  setTimeout(() => statusEl.textContent = '', 2000);
+});
+
+socket.on('level_update', (d) => {
+  const bar = document.getElementById('bar-' + d.mic_index);
+  const dot = document.getElementById('dot-' + d.mic_index);
+  if (bar) bar.style.width = Math.min(d.level * 400, 100) + '%';
+  if (dot) dot.classList.toggle('active', d.speaking);
+});
+
+async function loadConfig() {
+  const res = await fetch('/api/config');
+  currentConfig = await res.json();
+  const tbody = document.querySelector('#mapping-table tbody');
+  tbody.innerHTML = '';
+  currentConfig.mappings.forEach((m, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="number" value="${m.mic_index}" data-field="mic_index" data-i="${i}"></td>
+      <td><input type="text" value="${m.mic_name}" data-field="mic_name" data-i="${i}"></td>
+      <td><input type="text" value="${m.scene_name}" data-field="scene_name" data-i="${i}"></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('rms_threshold').value = currentConfig.detection.rms_threshold;
+  document.getElementById('hangover_ms').value = currentConfig.detection.hangover_ms;
+  document.getElementById('min_speak_ms').value = currentConfig.detection.min_speak_ms;
+  document.getElementById('switch_cooldown_ms').value = currentConfig.detection.switch_cooldown_ms;
+  document.getElementById('silence_to_wide_ms').value = currentConfig.detection.silence_to_wide_ms;
+  document.getElementById('default_scene').value = currentConfig.obs.default_scene;
+}
+
+async function loadDevices() {
+  const res = await fetch('/api/devices');
+  const devices = await res.json();
+  document.getElementById('device-hint').textContent = devices.map(d => `[${d.index}] ${d.name}`).join(' · ') || 'aucun';
+}
+
+async function saveConfig() {
+  const rows = document.querySelectorAll('#mapping-table tbody tr');
+  const mappings = Array.from(rows).map(tr => ({
+    mic_index: parseInt(tr.querySelector('[data-field=mic_index]').value),
+    mic_name: tr.querySelector('[data-field=mic_name]').value,
+    scene_name: tr.querySelector('[data-field=scene_name]').value,
+  }));
+  const payload = {
+    mappings,
+    detection: {
+      rms_threshold: parseFloat(document.getElementById('rms_threshold').value),
+      hangover_ms: parseInt(document.getElementById('hangover_ms').value),
+      min_speak_ms: parseInt(document.getElementById('min_speak_ms').value),
+      switch_cooldown_ms: parseInt(document.getElementById('switch_cooldown_ms').value),
+      silence_to_wide_ms: parseInt(document.getElementById('silence_to_wide_ms').value),
+    },
+    obs: { default_scene: document.getElementById('default_scene').value }
+  };
+  const res = await fetch('/api/config/mappings', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  const flash = document.getElementById('save-flash');
+  flash.textContent = '✓ Enregistré — redémarre le service pour appliquer';
+  setTimeout(() => flash.textContent = '', 4000);
+}
+
+async function initAll() {
+  await loadConfig();
+  populateMidiActionSelect();
+  loadMidiMappings();
+}
+
+loadStatus();
+initAll();
+loadDevices();
+loadMidiDevices();
+setInterval(loadStatus, 2000);
+setInterval(loadMidiDevices, 5000);
+</script>
+</body>
+</html>

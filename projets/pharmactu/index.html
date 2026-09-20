@@ -60,6 +60,11 @@
     background: #eef4ff; border-radius: 14px; font-size: 0.85rem; cursor: pointer;
   }
   .substance-chip:hover { background: #dbe8ff; }
+  .rupture-badge {
+    background: #fff0f0; border: 1px solid #e8b4b4; color: #a12b2b;
+    padding: 10px 14px; border-radius: 8px; margin: 10px 0; font-size: 0.9rem;
+  }
+  .rupture-badge a { color: #a12b2b; }
 </style>
 </head>
 <body>
@@ -111,6 +116,8 @@ const CIS_TO_GROUP_URL = './data/cis_to_group.json';     // idem
 const GROUP_DETAIL_DIR = './data/medicaments_groups/';   // idem (dossier entier, ~2400 petits fichiers)
 const ANSM_RSS_URL = 'https://ansm.sante.fr/rss/informations_securite';
 const ANSM_PAGE_URL = 'https://ansm.sante.fr/informations-de-securite'; // lien de repli si le flux est inaccessible
+// URL confirmée le 19/09/2026 sur https://ansm.sante.fr/page/flux-rss (liste officielle des flux)
+const ANSM_RUPTURES_RSS_URL = 'https://ansm.sante.fr/rss/disponibilite_produits_sante?produitsSante=medicaments';
 // Confirmé le 19/09/2026 : l'ANSM ne renvoie pas d'en-tête CORS sur ce flux.
 // allorigins.win et corsproxy.io, testés en repli, se sont tous les deux
 // révélés morts (l'un en erreur serveur, l'autre exigeant désormais une clé)
@@ -389,6 +396,25 @@ async function getDailyMedSections(rxcui) {
 }
 
 /**
+ * openFDA renvoie un 404 avec un corps JSON {error:{code:"NOT_FOUND"}} quand
+ * la recherche n'aboutit à rien — ce n'est PAS une panne, juste une absence
+ * de résultat (normal pour une substance non commercialisée aux US, ou un
+ * nom encore mal traduit). On distingue ce cas d'une vraie erreur réseau/
+ * CORS pour afficher un message pertinent plutôt qu'un "indisponible"
+ * générique qui laisse penser à un bug.
+ */
+async function openFdaFetchJson(url) {
+  try {
+    const res = await fetch(url);
+    if (res.status === 404) return { status: 'notfound' };
+    if (!res.ok) return { status: 'error', code: res.status };
+    return { status: 'ok', data: await res.json() };
+  } catch (e) {
+    return { status: 'error', code: null };
+  }
+}
+
+/**
  * Littérature scientifique via Crossref — remplace Europe PMC (confirmé
  * mort côté CORS, y compris dans le code pharmatlas lui-même où le même
  * endpoint est présent mais jamais réellement validé). Crossref indexe
@@ -454,134 +480,225 @@ async function resolveSubstance(cis) {
   };
 }
 
-async function lookupDrug(nom, targetBox) {
-  const box = targetBox || ficheBox;
-  box.innerHTML = '<p class="loading">Interrogation des sources en cours...</p>';
-
-  const bdpmMatch = bdpmIndex.find(item => item.name.toLowerCase() === nom.toLowerCase()) || null;
-  const groupInfo = bdpmMatch ? await resolveSubstance(bdpmMatch.id) : null;
-
-  // PubChem/openFDA attendent un nom de substance active (ex. "paracétamol"),
-  // pas un nom commercial complet avec dosage/forme (ex. "DOLIPRANE 1000 mg,
-  // comprimé") — confirmé par un 404/400 en test réel le 19/09/2026.
-  // On utilise la substance résolue via pharmatlas (cis_to_group), sinon on
-  // retombe sur la recherche brute (cas d'une DCI tapée directement, sans
-  // passage par la table locale).
-  const requeteChimie = groupInfo?.substance || nom;
-  const requeteInternationale = stripAccents(requeteChimie);
-  const rxcui = await getRxcui(requeteInternationale);
-  const requeteUS = await normalizeForUS(requeteChimie);
-
-  const [openfdaLabel, openfdaEvents, pubchem, pmc, trials, atcRxClass, dailyMed] = await Promise.all([
-    safeFetchJson(`https://api.fda.gov/drug/label.json?search=openfda.substance_name:"${encodeURIComponent(requeteUS)}"&limit=1`),
-    safeFetchJson(`https://api.fda.gov/drug/event.json?search=patient.drug.medicinalproduct:"${encodeURIComponent(requeteUS)}"&count=patient.reaction.reactionmeddrapt.exact`),
-    safeFetchJson(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(requeteInternationale)}/property/MolecularFormula,MolecularWeight,IUPACName/JSON`),
-    corsFetchJson(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(requeteInternationale)}&format=json&pageSize=5`),
-    safeFetchJson(`https://clinicaltrials.gov/api/v2/studies?query.term=${encodeURIComponent(requeteInternationale)}&pageSize=5`),
-    groupInfo?.atc ? Promise.resolve([]) : getAtcViaRxClass(rxcui), // pas besoin de RxClass si pharmatlas a déjà l'ATC
-    getDailyMedSections(rxcui),
-  ]);
-
-  // Europe PMC confirmé sans CORS — on tente Crossref en repli avant le lien manuel
-  let litterature = pmc?.resultList?.result || [];
-  let litteratureSource = 'europepmc';
-  if (!litterature.length) {
-    const crossref = await crossrefSearch(requeteInternationale);
-    if (crossref.length) { litterature = crossref; litteratureSource = 'crossref'; }
-  }
-
-  renderFiche({
-    nom,
-    substanceInterrogee: requeteChimie !== nom ? requeteChimie : null,
-    bdpm: bdpmMatch,
-    atc: groupInfo?.atc || atcRxClass?.[0]?.code || null,
-    atcSource: groupInfo?.atc ? 'pharmatlas' : (atcRxClass?.[0]?.code ? 'rxclass' : null),
-    openfdaLabel: openfdaLabel?.results?.[0] || null,
-    openfdaEvents: openfdaEvents?.results?.slice(0, 5) || [],
-    pubchem: pubchem?.PropertyTable?.Properties?.[0] || null,
-    litterature,
-    litteratureSource,
-    trials: trials?.studies || [],
-    dailyMed,
-  }, box);
+/**
+ * Liste les autres présentations (princeps + génériques) partageant le même
+ * group_id pharmatlas que la spécialité courante — entièrement synchrone,
+ * les deux tables (bdpmIndex, cisToGroup) sont déjà en mémoire, aucun fetch
+ * supplémentaire nécessaire. Exclut la spécialité actuellement affichée.
+ */
+function findAutresPresentations(currentCis, groupId) {
+  if (!groupId) return { total: 0, items: [] };
+  const items = bdpmIndex.filter(item => item.id !== currentCis && cisToGroup[item.id] === groupId);
+  return { total: items.length, items: items.slice(0, 15) };
 }
 
-function renderFiche(f, targetBox) {
+function loadingBlock(secClass, titre) {
+  return `<section class="bloc ${secClass}"><h3>${titre}</h3><p class="loading">Chargement...</p></section>`;
+}
+
+function ficheSkeleton(nom) {
+  return `
+    <h2>${nom}</h2>
+    <div class="sec-substance"></div>
+    <div class="sec-rupture"></div>
+    ${loadingBlock('sec-bdpm', 'France — pharmatlas / BDPM')}
+    <div class="sec-generiques"></div>
+    ${loadingBlock('sec-chimie', 'Données chimiques (PubChem)')}
+    ${loadingBlock('sec-notice', 'Notice (openFDA)')}
+    <div class="sec-effets"></div>
+    <div class="sec-dailymed"></div>
+    ${loadingBlock('sec-litterature', 'Littérature scientifique')}
+    ${loadingBlock('sec-essais', 'Essais cliniques en cours')}
+  `;
+}
+
+function setSection(box, cls, html) {
+  const el = box.querySelector('.' + cls);
+  if (el) el.outerHTML = html;
+}
+
+/**
+ * Recherche progressive : chaque source met à jour sa propre section dès
+ * qu'elle répond, sans attendre les autres — donne une sensation de
+ * rapidité et montre clairement quelle source traîne, plutôt qu'un seul
+ * message "chargement" jusqu'à ce que tout (même la source la plus lente)
+ * ait répondu.
+ */
+async function lookupDrug(nom, targetBox) {
   const box = targetBox || ficheBox;
-  let html = `<h2>${f.nom}</h2>`;
-  if (f.substanceInterrogee) {
-    html += `<p class="sub">Recherche PubChem/openFDA/Europe PMC/ClinicalTrials effectuée sur la substance active : <strong>${f.substanceInterrogee}</strong></p>`;
+  box.innerHTML = ficheSkeleton(nom);
+
+  const bdpmMatch = bdpmIndex.find(item => item.name.toLowerCase() === nom.toLowerCase()) || null;
+
+  // Rupture de stock : indépendant, se déclenche tout de suite (nom brut
+  // disponible immédiatement, la substance affinera la recherche si trouvée)
+  checkRupture(nom, null).then(rupture => {
+    if (rupture) renderRuptureBadge(box, rupture);
+  });
+
+  // BDPM/pharmatlas : résolution de substance + ATC (un seul petit fetch local)
+  const groupInfo = bdpmMatch ? await resolveSubstance(bdpmMatch.id) : null;
+  const requeteChimie = groupInfo?.substance || nom;
+  const requeteInternationale = stripAccents(requeteChimie);
+
+  if (requeteChimie !== nom) {
+    box.querySelector('.sec-substance').innerHTML =
+      `<p class="sub">Recherche PubChem/openFDA/Europe PMC/ClinicalTrials effectuée sur la substance active : <strong>${requeteChimie}</strong></p>`;
   }
 
-  if (f.bdpm) {
-    html += `<section class="bloc"><h3>France — pharmatlas / BDPM</h3>
-      <p>Code CIS : ${f.bdpm.id}<br>
-      Composition : ${f.bdpm.desc || 'non précisée'}<br>
-      Forme : ${f.bdpm.forme || '—'}<br>
-      Voie d'administration : ${f.bdpm.voie || '—'}
-      ${f.atc ? `<br>Code ATC : <strong>${f.atc}</strong> <span class="tag">${f.atcSource === 'rxclass' ? 'via RxClass' : 'via pharmatlas'}</span>` : ''}</p></section>`;
+  // Ré-affine le badge rupture avec la substance si le nom brut n'a rien donné
+  if (groupInfo?.substance) {
+    checkRupture(nom, groupInfo.substance).then(rupture => {
+      if (rupture && !box.querySelector('.rupture-badge')) renderRuptureBadge(box, rupture);
+    });
+  }
+
+  renderBdpmSection(box, bdpmMatch, groupInfo, null); // ATC RxClass pas encore résolu, complété plus bas si besoin
+
+  if (bdpmMatch && groupInfo?.groupId) {
+    const { total, items: autres } = findAutresPresentations(bdpmMatch.id, groupInfo.groupId);
+    if (autres.length) {
+      const titre = total > autres.length ? `Autres présentations (${autres.length} sur ${total})` : `Autres présentations (${total})`;
+      box.querySelector('.sec-generiques').innerHTML = `<section class="bloc"><h3>${titre}</h3>
+        <p>${autres.map(a => `<span class="substance-chip" data-nom="${a.name}">${a.name}</span>`).join('')}</p></section>`;
+      box.querySelectorAll('.sec-generiques .substance-chip').forEach(chip => {
+        chip.addEventListener('click', () => lookupDrug(chip.dataset.nom, box));
+      });
+    }
+  }
+
+  // --- Sources indépendantes de la substance (démarrent tout de suite) ---
+  safeFetchJson(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(requeteInternationale)}/property/MolecularFormula,MolecularWeight,IUPACName/JSON`)
+    .then(pubchem => renderChimieSection(box, pubchem?.PropertyTable?.Properties?.[0] || null));
+
+  safeFetchJson(`https://clinicaltrials.gov/api/v2/studies?query.term=${encodeURIComponent(requeteInternationale)}&pageSize=5`)
+    .then(trials => renderEssaisSection(box, trials?.studies || []));
+
+  (async () => {
+    const pmc = await corsFetchJson(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(requeteInternationale)}&format=json&pageSize=5`);
+    let litterature = pmc?.resultList?.result || [];
+    let source = 'europepmc';
+    if (!litterature.length) {
+      const crossref = await crossrefSearch(requeteInternationale);
+      if (crossref.length) { litterature = crossref; source = 'crossref'; }
+    }
+    renderLitteratureSection(box, litterature, source, requeteChimie);
+  })();
+
+  // --- Sources qui dépendent du rxcui (chaîne RxNorm) ---
+  const rxcui = await getRxcui(requeteInternationale);
+
+  if (!groupInfo?.atc) {
+    getAtcViaRxClass(rxcui).then(atcRxClass => {
+      if (atcRxClass?.[0]?.code) renderBdpmSection(box, bdpmMatch, groupInfo, atcRxClass[0].code);
+    });
+  }
+
+  getDailyMedSections(rxcui).then(dailyMed => renderDailyMedSection(box, dailyMed));
+
+  normalizeForUS(requeteChimie).then(requeteUS => {
+    openFdaFetchJson(`https://api.fda.gov/drug/label.json?search=openfda.substance_name:"${encodeURIComponent(requeteUS)}"&limit=1`)
+      .then(result => renderNoticeSection(box, result));
+    openFdaFetchJson(`https://api.fda.gov/drug/event.json?search=patient.drug.medicinalproduct:"${encodeURIComponent(requeteUS)}"&count=patient.reaction.reactionmeddrapt.exact`)
+      .then(result => renderEffetsSection(box, result));
+  });
+}
+
+function renderRuptureBadge(box, rupture) {
+  const el = box.querySelector('.sec-rupture');
+  if (el.querySelector('.rupture-badge')) return; // déjà affiché (évite le doublon nom brut + substance)
+  el.innerHTML = `<div class="rupture-badge">⚠️ Rupture ou tension d'approvisionnement signalée à l'ANSM —
+    <a href="${rupture.lien}" target="_blank" rel="noopener">voir le détail →</a></div>`;
+}
+
+function renderBdpmSection(box, bdpmMatch, groupInfo, atcRxClassOverride) {
+  const atc = groupInfo?.atc || atcRxClassOverride;
+  const atcSource = groupInfo?.atc ? 'pharmatlas' : (atcRxClassOverride ? 'rxclass' : null);
+  let html;
+  if (bdpmMatch) {
+    html = `<section class="bloc sec-bdpm"><h3>France — pharmatlas / BDPM</h3>
+      <p>Code CIS : ${bdpmMatch.id}<br>
+      Composition : ${bdpmMatch.desc || 'non précisée'}<br>
+      Forme : ${bdpmMatch.forme || '—'}<br>
+      Voie d'administration : ${bdpmMatch.voie || '—'}
+      ${atc ? `<br>Code ATC : <strong>${atc}</strong> <span class="tag">${atcSource === 'rxclass' ? 'via RxClass' : 'via pharmatlas'}</span>` : ''}</p></section>`;
   } else {
-    html += `<p class="empty">Aucune correspondance trouvée dans la table locale pour ce nom.</p>`;
+    html = `<p class="empty sec-bdpm">Aucune correspondance trouvée dans la table locale pour ce nom.</p>`;
   }
+  setSection(box, 'sec-bdpm', html);
+}
 
-  html += `<section class="bloc"><h3>Données chimiques (PubChem)</h3>` +
-    (f.pubchem
-      ? `<p>Formule : ${f.pubchem.MolecularFormula || '—'}<br>
-         Masse moléculaire : ${f.pubchem.MolecularWeight || '—'}<br>
-         Nom IUPAC : ${f.pubchem.IUPACName || '—'}</p>`
+function renderChimieSection(box, pubchem) {
+  const html = `<section class="bloc sec-chimie"><h3>Données chimiques (PubChem)</h3>` +
+    (pubchem
+      ? `<p>Formule : ${pubchem.MolecularFormula || '—'}<br>
+         Masse moléculaire : ${pubchem.MolecularWeight || '—'}<br>
+         Nom IUPAC : ${pubchem.IUPACName || '—'}</p>`
       : `<p class="indispo">Source indisponible pour cette recherche.</p>`) +
     `</section>`;
+  setSection(box, 'sec-chimie', html);
+}
 
-  html += `<section class="bloc"><h3>Notice (openFDA)</h3>
+function renderNoticeSection(box, result) {
+  let corps;
+  if (result.status === 'ok') {
+    const label = result.data?.results?.[0];
+    corps = `<p>${(label?.indications_and_usage || ['—'])[0]}</p>`;
+  } else if (result.status === 'notfound') {
+    corps = `<p class="indispo">Aucune fiche openFDA pour cette substance (marché américain) — pas forcément une erreur, elle peut simplement ne pas y être commercialisée.</p>`;
+  } else {
+    corps = `<p class="indispo">Erreur réseau/CORS lors de l'appel à openFDA (code ${result.code ?? '—'}).</p>`;
+  }
+  const html = `<section class="bloc sec-notice"><h3>Notice (openFDA)</h3>
     <p class="avertissement">Notice américaine, fournie à titre comparatif uniquement —
-    se référer au RCP français (BDPM/ANSM) pour toute décision clinique.</p>` +
-    (f.openfdaLabel
-      ? `<p>${(f.openfdaLabel.indications_and_usage || ['—'])[0]}</p>`
-      : `<p class="indispo">Source indisponible pour cette recherche.</p>`) +
-    `</section>`;
+    se référer au RCP français (BDPM/ANSM) pour toute décision clinique.</p>${corps}</section>`;
+  setSection(box, 'sec-notice', html);
+}
 
-  if (f.openfdaEvents.length) {
-    html += `<section class="bloc"><h3>Effets indésirables les plus rapportés (FAERS)</h3><ul>` +
-      f.openfdaEvents.map(e => `<li>${e.term} — ${e.count} signalements</li>`).join('') +
-      `</ul></section>`;
-  }
+function renderEffetsSection(box, result) {
+  const events = result.status === 'ok' ? (result.data?.results?.slice(0, 5) || []) : [];
+  if (!events.length) { box.querySelector('.sec-effets').innerHTML = ''; return; }
+  box.querySelector('.sec-effets').innerHTML = `<section class="bloc"><h3>Effets indésirables les plus rapportés (FAERS)</h3><ul>` +
+    events.map(e => `<li>${e.term} — ${e.count} signalements</li>`).join('') +
+    `</ul></section>`;
+}
 
-  if (f.dailyMed) {
-    html += `<section class="bloc"><h3>Notice structurée US (DailyMed)</h3>` +
-      f.dailyMed.sections.map(s => `<p><strong>${s.label}</strong><br>${s.texte}</p>`).join('') +
-      `<p><a href="${f.dailyMed.url}" target="_blank" rel="noopener">Voir la notice complète sur DailyMed →</a></p></section>`;
-  }
+function renderDailyMedSection(box, dailyMed) {
+  if (!dailyMed) { box.querySelector('.sec-dailymed').innerHTML = ''; return; }
+  box.querySelector('.sec-dailymed').innerHTML = `<section class="bloc"><h3>Notice structurée US (DailyMed)</h3>` +
+    dailyMed.sections.map(s => `<p><strong>${s.label}</strong><br>${s.texte}</p>`).join('') +
+    `<p><a href="${dailyMed.url}" target="_blank" rel="noopener">Voir la notice complète sur DailyMed →</a></p></section>`;
+}
 
-  if (f.litterature.length) {
-    const sourceLabel = f.litteratureSource === 'crossref' ? 'Crossref — Europe PMC indisponible (CORS)' : 'Europe PMC';
-    html += `<section class="bloc"><h3>Littérature scientifique (${sourceLabel})</h3><ul>` +
-      f.litterature.map(l => {
-        if (f.litteratureSource === 'crossref') {
-          return `<li>${l.titre}${l.journal ? ' — ' + l.journal : ''} (${l.annee || 's.d.'})${l.doi ? ` — <a href="https://doi.org/${l.doi}" target="_blank" rel="noopener">DOI</a>` : ''}</li>`;
-        }
-        return `<li>${l.title} (${l.pubYear || 's.d.'})</li>`;
-      }).join('') +
-      `</ul></section>`;
+function renderLitteratureSection(box, litterature, source, substanceInterrogee) {
+  let html;
+  if (litterature.length) {
+    const sourceLabel = source === 'crossref' ? 'Crossref — Europe PMC indisponible (CORS)' : 'Europe PMC';
+    html = `<section class="bloc sec-litterature"><h3>Littérature scientifique (${sourceLabel})</h3><ul>` +
+      litterature.map(l => source === 'crossref'
+        ? `<li>${l.titre}${l.journal ? ' — ' + l.journal : ''} (${l.annee || 's.d.'})${l.doi ? ` — <a href="https://doi.org/${l.doi}" target="_blank" rel="noopener">DOI</a>` : ''}</li>`
+        : `<li>${l.title} (${l.pubYear || 's.d.'})</li>`
+      ).join('') + `</ul></section>`;
   } else {
-    html += `<section class="bloc"><h3>Littérature scientifique</h3>
+    html = `<section class="bloc sec-litterature"><h3>Littérature scientifique</h3>
       <p class="indispo">Europe PMC et Crossref indisponibles pour cette recherche.</p>
-      <p><a href="https://europepmc.org/search?query=${encodeURIComponent(f.substanceInterrogee || f.nom)}" target="_blank" rel="noopener">Chercher directement sur Europe PMC →</a></p>
-      </section>`;
+      <p><a href="https://europepmc.org/search?query=${encodeURIComponent(substanceInterrogee)}" target="_blank" rel="noopener">Chercher directement sur Europe PMC →</a></p></section>`;
   }
+  setSection(box, 'sec-litterature', html);
+}
 
-
-  if (f.trials.length) {
-    html += `<section class="bloc"><h3>Essais cliniques en cours</h3><ul>` +
-      f.trials.map(s => {
+function renderEssaisSection(box, trials) {
+  const html = trials.length
+    ? `<section class="bloc sec-essais"><h3>Essais cliniques en cours</h3><ul>` +
+      trials.map(s => {
         const id = s.protocolSection?.identificationModule || {};
         const status = s.protocolSection?.statusModule?.overallStatus || '—';
         return `<li>${id.briefTitle || 'Sans titre'} — ${status} (${id.nctId || '—'})</li>`;
-      }).join('') +
-      `</ul></section>`;
-  }
-
-  box.innerHTML = html;
+      }).join('') + `</ul></section>`
+    : `<p class="empty sec-essais">Aucun essai clinique en cours trouvé.</p>`;
+  setSection(box, 'sec-essais', html);
 }
+
 
 // =========================================================================
 // Actualités ANSM (flux RSS, groupées par période, rien de persisté)
@@ -589,35 +706,44 @@ function renderFiche(f, targetBox) {
 let rssLoaded = false;
 let allRssItems = [];
 
+/**
+ * Récupère et parse un flux RSS ANSM (tentative directe, puis repli
+ * rss2json). Retourne un tableau d'items ou null si les deux échouent.
+ * Factorisé pour être réutilisé par le module ruptures de stock (badge
+ * sur la fiche médicament) sans dupliquer la logique CORS.
+ */
+async function fetchRssFeed(url) {
+  try {
+    const res = await fetch(url);
+    if (res.ok) {
+      const items = parseRssXml(await res.text());
+      if (items) return items;
+    }
+  } catch (e) { /* silencieux, on tente rss2json ensuite */ }
+
+  try {
+    const res = await fetch(RSS2JSON_URL(url));
+    if (res.ok) {
+      const data = await res.json();
+      if (data.status === 'ok' && data.items) {
+        return data.items.map(it => ({
+          titre: it.title || '',
+          lien: it.link || '',
+          dateRaw: it.pubDate || '',
+        }));
+      }
+    }
+  } catch (e) { /* échec du repli aussi */ }
+
+  return null;
+}
+
 async function loadAnsmRss() {
   rssLoaded = true;
   const content = document.getElementById('rss-content');
   content.innerHTML = '<p class="loading">Chargement du flux ANSM...</p>';
 
-  let items = null;
-
-  // Tentative directe (fonctionne seulement si l'ANSM autorise CORS un jour)
-  try {
-    const res = await fetch(ANSM_RSS_URL);
-    if (res.ok) items = parseRssXml(await res.text());
-  } catch (e) { /* silencieux, on tente rss2json ensuite */ }
-
-  // Seul repli gardé (voir commentaire plus haut sur les deux proxys retirés)
-  if (!items) {
-    try {
-      const res = await fetch(RSS2JSON_URL(ANSM_RSS_URL));
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status === 'ok' && data.items) {
-          items = data.items.map(it => ({
-            titre: it.title || '',
-            lien: it.link || '',
-            dateRaw: it.pubDate || '',
-          }));
-        }
-      }
-    } catch (e) { /* échec du repli aussi */ }
-  }
+  const items = await fetchRssFeed(ANSM_RSS_URL);
 
   if (!items) {
     content.innerHTML = `<p class="indispo">Flux ANSM inaccessible depuis le navigateur (CORS).</p>
@@ -627,6 +753,39 @@ async function loadAnsmRss() {
 
   allRssItems = items;
   renderRss('jour');
+}
+
+// --- Module ruptures de stock (badge sur la fiche médicament) ----------
+let rupturesCache = null; // null = pas encore chargé ; [] = chargé mais vide ; undefined jamais utilisé
+let rupturesPromise = null;
+
+function getRupturesList() {
+  if (rupturesCache !== null) return Promise.resolve(rupturesCache);
+  if (!rupturesPromise) {
+    rupturesPromise = fetchRssFeed(ANSM_RUPTURES_RSS_URL).then(items => {
+      rupturesCache = items || []; // liste vide si le flux est inaccessible : pas de badge affiché, pas d'erreur bloquante
+      return rupturesCache;
+    });
+  }
+  return rupturesPromise;
+}
+
+/**
+ * Croise le nom commercial (préfixe avant la virgule, ex. "DOLIPRANE 1000 mg"
+ * à partir de "DOLIPRANE 1000 mg, comprimé") et la substance active contre
+ * les titres du flux ruptures ANSM. Correspondance texte simple — les
+ * ruptures de stock officielles reprennent presque toujours le nom de la
+ * spécialité ou la substance dans leur titre.
+ */
+async function checkRupture(nomSpecialite, substance) {
+  const items = await getRupturesList();
+  if (!items.length) return null;
+  const brandPrefix = (nomSpecialite || '').split(',')[0].trim().toLowerCase();
+  const substanceLower = (substance || '').toLowerCase();
+  return items.find(it => {
+    const t = it.titre.toLowerCase();
+    return (brandPrefix && t.includes(brandPrefix)) || (substanceLower && substanceLower.length > 3 && t.includes(substanceLower));
+  }) || null;
 }
 
 function parseRssXml(xmlText) {

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Battement — mesure de rythme cardiaque</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; background:#0a1015; color:#eaf4ff;
+    font-family: system-ui, sans-serif; overflow:hidden; }
+  #app { display:flex; flex-direction:column; align-items:center; justify-content:center;
+    height:100%; padding:20px; box-sizing:border-box; text-align:center; }
+  h1 { font-weight:300; letter-spacing:1px; margin-bottom:4px; }
+  p { opacity:0.7; font-size:14px; max-width:340px; }
+  #bpmDisplay { font-size:64px; font-weight:600; margin:20px 0 4px; color:#ff9b9b; transition: color 0.3s; }
+  #bpmLabel { font-size:14px; opacity:0.6; margin-bottom:24px; }
+  #qualityRing {
+    width:200px; height:200px; border-radius:50%; border:6px solid rgba(255,255,255,0.12);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition: border-color 0.4s; margin-top:8px;
+  }
+  #qualityText {
+    font-size:15px; font-weight:600; margin-top:10px; max-width:220px; line-height:1.3;
+    transition: color 0.3s;
+  }
+  #startBtn {
+    padding:16px 40px; font-size:18px; border-radius:40px; border:1px solid #ff9b9b;
+    background:rgba(255,155,155,0.12); color:#eaf4ff; cursor:pointer;
+  }
+  #video { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+  #pulseCanvas { width:280px; height:60px; margin-top:16px; opacity:0.6; }
+  #sessionRow { margin-top:28px; font-size:12px; opacity:0.5; }
+  #sessionRow input {
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2);
+    color:#eaf4ff; border-radius:6px; padding:4px 8px; font-size:12px; width:100px;
+    text-align:center; margin-left:6px;
+  }
+  #syncStatus { font-size:12px; margin-top:8px; opacity:0.5; }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>🫀 Battement</h1>
+  <p>Pose délicatement le bout de ton index sur l'objectif de la caméra arrière
+     (et le flash s'il est à côté) — recouvre-les complètement, sans trop
+     appuyer. Reste immobile quelques secondes le temps que la mesure se stabilise.</p>
+
+  <div id="qualityRing">
+    <div id="bpmDisplay">--</div>
+    <div id="bpmLabel">bpm</div>
+  </div>
+  <div id="qualityText">Appuie sur "Démarrer" pour commencer</div>
+
+  <button id="startBtn">Démarrer la mesure</button>
+  <canvas id="pulseCanvas" width="280" height="60"></canvas>
+
+  <div id="sessionRow">
+    Code de séance :
+    <input id="sessionInput" type="text" value="default">
+  </div>
+  <div id="syncStatus">Pas encore envoyé au casque</div>
+
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="sampleCanvas" width="20" height="20" style="display:none;"></canvas>
+</div>
+
+<script>
+const bpmDisplay = document.getElementById('bpmDisplay');
+const bpmLabel = document.getElementById('bpmLabel');
+const qualityRing = document.getElementById('qualityRing');
+const qualityText = document.getElementById('qualityText');
+const startBtn = document.getElementById('startBtn');
+const pulseCanvas = document.getElementById('pulseCanvas');
+const pulseCtx = pulseCanvas.getContext('2d');
+const video = document.getElementById('video');
+const sampleCanvas = document.getElementById('sampleCanvas');
+const sampleCtx = sampleCanvas.getContext('2d');
+const syncStatus = document.getElementById('syncStatus');
+const sessionInput = document.getElementById('sessionInput');
+
+// Le code de séance arrive tout seul via le lien scanné (QR code affiché sur
+// le casque) — rien à taper. Repli sur "default" seulement si la page est
+// ouverte directement sans passer par le QR code (usage de test/dev).
+const urlCode = new URLSearchParams(window.location.search).get('code');
+if (urlCode) sessionInput.value = urlCode;
+
+// ⚠️ Même identifiant de bucket que dans index.html (Respire) — voir les
+// instructions dans le README pour en créer un (gratuit, une seule fois).
+const KVDB_BUCKET = 'TON_BUCKET_ID_ICI';
+
+// ===================== MESURE PPG PAR CAMÉRA =====================
+// Principe standard (utilisé par la plupart des apps "heart rate camera") :
+// le doigt posé sur l'objectif + flash allumé laisse passer une lumière rouge
+// dont l'intensité varie légèrement à chaque battement (le sang affluant dans
+// les capillaires absorbe un peu plus de lumière à chaque pulsation). On
+// suit cette variation de luminosité image par image et on détecte les pics.
+let stream = null;
+let sampling = false;
+const brightnessHistory = []; // { t, value }
+const HISTORY_WINDOW = 8; // secondes glissantes analysées pour le calcul du BPM
+
+// ===================== ÉTATS DE QUALITÉ DU SIGNAL =====================
+// Contexte : poste en libre-service à forte rotation, souvent sans supervision
+// (pause déjeuner, université). Il faut qu'une mauvaise mesure soit
+// IMPOSSIBLE à manquer (grand anneau coloré + texte court, pas juste un
+// warning discret), et surtout qu'elle ne soit JAMAIS envoyée au casque —
+// mieux vaut "en attente" côté VR qu'un chiffre faux affiché avec assurance.
+// ⚠️ Seuils fixés à vue, sans pouvoir tester sur du vrai matériel varié — à
+// recalibrer sur place avec plusieurs téléphones si le comportement observé
+// ne correspond pas (voir QUALITY_THRESHOLDS ci-dessous, regroupés exprès).
+const QUALITY_THRESHOLDS = {
+  noFingerBrightness: 165,   // au-dessus : le doigt ne couvre probablement pas l'objectif
+  overPressureBrightness: 12, // en-dessous : doigt qui écrase trop fort, plus de lumière du tout
+  minAmplitude: 2.5,          // variation min sur la fenêtre récente pour espérer un signal exploitable
+  maxIntervalCV: 0.22,        // coefficient de variation des intervalles entre pics (régularité du pouls)
+  goodStreakNeeded: 4,        // nb d'estimations cohérentes d'affilée avant d'afficher/envoyer
+};
+
+const QUALITY_STYLES = {
+  idle:      { color: '#8899aa', ring: 'rgba(255,255,255,0.12)' },
+  noFinger:  { color: '#ffcf6b', ring: '#ffcf6b' },
+  tooHard:   { color: '#ffcf6b', ring: '#ffcf6b' },
+  moving:    { color: '#ff9b6b', ring: '#ff9b6b' },
+  measuring: { color: '#8cc7ff', ring: '#8cc7ff' },
+  good:      { color: '#7ee89a', ring: '#7ee89a' },
+};
+
+let qualityState = 'idle';
+let goodStreak = 0;
+
+function setQuality(state, text) {
+  if (state === qualityState && qualityText.textContent === text) return;
+  qualityState = state;
+  const style = QUALITY_STYLES[state];
+  qualityRing.style.borderColor = style.ring;
+  qualityText.style.color = style.color;
+  qualityText.textContent = text;
+  if (state !== 'good') {
+    bpmDisplay.style.color = style.color;
+  }
+}
+
+async function startMeasurement() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: 64, height: 64 }
+    });
+    video.srcObject = stream;
+    await video.play();
+
+    // Tente d'allumer le flash (torche) si le matériel le permet — améliore
+    // nettement la qualité du signal. Échoue silencieusement sinon (l'app
+    // reste utilisable avec juste la lumière ambiante, moins précis).
+    const track = stream.getVideoTracks()[0];
+    const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+    if (capabilities.torch) {
+      await track.applyConstraints({ advanced: [{ torch: true }] }).catch(() => {});
+    }
+
+    sampling = true;
+    startBtn.textContent = 'Mesure en cours…';
+    startBtn.disabled = true;
+    setQuality('noFinger', '👆 Pose ton doigt sur la caméra arrière');
+    requestAnimationFrame(sampleFrame);
+  } catch (e) {
+    setQuality('idle', '⚠ Caméra inaccessible');
+    alert('Impossible d\'accéder à la caméra : ' + e.message);
+  }
+}
+
+function sampleFrame() {
+  if (!sampling) return;
+  sampleCtx.drawImage(video, 0, 0, 20, 20);
+  const frame = sampleCtx.getImageData(0, 0, 20, 20).data;
+  let sum = 0;
+  for (let i = 0; i < frame.length; i += 4) sum += frame[i]; // canal rouge
+  const avgRed = sum / (frame.length / 4);
+
+  const t = performance.now() / 1000;
+  brightnessHistory.push({ t, value: avgRed });
+  while (brightnessHistory.length && t - brightnessHistory[0].t > HISTORY_WINDOW) {
+    brightnessHistory.shift();
+  }
+
+  drawPulseTrace();
+  evaluateSignal(avgRed);
+
+  requestAnimationFrame(sampleFrame);
+}
+
+function drawPulseTrace() {
+  pulseCtx.clearRect(0, 0, 280, 60);
+  if (brightnessHistory.length < 2) return;
+  const values = brightnessHistory.map(h => h.value);
+  const min = Math.min(...values), max = Math.max(...values) || min + 1;
+  pulseCtx.strokeStyle = QUALITY_STYLES[qualityState].ring; pulseCtx.lineWidth = 2;
+  pulseCtx.beginPath();
+  brightnessHistory.forEach((h, i) => {
+    const x = (i / (brightnessHistory.length - 1)) * 280;
+    const y = 55 - ((h.value - min) / (max - min)) * 50;
+    if (i === 0) pulseCtx.moveTo(x, y); else pulseCtx.lineTo(x, y);
+  });
+  pulseCtx.stroke();
+}
+
+// Évalue en continu la qualité du signal et décide de l'état à afficher.
+// Ne calcule le BPM (computeBPM) que si les conditions de base sont réunies —
+// évite de faire tourner la détection de pics sur un signal clairement
+// inexploitable (doigt absent, pression excessive).
+function evaluateSignal(avgRed) {
+  if (avgRed > QUALITY_THRESHOLDS.noFingerBrightness) {
+    if (qualityState !== 'noFinger') resetMeasurementState();
+    setQuality('noFinger', '👆 Pose ton doigt sur la caméra arrière');
+    return;
+  }
+  if (avgRed < QUALITY_THRESHOLDS.overPressureBrightness) {
+    setQuality('tooHard', '🤏 Relâche un peu la pression du doigt');
+    return;
+  }
+  if (brightnessHistory.length < 30) {
+    setQuality('measuring', '⏳ Mesure en cours, reste immobile…');
+    return;
+  }
+  computeBPM();
+}
+
+function resetMeasurementState() {
+  brightnessHistory.length = 0;
+  lastBpmValues = [];
+  goodStreak = 0;
+  bpmDisplay.textContent = '--';
+}
+
+let lastBpmValues = [];
+function computeBPM() {
+  const values = brightnessHistory.map(h => h.value);
+  const min = Math.min(...values), max = Math.max(...values);
+  const amplitude = max - min;
+
+  if (amplitude < QUALITY_THRESHOLDS.minAmplitude) {
+    setQuality('moving', '🤚 Reste immobile quelques secondes');
+    goodStreak = 0;
+    return;
+  }
+
+  // Détection de pics simple : un point est un pic s'il est plus élevé que
+  // ses voisins immédiats et dépasse la moyenne locale.
+  const mean = values.reduce((a,b) => a+b, 0) / values.length;
+  const peaks = [];
+  for (let i = 2; i < brightnessHistory.length - 2; i++) {
+    const v = values[i];
+    if (v > mean && v > values[i-1] && v > values[i-2] && v >= values[i+1] && v >= values[i+2]) {
+      peaks.push(brightnessHistory[i].t);
+    }
+  }
+  if (peaks.length < 3) {
+    setQuality('measuring', '⏳ Mesure en cours, reste immobile…');
+    goodStreak = 0;
+    return;
+  }
+
+  const intervals = [];
+  for (let i = 1; i < peaks.length; i++) {
+    const dt = peaks[i] - peaks[i-1];
+    if (dt > 0.33 && dt < 1.5) intervals.push(dt); // exclut 40-180 bpm hors plage plausible
+  }
+  if (intervals.length < 2) {
+    setQuality('measuring', '⏳ Mesure en cours, reste immobile…');
+    goodStreak = 0;
+    return;
+  }
+
+  // Régularité des intervalles : un vrai pouls est régulier d'un battement à
+  // l'autre. Un doigt qui bouge produit des intervalles erratiques — c'est le
+  // signal le plus fiable pour distinguer "mouvement parasite" de "vrai pouls".
+  const avgInterval = intervals.reduce((a,b) => a+b, 0) / intervals.length;
+  const variance = intervals.reduce((a,b) => a + (b-avgInterval)**2, 0) / intervals.length;
+  const coeffVariation = Math.sqrt(variance) / avgInterval;
+  if (coeffVariation > QUALITY_THRESHOLDS.maxIntervalCV) {
+    setQuality('moving', '🤚 Signal irrégulier — reste immobile');
+    goodStreak = 0;
+    return;
+  }
+
+  const bpm = Math.round(60 / avgInterval);
+  if (bpm < 40 || bpm > 180) {
+    setQuality('measuring', '⏳ Mesure en cours, reste immobile…');
+    goodStreak = 0;
+    return;
+  }
+
+  // Lissage sur les 5 dernières estimations valides pour une valeur stable
+  lastBpmValues.push(bpm);
+  if (lastBpmValues.length > 5) lastBpmValues.shift();
+  const smoothed = Math.round(lastBpmValues.reduce((a,b) => a+b, 0) / lastBpmValues.length);
+
+  goodStreak++;
+  if (goodStreak < QUALITY_THRESHOLDS.goodStreakNeeded) {
+    setQuality('measuring', '⏳ Stabilisation… (' + goodStreak + '/' + QUALITY_THRESHOLDS.goodStreakNeeded + ')');
+    return;
+  }
+
+  // Seuil de confiance atteint : on affiche ET on envoie au casque.
+  // C'est le SEUL chemin de code qui appelle sendHeartRate() — aucune valeur
+  // incertaine ne peut donc jamais atteindre le casque.
+  setQuality('good', '✓ Mesure stable');
+  bpmDisplay.textContent = smoothed;
+  sendHeartRate(smoothed);
+}
+
+// ===================== ENVOI AU CASQUE (kvdb.io) =====================
+let lastSendAt = 0;
+async function sendHeartRate(bpm) {
+  const now = performance.now();
+  if (now - lastSendAt < 1800) return; // pas plus d'un envoi ~2s
+  lastSendAt = now;
+  const code = sessionInput.value.trim() || 'default';
+  try {
+    const res = await fetch(`https://kvdb.io/${KVDB_BUCKET}/hr_${code}`, {
+      method: 'PUT',
+      body: String(bpm)
+    });
+    syncStatus.textContent = res.ok
+      ? '✓ Envoyé au casque (code "' + code + '")'
+      : '⚠ Échec de l\'envoi';
+  } catch (e) {
+    syncStatus.textContent = '⚠ Hors-ligne ou relais injoignable';
+  }
+}
+
+startBtn.addEventListener('click', startMeasurement);
+</script>
+</body>
+</html>

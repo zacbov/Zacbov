@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PHARMA-FOOT</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;overflow:hidden;background:#06110b;color:#fff;
+    font-family:'Trebuchet MS',system-ui,-apple-system,sans-serif;user-select:none}
+  #app{position:fixed;inset:0}
+  canvas{display:block}
+
+  .panel{background:rgba(6,17,11,.88);border:1px solid rgba(120,255,170,.25);
+    border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.55)}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;top:14px;left:50%;transform:translateX(-50%);display:none;
+    align-items:center;gap:14px;padding:8px 16px;z-index:5}
+  #hud.on{display:flex}
+  .team{display:flex;align-items:center;gap:8px;font-weight:bold;font-size:18px;letter-spacing:1px}
+  .dot{width:14px;height:14px;border-radius:4px}
+  #score{font-size:34px;font-weight:bold;letter-spacing:2px;min-width:96px;text-align:center;
+    font-variant-numeric:tabular-nums}
+  #clock{font-size:16px;opacity:.85;text-align:center;font-variant-numeric:tabular-nums}
+  #period{font-size:11px;opacity:.55;letter-spacing:2px;text-align:center}
+
+  /* ---------- LOBBY ---------- */
+  #lobby{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    gap:26px;flex-wrap:wrap;background:radial-gradient(ellipse at 50% 30%,#0d2a1a,#040d08 70%);z-index:20}
+  #lobby.off{display:none}
+  .card{padding:26px 30px;min-width:330px}
+  h1{font-size:44px;letter-spacing:4px;margin-bottom:4px;
+     background:linear-gradient(180deg,#eafff2,#5ce39a);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{opacity:.5;font-size:13px;letter-spacing:3px;margin-bottom:22px}
+  .code{font-size:64px;font-weight:bold;letter-spacing:12px;color:#7dffb4;text-shadow:0 0 26px rgba(90,255,170,.4)}
+  .url{font-size:14px;opacity:.65;margin-top:6px;word-break:break-all}
+  .lbl{font-size:11px;letter-spacing:2px;opacity:.5;margin:16px 0 6px}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .opt{padding:8px 14px;border-radius:9px;border:1px solid rgba(255,255,255,.16);
+    background:rgba(255,255,255,.04);cursor:pointer;font-size:14px;transition:.12s}
+  .opt:hover{background:rgba(255,255,255,.11)}
+  .opt.sel{background:#2ecb7a;color:#04180d;border-color:#2ecb7a;font-weight:bold}
+  #playerList{display:flex;flex-direction:column;gap:7px;min-height:60px;margin-top:8px}
+  .pl{display:flex;align-items:center;gap:10px;padding:7px 11px;border-radius:9px;background:rgba(255,255,255,.06);font-size:15px}
+  .pl .av{width:26px;height:26px;border-radius:7px;background:#333;background-size:cover;background-position:center}
+  .pl .num{font-size:12px;opacity:.6;margin-left:auto}
+  .empty{opacity:.35;font-size:13px;padding:8px 2px}
+  #startBtn{margin-top:22px;width:100%;padding:16px;border:0;border-radius:12px;cursor:pointer;
+    background:linear-gradient(180deg,#3ce68b,#18a95e);color:#03170c;font-size:20px;font-weight:bold;letter-spacing:3px}
+  #startBtn:disabled{filter:grayscale(1) brightness(.6);cursor:default}
+  .hint{margin-top:12px;font-size:12px;opacity:.45;line-height:1.6}
+
+  /* ---------- BANNIERES ---------- */
+  #banner{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+    flex-direction:column;pointer-events:none;z-index:10}
+  #banner.on{display:flex}
+  #bigText{font-size:110px;font-weight:bold;letter-spacing:10px;
+    text-shadow:0 8px 40px rgba(0,0,0,.7);animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+  #subText{font-size:22px;letter-spacing:4px;opacity:.85;margin-top:6px}
+  @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+
+  #result{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+    flex-direction:column;background:rgba(3,10,6,.86);z-index:25}
+  #result.on{display:flex}
+  #resTitle{font-size:70px;font-weight:bold;letter-spacing:6px}
+  #resScore{font-size:44px;margin:14px 0 28px;opacity:.9}
+  #againBtn{padding:14px 40px;border:0;border-radius:12px;cursor:pointer;
+    background:#3ce68b;color:#03170c;font-size:18px;font-weight:bold;letter-spacing:2px}
+
+  #conn{position:fixed;bottom:10px;left:12px;font-size:11px;opacity:.4;letter-spacing:1px;z-index:6}
+  #dbg{position:fixed;bottom:10px;right:12px;font-size:11px;opacity:.35;letter-spacing:1px;z-index:6;text-align:right}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="hud" class="panel">
+  <div class="team"><span class="dot" id="dotA"></span><span id="nameA">BLEUS</span></div>
+  <div>
+    <div id="score">0 - 0</div>
+    <div id="clock">4:00</div>
+    <div id="period">MATCH</div>
+  </div>
+  <div class="team"><span id="nameB">ROUGES</span><span class="dot" id="dotB"></span></div>
+</div>
+
+<div id="lobby">
+  <div class="card panel">
+    <h1>PHARMA-FOOT</h1>
+    <div class="sub">CONNECTE TON TÉLÉPHONE</div>
+    <div class="code" id="roomCode">----</div>
+    <div class="url" id="joinUrl">…</div>
+    <div class="lbl">JOUEURS CONNECTÉS</div>
+    <div id="playerList"><div class="empty">En attente…</div></div>
+    <div class="hint">Touche <b>K</b> : ajouter un joueur clavier (ZQSD / flèches,<br>Espace = tir, E = passe, Maj = tacle).</div>
+  </div>
+
+  <div class="card panel">
+    <div class="lbl">FORMAT</div>
+    <div class="row" id="fmtRow"></div>
+    <div class="lbl">DURÉE</div>
+    <div class="row" id="durRow"></div>
+    <div class="lbl">DIFFICULTÉ IA</div>
+    <div class="row" id="diffRow"></div>
+    <div class="lbl">GARDIENS</div>
+    <div class="row" id="gkRow"></div>
+    <div class="lbl">COULEURS</div>
+    <div class="row" id="colRow"></div>
+    <button id="startBtn" disabled>COUP D'ENVOI</button>
+    <div class="hint">Les places libres de ton équipe sont comblées par des<br>coéquipiers IA. L'équipe adverse a toujours le même effectif.</div>
+  </div>
+</div>
+
+<div id="banner"><div id="bigText"></div><div id="subText"></div></div>
+
+<div id="result">
+  <div id="resTitle">FIN DU MATCH</div>
+  <div id="resScore">0 - 0</div>
+  <button id="againBtn">REJOUER</button>
+</div>
+
+<div id="conn">déconnecté</div>
+<div id="dbg"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/screen.js"></script>
+</body>
+</html>

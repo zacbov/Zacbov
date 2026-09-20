@@ -1,0 +1,64 @@
+# Configuration du Auto-Director
+# Modifiable à chaud via la WebUI (http://localhost:8765)
+
+obs:
+  host: "localhost"
+  port: 4455
+  password: ""          # mot de passe obs-websocket (Outils > obs-websocket > Paramètres)
+  default_scene: "Plan large"   # scène affichée quand personne ne parle / silence total
+  split_scene: "Split écran"    # optionnel : scène affichée si 2+ personnes parlent en même temps
+                                  # (laisser vide "" pour désactiver le split-screen)
+
+# Mapping micro (index du device audio) -> scène OBS correspondante
+# L'index se trouve via la WebUI (liste des devices détectés) ou `python3 list_devices.py`
+# `threshold` est optionnel : seuil spécifique à ce micro (rempli automatiquement
+# par la calibration auto, ou modifiable à la main). Si absent, le seuil global
+# (detection.rms_threshold ou detection.silero_threshold) est utilisé.
+mappings:
+  - mic_index: 1
+    mic_name: "Micro Intervenant 1"
+    scene_name: "Cam Intervenant 1"
+    threshold: null
+  - mic_index: 2
+    mic_name: "Micro Intervenant 2"
+    scene_name: "Cam Intervenant 2"
+    threshold: null
+
+detection:
+  sample_rate: 16000
+  block_size: 1024          # taille des blocs audio analysés
+
+  # Moteur de détection de voix : "rms" (simple niveau audio, CPU, zéro dépendance)
+  # ou "silero" (réseau de neurones, bien plus fiable sur le bruit non-vocal,
+  # accéléré automatiquement sur GPU NVIDIA si disponible, sinon CPU).
+  # Si "silero" est choisi mais indisponible (pas de torch/GPU), repli auto sur "rms".
+  vad_engine: "silero"
+
+  rms_threshold: 0.02        # seuil par défaut si vad_engine = "rms" (0.0 à 1.0)
+  silero_threshold: 0.5      # seuil par défaut si vad_engine = "silero" (probabilité 0.0 à 1.0)
+
+  hangover_ms: 700          # temps de silence avant de considérer que la personne a arrêté de parler
+  min_speak_ms: 250         # durée minimum de parole avant de déclencher un switch (anti-toux/anti-bruit)
+  switch_cooldown_ms: 1200  # délai minimum entre deux switches (évite le "ping-pong")
+  silence_to_wide_ms: 4000  # si personne ne parle depuis ce délai -> retour au plan large
+  split_hold_ms: 1500       # durée de parole simultanée avant de basculer en split-screen
+
+logging:
+  level: "INFO"
+  file: "auto_director.log"
+
+# Mapping clavier/contrôleur MIDI -> action.
+# Se remplit facilement via la WebUI (bouton "Apprendre" + appui sur la touche).
+# key: identifiant de la touche/pad, ex. "note:60" (note MIDI 60) ou "cc:20" (control change 20)
+# action: nom d'une scène OBS (override sur cette scène) ou "__auto__" (retour au mode automatique)
+midi:
+  enabled: true
+  mappings: []
+  # Exemple:
+  # mappings:
+  #   - key: "note:60"
+  #     action: "Cam Intervenant 1"
+  #   - key: "note:62"
+  #     action: "Cam Intervenant 2"
+  #   - key: "note:64"
+  #     action: "__auto__"

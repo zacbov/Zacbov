@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sherlock VR — Palais mental (Quest 3)</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #050505; font-family: system-ui, sans-serif; }
+  #overlay {
+    position: absolute; top: 0; left: 0; width: 100%;
+    padding: 14px 16px; color: #fff; background: rgba(0,0,0,0.55);
+    text-align: center; z-index: 10; box-sizing: border-box;
+    font-size: 14px; line-height: 1.4;
+  }
+  #status { position: absolute; bottom: 12px; left: 12px; color: #9f9; font-size: 12px; z-index: 10; max-width: 70%; }
+  #not-supported {
+    position: absolute; inset: 0; display: none; color: #fff;
+    background: #111; align-items: center; justify-content: center;
+    text-align: center; padding: 24px; font-size: 16px; z-index: 20;
+  }
+  #progress {
+    position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 10px; z-index: 10;
+  }
+  .progress-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.35);
+    transition: background 0.3s, transform 0.3s;
+  }
+  .progress-dot.revealed { background: #ffd700; border-color: #ffd700; transform: scale(1.15); }
+  .progress-dot.redherring { background: #ff5544; border-color: #ff5544; transform: scale(1.15); }
+  #accusation-screen {
+    position: absolute; inset: 0; z-index: 40; display: none;
+    background: rgba(5,5,10,0.94); color: #fff;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 24px; box-sizing: border-box;
+  }
+  #accusation-screen h2 { margin-bottom: 16px; }
+  #accusation-screen button {
+    display: block; width: 240px; margin: 6px auto; padding: 12px;
+    font-size: 15px; border: none; border-radius: 8px; cursor: pointer;
+    background: #2a2a3a; color: #fff;
+  }
+  #accusation-screen button:active { background: #444460; }
+  #accusation-result { font-size: 18px; margin-top: 16px; display: none; }
+  #accusation-result.correct { color: #7CFC00; }
+  #accusation-result.wrong { color: #ff5544; }
+</style>
+</head>
+<body>
+
+<div id="progress">
+  <div class="progress-dot" id="dot-1"></div>
+  <div class="progress-dot" id="dot-2"></div>
+  <div class="progress-dot" id="dot-3"></div>
+  <div class="progress-dot" id="dot-4"></div>
+</div>
+
+<div id="overlay">
+  <strong>Palais mental — Holmes</strong><br/>
+  <u>Indice 1 (tiroir)</u> : grip pour saisir, tourne le poignet (~150°), vise le panneau doré et presse la gâchette.<br/>
+  <u>Indice 2 (livre)</u> : saisis les deux fragments (un par main) et rapproche-les.<br/>
+  <u>Indice 3 (cendres)</u> : approche ta main du tas de cendres, puis presse la gâchette une fois la vibration au maximum.<br/>
+  <u>Indice 4 (botte)</u> : saisis la botte et superpose-la sur le gabarit vert au sol.
+</div>
+<div id="status">En attente du démarrage VR…</div>
+<div id="not-supported">
+  ⚠️ WebXR VR non disponible sur ce navigateur.<br/><br/>
+  Ouvre cette page dans le <strong>navigateur du Quest 3</strong> (Meta Quest Browser / Chrome intégré).
+</div>
+<div id="accusation-screen">
+  <h2>Tous les indices sont révélés. Qui accuses-tu ?</h2>
+  <div id="accusation-buttons"></div>
+  <div id="accusation-result"></div>
+</div>
+
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+import { VRButton } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/VRButton.js";
+
+const statusEl = document.getElementById("status");
+const CLUE_INDEX = { indice_1_bureau: 1, indice_2_bibliotheque: 2, indice_3_cheminee: 3, indice_4_fenetre: 4 };
+
+// ============================================================
+// SON (Web Audio API — aucun fichier audio nécessaire)
+// ============================================================
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTone(freq, duration, type = "sine", startDelay = 0, gainPeak = 0.25) {
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  const t0 = ctx.currentTime + startDelay;
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(gainPeak, t0 + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+
+  osc.start(t0);
+  osc.stop(t0 + duration + 0.05);
+}
+
+function playRevealSound(isRedHerring) {
+  if (isRedHerring) {
+    playTone(180, 0.35, "sawtooth", 0, 0.2);
+    playTone(140, 0.4, "sawtooth", 0.05, 0.15);
+  } else {
+    playTone(660, 0.18, "sine", 0);
+    playTone(880, 0.25, "sine", 0.09);
+    playTone(1320, 0.3, "sine", 0.16);
+  }
+}
+
+// ============================================================
+// INDICATEUR DE PROGRESSION PARTAGÉ
+// ============================================================
+function updateProgressDot(clueId, isRedHerring) {
+  const index = CLUE_INDEX[clueId];
+  if (!index) return;
+  const dot = document.getElementById(`dot-${index}`);
+  if (!dot) return;
+  dot.classList.remove("revealed", "redherring");
+  dot.classList.add(isRedHerring ? "redherring" : "revealed");
+}
+
+// ============================================================
+// 1. CONNEXION AU SERVEUR RELAIS
+// ============================================================
+const RELAY_URL = "wss://REMPLACE_PAR_TON_TUNNEL_OU_IP:8080"; // ex: via ngrok en HTTPS, requis par WebXR
+const SESSION_CODE = "TEST_SESSION"; // doit être identique côté client AR
+let socket = null;
+let caseSeed = null;
+let caseDifficulty = null;
+let gameGenerated = false;
+let reconnectAttempts = 0;
+let reconnectTimer = null;
+const MAX_RECONNECT_DELAY = 10000;
+
+function connectToRelay() {
+  try {
+    socket = new WebSocket(`${RELAY_URL}?session=${SESSION_CODE}&role=vr`);
+  } catch (e) {
+    statusEl.textContent = "Impossible de joindre le relais — vérifie RELAY_URL.";
+    scheduleReconnect();
+    return;
+  }
+
+  socket.addEventListener("open", () => {
+    reconnectAttempts = 0;
+    statusEl.textContent = "Connecté au relais — en attente du choix de difficulté (côté AR).";
+    // Filet de sécurité : si personne n'a démarré la partie après 6s (ex: test solo
+    // sans le client AR), on la démarre nous-même en difficulté normale.
+    setTimeout(() => {
+      if (!gameGenerated) {
+        sendEvent({ type: "start_game", difficulty: "normal" });
+      }
+    }, 6000);
+  });
+
+  socket.addEventListener("message", (event) => {
+    const data = JSON.parse(event.data);
+    handleIncomingEvent(data);
+  });
+
+  socket.addEventListener("close", () => {
+    statusEl.textContent = "Déconnecté du relais — nouvelle tentative en cours…";
+    scheduleReconnect();
+  });
+
+  socket.addEventListener("error", () => {
+    statusEl.textContent = "Erreur relais — vérifie que relay-server.js tourne et que l'URL est en wss://.";
+  });
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer) return; // une tentative est déjà planifiée
+  const delay = Math.min(1000 * Math.pow(1.6, reconnectAttempts), MAX_RECONNECT_DELAY);
+  reconnectAttempts++;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connectToRelay();
+  }, delay);
+}
+
+function sendEvent(evt) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify(evt));
+  }
+}
+
+function handleIncomingEvent(evt) {
+  console.log("[VR] Événement reçu :", evt);
+
+  if (evt.type === "session_seed" && !gameGenerated) {
+    try {
+      const parsed = JSON.parse(evt.payload);
+      generateCase(parsed.seed, parsed.difficulty || "normal");
+    } catch (e) {
+      generateCase(Number(evt.payload), "normal"); // compat ancien format
+    }
+  }
+
+  if (evt.type === "clue_observed_ar") {
+    statusEl.textContent = `Watson signale : "${evt.payload}"`;
+  }
+}
+
+connectToRelay();
+
+// ============================================================
+// 2. GESTION DE LA PARTIE + NIVEAUX DE DIFFICULTÉ
+// ============================================================
+const suspectPool = [
+  "Colonel Moran", "Mrs. Hudson", "Collectionneur rival", "Inspecteur Lestrade",
+  "Irene Adler", "Le majordome", "Un cocher anonyme", "Professeur Moriarty",
+  "Un marin du port",
+];
+const inscriptionVariants = [
+  "Pour Moriarty seul — 14",
+  "Rendez-vous au 14, comme convenu",
+  "M. — minuit",
+];
+
+const DIFFICULTY_CONFIG = {
+  facile:    { suspects: 3, herrings: 1 },
+  normal:    { suspects: 4, herrings: 2 },
+  difficile: { suspects: 6, herrings: 3 },
+};
+
+let culprit = null;
+let redHerrings = [];
+let inscriptionForClue1 = "???";
+
+function generateCase(seed, difficulty) {
+  gameGenerated = true;
+  caseSeed = seed;
+  caseDifficulty = difficulty;
+
+  const config = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.normal;
+  const rng = seededRandom(seed);
+  const pool = suspectPool.slice(0, Math.min(suspectPool.length, config.suspects + config.herrings));
+
+  const culpritIndex = Math.floor(rng() * pool.length);
+  culprit = pool[culpritIndex];
+  pool.splice(culpritIndex, 1);
+
+  redHerrings = [];
+  for (let i = 0; i < Math.min(config.herrings, pool.length); i++) {
+    const idx = Math.floor(rng() * pool.length);
+    redHerrings.push(pool[idx]);
+    pool.splice(idx, 1);
+  }
+
+  inscriptionForClue1 = inscriptionVariants[Math.floor(rng() * inscriptionVariants.length)];
+
+  statusEl.textContent = `Partie générée (difficulté : ${difficulty}).`;
+  console.log(`[VR] Partie générée — seed=${seed}, difficulté=${difficulty}, coupable=${culprit}, fausses pistes=${redHerrings.join(", ")}`);
+}
+
+// Générateur pseudo-aléatoire déterministe à partir d'un seed (mulberry32)
+function seededRandom(seed) {
+  let a = seed;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ============================================================
+// 3. ANIMATIONS (tweens simples, sans librairie externe)
+// ============================================================
+const activeTweens = [];
+
+function animateScaleIn(object3D, duration = 450) {
+  object3D.scale.set(0.01, 0.01, 0.01);
+  const start = performance.now();
+  activeTweens.push({
+    update(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      object3D.scale.setScalar(0.01 + eased * 0.99);
+      return t >= 1;
+    },
+  });
+}
+
+function animateSlideUp(object3D, fromY, toY, duration = 450) {
+  const start = performance.now();
+  activeTweens.push({
+    update(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      object3D.position.y = fromY + (toY - fromY) * eased;
+      return t >= 1;
+    },
+  });
+}
+
+function updateTweens(now) {
+  for (let i = activeTweens.length - 1; i >= 0; i--) {
+    const done = activeTweens[i].update(now);
+    if (done) activeTweens.splice(i, 1);
+  }
+}
+
+// ============================================================
+// 3bis. ACCUSATION FINALE
+// ============================================================
+const accusationScreen = document.getElementById("accusation-screen");
+const accusationButtonsEl = document.getElementById("accusation-buttons");
+const accusationResultEl = document.getElementById("accusation-result");
+let accusationDone = false;
+
+function checkAllCluesReady() {
+  if (clueRevealed && fragmentsMerged && indice3Revealed && bootMatched) {
+    sendEvent({ type: "all_clues_ready" });
+    showAccusationScreen();
+  }
+}
+
+function shuffle(array) {
+  const copy = [...array];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function showAccusationScreen() {
+  if (!culprit) return; // partie pas encore générée (ne devrait pas arriver ici)
+
+  const suspects = shuffle([culprit, ...redHerrings]);
+  accusationButtonsEl.innerHTML = "";
+
+  suspects.forEach((name) => {
+    const btn = document.createElement("button");
+    btn.textContent = name;
+    btn.addEventListener("click", () => accuse(name));
+    accusationButtonsEl.appendChild(btn);
+  });
+
+  accusationScreen.style.display = "flex";
+}
+
+function accuse(suspectName) {
+  if (accusationDone) return;
+  accusationDone = true;
+
+  const isCorrect = suspectName === culprit;
+
+  accusationButtonsEl.querySelectorAll("button").forEach((b) => (b.disabled = true));
+  accusationResultEl.style.display = "block";
+  accusationResultEl.classList.add(isCorrect ? "correct" : "wrong");
+  accusationResultEl.textContent = isCorrect
+    ? `✅ Correct ! ${suspectName} était bien le coupable.`
+    : `❌ Erreur. ${suspectName} n'était pas le coupable — c'était ${culprit}.`;
+
+  playRevealSound(!isCorrect);
+
+  sendEvent({
+    type: "accusation_result",
+    payload: JSON.stringify({ accused: suspectName, culprit, isCorrect }),
+  });
+}
+
+
+// ============================================================
+// 4. SCÈNE WEBXR
+// ============================================================
+let camera, scene, renderer;
+let controller1, controller2;
+let drawer, pressButton, doubleFondPanel;
+let initialDrawerQuaternion = new THREE.Quaternion();
+let hasBeenFlipped = false;
+let clueRevealed = false;
+
+// Indice 2 — Bibliothèque (assemblage de fragments)
+let fragmentA, fragmentB, mergedBook;
+let fragmentsMerged = false;
+const MERGE_DISTANCE = 0.08;
+
+// Indice 3 — Cheminée (fouille haptique)
+let ashPile, hiddenFragmentPoint, extractedButton;
+let handInAshes = null;
+let withinExtractionRange = false;
+let indice3Revealed = false;
+const SEARCH_RADIUS = 0.25;
+const EXTRACTION_THRESHOLD = 0.03;
+
+// Indice 4 — Fenêtre (comparaison par superposition)
+let boot, templateTarget;
+let bootMatched = false;
+const SNAP_DISTANCE = 0.05;
+const SNAP_ANGLE = 15; // degrés
+
+init();
+
+function init() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a12);
+  scene.fog = new THREE.FogExp2(0x0a0a12, 0.08);
+
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 50);
+
+  // Lumière d'ambiance douce (fond de scène, évite le noir total dans les zones d'ombre)
+  const ambient = new THREE.HemisphereLight(0x5566aa, 0x140f0a, 0.6);
+  scene.add(ambient);
+
+  // Lumière clé chaude façon lampe à huile, porte les ombres principales
+  const keyLight = new THREE.DirectionalLight(0xffddaa, 2.2);
+  keyLight.position.set(1.5, 3, 1.2);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.set(2048, 2048);
+  keyLight.shadow.camera.left = -3;
+  keyLight.shadow.camera.right = 3;
+  keyLight.shadow.camera.top = 3;
+  keyLight.shadow.camera.bottom = -3;
+  keyLight.shadow.bias = -0.0015;
+  scene.add(keyLight);
+
+  // Contre-jour froid, pour détacher les objets du fond
+  const rimLight = new THREE.DirectionalLight(0x88aaff, 0.6);
+  rimLight.position.set(-2, 1.5, -2);
+  scene.add(rimLight);
+
+  // Petit point lumineux doré près des indices, pour une ambiance "loupe de détective"
+  const accentLight = new THREE.PointLight(0xffcc66, 1.2, 4, 2);
+  accentLight.position.set(0, 1.6, -0.4);
+  scene.add(accentLight);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.xr.enabled = true;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+  document.body.appendChild(renderer.domElement);
+
+  if (navigator.xr) {
+    navigator.xr.isSessionSupported("immersive-vr").then((supported) => {
+      if (supported) {
+        document.body.appendChild(VRButton.createButton(renderer));
+      } else {
+        showNotSupported();
+      }
+    });
+  } else {
+    showNotSupported();
+  }
+
+  buildSkybox();
+  buildPalaceRoom();
+  buildDrawerClue();
+  buildBookAssemblyClue();
+  buildAshSearchClue();
+  buildBootCompareClue();
+  setupControllers();
+
+  window.addEventListener("resize", onWindowResize);
+  renderer.setAnimationLoop(render);
+}
+
+function showNotSupported() {
+  document.getElementById("not-supported").style.display = "flex";
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ============================================================
+// TEXTURES PROCÉDURALES (aucun asset externe requis)
+// ============================================================
+function makeCanvasTexture(draw, size = 256) {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  draw(ctx, size);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function makeWoodTexture() {
+  return makeCanvasTexture((ctx, size) => {
+    ctx.fillStyle = "#5a3a22";
+    ctx.fillRect(0, 0, size, size);
+    for (let i = 0; i < 40; i++) {
+      const y = (i / 40) * size + (Math.random() - 0.5) * 6;
+      ctx.strokeStyle = `rgba(30, 15, 5, ${0.15 + Math.random() * 0.2})`;
+      ctx.lineWidth = 1 + Math.random() * 2;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      for (let x = 0; x <= size; x += 16) {
+        ctx.lineTo(x, y + Math.sin(x * 0.05 + i) * 4);
+      }
+      ctx.stroke();
+    }
+  });
+}
+
+function makeParchmentTexture() {
+  return makeCanvasTexture((ctx, size) => {
+    ctx.fillStyle = "#e8dcb5";
+    ctx.fillRect(0, 0, size, size);
+    for (let i = 0; i < 800; i++) {
+      const shade = Math.random() * 40;
+      ctx.fillStyle = `rgba(${120 - shade}, ${100 - shade}, ${60 - shade}, 0.08)`;
+      ctx.fillRect(Math.random() * size, Math.random() * size, 2, 2);
+    }
+  });
+}
+
+function makeAshTexture() {
+  return makeCanvasTexture((ctx, size) => {
+    ctx.fillStyle = "#2b2b2b";
+    ctx.fillRect(0, 0, size, size);
+    for (let i = 0; i < 1500; i++) {
+      const g = 30 + Math.random() * 60;
+      ctx.fillStyle = `rgba(${g}, ${g}, ${g}, 0.5)`;
+      ctx.fillRect(Math.random() * size, Math.random() * size, 1.5, 1.5);
+    }
+  });
+}
+
+function makeLeatherTexture() {
+  return makeCanvasTexture((ctx, size) => {
+    ctx.fillStyle = "#181818";
+    ctx.fillRect(0, 0, size, size);
+    for (let i = 0; i < 300; i++) {
+      ctx.fillStyle = `rgba(${40 + Math.random() * 20}, ${40 + Math.random() * 20}, ${40 + Math.random() * 20}, 0.4)`;
+      ctx.beginPath();
+      ctx.arc(Math.random() * size, Math.random() * size, 1 + Math.random() * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+function makeFloorTexture() {
+  return makeCanvasTexture((ctx, size) => {
+    ctx.fillStyle = "#161620";
+    ctx.fillRect(0, 0, size, size);
+    ctx.strokeStyle = "rgba(255,255,255,0.04)";
+    ctx.lineWidth = 2;
+    for (let x = 0; x <= size; x += 32) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke();
+    }
+    for (let y = 0; y <= size; y += 32) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(size, y); ctx.stroke();
+    }
+  });
+}
+
+// ============================================================
+// SKYBOX — dégradé vertical simple (aucun asset externe requis)
+// ============================================================
+function buildSkybox() {
+  const skyGeo = new THREE.SphereGeometry(25, 32, 16);
+  const skyMat = new THREE.ShaderMaterial({
+    uniforms: {
+      topColor: { value: new THREE.Color(0x1a1330) },
+      bottomColor: { value: new THREE.Color(0x0a0806) },
+      offset: { value: 2 },
+      exponent: { value: 0.7 },
+    },
+    vertexShader: `
+      varying vec3 vWorldPosition;
+      void main() {
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPosition.xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 topColor;
+      uniform vec3 bottomColor;
+      uniform float offset;
+      uniform float exponent;
+      varying vec3 vWorldPosition;
+      void main() {
+        float h = normalize(vWorldPosition + offset).y;
+        gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+      }
+    `,
+    side: THREE.BackSide,
+    fog: false,
+  });
+  const sky = new THREE.Mesh(skyGeo, skyMat);
+  scene.add(sky);
+}
+
+function buildPalaceRoom() {
+  // Sol texturé avec grille subtile, reçoit les ombres portées
+  const floorTexture = makeFloorTexture();
+  floorTexture.repeat.set(6, 6);
+  const floorGeo = new THREE.PlaneGeometry(8, 8);
+  const floorMat = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.9, metalness: 0.05 });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+}
+
+function buildDrawerClue() {
+  const drawerGeo = new THREE.BoxGeometry(0.3, 0.08, 0.2);
+  const drawerMat = new THREE.MeshStandardMaterial({ map: makeWoodTexture(), roughness: 0.65, metalness: 0.05 });
+  drawer = new THREE.Mesh(drawerGeo, drawerMat);
+  drawer.position.set(0, 1.1, -0.6);
+  drawer.castShadow = true;
+  drawer.receiveShadow = true;
+  scene.add(drawer);
+
+  initialDrawerQuaternion.copy(drawer.quaternion);
+
+  const buttonGeo = new THREE.CircleGeometry(0.03, 16);
+  const buttonMat = new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0x553300, emissiveIntensity: 0.4, roughness: 0.3, metalness: 0.8 });
+  pressButton = new THREE.Mesh(buttonGeo, buttonMat);
+  pressButton.position.set(0, -0.045, 0);
+  pressButton.rotation.x = Math.PI / 2;
+  drawer.add(pressButton);
+
+  const panelGeo = new THREE.PlaneGeometry(0.25, 0.15);
+  const panelMat = new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xaa7700, emissiveIntensity: 0.6, side: THREE.DoubleSide, roughness: 0.4 });
+  doubleFondPanel = new THREE.Mesh(panelGeo, panelMat);
+  doubleFondPanel.visible = false;
+  doubleFondPanel.position.set(0, 1.15, -0.6);
+  scene.add(doubleFondPanel);
+}
+
+function buildBookAssemblyClue() {
+  const fragGeoA = new THREE.BoxGeometry(0.06, 0.02, 0.1);
+  const fragMatA = new THREE.MeshStandardMaterial({ map: makeLeatherTexture(), roughness: 0.5, metalness: 0.1 });
+  fragmentA = new THREE.Mesh(fragGeoA, fragMatA);
+  fragmentA.position.set(-0.4, 1.1, -0.6);
+  fragmentA.castShadow = true;
+  scene.add(fragmentA);
+
+  const fragGeoB = new THREE.PlaneGeometry(0.08, 0.12);
+  const fragMatB = new THREE.MeshStandardMaterial({ map: makeParchmentTexture(), side: THREE.DoubleSide, roughness: 0.95 });
+  fragmentB = new THREE.Mesh(fragGeoB, fragMatB);
+  fragmentB.position.set(0.4, 1.1, -0.6);
+  fragmentB.castShadow = true;
+  scene.add(fragmentB);
+
+  const bookGeo = new THREE.BoxGeometry(0.15, 0.03, 0.12);
+  const bookMat = new THREE.MeshStandardMaterial({ map: makeLeatherTexture(), roughness: 0.55, metalness: 0.1 });
+  mergedBook = new THREE.Mesh(bookGeo, bookMat);
+  mergedBook.visible = false;
+  mergedBook.castShadow = true;
+  scene.add(mergedBook);
+}
+
+function buildAshSearchClue() {
+  const ashGeo = new THREE.CylinderGeometry(0.2, 0.22, 0.06, 24);
+  const ashMat = new THREE.MeshStandardMaterial({ map: makeAshTexture(), roughness: 1, metalness: 0 });
+  ashPile = new THREE.Mesh(ashGeo, ashMat);
+  ashPile.position.set(-0.8, 1.0, -0.6);
+  ashPile.castShadow = true;
+  ashPile.receiveShadow = true;
+  scene.add(ashPile);
+
+  hiddenFragmentPoint = new THREE.Object3D();
+  hiddenFragmentPoint.position.set(-0.8, 1.0, -0.6);
+  ashPile.add(hiddenFragmentPoint);
+
+  const buttonGeo = new THREE.SphereGeometry(0.025, 16, 16);
+  const buttonMat = new THREE.MeshStandardMaterial({ color: 0xc9a227, roughness: 0.35, metalness: 0.85 });
+  extractedButton = new THREE.Mesh(buttonGeo, buttonMat);
+  extractedButton.visible = false;
+  extractedButton.castShadow = true;
+  scene.add(extractedButton);
+}
+
+function buildBootCompareClue() {
+  const templateGeo = new THREE.PlaneGeometry(0.15, 0.3);
+  const templateMat = new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+  templateTarget = new THREE.Mesh(templateGeo, templateMat);
+  templateTarget.rotation.x = -Math.PI / 2;
+  templateTarget.position.set(0.8, 0.02, -0.6);
+  scene.add(templateTarget);
+
+  const bootGeo = new THREE.BoxGeometry(0.12, 0.15, 0.3);
+  const bootMat = new THREE.MeshStandardMaterial({ map: makeLeatherTexture(), roughness: 0.6, metalness: 0.15 });
+  boot = new THREE.Mesh(bootGeo, bootMat);
+  boot.position.set(0.8, 1.1, -0.9);
+  boot.castShadow = true;
+  boot.receiveShadow = true;
+  scene.add(boot);
+}
+
+function setupControllers() {
+  controller1 = renderer.xr.getController(0);
+  controller2 = renderer.xr.getController(1);
+  scene.add(controller1);
+  scene.add(controller2);
+
+  const rayGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, 0, -1),
+  ]);
+  const rayMat = new THREE.LineBasicMaterial({ color: 0x00ff88 });
+
+  [controller1, controller2].forEach((controller) => {
+    const ray = new THREE.Line(rayGeo, rayMat);
+    ray.scale.z = 1.5;
+    controller.add(ray);
+
+    controller.addEventListener("squeezestart", () => onSqueezeStart(controller));
+    controller.addEventListener("squeezeend", () => onSqueezeEnd(controller));
+    controller.addEventListener("selectstart", () => onSelectStart(controller));
+  });
+}
+
+function onSqueezeStart(controller) {
+  if (controller.userData.grabbed) return;
+
+  const controllerPos = controller.position;
+  const candidates = [
+    { obj: drawer, distance: 0.25 },
+    { obj: fragmentA, distance: 0.15 },
+    { obj: fragmentB, distance: 0.15 },
+    { obj: boot, distance: 0.2 },
+  ];
+
+  for (const candidate of candidates) {
+    const worldPos = candidate.obj.getWorldPosition(new THREE.Vector3());
+    if (controllerPos.distanceTo(worldPos) < candidate.distance) {
+      controller.userData.grabbed = candidate.obj;
+      controller.userData.initialQuaternion = candidate.obj.quaternion.clone();
+      controller.attach(candidate.obj);
+      break;
+    }
+  }
+}
+
+function onSqueezeEnd(controller) {
+  const obj = controller.userData.grabbed;
+  if (!obj) return;
+
+  scene.attach(obj);
+  controller.userData.grabbed = null;
+
+  if (obj === drawer) {
+    const angle = THREE.MathUtils.radToDeg(drawer.quaternion.angleTo(initialDrawerQuaternion));
+    if (angle >= 150) {
+      hasBeenFlipped = true;
+      statusEl.textContent = "Tiroir retourné. Vise le panneau doré et presse la gâchette.";
+    }
+  }
+
+  if (obj === boot) {
+    checkBootMatch();
+  }
+}
+
+function onSelectStart(controller) {
+  onExtractionAttempt(controller);
+
+  if (clueRevealed || !hasBeenFlipped) return;
+
+  const raycaster = new THREE.Raycaster();
+  const tempMatrix = new THREE.Matrix4();
+  tempMatrix.identity().extractRotation(controller.matrixWorld);
+  raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+  raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+
+  const intersects = raycaster.intersectObject(pressButton, true);
+  if (intersects.length > 0) {
+    revealClue1();
+  }
+}
+
+function revealClue1() {
+  clueRevealed = true;
+  doubleFondPanel.visible = true;
+  animateScaleIn(doubleFondPanel);
+  statusEl.textContent = `Indice 1 révélé : "${inscriptionForClue1}"`;
+  updateProgressDot("indice_1_bureau", false);
+  playRevealSound(false);
+
+  sendEvent({
+    type: "clue_revealed_vr",
+    clueId: "indice_1_bureau",
+    isRedHerring: false,
+    payload: inscriptionForClue1,
+  });
+
+  checkAllCluesReady();
+}
+
+function checkFragmentMerge() {
+  if (fragmentsMerged) return;
+
+  const distance = fragmentA.getWorldPosition(new THREE.Vector3())
+    .distanceTo(fragmentB.getWorldPosition(new THREE.Vector3()));
+
+  if (distance <= MERGE_DISTANCE) {
+    fragmentsMerged = true;
+    fragmentA.visible = false;
+    fragmentB.visible = false;
+    mergedBook.position.copy(fragmentA.getWorldPosition(new THREE.Vector3()));
+    mergedBook.visible = true;
+    animateScaleIn(mergedBook);
+
+    statusEl.textContent = "Indice 2 révélé : \"Rendez-vous au 14, comme convenu\"";
+    updateProgressDot("indice_2_bibliotheque", false);
+    playRevealSound(false);
+
+    sendEvent({
+      type: "clue_revealed_vr",
+      clueId: "indice_2_bibliotheque",
+      isRedHerring: false,
+      payload: "Fragments assemblés — message dans la marge.",
+    });
+
+    checkAllCluesReady();
+  }
+}
+
+function getGamepadForController(controller) {
+  const session = renderer.xr.getSession();
+  if (!session) return null;
+  const index = controller === controller1 ? 0 : 1;
+  return session.inputSources[index]?.gamepad || null;
+}
+
+function checkAshSearch() {
+  if (indice3Revealed) return;
+
+  [controller1, controller2].forEach((controller) => {
+    const distanceToAshes = controller.position.distanceTo(ashPile.getWorldPosition(new THREE.Vector3()));
+
+    if (distanceToAshes < 0.3) {
+      const worldHiddenPoint = hiddenFragmentPoint.getWorldPosition(new THREE.Vector3());
+      const distanceToFragment = controller.position.distanceTo(worldHiddenPoint);
+      withinExtractionRange = distanceToFragment <= EXTRACTION_THRESHOLD;
+      handInAshes = controller;
+
+      const intensity = THREE.MathUtils.clamp(1 - distanceToFragment / SEARCH_RADIUS, 0, 1);
+      const gamepad = getGamepadForController(controller);
+      if (gamepad?.hapticActuators?.[0] && intensity > 0) {
+        gamepad.hapticActuators[0].pulse(intensity, 60);
+      }
+    }
+  });
+}
+
+function onExtractionAttempt(controller) {
+  if (indice3Revealed || handInAshes !== controller || !withinExtractionRange) return;
+
+  indice3Revealed = true;
+  extractedButton.position.copy(hiddenFragmentPoint.getWorldPosition(new THREE.Vector3()));
+  extractedButton.visible = true;
+  animateScaleIn(extractedButton);
+
+  const gamepad = getGamepadForController(controller);
+  gamepad?.hapticActuators?.[0]?.pulse(1, 150);
+
+  statusEl.textContent = "Indice 3 révélé : bouton de manteau gravé d'un blason.";
+  updateProgressDot("indice_3_cheminee", false);
+  playRevealSound(false);
+
+  sendEvent({
+    type: "clue_revealed_vr",
+    clueId: "indice_3_cheminee",
+    isRedHerring: false,
+    payload: "Bouton de manteau extrait des cendres — blason gravé.",
+  });
+
+  checkAllCluesReady();
+}
+
+function checkBootMatch() {
+  if (bootMatched) return;
+
+  const distance = boot.getWorldPosition(new THREE.Vector3())
+    .distanceTo(templateTarget.getWorldPosition(new THREE.Vector3()));
+  const angle = THREE.MathUtils.radToDeg(boot.quaternion.angleTo(templateTarget.quaternion));
+
+  if (distance <= SNAP_DISTANCE && angle <= SNAP_ANGLE) {
+    bootMatched = true;
+    boot.position.copy(templateTarget.getWorldPosition(new THREE.Vector3()));
+    boot.quaternion.copy(templateTarget.quaternion);
+    templateTarget.material.color.set(0x00ff00);
+
+    statusEl.textContent = "Indice 4 révélé : empreinte correspondante trouvée.";
+    updateProgressDot("indice_4_fenetre", false);
+    playRevealSound(false);
+
+    sendEvent({
+      type: "clue_revealed_vr",
+      clueId: "indice_4_fenetre",
+      isRedHerring: false,
+      payload: "Semelle alignée avec l'empreinte — motif en croix confirmé.",
+    });
+
+    checkAllCluesReady();
+  }
+}
+
+function render() {
+  updateTweens(performance.now());
+  checkFragmentMerge();
+  checkAshSearch();
+  if (!bootMatched) checkBootMatch();
+
+  renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>

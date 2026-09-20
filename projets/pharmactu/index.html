@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outil Pharma</title>
+<style>
+  :root { color-scheme: light; }
+  body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 16px; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .sub { color: #666; font-size: 0.9rem; margin-top: 0; }
+  nav { display: flex; gap: 8px; margin: 20px 0; border-bottom: 1px solid #eee; }
+  nav button {
+    background: none; border: none; padding: 10px 4px; font-size: 0.95rem;
+    cursor: pointer; color: #888; border-bottom: 2px solid transparent;
+  }
+  nav button.active { color: #1a1a1a; border-bottom-color: #1a1a1a; font-weight: 600; }
+  .tab { display: none; }
+  .tab.active { display: block; }
+
+  .search-box { position: relative; }
+  input[type="text"] {
+    width: 100%; padding: 12px 14px; font-size: 1rem;
+    border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;
+  }
+  .suggestions {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
+    background: white; border: 1px solid #ddd; border-top: none;
+    border-radius: 0 0 8px 8px; max-height: 260px; overflow-y: auto;
+  }
+  .suggestions div { padding: 10px 14px; cursor: pointer; display: flex; justify-content: space-between; }
+  .suggestions div:hover { background: #f2f2f2; }
+  .suggestions .tag { font-size: 0.75rem; color: #888; }
+
+  .fiche { margin-top: 28px; }
+  .fiche h2 { margin-bottom: 4px; }
+  section.bloc { margin: 20px 0; padding: 14px; background: #fafafa; border-radius: 8px; }
+  section.bloc h3 { margin-top: 0; font-size: 1rem; }
+  .avertissement { font-size: 0.85rem; color: #a15c00; background: #fff6e6; padding: 8px 12px; border-radius: 6px; }
+  .indispo { font-size: 0.85rem; color: #999; font-style: italic; }
+  .loading { color: #888; font-style: italic; }
+  .empty { color: #999; font-size: 0.9rem; }
+
+  .rss-filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .rss-filters button {
+    padding: 6px 12px; border: 1px solid #ccc; border-radius: 20px; background: white;
+    cursor: pointer; font-size: 0.85rem;
+  }
+  .rss-filters button.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+  .rss-group h4 { font-size: 0.85rem; text-transform: uppercase; color: #888; margin: 18px 0 8px; }
+  .rss-item { padding: 10px 0; border-bottom: 1px solid #eee; }
+  .rss-item a { color: #0a5cad; text-decoration: none; }
+  .rss-item a:hover { text-decoration: underline; }
+  .rss-item .date { font-size: 0.8rem; color: #999; }
+
+  .symptome-item { padding: 8px 0; border-bottom: 1px solid #eee; }
+  .symptome-item summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+  .substance-chip {
+    display: inline-block; margin: 4px 6px 4px 0; padding: 5px 10px;
+    background: #eef4ff; border-radius: 14px; font-size: 0.85rem; cursor: pointer;
+  }
+  .substance-chip:hover { background: #dbe8ff; }
+</style>
+</head>
+<body>
+  <h1>Outil Pharma</h1>
+  <p class="sub">Recherche en direct sur des sources publiques — rien n'est stocké.</p>
+
+  <nav>
+    <button class="tab-btn active" data-tab="recherche">Recherche</button>
+    <button class="tab-btn" data-tab="symptomes">Par symptôme</button>
+    <button class="tab-btn" data-tab="actualites">Actualités ANSM</button>
+  </nav>
+
+  <!-- ONGLET RECHERCHE -->
+  <div class="tab active" id="tab-recherche">
+    <div class="search-box">
+      <input type="text" id="search-input" placeholder="Ex. Doliprane, ibuprofène, aspirine..." autocomplete="off">
+      <div class="suggestions" id="suggestions" style="display:none;"></div>
+    </div>
+    <div class="fiche" id="fiche"></div>
+  </div>
+
+  <!-- ONGLET SYMPTÔMES -->
+  <div class="tab" id="tab-symptomes">
+    <p class="sub">Classification par code ATC (pharmatlas + RxClass). Couverture inégale :
+      bonne pour les pathologies chroniques (diabète, HTA, dépression...), plus faible pour
+      les symptômes OTC courants (rhume, toux) — la base sous-jacente est orientée
+      hospitalier/spécialiste. Ceci n'est pas un outil de diagnostic.</p>
+    <div id="symptomes-list"><p class="loading">Chargement...</p></div>
+    <div class="fiche" id="fiche-symptome"></div>
+  </div>
+
+  <!-- ONGLET ACTUALITÉS ANSM -->
+  <div class="tab" id="tab-actualites">
+    <div class="rss-filters">
+      <button data-period="jour" class="active">Aujourd'hui</button>
+      <button data-period="semaine">Cette semaine</button>
+      <button data-period="mois">Ce mois-ci</button>
+      <button data-period="tout">Tout</button>
+    </div>
+    <div id="rss-content"><p class="loading">Chargement du flux ANSM...</p></div>
+  </div>
+
+<script>
+// =========================================================================
+// Config
+// =========================================================================
+const MEDS_INDEX_URL = './data/medicaments_light.json'; // table pharmatlas — copier depuis pharmatlas/data/
+const CIS_TO_GROUP_URL = './data/cis_to_group.json';     // idem
+const GROUP_DETAIL_DIR = './data/medicaments_groups/';   // idem (dossier entier, ~2400 petits fichiers)
+const ANSM_RSS_URL = 'https://ansm.sante.fr/rss/informations_securite';
+const ANSM_PAGE_URL = 'https://ansm.sante.fr/informations-de-securite'; // lien de repli si le flux est inaccessible
+// Confirmé le 19/09/2026 : l'ANSM ne renvoie pas d'en-tête CORS sur ce flux.
+// allorigins.win et corsproxy.io, testés en repli, se sont tous les deux
+// révélés morts (l'un en erreur serveur, l'autre exigeant désormais une clé)
+// — on ne les garde pas, ce serait de la latence pour rien. rss2json.com
+// est un service dédié aux flux RSS (contrairement aux deux autres qui
+// sont des proxys génériques) : c'est la seule tentative de repli gardée,
+// avec un lien direct vers le site ANSM si elle échoue aussi.
+const RSS2JSON_URL = url => `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
+
+let bdpmIndex = [];   // { id, name, desc, voie, forme } — issu de medicaments_light.json
+let cisToGroup = {};  // { cis: group_id } — issu de cis_to_group.json
+
+// =========================================================================
+// Onglets
+// =========================================================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'actualites' && !rssLoaded) loadAnsmRss();
+    if (btn.dataset.tab === 'symptomes' && !symptomesLoaded) loadSymptomesData();
+  });
+});
+
+// =========================================================================
+// Chargement des tables pharmatlas (fichiers statiques, aucune BDD)
+// =========================================================================
+fetch(MEDS_INDEX_URL)
+  .then(r => r.ok ? r.json() : [])
+  .then(data => { bdpmIndex = data; })
+  .catch(() => { bdpmIndex = []; console.warn('medicaments_light.json introuvable — voir README (copier depuis pharmatlas/data/)'); });
+
+fetch(CIS_TO_GROUP_URL)
+  .then(r => r.ok ? r.json() : {})
+  .then(data => { cisToGroup = data; })
+  .catch(() => { cisToGroup = {}; console.warn('cis_to_group.json introuvable — voir README'); });
+
+let atcIndex = {};     // { code_atc: [{group_id, name}] } — data/atc_index.json
+let symptomesAtc = {}; // { "libellé symptôme": ["préfixe ATC", ...] } — data/symptomes_atc.json
+let symptomesLoaded = false;
+
+function loadSymptomesData() {
+  if (symptomesLoaded) return;
+  symptomesLoaded = true;
+  Promise.all([
+    fetch('./data/atc_index.json').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+    fetch('./data/symptomes_atc.json').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  ]).then(([atc, symp]) => {
+    atcIndex = atc;
+    symptomesAtc = symp;
+    renderSymptomesList();
+  });
+}
+
+function renderSymptomesList() {
+  const container = document.getElementById('symptomes-list');
+  if (!Object.keys(symptomesAtc).length) {
+    container.innerHTML = '<p class="indispo">Tables symptômes/ATC introuvables — voir README (copier data/atc_index.json et data/symptomes_atc.json).</p>';
+    return;
+  }
+
+  container.innerHTML = Object.entries(symptomesAtc).map(([symptome, prefixes]) => {
+    const substances = new Map(); // nom -> code ATC (le premier trouvé)
+    for (const [code, entries] of Object.entries(atcIndex)) {
+      if (prefixes.some(p => code.startsWith(p))) {
+        entries.forEach(e => { if (!substances.has(e.name)) substances.set(e.name, code); });
+      }
+    }
+    if (!substances.size) {
+      return `<details class="symptome-item"><summary>${symptome} (0)</summary>
+        <p class="indispo">Aucune substance trouvée pour cette catégorie dans la base locale.</p></details>`;
+    }
+    const chips = [...substances.entries()].slice(0, 25)
+      .map(([nom, code]) => `<span class="substance-chip" data-substance="${nom}">${nom}</span>`)
+      .join('');
+    return `<details class="symptome-item"><summary>${symptome} (${substances.size})</summary><div>${chips}</div></details>`;
+  }).join('');
+
+  container.querySelectorAll('.substance-chip').forEach(chip => {
+    chip.addEventListener('click', () => lookupSubstanceDirecte(chip.dataset.substance));
+  });
+}
+
+async function lookupSubstanceDirecte(substance) {
+  const ficheSympt = document.getElementById('fiche-symptome');
+  ficheSympt.innerHTML = '<p class="loading">Interrogation des sources en cours...</p>';
+  await lookupDrug(substance, ficheSympt); // recherche directe sur le nom de substance, pas un nom commercial
+}
+
+// =========================================================================
+// Autocomplétion
+// =========================================================================
+const input = document.getElementById('search-input');
+const suggBox = document.getElementById('suggestions');
+const ficheBox = document.getElementById('fiche');
+let debounceTimer = null;
+
+input.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  const q = input.value.trim();
+  if (q.length < 2) { suggBox.style.display = 'none'; return; }
+  debounceTimer = setTimeout(() => fetchSuggestions(q), 250);
+});
+
+async function fetchSuggestions(q) {
+  const qLower = q.toLowerCase();
+
+  // 1. Index pharmatlas local (chargé une fois, filtré en mémoire côté client)
+  const bdpmMatches = bdpmIndex
+    .filter(item => item.name.toLowerCase().includes(qLower))
+    .slice(0, 8)
+    .map(item => ({ label: item.name, source: 'bdpm', id: item.id }));
+
+  let suggestions = [...bdpmMatches];
+
+  // 2. Complément RxNorm si peu de résultats côté table locale
+  if (suggestions.length < 5) {
+    try {
+      const res = await fetch(
+        `https://rxnav.nlm.nih.gov/REST/approximateTerm.json?term=${encodeURIComponent(q)}&maxEntries=${8 - suggestions.length}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const candidates = data?.approximateGroup?.candidate || [];
+        const existing = new Set(suggestions.map(s => s.label.toLowerCase()));
+        for (const c of candidates) {
+          if (c.candidate && !existing.has(c.candidate.toLowerCase())) {
+            suggestions.push({ label: c.candidate, source: 'rxnorm', id: c.candidate });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('RxNorm indisponible (CORS ou réseau) :', e);
+    }
+  }
+
+  renderSuggestions(suggestions.slice(0, 8));
+}
+
+function renderSuggestions(items) {
+  if (!items.length) { suggBox.style.display = 'none'; return; }
+  suggBox.innerHTML = items.map(s =>
+    `<div data-label="${s.label}"><span>${s.label}</span><span class="tag">${s.source === 'bdpm' ? 'FR' : 'DCI'}</span></div>`
+  ).join('');
+  suggBox.style.display = 'block';
+  suggBox.querySelectorAll('div').forEach(el => {
+    el.addEventListener('click', () => {
+      input.value = el.dataset.label;
+      suggBox.style.display = 'none';
+      lookupDrug(el.dataset.label);
+    });
+  });
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-box')) suggBox.style.display = 'none';
+});
+
+// =========================================================================
+// Fiche complète — appels directs en parallèle vers chaque API
+// =========================================================================
+/**
+ * Retire les accents (PARACÉTAMOL -> PARACETAMOL). PubChem/openFDA/
+ * ClinicalTrials/Europe PMC sont des bases anglo-saxonnes qui ne
+ * reconnaissent pas les caractères accentués — confirmé par un 404 en
+ * test réel le 19/09/2026 sur "PARACÉTAMOL".
+ */
+function stripAccents(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * Résout le RxCUI (identifiant RxNorm) d'un terme, avec repli sur la
+ * recherche approximative si le match exact échoue. Extrait en fonction
+ * partagée car réutilisé par normalizeForUS, la classification RxClass/ATC
+ * et DailyMed — audit du code pharmatlas (19/09/2026) confirmant que ces
+ * trois endpoints RxNorm/RxNav acceptent le fetch direct sans proxy.
+ */
+async function getRxcui(term) {
+  const exact = await safeFetchJson(`https://rxnav.nlm.nih.gov/REST/rxcui.json?name=${encodeURIComponent(term)}`);
+  const exactId = exact?.idGroup?.rxnormId?.[0];
+  if (exactId) return exactId;
+
+  const approx = await safeFetchJson(
+    `https://rxnav.nlm.nih.gov/REST/approximateTerm.json?term=${encodeURIComponent(term)}&maxEntries=1`
+  );
+  return approx?.approximateGroup?.candidate?.[0]?.rxcui || null;
+}
+
+/**
+ * openFDA utilise la nomenclature américaine (ex. "acetaminophen", pas
+ * "paracetamol") pour un certain nombre de substances — confirmé par un
+ * 400 en test réel malgré un nom sans accent. On tente de faire traduire
+ * le nom via RxNorm (qui connaît les deux formes) avant d'interroger
+ * openFDA. Si RxNorm échoue ou ne renvoie rien, on retombe sur le nom
+ * sans accent tel quel — openFDA fonctionnera pour toutes les substances
+ * où le nom DCI français correspond déjà au nom US (la majorité des cas).
+ */
+async function normalizeForUS(term) {
+  const sansAccents = stripAccents(term);
+  const rxcui = await getRxcui(sansAccents);
+  if (!rxcui) return sansAccents;
+  const propData = await safeFetchJson(
+    `https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/property.json?propName=RxNorm%20Name`
+  );
+  const usName = propData?.propConceptGroup?.propConcept?.[0]?.propValue;
+  return usName || sansAccents;
+}
+
+/**
+ * Classe ATC via RxClass (RxNorm), utilisée en complément/repli du code
+ * ATC pharmatlas — utile quand la substance n'est pas dans la table locale
+ * (DCI internationale tapée directement, sans passage par une spécialité
+ * française). Endpoint confirmé CORS-direct dans le code pharmatlas
+ * (fonction PA_RxNorm.getATC).
+ */
+async function getAtcViaRxClass(rxcui) {
+  if (!rxcui) return [];
+  const data = await safeFetchJson(
+    `https://rxnav.nlm.nih.gov/REST/rxclass/class/byRxcui.json?rxcui=${rxcui}&relaSource=ATC`
+  );
+  const list = data?.rxclassDrugInfoList?.rxclassDrugInfo || [];
+  const seen = new Set();
+  const out = [];
+  for (const info of list) {
+    const mc = info.rxclassMinConceptItem;
+    if (mc?.classId && !seen.has(mc.classId)) {
+      seen.add(mc.classId);
+      out.push({ code: mc.classId, nom: mc.className });
+    }
+  }
+  return out.slice(0, 6);
+}
+
+/**
+ * Notice structurée US (DailyMed/SPL) : indications, posologie,
+ * contre-indications. Port simplifié de la logique pharmatlas
+ * (PA_DailyMed), endpoints confirmés CORS-direct dans son code.
+ * Alternative à openFDA, parfois plus complète/à jour.
+ */
+async function getDailyMedSections(rxcui) {
+  if (!rxcui) return null;
+  const WANT = {
+    '34067-9': 'Indications',
+    '34068-7': 'Posologie',
+    '34070-3': 'Contre-indications',
+  };
+  const splsData = await safeFetchJson(
+    `https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json?rxcui=${rxcui}&pagesize=1`
+  );
+  const setid = splsData?.data?.[0]?.setid;
+  if (!setid) return null;
+
+  try {
+    const res = await fetch(`https://dailymed.nlm.nih.gov/dailymed/services/v2/spls/${setid}.xml`);
+    if (!res.ok) return null;
+    const xmlText = await res.text();
+    const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+    const sections = Array.from(doc.getElementsByTagName('section'));
+    const out = [];
+    const seen = new Set();
+    for (const section of sections) {
+      const code = section.getElementsByTagName('code')[0]?.getAttribute('code');
+      if (!code || !WANT[code] || seen.has(code)) continue;
+      const textEl = section.getElementsByTagName('text')[0];
+      const texte = textEl ? textEl.textContent.replace(/\s+/g, ' ').trim().slice(0, 800) : '';
+      if (texte) { seen.add(code); out.push({ label: WANT[code], texte }); }
+    }
+    return out.length ? { setid, sections: out, url: `https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=${setid}` } : null;
+  } catch (e) {
+    console.warn('DailyMed indisponible :', e);
+    return null;
+  }
+}
+
+/**
+ * Littérature scientifique via Crossref — remplace Europe PMC (confirmé
+ * mort côté CORS, y compris dans le code pharmatlas lui-même où le même
+ * endpoint est présent mais jamais réellement validé). Crossref indexe
+ * une large part de la littérature biomédicale et accepte le fetch direct
+ * — confirmé dans pharmatlas pour /works/{doi}, endpoint /works?query=
+ * du même domaine, non re-testé individuellement mais raisonnable à tenter.
+ */
+async function crossrefSearch(term, limit = 5) {
+  const data = await safeFetchJson(
+    `https://api.crossref.org/works?query=${encodeURIComponent(term)}&rows=${limit}&sort=relevance`
+  );
+  const items = data?.message?.items || [];
+  return items.map(w => ({
+    titre: (w.title && w.title[0]) || '(sans titre)',
+    journal: (w['container-title'] && w['container-title'][0]) || '',
+    annee: w.issued?.['date-parts']?.[0]?.[0] || null,
+    doi: w.DOI || null,
+  }));
+}
+
+async function safeFetchJson(url, opts) {
+  try {
+    const res = await fetch(url, opts);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    console.warn('Appel échoué :', url, e);
+    return null; // CORS, réseau, ou 4xx/5xx — on traite comme "source indisponible"
+  }
+}
+
+/**
+ * Comme safeFetchJson, mais documente explicitement le cas Europe PMC :
+ * confirmé sans CORS en test réel (19/09/2026), et les proxys publics
+ * gratuits testés (allorigins, corsproxy.io) se sont révélés tous les
+ * deux indisponibles/nécessitant une clé au même moment — donc pas fiables
+ * comme solution de repli automatique. On tente néanmoins Crossref en
+ * repli (voir crossrefSearch) avant d'afficher le lien direct.
+ */
+async function corsFetchJson(url) {
+  return await safeFetchJson(url);
+}
+
+/**
+ * Résout la substance active "propre" d'une spécialité via les tables
+ * pharmatlas : cis_to_group.json donne un group_id (slug, ex.
+ * "abacavir_sulfate_d_abacavir"), dont le fichier détail contient un nom
+ * lisible ("ABACAVIR / SULFATE D'ABACAVIR") et le(s) code(s) ATC.
+ * On ne garde que le premier segment avant "/" pour la requête chimie
+ * (la forme salifiée complète fait souvent échouer PubChem/openFDA).
+ * Retourne { substance, atc, groupId } ou null si aucune correspondance.
+ */
+async function resolveSubstance(cis) {
+  const groupId = cisToGroup[cis];
+  if (!groupId) return null;
+  const detail = await safeFetchJson(`${GROUP_DETAIL_DIR}${groupId}.json`);
+  if (!detail) return null;
+  const nomPropre = (detail.name || '').split('/')[0].trim();
+  return {
+    substance: nomPropre || null,
+    atc: detail.med_atc?.[0] || null,
+    groupId,
+  };
+}
+
+async function lookupDrug(nom, targetBox) {
+  const box = targetBox || ficheBox;
+  box.innerHTML = '<p class="loading">Interrogation des sources en cours...</p>';
+
+  const bdpmMatch = bdpmIndex.find(item => item.name.toLowerCase() === nom.toLowerCase()) || null;
+  const groupInfo = bdpmMatch ? await resolveSubstance(bdpmMatch.id) : null;
+
+  // PubChem/openFDA attendent un nom de substance active (ex. "paracétamol"),
+  // pas un nom commercial complet avec dosage/forme (ex. "DOLIPRANE 1000 mg,
+  // comprimé") — confirmé par un 404/400 en test réel le 19/09/2026.
+  // On utilise la substance résolue via pharmatlas (cis_to_group), sinon on
+  // retombe sur la recherche brute (cas d'une DCI tapée directement, sans
+  // passage par la table locale).
+  const requeteChimie = groupInfo?.substance || nom;
+  const requeteInternationale = stripAccents(requeteChimie);
+  const rxcui = await getRxcui(requeteInternationale);
+  const requeteUS = await normalizeForUS(requeteChimie);
+
+  const [openfdaLabel, openfdaEvents, pubchem, pmc, trials, atcRxClass, dailyMed] = await Promise.all([
+    safeFetchJson(`https://api.fda.gov/drug/label.json?search=openfda.substance_name:"${encodeURIComponent(requeteUS)}"&limit=1`),
+    safeFetchJson(`https://api.fda.gov/drug/event.json?search=patient.drug.medicinalproduct:"${encodeURIComponent(requeteUS)}"&count=patient.reaction.reactionmeddrapt.exact`),
+    safeFetchJson(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(requeteInternationale)}/property/MolecularFormula,MolecularWeight,IUPACName/JSON`),
+    corsFetchJson(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(requeteInternationale)}&format=json&pageSize=5`),
+    safeFetchJson(`https://clinicaltrials.gov/api/v2/studies?query.term=${encodeURIComponent(requeteInternationale)}&pageSize=5`),
+    groupInfo?.atc ? Promise.resolve([]) : getAtcViaRxClass(rxcui), // pas besoin de RxClass si pharmatlas a déjà l'ATC
+    getDailyMedSections(rxcui),
+  ]);
+
+  // Europe PMC confirmé sans CORS — on tente Crossref en repli avant le lien manuel
+  let litterature = pmc?.resultList?.result || [];
+  let litteratureSource = 'europepmc';
+  if (!litterature.length) {
+    const crossref = await crossrefSearch(requeteInternationale);
+    if (crossref.length) { litterature = crossref; litteratureSource = 'crossref'; }
+  }
+
+  renderFiche({
+    nom,
+    substanceInterrogee: requeteChimie !== nom ? requeteChimie : null,
+    bdpm: bdpmMatch,
+    atc: groupInfo?.atc || atcRxClass?.[0]?.code || null,
+    atcSource: groupInfo?.atc ? 'pharmatlas' : (atcRxClass?.[0]?.code ? 'rxclass' : null),
+    openfdaLabel: openfdaLabel?.results?.[0] || null,
+    openfdaEvents: openfdaEvents?.results?.slice(0, 5) || [],
+    pubchem: pubchem?.PropertyTable?.Properties?.[0] || null,
+    litterature,
+    litteratureSource,
+    trials: trials?.studies || [],
+    dailyMed,
+  }, box);
+}
+
+function renderFiche(f, targetBox) {
+  const box = targetBox || ficheBox;
+  let html = `<h2>${f.nom}</h2>`;
+  if (f.substanceInterrogee) {
+    html += `<p class="sub">Recherche PubChem/openFDA/Europe PMC/ClinicalTrials effectuée sur la substance active : <strong>${f.substanceInterrogee}</strong></p>`;
+  }
+
+  if (f.bdpm) {
+    html += `<section class="bloc"><h3>France — pharmatlas / BDPM</h3>
+      <p>Code CIS : ${f.bdpm.id}<br>
+      Composition : ${f.bdpm.desc || 'non précisée'}<br>
+      Forme : ${f.bdpm.forme || '—'}<br>
+      Voie d'administration : ${f.bdpm.voie || '—'}
+      ${f.atc ? `<br>Code ATC : <strong>${f.atc}</strong> <span class="tag">${f.atcSource === 'rxclass' ? 'via RxClass' : 'via pharmatlas'}</span>` : ''}</p></section>`;
+  } else {
+    html += `<p class="empty">Aucune correspondance trouvée dans la table locale pour ce nom.</p>`;
+  }
+
+  html += `<section class="bloc"><h3>Données chimiques (PubChem)</h3>` +
+    (f.pubchem
+      ? `<p>Formule : ${f.pubchem.MolecularFormula || '—'}<br>
+         Masse moléculaire : ${f.pubchem.MolecularWeight || '—'}<br>
+         Nom IUPAC : ${f.pubchem.IUPACName || '—'}</p>`
+      : `<p class="indispo">Source indisponible pour cette recherche.</p>`) +
+    `</section>`;
+
+  html += `<section class="bloc"><h3>Notice (openFDA)</h3>
+    <p class="avertissement">Notice américaine, fournie à titre comparatif uniquement —
+    se référer au RCP français (BDPM/ANSM) pour toute décision clinique.</p>` +
+    (f.openfdaLabel
+      ? `<p>${(f.openfdaLabel.indications_and_usage || ['—'])[0]}</p>`
+      : `<p class="indispo">Source indisponible pour cette recherche.</p>`) +
+    `</section>`;
+
+  if (f.openfdaEvents.length) {
+    html += `<section class="bloc"><h3>Effets indésirables les plus rapportés (FAERS)</h3><ul>` +
+      f.openfdaEvents.map(e => `<li>${e.term} — ${e.count} signalements</li>`).join('') +
+      `</ul></section>`;
+  }
+
+  if (f.dailyMed) {
+    html += `<section class="bloc"><h3>Notice structurée US (DailyMed)</h3>` +
+      f.dailyMed.sections.map(s => `<p><strong>${s.label}</strong><br>${s.texte}</p>`).join('') +
+      `<p><a href="${f.dailyMed.url}" target="_blank" rel="noopener">Voir la notice complète sur DailyMed →</a></p></section>`;
+  }
+
+  if (f.litterature.length) {
+    const sourceLabel = f.litteratureSource === 'crossref' ? 'Crossref — Europe PMC indisponible (CORS)' : 'Europe PMC';
+    html += `<section class="bloc"><h3>Littérature scientifique (${sourceLabel})</h3><ul>` +
+      f.litterature.map(l => {
+        if (f.litteratureSource === 'crossref') {
+          return `<li>${l.titre}${l.journal ? ' — ' + l.journal : ''} (${l.annee || 's.d.'})${l.doi ? ` — <a href="https://doi.org/${l.doi}" target="_blank" rel="noopener">DOI</a>` : ''}</li>`;
+        }
+        return `<li>${l.title} (${l.pubYear || 's.d.'})</li>`;
+      }).join('') +
+      `</ul></section>`;
+  } else {
+    html += `<section class="bloc"><h3>Littérature scientifique</h3>
+      <p class="indispo">Europe PMC et Crossref indisponibles pour cette recherche.</p>
+      <p><a href="https://europepmc.org/search?query=${encodeURIComponent(f.substanceInterrogee || f.nom)}" target="_blank" rel="noopener">Chercher directement sur Europe PMC →</a></p>
+      </section>`;
+  }
+
+
+  if (f.trials.length) {
+    html += `<section class="bloc"><h3>Essais cliniques en cours</h3><ul>` +
+      f.trials.map(s => {
+        const id = s.protocolSection?.identificationModule || {};
+        const status = s.protocolSection?.statusModule?.overallStatus || '—';
+        return `<li>${id.briefTitle || 'Sans titre'} — ${status} (${id.nctId || '—'})</li>`;
+      }).join('') +
+      `</ul></section>`;
+  }
+
+  box.innerHTML = html;
+}
+
+// =========================================================================
+// Actualités ANSM (flux RSS, groupées par période, rien de persisté)
+// =========================================================================
+let rssLoaded = false;
+let allRssItems = [];
+
+async function loadAnsmRss() {
+  rssLoaded = true;
+  const content = document.getElementById('rss-content');
+  content.innerHTML = '<p class="loading">Chargement du flux ANSM...</p>';
+
+  let items = null;
+
+  // Tentative directe (fonctionne seulement si l'ANSM autorise CORS un jour)
+  try {
+    const res = await fetch(ANSM_RSS_URL);
+    if (res.ok) items = parseRssXml(await res.text());
+  } catch (e) { /* silencieux, on tente rss2json ensuite */ }
+
+  // Seul repli gardé (voir commentaire plus haut sur les deux proxys retirés)
+  if (!items) {
+    try {
+      const res = await fetch(RSS2JSON_URL(ANSM_RSS_URL));
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === 'ok' && data.items) {
+          items = data.items.map(it => ({
+            titre: it.title || '',
+            lien: it.link || '',
+            dateRaw: it.pubDate || '',
+          }));
+        }
+      }
+    } catch (e) { /* échec du repli aussi */ }
+  }
+
+  if (!items) {
+    content.innerHTML = `<p class="indispo">Flux ANSM inaccessible depuis le navigateur (CORS).</p>
+      <p><a href="${ANSM_PAGE_URL}" target="_blank" rel="noopener">Consulter les informations de sécurité directement sur ansm.sante.fr →</a></p>`;
+    return;
+  }
+
+  allRssItems = items;
+  renderRss('jour');
+}
+
+function parseRssXml(xmlText) {
+  const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+  if (doc.querySelector('parsererror')) return null;
+  return Array.from(doc.querySelectorAll('item')).map(item => ({
+    titre: item.querySelector('title')?.textContent || '',
+    lien: item.querySelector('link')?.textContent || '',
+    dateRaw: item.querySelector('pubDate')?.textContent || '',
+  }));
+}
+
+function renderRss(period) {
+  const content = document.getElementById('rss-content');
+  const now = new Date();
+  const limits = { jour: 1, semaine: 7, mois: 31, tout: Infinity };
+  const maxDays = limits[period];
+
+  const filtered = allRssItems.filter(it => {
+    if (maxDays === Infinity) return true;
+    const d = new Date(it.dateRaw);
+    if (isNaN(d)) return true; // date non parsable -> on l'affiche quand même
+    const diffDays = (now - d) / (1000 * 60 * 60 * 24);
+    return diffDays <= maxDays;
+  });
+
+  if (!filtered.length) {
+    content.innerHTML = '<p class="empty">Aucune publication sur cette période.</p>';
+    return;
+  }
+
+  content.innerHTML = filtered.map(it => `
+    <div class="rss-item">
+      <a href="${it.lien}" target="_blank" rel="noopener">${it.titre}</a><br>
+      <span class="date">${it.dateRaw}</span>
+    </div>
+  `).join('');
+}
+
+document.querySelectorAll('.rss-filters button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.rss-filters button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderRss(btn.dataset.period);
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>Sherlock VR/AR — Prototype Zone 1 (Bureau)</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; font-family: system-ui, sans-serif; }
+  #overlay {
+    position: absolute; top: 0; left: 0; width: 100%;
+    padding: 14px 16px; color: #fff; background: rgba(0,0,0,0.55);
+    text-align: center; z-index: 10; box-sizing: border-box;
+    font-size: 15px; line-height: 1.4;
+  }
+  #status { position: absolute; bottom: 12px; left: 12px; color: #9f9; font-size: 12px; z-index: 10; max-width: 70%; }
+  #not-supported {
+    position: absolute; inset: 0; display: none; color: #fff;
+    background: #111; align-items: center; justify-content: center;
+    text-align: center; padding: 24px; font-size: 16px; z-index: 20;
+  }
+  #difficulty-select {
+    position: absolute; inset: 0; z-index: 30;
+    background: rgba(5,5,10,0.92); color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 24px; box-sizing: border-box;
+  }
+  #difficulty-select h2 { margin-bottom: 18px; font-size: 20px; }
+  #difficulty-select button {
+    display: block; width: 220px; margin: 8px auto; padding: 14px;
+    font-size: 15px; border: none; border-radius: 8px; cursor: pointer;
+    background: #2a2a3a; color: #fff;
+  }
+  #difficulty-select button:active { background: #444460; }
+  #difficulty-select .desc { font-size: 12px; color: #aaa; margin-top: 2px; }
+  #progress {
+    position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 10px; z-index: 10;
+  }
+  .progress-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.35);
+    transition: background 0.3s, transform 0.3s;
+  }
+  .progress-dot.revealed { background: #ffd700; border-color: #ffd700; transform: scale(1.15); }
+  .progress-dot.redherring { background: #ff5544; border-color: #ff5544; transform: scale(1.15); }
+</style>
+</head>
+<body>
+
+<div id="difficulty-select">
+  <h2>Choisis la difficulté</h2>
+  <button data-diff="facile">Facile<div class="desc">3 suspects, 1 fausse piste</div></button>
+  <button data-diff="normal">Normal<div class="desc">4 suspects, 2 fausses pistes</div></button>
+  <button data-diff="difficile">Difficile<div class="desc">6 suspects, 3 fausses pistes</div></button>
+</div>
+
+<div id="progress">
+  <div class="progress-dot" id="dot-1"></div>
+  <div class="progress-dot" id="dot-2"></div>
+  <div class="progress-dot" id="dot-3"></div>
+  <div class="progress-dot" id="dot-4"></div>
+</div>
+
+<div id="overlay">
+  <strong>Prototype — Zone 1 : Bureau</strong><br/>
+  Visez une surface plane (table, sol) jusqu'à voir l'anneau vert, puis touchez l'écran pour ancrer le tiroir.
+  Touchez ensuite le tiroir pour révéler le double-fond.<br/>
+  <em>Astuce : pince à deux doigts pour zoomer et repérer un détail caché sur le tiroir ancré.</em>
+</div>
+<div id="status">En attente du démarrage AR…</div>
+<div id="not-supported">
+  ⚠️ WebXR AR non disponible sur cet appareil/navigateur.<br/><br/>
+  Ouvrez cette page sur <strong>Chrome pour Android</strong> (version récente), sur un appareil compatible ARCore.
+</div>
+
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/ARButton.js";
+
+let camera, scene, renderer;
+let reticle;
+let hitTestSource = null;
+let hitTestSourceRequested = false;
+let anchoredDrawer = null;
+let doubleFondRevealed = false;
+let microDetailRevealed = false;
+
+const statusEl = document.getElementById("status");
+const CLUE_INDEX = { indice_1_bureau: 1, indice_2_bibliotheque: 2, indice_3_cheminee: 3, indice_4_fenetre: 4 };
+
+// ============================================================
+// SON (Web Audio API — aucun fichier audio nécessaire)
+// ============================================================
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTone(freq, duration, type = "sine", startDelay = 0, gainPeak = 0.25) {
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  const t0 = ctx.currentTime + startDelay;
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(gainPeak, t0 + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+
+  osc.start(t0);
+  osc.stop(t0 + duration + 0.05);
+}
+
+function playRevealSound(isRedHerring) {
+  if (isRedHerring) {
+    playTone(180, 0.35, "sawtooth", 0, 0.2);
+    playTone(140, 0.4, "sawtooth", 0.05, 0.15);
+  } else {
+    playTone(660, 0.18, "sine", 0);
+    playTone(880, 0.25, "sine", 0.09);
+    playTone(1320, 0.3, "sine", 0.16);
+  }
+}
+
+function playDetailSound() {
+  playTone(1046, 0.12, "triangle", 0, 0.15);
+  playTone(1568, 0.15, "triangle", 0.06, 0.12);
+}
+
+// ============================================================
+// INDICATEUR DE PROGRESSION PARTAGÉ
+// ============================================================
+function updateProgressDot(clueId, isRedHerring) {
+  const index = CLUE_INDEX[clueId];
+  if (!index) return;
+  const dot = document.getElementById(`dot-${index}`);
+  if (!dot) return;
+  dot.classList.remove("revealed", "redherring");
+  dot.classList.add(isRedHerring ? "redherring" : "revealed");
+}
+
+// ============================================================
+// SÉLECTION DE DIFFICULTÉ
+// ============================================================
+let pendingDifficulty = null;
+const difficultyScreen = document.getElementById("difficulty-select");
+
+difficultyScreen.querySelectorAll("button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const diff = btn.dataset.diff;
+    difficultyScreen.style.display = "none";
+    sendOrQueueStartGame(diff);
+  });
+});
+
+function sendOrQueueStartGame(difficulty) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    sendEvent({ type: "start_game", difficulty });
+  } else {
+    pendingDifficulty = difficulty;
+  }
+}
+
+// ============================================================
+// CONNEXION AU SERVEUR RELAIS (brique 2)
+// ============================================================
+// Remplacer RELAY_URL par l'adresse LAN ou publique du serveur relais
+// (voir Server/relay-server.js).
+const RELAY_URL = "ws://localhost:8080";
+const SESSION_CODE = "TEST_SESSION"; // doit être identique côté client VR
+let socket = null;
+let caseSeed = null;
+let caseDifficulty = null;
+let reconnectAttempts = 0;
+let reconnectTimer = null;
+const MAX_RECONNECT_DELAY = 10000;
+
+connectToRelay();
+
+function connectToRelay() {
+  socket = new WebSocket(`${RELAY_URL}?session=${SESSION_CODE}&role=ar`);
+
+  socket.addEventListener("open", () => {
+    reconnectAttempts = 0;
+    statusEl.textContent = "Connecté au relais — en attente du démarrage AR.";
+    if (pendingDifficulty) {
+      sendEvent({ type: "start_game", difficulty: pendingDifficulty });
+      pendingDifficulty = null;
+    }
+  });
+
+  socket.addEventListener("message", (event) => {
+    const data = JSON.parse(event.data);
+    handleIncomingEvent(data);
+  });
+
+  socket.addEventListener("close", () => {
+    statusEl.textContent = "Déconnecté du relais — nouvelle tentative en cours…";
+    scheduleReconnect();
+  });
+
+  socket.addEventListener("error", () => {
+    statusEl.textContent = "Relais introuvable — vérifie que relay-server.js tourne.";
+  });
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  const delay = Math.min(1000 * Math.pow(1.6, reconnectAttempts), MAX_RECONNECT_DELAY);
+  reconnectAttempts++;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connectToRelay();
+  }, delay);
+}
+
+function sendEvent(evt) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify(evt));
+  }
+}
+
+function handleIncomingEvent(evt) {
+  console.log("[AR] Événement reçu :", evt);
+
+  if (evt.type === "session_seed") {
+    try {
+      const parsed = JSON.parse(evt.payload);
+      caseSeed = parsed.seed;
+      caseDifficulty = parsed.difficulty;
+    } catch (e) {
+      caseSeed = Number(evt.payload); // compat ancien format
+    }
+    console.log("[AR] Partie démarrée — seed:", caseSeed, "difficulté:", caseDifficulty);
+    statusEl.textContent = `Partie démarrée (difficulté : ${caseDifficulty || "?"}).`;
+  }
+
+  if (evt.type === "clue_revealed_vr") {
+    statusEl.textContent = `Holmes a révélé ${evt.clueId}${evt.isRedHerring ? " (fausse piste !)" : ""} : "${evt.payload || ""}"`;
+    updateProgressDot(evt.clueId, evt.isRedHerring);
+    playRevealSound(evt.isRedHerring);
+  }
+
+  if (evt.type === "all_clues_ready") {
+    statusEl.textContent = "Tous les indices sont révélés — Holmes va accuser un suspect.";
+  }
+
+  if (evt.type === "accusation_result") {
+    try {
+      const result = JSON.parse(evt.payload);
+      statusEl.textContent = result.isCorrect
+        ? `✅ Holmes a accusé ${result.accused} — c'était le bon coupable !`
+        : `❌ Holmes a accusé ${result.accused} — ce n'était pas lui (c'était ${result.culprit}).`;
+      playRevealSound(!result.isCorrect);
+    } catch (e) {
+      statusEl.textContent = "Accusation reçue (payload illisible).";
+    }
+  }
+}
+// --------------------------------------------------------------------------
+
+init();
+
+function init() {
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(
+    70,
+    window.innerWidth / window.innerHeight,
+    0.01,
+    20
+  );
+
+  const light = new THREE.HemisphereLight(0xffffff, 0x445566, 1.2);
+  scene.add(light);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.xr.enabled = true;
+  document.body.appendChild(renderer.domElement);
+
+  // Reticle : indique la surface détectée
+  const reticleGeometry = new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2);
+  const reticleMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
+  reticle = new THREE.Mesh(reticleGeometry, reticleMaterial);
+  reticle.matrixAutoUpdate = false;
+  reticle.visible = false;
+  scene.add(reticle);
+
+  if (navigator.xr) {
+    navigator.xr.isSessionSupported("immersive-ar").then((supported) => {
+      if (supported) {
+        const button = ARButton.createButton(renderer, {
+          requiredFeatures: ["hit-test"],
+        });
+        document.body.appendChild(button);
+        statusEl.textContent = "Appuyez sur le bouton AR pour démarrer.";
+      } else {
+        showNotSupported();
+      }
+    });
+  } else {
+    showNotSupported();
+  }
+
+  renderer.domElement.addEventListener("click", onSelect);
+  window.addEventListener("resize", onWindowResize);
+  setupPinchZoom();
+  renderer.setAnimationLoop(render);
+}
+
+function showNotSupported() {
+  document.getElementById("not-supported").style.display = "flex";
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ============================================================
+// INDICE "LOUPE" — zoom AR pour révéler un détail caché
+// ============================================================
+const DEFAULT_FOV = 70;
+const MAX_ZOOM_FOV = 22; // plus la valeur est basse, plus le zoom est fort
+const ZOOM_DETAIL_THRESHOLD = 30; // en dessous de ce FOV, le détail se révèle
+
+let activePinchDistance = null;
+let fovAtPinchStart = DEFAULT_FOV;
+
+function setupPinchZoom() {
+  renderer.domElement.addEventListener("touchstart", onTouchStart, { passive: true });
+  renderer.domElement.addEventListener("touchmove", onTouchMove, { passive: true });
+  renderer.domElement.addEventListener("touchend", onTouchEnd, { passive: true });
+}
+
+function touchDistance(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function onTouchStart(e) {
+  if (e.touches.length === 2) {
+    activePinchDistance = touchDistance(e.touches);
+    fovAtPinchStart = camera.fov;
+  }
+}
+
+function onTouchMove(e) {
+  if (e.touches.length === 2 && activePinchDistance) {
+    const newDistance = touchDistance(e.touches);
+    const scale = newDistance / activePinchDistance;
+    const newFov = THREE.MathUtils.clamp(fovAtPinchStart / scale, MAX_ZOOM_FOV, DEFAULT_FOV);
+    camera.fov = newFov;
+    camera.updateProjectionMatrix();
+    checkZoomDetail();
+  }
+}
+
+function onTouchEnd(e) {
+  if (e.touches.length < 2) {
+    activePinchDistance = null;
+  }
+}
+
+function checkZoomDetail() {
+  if (microDetailRevealed || !anchoredDrawer || camera.fov > ZOOM_DETAIL_THRESHOLD) return;
+
+  // Vise le centre de l'écran vers le tiroir ancré
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+  const intersects = raycaster.intersectObject(anchoredDrawer, true);
+
+  if (intersects.length > 0) {
+    revealMicroDetail();
+  }
+}
+
+function revealMicroDetail() {
+  microDetailRevealed = true;
+  statusEl.textContent = "🔍 Détail repéré au zoom : de fines initiales gravées \"S.M.\" près de la poignée.";
+  playDetailSound();
+
+  sendEvent({
+    type: "clue_detail_ar",
+    clueId: "indice_1_bureau",
+    payload: "Détail au zoom : initiales gravées \"S.M.\" près de la poignée.",
+  });
+}
+
+// ============================================================
+// ANIMATIONS (tweens simples, sans librairie externe)
+// ============================================================
+const activeTweens = [];
+
+function animateScaleIn(object3D, duration = 450) {
+  object3D.scale.set(0.01, 0.01, 0.01);
+  const start = performance.now();
+  activeTweens.push({
+    update(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      object3D.scale.setScalar(0.01 + eased * 0.99);
+      return t >= 1;
+    },
+  });
+}
+
+function updateTweens(now) {
+  for (let i = activeTweens.length - 1; i >= 0; i--) {
+    const done = activeTweens[i].update(now);
+    if (done) activeTweens.splice(i, 1);
+  }
+}
+
+function onSelect() {
+  // Cas 1 : le tiroir n'est pas encore ancré → on l'ancre à la position du reticle
+  if (!anchoredDrawer && reticle.visible) {
+    anchoredDrawer = createDrawer();
+    anchoredDrawer.position.setFromMatrixPosition(reticle.matrix);
+    scene.add(anchoredDrawer);
+    animateScaleIn(anchoredDrawer);
+    reticle.visible = false;
+    statusEl.textContent = "Tiroir ancré. Touchez-le pour révéler le double-fond.";
+
+    sendEvent({
+      type: "clue_observed_ar",
+      clueId: "indice_1_bureau",
+      payload: "Tiroir ancré côté AR.",
+    });
+    return;
+  }
+
+  // Cas 2 : le tiroir est ancré, on vérifie si on l'a touché pour révéler l'indice
+  if (anchoredDrawer && !doubleFondRevealed) {
+    revealDoubleFond();
+  }
+}
+
+function createDrawer() {
+  const geometry = new THREE.BoxGeometry(0.3, 0.08, 0.2);
+  const material = new THREE.MeshStandardMaterial({ color: 0x6b4226 });
+  const drawer = new THREE.Mesh(geometry, material);
+  drawer.userData.isDrawer = true;
+  return drawer;
+}
+
+function revealDoubleFond() {
+  doubleFondRevealed = true;
+
+  // Petit panneau lumineux qui "coulisse" pour simuler la révélation, avec scale-in animé
+  const geometry = new THREE.PlaneGeometry(0.25, 0.15);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xffd700,
+    side: THREE.DoubleSide,
+  });
+  const panel = new THREE.Mesh(geometry, material);
+  panel.rotation.x = -Math.PI / 2;
+  panel.position.copy(anchoredDrawer.position);
+  panel.position.y += 0.05;
+  scene.add(panel);
+  animateScaleIn(panel);
+
+  statusEl.textContent = "Indice 1 révélé côté AR : \"Pour Moriarty seul — 14\"";
+  updateProgressDot("indice_1_bureau", false);
+  playRevealSound(false);
+
+  sendEvent({
+    type: "clue_observed_ar",
+    clueId: "indice_1_bureau",
+    payload: "Trace de fente visible à l'arrière du tiroir, correspond au double-fond.",
+  });
+}
+
+function render(timestamp, frame) {
+  updateTweens(performance.now());
+
+  if (frame) {
+    const referenceSpace = renderer.xr.getReferenceSpace();
+    const session = renderer.xr.getSession();
+
+    if (!hitTestSourceRequested) {
+      session.requestReferenceSpace("viewer").then((viewerSpace) => {
+        session
+          .requestHitTestSource({ space: viewerSpace })
+          .then((source) => {
+            hitTestSource = source;
+          });
+      });
+
+      session.addEventListener("end", () => {
+        hitTestSourceRequested = false;
+        hitTestSource = null;
+      });
+
+      hitTestSourceRequested = true;
+    }
+
+    if (hitTestSource) {
+      const hitTestResults = frame.getHitTestResults(hitTestSource);
+
+      if (hitTestResults.length > 0 && !anchoredDrawer) {
+        const hit = hitTestResults[0];
+        reticle.visible = true;
+        reticle.matrix.fromArray(
+          hit.getPose(referenceSpace).transform.matrix
+        );
+      } else {
+        reticle.visible = false;
+      }
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>

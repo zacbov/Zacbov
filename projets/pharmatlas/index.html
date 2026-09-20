@@ -1878,6 +1878,12 @@ function _normaliseItemRaw(item,catId,base){
     file:         resolvePath(item.file,      base,catId),
     thumbnail:    resolveMedia(item.thumbnail,base,catId),
     image:        resolveMedia(item.image,    base,catId),
+    /* Galerie de photographies (Dispositifs Médicaux) : tableau d'URL.
+       Le champ était absent de cette liste, donc silencieusement supprimé —
+       les 22 galeries existantes n'étaient jamais rendues. */
+    photos:       Array.isArray(item.photos)
+                    ? item.photos.map(function(p){ return resolveMedia(p,base,catId); }).filter(Boolean)
+                    : null,
     portrait:     resolveMedia(item.portrait, base,catId),
     name:         item.name||item.titre||item.nom||item.nom_affiche||null,
     desc:         item.desc||item.objectif||null,
@@ -10397,7 +10403,9 @@ else if(wt==='bootstrap_viz'){
       return map[p]||p;
     }
 
-    let dmH = imgHtml;
+    /* Les photographies partent dans le VIEWER (initSheetRendererDMGallery),
+       pas dans le corps de la fiche : on n'ajoute donc plus imgHtml ici. */
+    let dmH = '';
 
     /* ── Badges header ── */
     dmH += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center">';
@@ -10967,6 +10975,9 @@ function doLoad(url,res,rej){
   loader.load(url, g=>res(g.scene), undefined, e=>{
     console.error('[PharmAtlas] Erreur GLB:', url, e);
     if(typeof paLogDiag==='function') paLogDiag('glb-404', url);
+    /* On mémorise l'absence : la même fiche rouverte ne relancera pas
+       la requête, et l'onglet « Modèle 3D » ne sera plus proposé. */
+    if(typeof paGlbMarkMissing==='function') paGlbMarkMissing(url);
     rej(new Error(e.message||'Fichier introuvable'));
   });
 }
@@ -11456,7 +11467,8 @@ function _paViewerTabs(m, tabs, activeKey){
 /* Recense les sources visuelles disponibles pour une fiche. */
 function _paVisualTabs(m){
   var tabs=[];
-  if(m.file) tabs.push({key:'3d', label:'🧬 Modèle 3D',
+  if(m.file && (typeof paGlbAvailable!=='function' || !/\.glb$/i.test(m.file) || paGlbAvailable(m.file)))
+    tabs.push({key:'3d', label:'🧬 Modèle 3D',
       run:function(){
         m._paTab='3d';
         /* Plantes : le modèle 3D vit DANS le viewer herbier (bouton interne).
@@ -11737,7 +11749,111 @@ window.initSheetRendererBioslides = function(m, slide){
   probe(0);
 };
 
+/* ── Galerie photo — Dispositifs Médicaux ──────────────────────────────────
+   Les photographies (R2) étaient rendues DANS la fiche via imgHtml, à gauche
+   du texte. Elles ont vocation à occuper le viewer, comme les planches GBIF
+   ou les modèles 3D des autres catégories. Ce viewer les y affiche avec
+   navigation entre les clichés. */
+var _dmGal = { imgs: [], idx: 0 };
+
+window.dmGalPrev = function(){
+  if(!_dmGal.imgs.length) return;
+  _dmGal.idx = (_dmGal.idx - 1 + _dmGal.imgs.length) % _dmGal.imgs.length;
+  _dmGalShow();
+};
+window.dmGalNext = function(){
+  if(!_dmGal.imgs.length) return;
+  _dmGal.idx = (_dmGal.idx + 1) % _dmGal.imgs.length;
+  _dmGalShow();
+};
+function _dmGalShow(){
+  var st = document.getElementById('dm-gal-stage');
+  if(!st || !_dmGal.imgs.length) return;
+  st.innerHTML = '<img src="'+escHtml(_dmGal.imgs[_dmGal.idx])+'" alt="" '
+    + 'style="max-width:100%;max-height:100%;object-fit:contain;display:block" '
+    + 'onerror="this.parentNode.innerHTML=\'<div style=&quot;color:rgba(255,255,255,.4);'
+    + 'font-size:12px&quot;>Image indisponible</div>\'">';
+  var c = document.getElementById('dm-gal-counter');
+  if(c) c.textContent = (_dmGal.idx+1)+' / '+_dmGal.imgs.length;
+}
+
+function initSheetRendererDMGallery(m){
+  var c = document.getElementById('sheetViewer');
+  if(!c) return false;
+  /* On réunit image principale + galerie, sans doublon. */
+  var imgs = [];
+  if(m.image) imgs.push(m.image);
+  (m.photos||[]).forEach(function(p){ if(p && imgs.indexOf(p)===-1) imgs.push(p); });
+  if(!imgs.length) return false;
+
+  if(typeof sheetAnimId!=='undefined' && sheetAnimId){ cancelAnimationFrame(sheetAnimId); sheetAnimId=null; }
+  try{ osdDestroy(); }catch(e){}
+  while(c.firstChild) c.removeChild(c.firstChild);
+  c.setAttribute('data-mode','dm-gallery');
+  c.style.cssText='position:relative;overflow:hidden;background:#0d1117';
+
+  _dmGal = { imgs: imgs, idx: 0 };
+  var nav = imgs.length>1
+    ? '<button onclick="dmGalPrev()" aria-label="Photo précédente" style="position:absolute;left:8px;top:50%;'
+      + 'transform:translateY(-50%);z-index:5;background:rgba(0,0,0,.55);color:#fff;border:none;'
+      + 'border-radius:50%;width:34px;height:34px;font-size:17px;cursor:pointer">‹</button>'
+      + '<button onclick="dmGalNext()" aria-label="Photo suivante" style="position:absolute;right:8px;top:50%;'
+      + 'transform:translateY(-50%);z-index:5;background:rgba(0,0,0,.55);color:#fff;border:none;'
+      + 'border-radius:50%;width:34px;height:34px;font-size:17px;cursor:pointer">›</button>'
+      + '<div id="dm-gal-counter" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);'
+      + 'z-index:5;background:rgba(0,0,0,.55);color:rgba(255,255,255,.85);padding:3px 11px;'
+      + 'border-radius:12px;font-size:11px;font-weight:600"></div>'
+    : '';
+  c.innerHTML = '<div id="dm-gal-stage" style="position:absolute;inset:0;display:flex;'
+    + 'align-items:center;justify-content:center;padding:14px"></div>' + nav;
+  _dmGalShow();
+  return true;
+}
+
+/* ── Disponibilité des modèles 3D (.glb) ───────────────────────────────────
+   1 690 fiches déclarent un fichier .glb. Tant qu'ils ne sont pas publiés,
+   chaque ouverture de fiche déclenche une requête vouée au 404, pollue la
+   console et retarde l'affichage du repli.
+
+   Deux garde-fous, sans avoir à modifier les 1 690 fiches :
+
+   • PA_GLB_MANIFEST : liste blanche optionnelle des .glb réellement publiés.
+     Renseigner un tableau de noms de fichiers (ex. ['digoxine.glb', …]) ou
+     l'URL d'un JSON à charger. Tout fichier absent de la liste n'est jamais
+     demandé — le viewer passe directement à la source suivante (lame, photo,
+     structure PubChem…). Laisser à null = comportement historique.
+
+   • Mémoire des échecs : un .glb ayant renvoyé 404 n'est plus redemandé de
+     la session. Sans cela, revenir sur une fiche relançait la même requête.  */
+const PA_GLB_MANIFEST = null;
+var _glbMissing = Object.create(null);   // nom de fichier → true si 404 constaté
+var _glbAvailable = null;                // Set des .glb publiés, si manifeste
+
+(function _initGlbManifest(){
+  if(!PA_GLB_MANIFEST) return;
+  if(Array.isArray(PA_GLB_MANIFEST)){ _glbAvailable=new Set(PA_GLB_MANIFEST); return; }
+  if(typeof PA_GLB_MANIFEST==='string'){
+    fetch(PA_GLB_MANIFEST).then(function(r){return r.json();})
+      .then(function(list){ if(Array.isArray(list)) _glbAvailable=new Set(list); })
+      .catch(function(){ /* manifeste illisible : on retombe sur le comportement historique */ });
+  }
+})();
+
+/* true si le .glb a une chance d'exister — sinon on n'émet aucune requête. */
+function paGlbAvailable(file){
+  if(!file) return false;
+  var name=String(file).split('/').pop();
+  if(_glbMissing[name]) return false;
+  if(_glbAvailable && !_glbAvailable.has(name)) return false;
+  return true;
+}
+function paGlbMarkMissing(url){
+  var name=String(url||'').split('?')[0].split('/').pop();
+  if(name) _glbMissing[name]=true;
+}
+
 function resolveHistoSlide(m){
+
   if(!m) return null;
   return HISTO_SLIDE_MAP[m.name] || null;
 }
@@ -12659,6 +12775,13 @@ function initSheetRenderer(m){
     if(m.file){ window._organiteViewMode='3d'; _renderOrganiteGLB(m); }
     else { window._organiteViewMode='2d'; render2DScientific(m); }
     return;
+  }
+
+  // ── Dispositifs Médicaux : galerie photo dans le viewer ──────────────────────
+  //    Les clichés (R2) occupent le viewer au lieu d'être encastrés dans la
+  //    fiche. 27 fiches ont une image principale, 22 une galerie complète.
+  if(m._cat==='Dispositifs_Medicaux' && typeof initSheetRendererDMGallery==='function'){
+    if(initSheetRendererDMGallery(m)) return;
   }
 
   // ── Lame de microscopie (UDE BioSLiDES) ──────────────────────────────────────
@@ -16354,7 +16477,11 @@ var _paViewer=(function(){
   function hasVisual(m){
     if(!m) return false;
     try{
-      if(m.file || m.image || m.thumbnail || m.pdb_id || m.smiles || m.pubchem_cid
+      /* Un .glb connu comme absent ne compte pas comme visuel : sans cela, la
+         fiche gardait un viewer ouvert sur une ressource introuvable. */
+      var _f = m.file;
+      if(_f && /\.glb$/i.test(_f) && typeof paGlbAvailable==='function' && !paGlbAvailable(_f)) _f=null;
+      if(_f || m.image || m.thumbnail || m.pdb_id || m.smiles || m.pubchem_cid
          || m.lame_idc || m.spectra_url || m.content_base64 || m.tool_mode
          || m.uniprot || m.icn3d_pdb || (m.photos&&m.photos.length)
          || (m.widget_def&&m.widget_def.html) || (m.ms_widget_def&&m.ms_widget_def.html)

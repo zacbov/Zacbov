@@ -375,6 +375,15 @@ body::after{
 .itemtoast .toast-label{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--phos-bright);opacity:0.85;}
 .itemtoast .toast-name{font-family:'IM Fell English',serif;font-size:1.08rem;color:var(--ink-text);margin-top:2px;}
 
+/* ===== Rituel du Signe des Anciens (tracé à la souris/au doigt) ===== */
+#ritualOverlay{position:absolute;inset:0;z-index:160;display:none;align-items:center;justify-content:center;background:rgba(3,8,10,0.82);backdrop-filter:blur(2px);}
+.ritual-panel{background:var(--panel);border:1px solid var(--brass-bright);padding:22px 26px;text-align:center;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.7);}
+.ritual-panel h3{font-family:'UnifrakturMaguntia',serif;color:var(--brass-bright);font-size:1.4rem;margin-bottom:6px;}
+.ritual-panel p{color:var(--parch-dim);font-size:0.85rem;margin-bottom:14px;font-style:italic;}
+#ritualCanvas{background:rgba(0,0,0,0.35);border:1px solid var(--brass-dim);touch-action:none;cursor:crosshair;display:block;margin:0 auto;}
+.ritual-btns{display:flex;gap:8px;justify-content:center;margin-top:14px;}
+#ritualFeedback{margin-top:12px;font-size:0.95rem;min-height:1.4em;color:var(--phos-bright);}
+
 /* ===== Termes clés surlignés dans le récit ===== */
 #story .kw-monster{color:var(--blood-bright);font-weight:600;}
 #story .kw-item{color:var(--brass-bright);font-weight:600;}
@@ -456,6 +465,19 @@ body::after{
   </div>
 
   <div id="dicetray"></div>
+
+  <div id="ritualOverlay">
+    <div class="ritual-panel">
+      <h3 id="ritualTitle">Tracez le Signe des Anciens</h3>
+      <p id="ritualSub"></p>
+      <canvas id="ritualCanvas" width="260" height="260"></canvas>
+      <div class="ritual-btns">
+        <button class="hbtn" onclick="ritualClear()">Effacer</button>
+        <button class="hbtn" id="ritualValidate">Valider le tracé</button>
+      </div>
+      <div id="ritualFeedback"></div>
+    </div>
+  </div>
 
   <div id="itemtoast-stack"></div>
 
@@ -971,7 +993,7 @@ const SECTIONS = {
 
 "242":{t:"Vous vous avancez ouvertement, les mains visibles, vers leur feu de camp. Les Hommes de Leng — des humanoïdes trapus, de petites cornes dépassant de sous leurs turbans, leurs pieds fourchus cachés sous de longues robes — vous encerclent sans un mot, leurs visages figés dans une expression indéchiffrable. Un cri guttural, plus autoritaire, retentit depuis l'obscurité, et la file s'écarte pour laisser passer une masse gélatineuse blanchâtre hérissée de tentacules roses vibrants : un CRAPAUD LUNAIRE, maître de cette bande. Rendez-vous au 244.", g:[244]},
 
-"244":{t:"Le Crapaud Lunaire vous observe de ses orifices sensoriels innombrables, dépourvu d'yeux à proprement parler, tandis que les Hommes de Leng attendent son verdict en silence respectueux. Vous comprenez que ces créatures gélatineuses réduisent habituellement les Hommes de Leng en esclavage, et qu'un simple voyageur humain n'a guère plus de valeur à leurs yeux qu'une bête de somme supplémentaire. Possédez-vous le Croquis du Signe des Anciens ? Si oui, Rendez-vous au 246. Si non, Rendez-vous au 248.", g:[246,248], choiceLabels:["Oui, j'ai le Croquis du Signe des Anciens","Non, je ne l'ai pas"]},
+"244":{t:"Le Crapaud Lunaire vous observe de ses orifices sensoriels innombrables, dépourvu d'yeux à proprement parler, tandis que les Hommes de Leng attendent son verdict en silence respectueux. Vous comprenez que ces créatures gélatineuses réduisent habituellement les Hommes de Leng en esclavage, et qu'un simple voyageur humain n'a guère plus de valeur à leurs yeux qu'une bête de somme supplémentaire. Vous n'avez qu'un instant pour tracer dans les airs, de la pointe du doigt, le Signe des Anciens.", g:[246,248], ritual:"star"},
 
 "246":{t:"Vous brandissez votre croquis du Signe des Anciens face au Crapaud Lunaire. Un frémissement d'horreur — ou de respect craintif — parcourt visiblement sa masse gélatineuse, et ses tentacules roses se rétractent brusquement. Il émet un gargouillis sifflant, et les Hommes de Leng s'écartent aussitôt de votre chemin, tête basse. Vous êtes libre de poursuivre votre route vers les montagnes que l'on vous désigne au loin. Rendez-vous au 250.", g:[250]},
 
@@ -983,11 +1005,13 @@ const SECTIONS = {
 
 "250":{t:"Au-delà du Plateau de Leng, les montagnes se font plus hautes, plus noires, jusqu'à ce qu'un pic unique se détache des autres, coiffé d'un château fait d'onyx que nulle main humaine n'a jamais taillé — Kadath l'Inconnue elle-même. Un froid qui n'a rien de météorologique s'insinue en vous à mesure que vous approchez. Rendez-vous au 256.", g:[256]},
 
-"256":{t:"Alors que vous gravissez les derniers contreforts avant le pic d'onyx, un battement d'ailes immense assombrit le ciel. Un SHANTAK — créature volante à tête chevaline et aux ailes écailleuses, monture des puissances divines — se pose lourdement sur un éperon rocheux, vous barrant la route de son regard vide. On raconte que ces bêtes ne supportent pas l'odeur des Goules. Possédez-vous un fragment d'os pris à une Goule (Os Taillé) ? Si oui, Rendez-vous au 257. Si non, Rendez-vous au 258.", g:[257,258]},
+"256":{t:"Alors que vous gravissez les derniers contreforts avant le pic d'onyx, un battement d'ailes immense assombrit le ciel. Un SHANTAK — créature volante à tête chevaline et aux ailes écailleuses, monture des puissances divines — se pose lourdement sur un éperon rocheux, vous barrant la route de son regard vide. On raconte que ces bêtes ne supportent pas l'odeur des Goules. Possédez-vous un fragment d'os pris à une Goule (Os Taillé) ? Si oui, Rendez-vous au 257. Si non, Rendez-vous au 258.", g:[257,258], choiceLabels:["Oui, j'ai un Os Taillé","Non, je n'en ai pas"]},
 
 "257":{t:"Vous brandissez l'os taillé et le frottez contre la roche, imitant maladroitement le raclement et l'odeur propres aux Goules. Le Shantak pousse un cri strident et perçant, recule d'un bond, puis s'envole précipitamment vers les cimes, vous laissant le passage libre. Rendez-vous au 260.", g:[260]},
 
-"258":{t:"Sans repoussoir à portée de main, vous devez agir vite. Voulez-vous tenter de vous faufiler discrètement le long de la paroi rocheuse pendant que la créature lisse ses ailes immenses (Rendez-vous au 259), ou l'affronter directement, épée au clair (Rendez-vous au 261) ?", g:[259,261]},
+"258":{t:"Sans repoussoir à portée de main, vous devez agir vite. Vous vous souvenez alors d'un détail lu dans le Necronomicon : les Shantaks, dit-on, obéissent à quiconque trace correctement leur sigil de soumission. Voulez-vous tenter de tracer ce sigil dans les airs (Rendez-vous au 263), tenter de vous faufiler discrètement le long de la paroi rocheuse pendant que la créature lisse ses ailes immenses (Rendez-vous au 259), ou l'affronter directement, épée au clair (Rendez-vous au 261) ?", g:[263,259,261]},
+
+"263":{t:"Vous levez la main et tracez, du bout des doigts, les lignes anguleuses du sigil de soumission tel que vous l'avez vu reproduit dans les marges du grimoire.", g:[260,261], ritual:"shantakSigil"},
 
 "259":{t:"Vous rasez la paroi à pas comptés, retenant votre souffle. TESTEZ VOTRE LUCIDITÉ. Si vous êtes Chanceux, Rendez-vous au 260. Si vous êtes Malchanceux, Rendez-vous au 261.", g:[260,261], luckTest:true},
 
@@ -1005,7 +1029,7 @@ const SECTIONS = {
 
 "308":{t:"Pour la première fois, un éclair d'intérêt — presque de respect — traverse le regard insondable de Nyarlathotep. « Tiens, tiens. On vous a bien renseigné, petit rêveur. Alhazred avait ses défauts, mais il ne mentait pas sur l'essentiel. » Il vous tourne autour lentement. « Je vous propose un marché, comme il m'arrive d'en proposer aux plus intéressants d'entre vous : repartez maintenant, avec un présent de ma part et un avertissement à porter aux vôtres. Ou bien, si votre curiosité l'emporte sur votre instinct de survie, posez-moi une dernière question — mais sachez que je ne réponds jamais gratuitement. » Voulez-vous accepter le présent et repartir sans poser de question (Rendez-vous au 316), ou risquer une dernière question (Rendez-vous au 312) ?", g:[316,312]},
 
-"310":{t:"Sans les mots exacts du grimoire pour appuyer votre geste, le Signe des Anciens que vous esquissez de mémoire tremble et vacille, à peine plus qu'un geste superstitieux. Nyarlathotep hausse un sourcil, amusé plutôt qu'impressionné. « Un souvenir de protection, sans la substance qui le rend efficace. Touchant. » Il s'approche, et son simple regard semble peser sur votre esprit comme une main de pierre. TESTEZ VOTRE LUCIDITÉ, une dernière fois. Si vous êtes Chanceux, Rendez-vous au 318. Si vous êtes Malchanceux, Rendez-vous au 320.", g:[318,320], luckTest:true},
+"310":{t:"Sans les mots exacts du grimoire pour appuyer votre geste, le Signe des Anciens que vous esquissez de mémoire tremble et vacille, à peine plus qu'un geste superstitieux. Nyarlathotep hausse un sourcil, amusé plutôt qu'impressionné. « Un souvenir de protection, sans la substance qui le rend efficace. Touchant. » Il s'approche, et son simple regard semble peser sur votre esprit comme une main de pierre. C'est à vous, maintenant, de tracer le Signe qui pourrait encore vous protéger.", g:[318,320], ritual:"star"},
 
 "312":{t:"Vous rassemblez votre courage et posez la question qui vous hante depuis Portneuve : « Que deviendrons-nous, nous autres humains, lorsque les étoiles seront enfin propices ? » Nyarlathotep sourit largement, et pour la première fois, un froid véritablement cosmique — au-delà de toute peur ordinaire — s'empare de vous. « Vous voulez vraiment savoir ? » TESTEZ VOTRE LUCIDITÉ, une ultime fois : c'est elle, et elle seule, qui déterminera si votre esprit peut contenir la réponse. Si vous êtes Chanceux, Rendez-vous au 322. Si vous êtes Malchanceux, Rendez-vous au 324.", g:[322,324], luckTest:true},
 
@@ -1293,9 +1317,212 @@ function goTo(n){
 
   if(sec.luckTest){ renderLuckChoiceOrAuto(sec); return; }
 
+  if(sec.ritual){ renderRitualPrompt(sec); return; }
+
   const targets = sec.g||[];
   if(targets.length===0){ death(sec.t); return; }
   renderChoices(sec);
+}
+
+/* ---------- Rituel du Signe des Anciens : reconnaissance de tracé ($1 Unistroke) ---------- */
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+function pathLength(pts){ let d=0; for(let i=1;i<pts.length;i++) d+=dist(pts[i-1],pts[i]); return d; }
+function resamplePoints(points, n){
+  const I = pathLength(points)/(n-1) || 1;
+  let D=0;
+  const pts = points.slice();
+  const newPoints=[pts[0]];
+  for(let i=1;i<pts.length;i++){
+    const d = dist(pts[i-1], pts[i]);
+    if(D+d >= I){
+      const t = (I-D)/d;
+      const q = { x: pts[i-1].x + t*(pts[i].x-pts[i-1].x), y: pts[i-1].y + t*(pts[i].y-pts[i-1].y) };
+      newPoints.push(q);
+      pts.splice(i,0,q);
+      D=0;
+    } else { D+=d; }
+  }
+  while(newPoints.length < n) newPoints.push(pts[pts.length-1]);
+  return newPoints;
+}
+function centroid(pts){ let x=0,y=0; pts.forEach(p=>{x+=p.x;y+=p.y;}); return {x:x/pts.length,y:y/pts.length}; }
+function rotateBy(pts, angle){
+  const c = centroid(pts);
+  const cos=Math.cos(angle), sin=Math.sin(angle);
+  return pts.map(p=>{
+    const dx=p.x-c.x, dy=p.y-c.y;
+    return { x: dx*cos - dy*sin + c.x, y: dx*sin + dy*cos + c.y };
+  });
+}
+function boundingBox(pts){
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  pts.forEach(p=>{ if(p.x<minX)minX=p.x; if(p.y<minY)minY=p.y; if(p.x>maxX)maxX=p.x; if(p.y>maxY)maxY=p.y; });
+  return {minX,minY,width:maxX-minX,height:maxY-minY};
+}
+function scaleToSquare(pts, size){
+  const b = boundingBox(pts);
+  return pts.map(p=>({ x: p.x*(size/(b.width||1)), y: p.y*(size/(b.height||1)) }));
+}
+function translateToOrigin(pts){
+  const c = centroid(pts);
+  return pts.map(p=>({x:p.x-c.x, y:p.y-c.y}));
+}
+function pathDistance(a,b){ let d=0; for(let i=0;i<a.length;i++) d+=dist(a[i],b[i]); return d/a.length; }
+function distanceAtAngle(pts, tmpl, angle){ return pathDistance(rotateBy(pts, angle), tmpl); }
+function distanceAtBestAngle(pts, tmpl, aLo, aHi, thresh){
+  const phi = 0.5*(-1+Math.sqrt(5));
+  let x1 = phi*aLo + (1-phi)*aHi, f1 = distanceAtAngle(pts,tmpl,x1);
+  let x2 = (1-phi)*aLo + phi*aHi, f2 = distanceAtAngle(pts,tmpl,x2);
+  while(Math.abs(aHi-aLo) > thresh){
+    if(f1 < f2){ aHi=x2; x2=x1; f2=f1; x1=phi*aLo+(1-phi)*aHi; f1=distanceAtAngle(pts,tmpl,x1); }
+    else { aLo=x1; x1=x2; f1=f2; x2=(1-phi)*aLo+phi*aHi; f2=distanceAtAngle(pts,tmpl,x2); }
+  }
+  return Math.min(f1,f2);
+}
+const RITUAL_N = 48, RITUAL_SIZE = 200;
+function normalizeStroke(points){
+  let pts = resamplePoints(points, RITUAL_N);
+  pts = translateToOrigin(scaleToSquare(pts, RITUAL_SIZE));
+  return pts;
+}
+function buildTemplatesFromPath(corePoints){
+  const variants = [];
+  [corePoints, corePoints.slice().reverse()].forEach(base=>{
+    for(let start=0; start<base.length; start++){
+      const seq = base.slice(start).concat(base.slice(0,start));
+      seq.push(seq[0]);
+      variants.push(normalizeStroke(resamplePoints(seq, 200)));
+    }
+  });
+  return variants;
+}
+const SYMBOL_DEFS = {
+  star: {
+    title: 'Tracez le Signe des Anciens',
+    core: [0,2,4,1,3].map(k=>{ const ang=(Math.PI*2*k/5)-Math.PI/2; return {x:100*Math.cos(ang), y:100*Math.sin(ang)}; }),
+    guide(ctx,w,h){
+      ctx.save(); ctx.strokeStyle='rgba(203,171,106,0.4)'; ctx.setLineDash([5,5]); ctx.lineWidth=2; ctx.beginPath();
+      const cx=w/2, cy=h/2, r=w*0.36;
+      [0,2,4,1,3,0].forEach((k,i)=>{
+        const ang=(Math.PI*2*k/5)-Math.PI/2;
+        const x=cx+r*Math.cos(ang), y=cy+r*Math.sin(ang);
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      });
+      ctx.stroke(); ctx.restore();
+    }
+  },
+  shantakSigil: {
+    title: 'Tracez le Sigil du Shantak',
+    core: (()=>{
+      const pts=[];
+      for(let i=0;i<8;i++){
+        const ang = Math.PI*2*i/8 - Math.PI/2;
+        const r = (i%2===0) ? 100 : 42;
+        pts.push({ x:r*Math.cos(ang), y:r*Math.sin(ang) });
+      }
+      return pts;
+    })(),
+    guide(ctx,w,h){
+      ctx.save(); ctx.strokeStyle='rgba(203,171,106,0.4)'; ctx.setLineDash([5,5]); ctx.lineWidth=2; ctx.beginPath();
+      const cx=w/2, cy=h/2, r=w*0.36;
+      for(let i=0;i<=8;i++){
+        const k = i%8;
+        const ang = Math.PI*2*k/8 - Math.PI/2;
+        const rr = (k%2===0) ? r : r*0.42;
+        const x = cx + rr*Math.cos(ang), y = cy + rr*Math.sin(ang);
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke(); ctx.restore();
+    }
+  }
+};
+let TEMPLATE_CACHE = {};
+function getTemplates(key){
+  if(!TEMPLATE_CACHE[key]) TEMPLATE_CACHE[key] = buildTemplatesFromPath(SYMBOL_DEFS[key].core);
+  return TEMPLATE_CACHE[key];
+}
+function recognizeShape(rawPoints, key){
+  if(rawPoints.length < 8) return 0;
+  const templates = getTemplates(key);
+  const candidate = normalizeStroke(rawPoints);
+  const halfDiag = 0.5*Math.hypot(RITUAL_SIZE,RITUAL_SIZE);
+  let best = Infinity;
+  templates.forEach(tmpl=>{
+    const d = distanceAtBestAngle(candidate, tmpl, -Math.PI/6, Math.PI/6, 0.05);
+    if(d<best) best=d;
+  });
+  return Math.max(0, 1 - best/halfDiag);
+}
+let RITUAL_STATE = null;
+function ritualClear(){
+  const canvas = $('ritualCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(RITUAL_STATE && RITUAL_STATE.hasGuide) SYMBOL_DEFS[RITUAL_STATE.symbol].guide(ctx, canvas.width, canvas.height);
+  if(RITUAL_STATE) RITUAL_STATE.points = [];
+  $('ritualFeedback').textContent = '';
+}
+function castRitual(symbolKey, hasGuide){
+  return new Promise(resolve=>{
+    const overlay = $('ritualOverlay');
+    const canvas = $('ritualCanvas');
+    const ctx = canvas.getContext('2d');
+    const def = SYMBOL_DEFS[symbolKey];
+    RITUAL_STATE = { points:[], drawing:false, hasGuide, symbol:symbolKey };
+    function getPos(e){
+      const r = canvas.getBoundingClientRect();
+      const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+      const cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+      return {x:cx, y:cy};
+    }
+    function onDown(e){ e.preventDefault(); RITUAL_STATE.drawing = true; RITUAL_STATE.points = [getPos(e)]; }
+    function onMove(e){
+      if(!RITUAL_STATE.drawing) return;
+      e.preventDefault();
+      const p = getPos(e);
+      const prev = RITUAL_STATE.points[RITUAL_STATE.points.length-1] || p;
+      RITUAL_STATE.points.push(p);
+      ctx.strokeStyle = 'rgba(159,214,171,0.95)';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(prev.x, prev.y);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    }
+    function onUp(e){ RITUAL_STATE.drawing = false; }
+    canvas.addEventListener('pointerdown', onDown);
+    canvas.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+
+    $('ritualTitle').textContent = def.title;
+    $('ritualSub').textContent = hasGuide
+      ? 'Suivez le contour pointillé du bout du doigt ou de la souris.'
+      : 'Aucun modèle : vous devez l\'esquisser de mémoire.';
+    $('ritualValidate').onclick = ()=>{
+      const score = recognizeShape(RITUAL_STATE.points, symbolKey);
+      const threshold = hasGuide ? 0.55 : 0.68;
+      const success = score >= threshold;
+      $('ritualFeedback').textContent = success
+        ? 'Le symbole s\'embrase brièvement d\'une lueur verdâtre...'
+        : 'Le tracé reste inerte, informe, sans force.';
+      setTimeout(()=>{
+        canvas.removeEventListener('pointerdown', onDown);
+        canvas.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        overlay.style.display = 'none';
+        resolve(success);
+      }, 900);
+    };
+    ritualClear();
+    overlay.style.display = 'flex';
+  });
+}
+function castElderSign(hasGuide){ return castRitual('star', hasGuide); }
+async function renderRitualPrompt(sec){
+  const hasGuide = sec.ritual === 'star' ? G.inv.includes('Croquis du Signe des Anciens') : !!sec.ritualGuide;
+  const success = await castRitual(sec.ritual, hasGuide);
+  goTo(success ? sec.g[0] : sec.g[1]);
 }
 
 function renderLuckChoiceOrAuto(sec){
@@ -1465,10 +1692,14 @@ function fleeCombat(){
 
 /* ---------- Death / Victory ---------- */
 function death(text){
+  document.querySelectorAll('.itemtoast').forEach(t=>t.remove());
+  hide('msgbox'); hide('choicesec'); hide('combatbox'); hide('dicetray'); hide('ritualOverlay');
   $('deathtext').textContent = text;
   $('deathscreen').style.display='flex';
 }
 function showFinale(sec){
+  document.querySelectorAll('.itemtoast').forEach(t=>t.remove());
+  hide('msgbox'); hide('choicesec'); hide('combatbox'); hide('dicetray'); hide('ritualOverlay');
   document.querySelector('#victoryscreen h2').textContent = sec.finaleTitle || 'FIN DE L\'HISTOIRE';
   $('victorytext').textContent = sec.t;
   $('victoryscreen').style.display='flex';

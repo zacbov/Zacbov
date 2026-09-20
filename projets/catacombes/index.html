@@ -71,6 +71,11 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
   backdrop-filter:blur(3px);overflow:hidden;}
 .ab .ic{font-family:'Share Tech Mono',monospace;font-size:20px;color:var(--parch);line-height:1;}
 .ab{width:58px;height:58px;}
+.ab.pop{animation:abpop .45s ease-out;}
+@keyframes abpop{
+  0%{box-shadow:0 0 0 0 var(--rc,#e0a44c);transform:scale(1.14);}
+  100%{box-shadow:0 0 0 14px rgba(0,0,0,0);transform:scale(1);}
+}
 .ab .lb{font-family:'Share Tech Mono',monospace;font-size:7px;color:var(--dim);
   letter-spacing:.5px;margin-top:2px;}
 .ab .cd{position:absolute;left:0;right:0;bottom:0;background:rgba(5,4,10,.72);
@@ -163,6 +168,15 @@ h1{font-family:'IM Fell English SC',serif;font-weight:400;font-size:36px;letter-
   font-family:'IM Fell English SC',serif;font-size:16px;letter-spacing:2.5px;padding:12px 36px;
   margin-bottom:9px;backdrop-filter:blur(2px);}
 .big:active{background:rgba(224,164,76,.24);}
+#tomb{margin-top:20px;max-width:320px;width:100%;font-family:'Share Tech Mono',monospace;
+  font-size:9.5px;color:#6a5f70;line-height:1.85;text-align:left;}
+#tomb .th{color:#8f8577;letter-spacing:2px;border-bottom:1px solid rgba(232,220,192,.14);
+  padding-bottom:4px;margin-bottom:6px;text-align:center;}
+#tomb .tr{display:flex;gap:6px;}
+#tomb .tr b{color:#a8998a;font-weight:400;width:26px;}
+#tomb .tr span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#tomb .tr i{color:#8d6a62;font-style:normal;}
+#tomb .tr.win i{color:var(--amber);}
 .mini{font-family:'Share Tech Mono',monospace;font-size:9.5px;color:var(--dim);
   border:1px solid var(--line);padding:7px 15px;}
 #seedin{background:rgba(11,9,16,.7);border:1px solid var(--line);color:var(--parch);
@@ -237,6 +251,7 @@ h1{font-family:'IM Fell English SC',serif;font-weight:400;font-size:36px;letter-
       <input id="seedin" placeholder="graine (facultatif)">
       <div class="big" id="bStart">DESCENDRE</div>
       <div class="mini" id="bHelp">comment jouer</div>
+      <div id="tomb"></div>
     </div>
   </div>
 
@@ -281,13 +296,13 @@ const MAXDEPTH=10;
 
 /* ---------------- STRATES : la couleur dit la profondeur ---------------- */
 const STRATA=[
- {from:1,to:3, name:'LA CRYPTE',        wall:'#4a4060', top:'#6a5a86', floor:'#0d0a16', slab:'#1a1428',
+ {from:1,to:3, name:'LA CRYPTE',        wall:'#4a4060', top:'#6a5a86', floor:'#241f2c', slab:'#393241',
   warm:'#ffbe6e', cold:'#3d3a72', mem:'#2a3352', amb:0.16, fog:'#0a0812'},
- {from:4,to:6, name:'L\'OSSUAIRE',      wall:'#5c5b48', top:'#7d7a5e', floor:'#0e100c', slab:'#1e2118',
-  warm:'#ffd08a', cold:'#2a5147', mem:'#274a42', amb:0.13, fog:'#080e0c'},
- {from:7,to:9, name:'LES FORGES NOIRES',wall:'#5e3a38', top:'#84504a', floor:'#100809', slab:'#241615',
-  warm:'#ff8f4a', cold:'#5e2630', mem:'#4a2430', amb:0.15, fog:'#100608'},
- {from:10,to:10,name:'LE SANCTUM',      wall:'#544527', top:'#786237', floor:'#0d0a04', slab:'#1e1809',
+ {from:4,to:6, name:'L\'OSSUAIRE',      wall:'#5c5b48', top:'#7d7a5e', floor:'#2a2a24', slab:'#3c3b32',
+  warm:'#ffd08a', cold:'#2f4a55', mem:'#2b4750', amb:0.13, fog:'#080d0f'},
+ {from:7,to:9, name:'LES FORGES NOIRES',wall:'#5e3a38', top:'#84504a', floor:'#272426', slab:'#3b3436',
+  warm:'#ff8f4a', cold:'#2c3b55', mem:'#2e3a4e', amb:0.15, fog:'#0a0810'},
+ {from:10,to:10,name:'LE SANCTUM',      wall:'#544527', top:'#786237', floor:'#251e11', slab:'#3a3118',
   warm:'#ffe08a', cold:'#4a3a6e', mem:'#3d3450', amb:0.13, fog:'#0a0704'},
 ];
 const strataOf=d=>STRATA.find(s=>d>=s.from&&d<=s.to)||STRATA[0];
@@ -728,6 +743,7 @@ function stepPressure(dt){
     const x=R.x+rnd(R.w)+.5, y=R.y+rnd(R.h)+.5;
     if(SOLID[G.map[(y|0)*MW+(x|0)]]) continue;
     if(G.vis[(y|0)*MW+(x|0)]) continue;                 // jamais sous les yeux du joueur
+    if(inSanct(x,y)) continue;                          // ni dans le sanctuaire
     if(Math.hypot(x-G.p.x,y-G.p.y)<11) continue;
     const proto=pick(pool);
     const n=(proto.beh==='swarm')?rr(3,4):rr(1,2);
@@ -789,6 +805,8 @@ function buildSpellBar(){
     const el=document.createElement('div');
     el.className='ab rdy'; el.id='ab'+i;
     el.style.right=ABPOS[i][0]+'px'; el.style.bottom=ABPOS[i][1]+'px';
+    const rc=RAR[(G.weapon&&G.weapon.rar)||0].c;
+    el.style.borderColor=rc+'99'; el.style.setProperty('--rc',rc);
     el.innerHTML='<div class="ic">'+S.ic+'</div><div class="lb">'+S.n.toUpperCase()+'</div>'+
                  '<div class="cd" style="height:0"></div>';
     el.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();castSpell(i);});
@@ -820,6 +838,8 @@ const BEAST=[
  {k:'spec',   n:'spectre',            c:'#7fb8c4', hp:34, dmg:17, spd:2.3, r:0.32, xp:26, d:4, beh:'phase',  wind:.55, rng:1.0, aggro:10},
  {k:'leech',  n:'sangsue d\'or',      c:'#c48fb0', hp:24, dmg:6,  spd:3.9, r:0.29, xp:15, d:5, beh:'thief',  wind:.3,  rng:0.8, aggro:9},
  {k:'statue', n:'garde de pierre',    c:'#7b7f8c', hp:120,dmg:34, spd:0,   r:0.40, xp:35, d:5, beh:'turret', wind:.9,  rng:1.7, aggro:2.4},
+ {k:'howler', n:'hurleur',            c:'#c4809a', hp:30, dmg:6,  spd:2.4, r:0.34, xp:20, d:3, beh:'howl',   wind:.5,  rng:1.0, aggro:12},
+ {k:'bearer', n:'porteur de pavois',  c:'#8a9aa8', hp:70, dmg:14, spd:1.9, r:0.42, xp:34, d:4, beh:'chase',  wind:.6,  rng:1.2, aggro:9, shield:1},
  {k:'necro',  n:'nécromancien',       c:'#8f6fb0', hp:52, dmg:9,  spd:2.0, r:0.33, xp:44, d:6, beh:'summon', wind:1.1, rng:8.0, aggro:11, keep:5.5},
  {k:'ogre',   n:'ogre du puits',      c:'#a8763f', hp:110,dmg:30, spd:2.2, r:0.44, xp:48, d:6, beh:'chase',  wind:.75, rng:1.4, aggro:9, kb:3.5},
  {k:'forge',  n:'forgeron damné',     c:'#c06a3a', hp:88, dmg:24, spd:2.4, r:0.38, xp:52, d:7, beh:'chase',  wind:.55, rng:1.2, aggro:9, applies:'brulure'},
@@ -883,6 +903,8 @@ const SCROLLS=[
    son butin et sa phrase d'ambiance. */
 const ROOMS={
  commune:  {name:'',                   w:26, fill:null},
+ sanctuaire:{minD:1, name:'Sanctuaire',        w:11, fill:null, sanct:true, always:true,
+   line:'Le brasier bleu n\'a jamais cessé de brûler. Ici, rien n\'entre.'},
  ossuaire: {minD:1, name:'Ossuaire',           w:9,  fill:BONES, mobs:['skel','archer'], nmob:[3,5], loot:1,
    line:'Des os empilés jusqu\'au plafond. Certains bougent encore.'},
  citerne:  {minD:1, name:'Citerne noyée',      w:8,  fill:WATER, mobs:['bat','slime'], nmob:[3,4], loot:1,
@@ -956,6 +978,7 @@ function newGame(seedStr){
   equip(decorate({t:'armor',...ARMORS[0], rar:0, bless:0, known:true}));
   G.bag.push(mkPotion('heal')); G.known.heal=1;
   G.bag.push(mkPotion('heal'));
+  initMotes();
   buildLevel();
   say('Vous descendez dans la première crypte.','amb','hi');
   say('La torche tient. Elle ne tiendra pas toujours.','amb');
@@ -1017,6 +1040,12 @@ function buildLevel(){
   const nThemed=clamp(2+Math.floor(d/2.5),2,Math.max(2,rooms.length-2));
   const idx=shuffle(rooms.map((_,i)=>i).filter(i=>i!==0&&i!==rooms.length-1)).slice(0,nThemed);
   const used={};
+  /* un sanctuaire par niveau, garanti, jamais collé au départ */
+  {
+    const cand=rooms.map((_,i)=>i).filter(i=>i!==0&&i!==rooms.length-1&&!idx.includes(i));
+    const si = cand.length ? pick(cand) : (idx.length?idx.pop():1);
+    rooms[si].role='sanctuaire'; used.sanctuaire=1;
+  }
   for(const i of idx){
     let role=bag.pop()||'nid'; let guard=0;
     while(used[role]&&guard++<8) role=bag.pop()||'nid';
@@ -1025,6 +1054,8 @@ function buildLevel(){
   if(BOSS[d]) last.role='gardien';
 
   for(const R of rooms) dressRoom(R,m,d);
+  /* --- la trace de la partie précédente --- */
+  placeGhostCorpse(m,d,rooms);
   ensureReachable(m,start,last);
 
   /* --- décor de fond --- */
@@ -1035,6 +1066,12 @@ function buildLevel(){
     if(RNG()<.10){ const x=R.x+rnd(R.w),y=R.y+rnd(R.h);
       if(m[y*MW+x]===FLOOR){ m[y*MW+x]=BRAZIER; G.lights.push({x:x+.5,y:y+.5,r:5.5,i:.9,fire:1}); } }
   }
+  /* --- occlusion et normales : la carte est FIGÉE à partir d'ici --------
+     Cuite une seule fois, pour tout le niveau. Les bibliothèques occultent,
+     les murs percés par ensureReachable sont pris en compte. Le coût par
+     image ne monte pas : il descend, puisque la passe temps réel disparaît. */
+  bakeAO();
+
   /* --- errants --- */
   const pool=BEAST.filter(b=>b.d<=d+1&&b.d>=d-4);
   const wander=rr(16,22)+Math.floor(d*3.2);
@@ -1113,6 +1150,13 @@ function dressRoom(R,m,d){
   }
   if(T.shelf){ for(const [i,j] of cells){
     if((i-R.x)%3===1 && j>R.y && j<R.y+R.h-1 && RNG()<.7) m[j*MW+i]=SHELF; } }
+  if(T.sanct){
+    G.sanct={x:R.x-0.4,y:R.y-0.4,w:R.w+0.8,h:R.h+0.8,cx:R.cx+.5,cy:R.cy+.5};
+    m[R.cy*MW+R.cx]=BRAZIER;
+    G.lights.push({x:R.cx+.5,y:R.cy+.5,r:8.5,i:1.0,col:'#7fb8c4',sanct:1});
+    for(const [i,j] of cells) if(m[j*MW+i]===FLOOR && RNG()<.10) m[j*MW+i]=RUBBLE;
+    dropItem(RNG()<.5?mkPotion('heal'):{t:'torch',n:'torche de suif',e:'ravive la flamme'},R.cx+.9,R.cy+.3);
+  }
   if(T.altar){ m[R.cy*MW+R.cx]=ALTAR; G.lights.push({x:R.cx+.5,y:R.cy+.5,r:4.5,i:.7,col:'#c8503a'}); }
   if(T.brazier){ for(let k=0;k<2;k++){ const [i,j]=pick(cells);
     if(m[j*MW+i]===FLOOR){ m[j*MW+i]=BRAZIER; G.lights.push({x:i+.5,y:j+.5,r:6,i:1,fire:1}); } } }
@@ -1141,6 +1185,31 @@ function dressRoom(R,m,d){
   }
   if(T.line) R.line=T.line;
   R.label=T.name;
+}
+
+/* Le cadavre de votre partie précédente vous attend à l'étage où vous êtes tombé,
+   avec l'arme que vous teniez. Une run n'efface plus la précédente. */
+function placeGhostCorpse(m,d,rooms){
+  let t=null;
+  try{ t=loadTombs()[0]; }catch(e){ return; }
+  if(!t||t.w||t.d!==d||G._ghostDone) return;
+  let x=t.x, y=t.y;
+  if(x<1||y<1||x>=MW-1||y>=MH-1||SOLID[m[y*MW+x]]){
+    const R=pick(rooms.slice(1)); x=R.cx; y=R.cy;
+    if(SOLID[m[y*MW+x]]) return;
+  }
+  G._ghostDone=1;
+  G.marks.push({x:x+.5,y:y+.5,ghost:true,corpse:true,shown:false,
+    name:'Vous, la fois d\'avant',
+    txt:'rang '+t.lv+' · '+t.k+' mises à mort · '+(t.c||'tombé ici')});
+  G.lights.push({x:x+.5,y:y+.5,r:4.2,i:.55,col:'#9d7fc4'});
+  if(t.wp){
+    const w={...t.wp, known:true, rar:t.wp.r||0, bless:0};
+    if(!w.spells) w.spells=(FAM[WFAM[w.id]||'lame']||FAM.lame).slice(0,(w.rar||0)+1);
+    dropItem(w, x+.5, y+.5);
+    G.items[G.items.length-1].relic=1;
+  }
+  dropItem({t:'gold',n:'votre bourse',amt:60+d*25}, x+.9, y+.4);
 }
 
 /* ---------------- butin ---------------- */
@@ -1231,7 +1300,12 @@ const solidAt=(x,y)=>{
   if(ix<0||iy<0||ix>=MW||iy>=MH) return true;
   return !!SOLID[G.map[iy*MW+ix]];
 };
+function inSanct(x,y){
+  const S=G.sanct; if(!S) return false;
+  return x>=S.x&&x<=S.x+S.w&&y>=S.y&&y<=S.y+S.h;
+}
 function moveEnt(e,dx,dy,r,ghost){
+  if(e!==G.p && G.sanct && inSanct(e.x+dx,e.y+dy) && !inSanct(e.x,e.y)) return false;
   if(ghost){
     e.x=clamp(e.x+dx,1,MW-2); e.y=clamp(e.y+dy,1,MH-2); return;
   }
@@ -1284,6 +1358,8 @@ function statSum(ent,field){
   let v=0; for(const k in ent.st){ const S=STATUS[k]; if(S[field]) v+=S[field]; } return v;
 }
 const frozen=ent=>!!ent.st.etourdi;
+/* Suspend le temps un instant : c'est ce qui donne du poids à un coup. */
+function hitstop(t){ G.hstop=Math.max(G.hstop||0,t); }
 
 /* ==========================================================================
    STATISTIQUES DÉRIVÉES
@@ -1320,6 +1396,7 @@ function frame(ts){
   requestAnimationFrame(frame);
   if(!G) { drawTitle(ts); return; }
   const raw=Math.min(0.05,(ts-LAST)/1000||0); LAST=ts;
+  if(G.hstop>0){ G.hstop-=raw; render(ts); return; }
   if(RUNNING && !G.paused && !G.dead){
     ACC+=raw;
     let guard=0;
@@ -1344,7 +1421,19 @@ function step(dt){
   P.lastHit+=dt; P.atkT-=dt; P.hurtT-=dt; P.invT-=dt;
   for(let i=0;i<G.cool.length;i++) G.cool[i]=Math.max(0,G.cool[i]-dt);
   stepBuffs(dt); stepPassives(dt); stepZones(dt); stepPressure(dt);
+  stepMotes(dt); stepEmbers(dt);
   if(G.p.base.regen) healP(G.p.base.regen*dt);
+  /* --- le sanctuaire : on y souffle --- */
+  const wasIn=G.inS;
+  G.inS=inSanct(G.p.x,G.p.y);
+  if(G.inS){
+    healP(3.2*dt);
+    G.p.torch=Math.min(G.p.torchMax,G.p.torch+9*dt);
+    if(!wasIn){ say('Le brasier bleu vous réchauffe. Rien ne peut entrer ici.','self','good');
+      G.flash=Math.max(G.flash,.18); }
+  } else if(wasIn){
+    say('Vous quittez le sanctuaire.','amb');
+  }
 
   if(P.dashT>0){
     P.dashT-=dt;
@@ -1453,9 +1542,9 @@ function hitMob(m,w){
   else if(w.crit && RNG()<w.crit){ dmg*=2.1; crit=true; }
   if(m.guard && facingPlayer(m)) dmg*=(1-m.guard);
   dmg=Math.round(dmg);
-  hurtMob(m,dmg);
+  hurtMob(m,dmg,false,P.x,P.y);
   popNum(m.x,m.y,dmg,crit?'#ffe08a':'#f0f0f0',crit?1.35:1);
-  if(crit){ G.flash=.5; G.shake=Math.max(G.shake,.28); }
+  if(crit){ G.flash=.5; G.shake=Math.max(G.shake,.28); hitstop(0.035); }
   /* recul */
   const a=Math.atan2(m.y-P.y,m.x-P.x);
   m.kbx+=Math.cos(a)*(w.kb||1); m.kby+=Math.sin(a)*(w.kb||1);
@@ -1474,7 +1563,21 @@ function facingPlayer(m){
   if(m.fx===undefined) return false;
   return Math.abs(angDiff(Math.atan2(G.p.y-m.y,G.p.x-m.x),Math.atan2(m.fy,m.fx)))<1.1;
 }
-function hurtMob(m,dmg,silent){
+function hurtMob(m,dmg,silent,fx,fy){
+  /* Le pavois arrête tout ce qui arrive de face. Il faut le contourner. */
+  if(m.shield && fx!==undefined && m.hp>0){
+    const fa=Math.atan2(m.fy||0,m.fx||1);
+    let da=Math.atan2(fy-m.y,fx-m.x)-fa;
+    while(da>Math.PI)da-=6.2832; while(da<-Math.PI)da+=6.2832;
+    if(Math.abs(da)<1.05){
+      popNum(m.x,m.y,'BLOQUÉ','#b8c4d0',.8);
+      m.aggroed=true; m.state='chase';
+      for(let k=0;k<7;k++){ const a2=fa+rf(-.55,.55);
+        G.parts.push({x:m.x+Math.cos(fa)*.42,y:m.y+Math.sin(fa)*.42,
+          vx:Math.cos(a2)*3.2,vy:Math.sin(a2)*3.2,life:.25,max:.25,c:'#b8c4d0',s:.08}); }
+      return;
+    }
+  }
   m.hp-=dmg;
   if(!silent){ m.flash=0.14; m.aggroed=true; if(m.fear<=0&&m.beh!=='turret') m.state='chase'; }
   if(m.hp<=0&&!m._d) { m.hp=0; }
@@ -1560,6 +1663,28 @@ function stepMob(m,dt){
   };
 
   switch(m.beh){
+    case 'howl': {
+      /* Il ne se bat pas : il crie. Chaque cri réveille tout ce qui traîne. */
+      m.hcd=(m.hcd||0)-dt;
+      const dP=Math.hypot(G.p.x-m.x,G.p.y-m.y);
+      if(dP<m.aggro && m.hcd<=0){
+        m.hcd=7.5;
+        ring(m.x,m.y,'#c4809a',3.2);
+        G.shake=Math.max(G.shake,.3);
+        let woke=0;
+        for(const o of G.mobs){
+          if(o===m||o.boss) continue;
+          if(Math.hypot(o.x-m.x,o.y-m.y)>18) continue;
+          o.alert=1; o.tx=G.p.x; o.ty=G.p.y; woke++;
+        }
+        say('Un hurlement déchire la galerie'+(woke?' — '+woke+' réponses.':'.'),'amb','bad');
+      }
+      /* il garde ses distances */
+      const a=Math.atan2(G.p.y-m.y,G.p.x-m.x);
+      const want=(dP<5)?-1:(dP>9?1:0);
+      if(want) moveEnt(m,Math.cos(a)*m.spd*want*dt,Math.sin(a)*m.spd*want*dt,m.r,false);
+      break;
+    }
     case 'ranged': case 'caster': {
       const keep=m.keep||4;
       if(dist>m.rng) adv(ux,uy);
@@ -1706,7 +1831,7 @@ function stepShots(dt){
         if(s.hit.has(m)) continue;
         if(Math.hypot(m.x-s.x,m.y-s.y)>s.r+m.r) continue;
         s.hit.add(m);
-        hurtMob(m,s.dmg); popNum(m.x,m.y,s.dmg,s.c,1);
+        hurtMob(m,s.dmg,false,s.x-s.vx*0.1,s.y-s.vy*0.1); popNum(m.x,m.y,s.dmg,s.c,1);
         const a=Math.atan2(s.vy,s.vx);
         m.kbx+=Math.cos(a)*s.kb; m.kby+=Math.sin(a)*s.kb;
         if(s.st) addStatus(m,s.st,3);
@@ -2009,6 +2134,31 @@ const SPR={
   cx.fillStyle=tint(c,.3);ell(.82,hy,.10,.09);
   cx.fillStyle='#3a1024';ell(.87,hy,.05,.055);
   eyes(.78,.86,hy-.05,.018,'#ffe08a');},
+ howler(c,t){ const d=shade(c,.45), o=Math.abs(Math.sin(t/260));
+   cx.fillStyle=d; poly([[.30,.96],[.38,.72],[.50,.96]]); poly([[.50,.96],[.62,.72],[.70,.96]]);
+   cx.fillStyle=c; poly([[.30,.80],[.36,.40],[.64,.40],[.70,.80]]);
+   cx.fillStyle=d; seg(.34,.50,.16,.30,.05,d); seg(.66,.50,.84,.30,.05,d);
+   cx.fillStyle=tint(c,.25); ell(.50,.32,.145,.16);
+   cx.fillStyle='#1a0a12'; ell(.50,.40,.075,.085+o*.05);   // gueule béante
+   eyes(.44,.57,.27,.020,'#ffe08a');
+   cx.globalAlpha=.20+o*.35; cx.strokeStyle=tint(c,.4); cx.lineWidth=.035;
+   for(let k=1;k<=3;k++){ cx.beginPath();
+     cx.arc(.50,.40,.20+k*.13+o*.06,-1.1,1.1); cx.stroke(); }
+   cx.globalAlpha=1;
+ },
+ bearer(c,t){ const d=shade(c,.45), b=Math.sin(t/520)*.010;
+   cx.fillStyle=d; poly([[.44,.96],[.48,.74],[.58,.96]]); poly([[.62,.96],[.70,.74],[.76,.96]]);
+   cx.fillStyle=c; poly([[.42,.80],[.46,.38+b],[.74,.38+b],[.78,.80]]);
+   cx.fillStyle=tint(c,.2); ell(.60,.30+b,.135,.14);
+   cx.fillStyle='#07060c'; cx.fillRect(.49,.28+b,.22,.042);
+   cx.fillStyle='#e0a44c'; ell(.545,.302+b,.015,.015); ell(.655,.302+b,.015,.015);
+   /* le pavois : large, plein, tourné vers vous */
+   cx.fillStyle=shade('#6f7d8a',.05);
+   poly([[.06,.20],[.40,.26],[.40,.86],[.06,.94]]);
+   cx.fillStyle='#8a9aa8'; poly([[.11,.26],[.35,.31],[.35,.81],[.11,.88]]);
+   cx.fillStyle='#c9a45a'; ell(.22,.57,.055,.075);
+   cx.fillStyle=shade('#6f7d8a',.25); cx.fillRect(.20,.30,.03,.54);
+ },
  statue(c,t){const d=shade(c,.4),lit=Math.sin(t/300)*.5+.5;
   cx.fillStyle=d;cx.fillRect(.18,.86,.64,.12);
   cx.fillStyle=c;poly([[.24,.88],[.30,.30],[.70,.30],[.76,.88]]);
@@ -2204,45 +2354,372 @@ function resize(){
   VW=Math.ceil(CW/TS)+2; VH=Math.ceil(CH/TS)+2;
   const t=document.getElementById('tcv');
   t.width=t.clientWidth*DPR; t.height=t.clientHeight*DPR;
+  if(typeof initLightBuffer==='function') initLightBuffer();
 }
 window.addEventListener('resize',()=>{resize();});
 
 function drawIn(px,py,s,fn){ cx.save(); cx.translate(px,py); cx.scale(s,s); fn(); cx.restore(); }
 
+/* ==========================================================================
+   CHAÎNE COLORIMÉTRIQUE
+   L'éclairage se calcule en espace LINÉAIRE — doubler une source double
+   vraiment l'énergie. L'écran attend du sRGB. Sans conversion, les dégradés
+   sont trop sombres au milieu et les couleurs paraissent sales.
+   ACES comprime ensuite les hautes lumières : deux torches qui se croisent
+   donnent un ambre dense, pas une tache blanche.
+   ========================================================================== */
+const S2L=new Float32Array(256);
+for(let i=0;i<256;i++){ const s=i/255;
+  S2L[i]= s<=0.04045 ? s/12.92 : Math.pow((s+0.055)/1.055,2.4); }
+
+/* linéaire tone-mappé -> octet sRGB, tabulé sur 1024 pas */
+const L2S=new Uint8Array(1025);
+function _aces(x){ const a=2.51,b=.03,c=2.43,d=.59,e=.14;
+  const v=(x*(a*x+b))/(x*(c*x+d)+e); return v<0?0:v>1?1:v; }
+for(let i=0;i<=1024;i++){
+  const l=_aces(i/1024*1.6);                       // 1.6 = latitude avant écrêtage
+  L2S[i]= Math.round(255*(l<=0.0031308 ? l*12.92 : 1.055*Math.pow(l,1/2.4)-0.055));
+}
+const l2s=v=>L2S[v<=0?0:v>=1.6?1024:(v/1.6*1024)|0];
+
+/* couleur d'une source, exposée puis tone-mappée : sert aux dégradés du buffer */
+function toneRGB(hex,gain){
+  const c=hx(hex);
+  return 'rgb('+l2s(S2L[c[0]|0]*gain)+','+l2s(S2L[c[1]|0]*gain)+','+l2s(S2L[c[2]|0]*gain)+')';
+}
+
+/* ==========================================================================
+   BUFFER DE LUMIÈRE
+   Le décor et les créatures sont dessinés CRISP, en albédo pur, directement
+   sur le canvas visible. La lumière vit dans une cible séparée en demi-
+   résolution, puis se compose par multiplication par-dessus l'image déjà
+   affichée. Les sprites restent nets, la lumière reste lisse et continue —
+   elle n'est plus quantifiée à la case.
+   ========================================================================== */
+/* --- réglages du rendu, rassemblés : tout se juge ici --- */
+const RND={
+  albedo:   1.22,   // exposition de la couleur propre, avant multiplication
+  ambiant:  0.31,   // la pierre froide — seconde source, pas un fond noir
+  torche:   0.80,   // puissance de la torche (l'ambiance s'y ajoute)
+  sources:  0.70,   // puissance des brasiers, autels, escalier
+  aoForce:  0.54,   // profondeur de l'occlusion cuite
+  mur:      0.26,   // force de l'ombrage directionnel
+  halo:     0.30,   // bloom additif
+};
+let LB=null, lbx=null, LBW=0, LBH=0;
+const LBDIV=2;                                  // demi-résolution : 4× moins de pixels
+function initLightBuffer(){
+  if(!LB){ LB=document.createElement('canvas'); lbx=LB.getContext('2d'); }
+  LBW=Math.max(2,Math.ceil(CW/LBDIV)); LBH=Math.max(2,Math.ceil(CH/LBDIV));
+  LB.width=LBW; LB.height=LBH;
+}
+
+/* rayonnement d'une source dans le buffer — profil filmique, pas linéaire */
+function paintLight(lx,ly,rad,col,gain,flick){
+  const g=gain*flick;
+  if(g<=0.008||rad<=0) return;
+  const c=hx(col);
+  /* Désaturation des hautes lumières. Le cœur d'une flamme est blanc, pas
+     orange : seule la périphérie est colorée. Sans cela, toute surface en
+     pleine lumière prend la teinte de la source et perd sa couleur propre —
+     une armure d'acier devenait crème sous la torche. C'est aussi ce que fait
+     une courbe filmique sur une pellicule surexposée. */
+  const stop=(f)=>{
+    const v=g*f;
+    const wash=clamp((v-0.52)*1.05,0,0.42);
+    /* on lave vers un blanc TIÈDE, pas vers le blanc pur : une flamme ne
+       devient jamais bleue, même à son cœur */
+    const W=[255,242,222];
+    return 'rgb('+l2s(S2L[(c[0]+(W[0]-c[0])*wash)|0]*v)+','
+                 +l2s(S2L[(c[1]+(W[1]-c[1])*wash)|0]*v)+','
+                 +l2s(S2L[(c[2]+(W[2]-c[2])*wash)|0]*v)+')';
+  };
+  const gr=lbx.createRadialGradient(lx,ly,0,lx,ly,rad);
+  /* décroissance franche : une flamme n'éclaire loin que très faiblement.
+     C'est cette pente qui fait exister l'obscurité autour du cercle de clarté. */
+  gr.addColorStop(0,    stop(1.00));
+  gr.addColorStop(0.17, stop(0.68));
+  gr.addColorStop(0.32, stop(0.31));
+  gr.addColorStop(0.55, stop(0.115));
+  gr.addColorStop(0.78, stop(0.030));
+  gr.addColorStop(1,    '#000');
+  lbx.fillStyle=gr;
+  lbx.fillRect(lx-rad,ly-rad,rad*2,rad*2);
+}
+
+/* ==========================================================================
+   OCCLUSION AMBIANTE CUITE
+   Le décor ne bouge pas de tout un niveau. L'occlusion se calcule donc UNE
+   FOIS à la génération, dans un canvas d'un pixel par case, et se rejoue
+   ensuite d'un seul drawImage. Le coût par image ne monte pas : il descend.
+   ========================================================================== */
+function bakeAO(){
+  const c=document.createElement('canvas'); c.width=MW; c.height=MH;
+  const g=c.getContext('2d');
+  const im=g.createImageData(MW,MH), D=im.data;
+  /* normales de mur : direction moyenne vers les faces ouvertes */
+  G.wnx=new Float32Array(MW*MH); G.wny=new Float32Array(MW*MH);
+  const sol=(i,j)=> (i<0||j<0||i>=MW||j>=MH) ? 1 : (SOLID[G.map[j*MW+i]]?1:0);
+  for(let j=0;j<MH;j++)for(let i=0;i<MW;i++){
+    const id=j*MW+i, wall=sol(i,j);
+    let occ=0, nx=0, ny=0;
+    for(let b=-1;b<=1;b++)for(let a=-1;a<=1;a++){
+      if(!a&&!b) continue;
+      const s=sol(i+a,j+b);
+      const w=(a&&b)?0.55:1.0;                   // les diagonales occultent moins
+      if(s) occ+=w; else { nx-=a*w; ny-=b*w; }   // normale : fuit la matière
+    }
+    const maxo=4*1.0+4*0.55;
+    let ao;
+    if(wall){
+      /* un mur est lui-même un occulteur : sa base reste sourde */
+      ao=0.50+0.34*(1-occ/maxo);
+    }else{
+      /* un sol cerné de pierre s'assombrit, un coin plus encore */
+      ao=1-Math.pow(occ/maxo,0.80)*RND.aoForce;
+    }
+    const n=Math.hypot(nx,ny)||1;
+    G.wnx[id]=nx/n; G.wny[id]=ny/n;
+    const v=Math.round(clamp(ao,0,1)*255);
+    const o=id*4; D[o]=v; D[o+1]=v; D[o+2]=v; D[o+3]=255;
+  }
+  g.putImageData(im,0,0);
+  G.aoCanvas=c;
+}
+
+/* ==========================================================================
+   COMPOSITION
+   1. albédo net (déjà dessiné)   2. × lumière   3. + halos   4. surcouches
+   ========================================================================== */
+function composeLight(camx,camy,T){
+  if(!LB||LBW!==Math.ceil(CW/LBDIV)||LBH!==Math.ceil(CH/LBDIV)) initLightBuffer();
+  const S=1/LBDIV, tsb=TS*S;
+  const LX=v=>(v*TS-camx)*S, LY=v=>(v*TS-camy)*S;
+
+  /* --- fond : l'ambiance froide de la strate, jamais le noir pur --- */
+  lbx.globalCompositeOperation='source-over';
+  /* Le plancher froid. Ce n'est pas un « presque noir » : c'est la seconde
+     source. Sans lui, la torche n'a rien à quoi s'opposer et tout vire au brun. */
+  lbx.fillStyle=toneRGB(G.st.cold, RND.ambiant);
+  lbx.fillRect(0,0,LBW,LBH);
+
+  /* --- occlusion cuite : un seul drawImage pour tout le décor visible --- */
+  if(G.aoCanvas){
+    lbx.globalCompositeOperation='multiply';
+    lbx.imageSmoothingEnabled=true;
+    lbx.drawImage(G.aoCanvas,0,0,MW,MH,LX(0),LY(0),MW*tsb,MH*tsb);
+  }
+
+  /* --- accumulation des sources --- */
+  lbx.globalCompositeOperation='lighter';
+
+  /* torche du joueur : la source maîtresse */
+  if(G.p.torch>0){
+    const r=lightRadius()*FLICK;
+    paintLight(LX(G.p.x),LY(G.p.y), r*tsb, G.st.warm, RND.torche, 1);
+  }else{
+    paintLight(LX(G.p.x),LY(G.p.y), 2.9*tsb, '#6a7a9c', 0.30, 1);
+  }
+
+  /* brasiers, autels, escalier, sanctuaire */
+  for(const S2 of G.lights){
+    const lx=LX(S2.x), ly=LY(S2.y), rr=S2.r*tsb;
+    if(lx<-rr||ly<-rr||lx>LBW+rr||ly>LBH+rr) continue;
+    const fl=S2.fire ? (0.84+Math.sin(T/120+S2.x*2.3)*0.11+Math.sin(T/47+S2.y)*0.05) : 1;
+    paintLight(lx,ly,rr, S2.col||G.st.warm, S2.i*RND.sources, fl);
+  }
+
+  /* zones persistantes : le venin et le séisme éclairent ce qu'ils rongent */
+  for(const z of G.zones){
+    paintLight(LX(z.x),LY(z.y), z.r*tsb*1.15, z.c, 0.42*clamp(z.dur/0.8,0,1), 1);
+  }
+
+  /* onde de choc d'un sort : une source brève mais franche */
+  for(const p of G.parts){
+    if(!p.ring) continue;
+    const k=p.life/p.max;
+    paintLight(LX(p.x),LY(p.y), p.r*tsb*1.7, p.c, 0.95*k, 1);
+  }
+
+  /* projectiles et gardiens portent leur propre lueur */
+  for(const s of G.shots) paintLight(LX(s.x),LY(s.y), tsb*1.5, s.c, 0.34, 1);
+  for(const m of G.mobs){
+    if(!m.boss||!G.vis[(m.y|0)*MW+(m.x|0)]) continue;
+    paintLight(LX(m.x),LY(m.y), tsb*3.0, m.c, 0.30, 0.9+Math.sin(T/200)*0.1);
+  }
+
+  /* --- multiplication sur l'image nette --- */
+  cx.save();
+  cx.globalCompositeOperation='multiply';
+  cx.imageSmoothingEnabled=true;
+  cx.drawImage(LB,0,0,LBW,LBH,0,0,CW,CH);
+  cx.restore();
+}
+
+/* Halos : ce que la multiplication ne peut pas faire — dépasser le blanc.
+   Un quad additif par source chaude, le coût d'une ombre de contact. */
+function glowPass(X,Y,T){
+  cx.save();
+  cx.globalCompositeOperation='lighter';
+  const halo=(px,py,rad,col,a)=>{
+    if(a<=0.01) return;
+    const gr=cx.createRadialGradient(px,py,0,px,py,rad);
+    gr.addColorStop(0,   'rgba('+col+','+(a*0.55)+')');
+    gr.addColorStop(0.35,'rgba('+col+','+(a*0.20)+')');
+    gr.addColorStop(1,   'rgba('+col+',0)');
+    cx.fillStyle=gr; cx.fillRect(px-rad,py-rad,rad*2,rad*2);
+  };
+  if(G.p.torch>0){
+    const r=lightRadius()*FLICK*TS*0.62;
+    halo(X(G.p.x),Y(G.p.y), r, '255,196,122', RND.halo*clamp(G.p.torch/40,0.35,1));
+  }
+  for(const S of G.lights){
+    const px=X(S.x), py=Y(S.y);
+    if(px<-TS*8||py<-TS*8||px>CW+TS*8||py>CH+TS*8) continue;
+    if(!G.seen[(S.y|0)*MW+(S.x|0)]) continue;
+    const fl=S.fire?(0.82+Math.sin(T/110+S.x*2.1)*0.18):1;
+    const col=S.col?hx(S.col).join(','):'255,180,96';
+    halo(px,py, S.r*TS*0.46*fl, col, RND.halo*1.15*S.i);
+  }
+  for(const z of G.zones) halo(X(z.x),Y(z.y), z.r*TS*0.8, hx(z.c).join(','), 0.20*clamp(z.dur/0.8,0,1));
+  for(const s of G.shots) halo(X(s.x),Y(s.y), TS*0.9, hx(s.c).join(','), 0.40);
+  for(const p of G.parts){ if(!p.ring) continue;
+    halo(X(p.x),Y(p.y), p.r*TS*1.3, hx(p.c).join(','), 0.5*(p.life/p.max)); }
+  cx.restore();
+}
+
+/* ==========================================================================
+   POUSSIÈRE EN SUSPENSION
+   Quelques dizaines de grains qui dérivent dans le halo de la torche. Ils ne
+   coûtent rien et ils font respirer l'air : sans eux la lumière traverse du
+   vide. Ils ne vivent que là où on les verra.
+   ========================================================================== */
+const MOTES=[];
+function initMotes(){ MOTES.length=0;
+  for(let i=0;i<64;i++) MOTES.push({x:0,y:0,vx:0,vy:0,s:0,a:0,ph:Math.random()*6.28,seeded:false}); }
+function stepMotes(dt){
+  const R=Math.max(3,lightRadius());
+  for(const m of MOTES){
+    if(!m.seeded || Math.hypot(m.x-G.p.x,m.y-G.p.y)>R*1.15){
+      const a=RNG()*6.2832, d=Math.sqrt(RNG())*R;
+      m.x=G.p.x+Math.cos(a)*d; m.y=G.p.y+Math.sin(a)*d;
+      m.vx=rf(-.16,.16); m.vy=rf(-.30,-.05);
+      m.s=rf(.018,.045); m.a=rf(.20,.60); m.seeded=true;
+    }
+    m.ph+=dt*1.6;
+    m.x+=(m.vx+Math.sin(m.ph)*0.08)*dt;
+    m.y+=m.vy*dt;
+  }
+}
+function drawMotes(X,Y){
+  if(G.p.torch<=0) return;
+  const R=Math.max(3,lightRadius());
+  cx.save(); cx.globalCompositeOperation='lighter';
+  for(const m of MOTES){
+    const d=Math.hypot(m.x-G.p.x,m.y-G.p.y);
+    const k=clamp(1-d/R,0,1);
+    if(k<=0.02) continue;
+    if(!G.vis[(m.y|0)*MW+(m.x|0)]) continue;
+    cx.fillStyle='rgba(255,214,150,'+(m.a*k*k*0.85)+')';
+    const s=TS*m.s*(0.7+k*0.6);
+    cx.fillRect(X(m.x)-s/2,Y(m.y)-s/2,s,s);
+  }
+  cx.restore();
+}
+/* braises montantes au-dessus des brasiers visibles */
+function stepEmbers(dt){
+  G.emb=G.emb||[];
+  G.embT=(G.embT||0)-dt;
+  if(G.embT<=0){
+    G.embT=0.09;
+    for(const S of G.lights){
+      if(!S.fire||!G.vis[(S.y|0)*MW+(S.x|0)]) continue;
+      if(RNG()>0.5) continue;
+      G.emb.push({x:S.x+rf(-.22,.22), y:S.y+rf(-.14,.10),
+        vx:rf(-.22,.22), vy:rf(-1.5,-.7), life:rf(.7,1.5), max:1.5, s:rf(.03,.07)});
+    }
+  }
+  for(let i=G.emb.length-1;i>=0;i--){
+    const e=G.emb[i]; e.life-=dt;
+    if(e.life<=0){ G.emb.splice(i,1); continue; }
+    e.x+=e.vx*dt; e.y+=e.vy*dt; e.vy*=0.985; e.vx+=rf(-.5,.5)*dt;
+  }
+}
+function drawEmbers(X,Y){
+  if(!G.emb) return;
+  cx.save(); cx.globalCompositeOperation='lighter';
+  for(const e of G.emb){
+    const k=e.life/e.max;
+    if(!G.vis[(e.y|0)*MW+(e.x|0)]) continue;
+    cx.fillStyle='rgba('+(255)+','+(150+80*k|0)+','+(60+60*k|0)+','+(k*0.8)+')';
+    const s=TS*e.s*k;
+    cx.fillRect(X(e.x)-s/2,Y(e.y)-s/2,s,s);
+  }
+  cx.restore();
+}
+
+
 /* teinte finale d'une case : base -> froid -> chaud */
+/* ALBÉDO seul. La luminance ne se calcule plus ici : elle vit dans le buffer
+   de lumière et se compose par multiplication. Une surface garde donc la même
+   couleur propre où qu'elle soit — c'est la lumière qui la révèle ou la cache. */
 function lit(baseHex,lum,warm,mem){
   const b=hx(baseHex);
   if(mem){
+    /* souvenir : désaturé et bleuté. Exposé haut, car la multiplication
+       le ramènera ensuite au niveau d'ambiance. */
     const m=hx(G.st.mem);
-    // souvenir : désaturé et bleuté, jamais noir
     const g=(b[0]+b[1]+b[2])/3;
-    const r=rgbmix([g,g,g],m,.62);
-    return 'rgb('+(r[0]*.52|0)+','+(r[1]*.56|0)+','+(r[2]*.74|0)+')';
+    const r=rgbmix([g,g,g],m,.58);
+    return 'rgb('+clamp(r[0]*1.30,0,255)+','+clamp(r[1]*1.38,0,255)+','+clamp(r[2]*1.72,0,255)+')';
   }
   const cold=hx(G.st.cold), warmc=hx(G.st.warm);
-  let c=rgbmix(b,cold,0.58*(1-warm*0.92));
-  c=rgbmix(c,warmc,warm*0.36);
-  const k=G.st.amb+lum*1.02;
+  /* La teinte froide ne s'applique QUE là où la flamme n'arrive pas. Sinon
+     une lumière ambre sur une pierre bleutée donne du mauve — les deux
+     sources doivent se partager l'espace, pas se superposer. */
+  let c=rgbmix(b,cold,0.40*(1-warm*0.90));
+  c=rgbmix(c,warmc,warm*0.30);
+  const k=ALBEDO_GAIN;
   return 'rgb('+(clamp(c[0]*k,0,255)|0)+','+(clamp(c[1]*k,0,255)|0)+','+(clamp(c[2]*k,0,255)|0)+')';
 }
+const ALBEDO_GAIN=1.22;
 
 let FLICK=1;
+/* Ne renvoie plus la luminance — le buffer s'en charge — mais la DOMINANTE
+   CHAUDE : de quelle couleur la surface est-elle éclairée ? C'est ce qui
+   distingue une pierre baignée par la torche d'une pierre au froid. */
 function lumAt(x,y,tflick){
-  const R=lightRadius()*tflick;
-  const d=Math.hypot(x-G.p.x,y-G.p.y);
-  let L=G.p.torch>0 ? Math.pow(clamp(1-d/(R+1.0),0,1),1.75) : 0;
-  if(G.p.torch<=0) L=Math.max(L,Math.pow(clamp(1-d/2.6,0,1),1.3)*.55);
-  let W=L;
+  let W=0;
+  if(G.p.torch>0){
+    const R=lightRadius()*tflick;
+    const d=Math.hypot(x-G.p.x,y-G.p.y);
+    W=Math.pow(clamp(1-d/(R+1.0),0,1),1.35);
+  }
   for(const S of G.lights){
+    if(S.col&&!S.fire) continue;                 // une source froide ne réchauffe rien
     const dd=Math.hypot(x-S.x,y-S.y);
     if(dd>S.r) continue;
-    const a=Math.pow(1-dd/S.r,1.4)*S.i*(S.fire?(0.82+Math.sin(G.time*9+S.x)*0.18):1);
-    L=Math.min(1.35,L+a); W=Math.min(1,W+a*0.9);
+    W=Math.min(1,W+Math.pow(1-dd/S.r,1.3)*S.i*0.85);
   }
-  for(const p of G.parts){ if(!p.ring) continue;
-    const dd=Math.hypot(x-p.x,y-p.y);
-    if(dd<p.r*1.4){ const a=(p.life/p.max)*(1-dd/(p.r*1.4))*1.1; L=Math.min(1.8,L+a); W=Math.min(1,W+a); } }
-  return [L,W];
+  return [1,W];
+}
+/* Ombrage directionnel : la face d'un mur tournée vers la flamme s'éclaire,
+   celle qui lui tourne le dos reste sourde. Les normales sont cuites avec
+   l'occlusion, à la génération du niveau. */
+function wallShade(i,j){
+  if(!G.wnx) return 0;
+  const id=j*MW+i, nx=G.wnx[id], ny=G.wny[id];
+  if(!nx&&!ny) return 0;
+  let bx=G.p.x-(i+.5), by=G.p.y-(j+.5);
+  let best=G.p.torch>0 ? 1/(1+Math.hypot(bx,by)*0.22) : 0.10;
+  for(const S of G.lights){
+    const dx=S.x-(i+.5), dy=S.y-(j+.5), d=Math.hypot(dx,dy);
+    if(d>S.r) continue;
+    const w=S.i/(1+d*0.22);
+    if(w>best){ best=w; bx=dx; by=dy; }
+  }
+  const n=Math.hypot(bx,by)||1;
+  return (nx*bx/n + ny*by/n) * clamp(best*1.5,0,1);
 }
 
 function render(ts){
@@ -2271,8 +2748,16 @@ function render(ts){
     if(t===WALL||t===SHELF){
       cx.fillStyle=lit(t===SHELF?'#2e2418':P.wall,L*.95,W*.7,mem); cx.fillRect(x,y,TS+1,TS+1);
       cx.fillStyle=lit(P.top,L*1.25,W*.8,mem); cx.fillRect(x,y,TS+1,TS*.26);
+      cx.fillStyle='rgba(255,246,228,'+(mem?0.03:0.07)+')'; cx.fillRect(x,y,TS+1,TS*.26);
       /* arête vive en haut, ombre portée en bas : le mur prend du volume */
-      cx.fillStyle='rgba(255,240,210,'+(mem?0.05:0.10+L*0.16)+')'; cx.fillRect(x,y,TS+1,1.5);
+      /* la face tournée vers la flamme s'éclaire, celle qui lui tourne le dos
+         reste sourde : c'est ce qui donne un volume aux murs */
+      if(!mem){
+        const sd=wallShade(i,j);
+        if(sd>0.02){ cx.fillStyle='rgba(255,236,206,'+(sd*RND.mur)+')'; cx.fillRect(x,y,TS+1,TS+1); }
+        else if(sd<-0.02){ cx.fillStyle='rgba(4,4,12,'+(-sd*0.50)+')'; cx.fillRect(x,y,TS+1,TS+1); }
+      }
+      cx.fillStyle='rgba(255,240,210,'+(mem?0.05:0.22)+')'; cx.fillRect(x,y,TS+1,1.5);
       cx.fillStyle='rgba(0,0,0,.55)'; cx.fillRect(x,y+TS*.90,TS+1,TS*.12);
       if(!mem&&L>.12){
         cx.fillStyle='rgba(0,0,0,.22)';
@@ -2335,31 +2820,6 @@ function render(ts){
     }
   }
 
-  /* ---------- boussole vers l'escalier ---------- */
-  if(G.stair){
-    const sx=X(G.stair.x+.5), sy=Y(G.stair.y+.5);
-    const onScreen = sx>TS && sx<CW-TS && sy>TS && sy<CH-TS;
-    if(!onScreen){
-      const cxs=CW/2, cys=CH/2;
-      let a=Math.atan2(sy-cys,sx-cxs);
-      const mrg=Math.min(CW,CH)*0.36;
-      const px=cxs+Math.cos(a)*mrg, py=cys+Math.sin(a)*mrg;
-      const pu=.6+Math.sin(T/300)*.4;
-      const dist=Math.hypot(G.stair.x-G.p.x,G.stair.y-G.p.y);
-      cx.save(); cx.translate(px,py); cx.rotate(a);
-      cx.globalAlpha=0.30+0.30*pu;
-      cx.fillStyle='#e0a44c';
-      cx.beginPath(); cx.moveTo(TS*.42,0); cx.lineTo(-TS*.16,-TS*.26);
-      cx.lineTo(-TS*.02,0); cx.lineTo(-TS*.16,TS*.26); cx.closePath(); cx.fill();
-      cx.restore();
-      cx.save(); cx.globalAlpha=0.42;
-      cx.fillStyle='#e0a44c'; cx.textAlign='center'; cx.textBaseline='middle';
-      cx.font='9px "Share Tech Mono",monospace';
-      cx.fillText(Math.round(dist)+'m', px+Math.cos(a)*TS*.85, py+Math.sin(a)*TS*.85);
-      cx.restore();
-    }
-  }
-
   /* ---------- inscriptions ---------- */
   for(const mk of G.marks){
     if(!G.vis[(mk.y|0)*MW+(mk.x|0)]) continue;
@@ -2393,6 +2853,7 @@ function render(ts){
     cx.globalAlpha=clamp(.30+L,0,1);
     cx.shadowColor=icol(it); cx.shadowBlur=TS*(.22+L*.3);
     drawIn(x,y,TS*.78,()=>{ (ISPR[it.t]||ISPR.gold)(icol(it)); });
+
     cx.restore();
   }
 
@@ -2510,14 +2971,6 @@ function render(ts){
     cx.strokeStyle='rgba(255,225,170,'+(k*.6)+')'; cx.lineWidth=TS*.14;
     cx.beginPath(); cx.arc(X(G.p.x),Y(G.p.y),TS*2.1*(1.15-k*.25),0,6.2832); cx.stroke();
   }
-  if(G.p.torch>0){
-    const g=cx.createRadialGradient(X(G.p.x),Y(G.p.y),TS*.2,X(G.p.x),Y(G.p.y),TS*lightRadius()*FLICK);
-    g.addColorStop(0,'rgba(255,190,110,.20)');
-    g.addColorStop(.45,'rgba(255,160,80,.07)');
-    g.addColorStop(1,'rgba(255,150,70,0)');
-    cx.fillStyle=g;
-    cx.fillRect(X(G.p.x)-TS*12,Y(G.p.y)-TS*12,TS*24,TS*24);
-  }
   cx.save();
   if(G.p.invT>0){ cx.globalAlpha=.55; }
   cx.translate(X(G.p.x),Y(G.p.y));
@@ -2525,6 +2978,77 @@ function render(ts){
   cx.translate(-hs/2,-hs*.62);
   cx.save(); cx.scale(hs,hs); SPR.hero('#9fa2b4',T,G.p.torch,0); cx.restore();
   cx.restore(); cx.restore();
+
+  /* ======================================================================
+     COMPOSITION — l'albédo est posé, net. On l'éclaire maintenant.
+     1. multiplication par le buffer de lumière (occlusion cuite comprise)
+     2. halos additifs : ce que la multiplication ne peut pas faire
+     3. atmosphère : braises, poussière en suspension
+     4. surcouches non éclairées : balises, chiffres, éclair
+     ====================================================================== */
+  composeLight(camx,camy,T);
+  glowPass(X,Y,T);
+  drawEmbers(X,Y);
+  drawMotes(X,Y);
+
+  if(G.sanct && G.seen[(G.sanct.cy|0)*MW+(G.sanct.cx|0)]){
+    const S=G.sanct, pu=.6+Math.sin(T/700)*.4;
+    cx.save();
+    cx.globalAlpha=0.10+0.05*pu; cx.fillStyle='#7fb8c4';
+    cx.fillRect(X(S.x),Y(S.y),S.w*TS,S.h*TS);
+    cx.globalAlpha=0.30+0.20*pu; cx.strokeStyle='#7fb8c4';
+    cx.lineWidth=2; cx.setLineDash([TS*.3,TS*.22]);
+    cx.strokeRect(X(S.x),Y(S.y),S.w*TS,S.h*TS);
+    cx.setLineDash([]); cx.restore();
+  }
+
+  /* ---------- balises des objets remarquables (visibles au travers) ---------- */
+  for(const it of G.items){
+    const r=it.rar;
+    if(!(it.relic || (r!==undefined && r>=2))) continue;
+    const bx=X(it.x), by=Y(it.y);
+    if(bx<-TS||by<-TS||bx>CW+TS||by>CH+TS) continue;
+    const col=it.relic&&r===undefined?'#9d7fc4':RAR[r||2].c;
+    const seen=G.seen[(it.y|0)*MW+(it.x|0)];
+    const pu=.55+Math.sin(T/420+it.x)*.45;
+    cx.save();
+    cx.globalAlpha=(seen?0.55:0.28)*(0.45+pu*0.55);
+    /* colonne de lumière : on la voit avant de voir l'objet */
+    const g2=cx.createLinearGradient(bx,by-TS*2.6,bx,by+TS*.4);
+    g2.addColorStop(0,'rgba(0,0,0,0)'); g2.addColorStop(1,col);
+    cx.fillStyle=g2;
+    cx.fillRect(bx-TS*.11,by-TS*2.6,TS*.22,TS*3.0);
+    cx.globalAlpha=(seen?0.5:0.3);
+    cx.strokeStyle=col; cx.lineWidth=1.4;
+    cx.beginPath(); cx.ellipse(bx,by+TS*.22,TS*(.34+pu*.10),TS*(.13+pu*.04),0,0,6.2832); cx.stroke();
+    cx.restore();
+  }
+
+  /* ---------- boussole vers l'escalier ---------- */
+  if(G.stair){
+    const sx=X(G.stair.x+.5), sy=Y(G.stair.y+.5);
+    const onScreen = sx>TS && sx<CW-TS && sy>TS && sy<CH-TS;
+    if(!onScreen){
+      const cxs=CW/2, cys=CH/2;
+      let a=Math.atan2(sy-cys,sx-cxs);
+      const mrg=Math.min(CW,CH)*0.36;
+      const px=cxs+Math.cos(a)*mrg, py=cys+Math.sin(a)*mrg;
+      const pu=.6+Math.sin(T/300)*.4;
+      const dist=Math.hypot(G.stair.x-G.p.x,G.stair.y-G.p.y);
+      cx.save(); cx.translate(px,py); cx.rotate(a);
+      cx.globalAlpha=0.30+0.30*pu;
+      cx.fillStyle='#e0a44c';
+      cx.beginPath(); cx.moveTo(TS*.42,0); cx.lineTo(-TS*.16,-TS*.26);
+      cx.lineTo(-TS*.02,0); cx.lineTo(-TS*.16,TS*.26); cx.closePath(); cx.fill();
+      cx.restore();
+      cx.save(); cx.globalAlpha=0.42;
+      cx.fillStyle='#e0a44c'; cx.textAlign='center'; cx.textBaseline='middle';
+      cx.font='9px "Share Tech Mono",monospace';
+      cx.fillText(Math.round(dist)+'m', px+Math.cos(a)*TS*.85, py+Math.sin(a)*TS*.85);
+      cx.restore();
+    }
+  }
+
 
   /* ---------- particules ---------- */
   for(const p of G.parts){
@@ -2670,7 +3194,10 @@ function hud(){
     const el=document.getElementById('ab'+i); if(!el) continue;
     const k=G.cool[i]/(SPELLS[G.spells[i]].cd*(G.p.base.cdr||1));
     el.querySelector('.cd').style.height=Math.max(0,k*100)+'%';
-    el.classList.toggle('rdy',G.cool[i]<=0);
+    const ready=G.cool[i]<=0;
+    if(ready && el._wasCd){ el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+    el._wasCd=!ready;
+    el.classList.toggle('rdy',ready);
   }
   /* bouton descendre */
   const onStair=tileAt(P.x,P.y)===STAIR;
@@ -2876,6 +3403,31 @@ function descend(){
   const boss=G.mobs.find(m=>m.boss);
   if(boss){ say('Quelque chose barre le passage. Il faut l\'abattre.','self','bad'); return; }
   if(G.depth>=MAXDEPTH) return;
+  offerPact();
+}
+/* On ne descend plus par habitude : on choisit comment on descend. */
+function offerPact(){
+  G.paused=true;
+  const nxt=G.depth+1;
+  openModal(
+    '<h3>L\'escalier</h3><div class="cs">niveau '+roman(nxt)+' — comment descendez-vous ?</div>'+
+    '<div class="it" onclick="doDescend(0)">'+
+      '<div style="width:26px;text-align:center;color:#8f8577;font-size:18px">↓</div>'+
+      '<div><div class="nm">Descendre</div>'+
+      '<div class="ds">Sans rien promettre à personne.</div></div></div>'+
+    '<div class="it" onclick="doDescend(1)" style="border-color:rgba(163,61,44,.5)">'+
+      '<div style="width:26px;text-align:center;color:#c8503a;font-size:18px">✝</div>'+
+      '<div><div class="nm" style="color:#d8705a">Descendre en pacte</div>'+
+      '<div class="ds">Tout ce qui vit en dessous sera plus rapide et plus hargneux.<br>'+
+      'Une relique vous attendra en bas — au moins <span style="color:'+RAR[2].c+'">rare</span>.</div></div></div>'+
+    '<div class="btn" style="margin-top:8px" onclick="cancelPact()">Rester encore un peu</div>'
+  );
+}
+function cancelPact(){ closeModal(); G.paused=false; LAST=performance.now(); }
+function doDescend(pact){
+  closeModal();
+  G.pact=!!pact;
+  if(pact){ G.pacts=(G.pacts||0)+1; }
   G.depth++;
   G.paused=true;
   const st=strataOf(G.depth), fresh=(st!==G.st);
@@ -2892,6 +3444,19 @@ function descend(){
     ln.style.transition='width 1.2s .1s';
     num.style.opacity=1; nm.style.opacity=1; ln.style.width='150px';
     say('— '+st.name+' · NIVEAU '+roman(G.depth)+' —','self','hi');
+    if(G.pact){
+      say('Le pacte est scellé. Ils vous ont entendu venir.','amb','bad');
+      for(const m of G.mobs){ m.spd*=1.22; m.dmg=Math.round(m.dmg*1.12); m.pact=1; }
+      const r=Math.max(2,rarRoll(G.depth+4));
+      const relic=RNG()<.5 ? decorate({t:'weapon',...pick(WEAPONS.filter(w=>Math.abs(w.d-G.depth)<=3)||WEAPONS),rar:r,bless:0,known:false})
+                : (RNG()<.5 ? Object.assign(rollRing(G.depth+3),{rar:r}) : Object.assign(rollAmulet(G.depth+3),{rar:r}));
+      if(relic.t==='ring') relic.pass=shuffle(POOL.ring.slice()).slice(0,r+1);
+      if(relic.t==='amulet') relic.pass=shuffle(POOL.amulet.slice()).slice(0,r+1);
+      relic.n=RAR[r].n==='légendaire'?relic.n:relic.n;
+      dropItem(relic, G.p.x+rf(-1.2,1.2), G.p.y+rf(-1.2,1.2));
+      G.items[G.items.length-1].relic=1;
+      say('Quelque chose brille non loin. C\'était le prix.','amb','hi');
+    }
     if(fresh) say(strataLine(st),'amb');
     if(BOSS[G.depth]) say(BOSS[G.depth].txt,'amb','bad');
   },600);
@@ -2917,16 +3482,42 @@ function strataLine(st){
    FIN DE PARTIE
    ========================================================================== */
 function die(cause){
-  G.dead=true; RUNNING=false;
+  G.dead=true; RUNNING=false; saveTomb(cause);
   document.getElementById('ocause').textContent='tué par '+cause+' — '+G.st.name+' · '+roman(G.depth);
   epitaph(); document.getElementById('over').style.display='flex';
 }
 function win(){
-  G.dead=true; G.won=true; RUNNING=false;
+  G.dead=true; G.won=true; RUNNING=false; saveTomb('la porte');
   document.getElementById('omark').textContent='✧';
   document.getElementById('otitle').textContent='LA PORTE EST ROUVERTE';
   document.getElementById('ocause').textContent='vous remontez, et personne ne vous croira';
   epitaph(); document.getElementById('over').style.display='flex';
+}
+/* ---------------- mémoire entre les parties ---------------- */
+const TOMBKEY='catacombes.tombes.v1';
+function loadTombs(){
+  try{ return JSON.parse(localStorage.getItem(TOMBKEY)||'[]'); }catch(e){ return []; }
+}
+function saveTomb(cause){
+  try{
+    const t=loadTombs();
+    t.unshift({d:G.depth, lv:G.p.level, k:G.kills, c:cause, w:!!G.won,
+      st:G.st?G.st.name:'', s:G.seedStr, x:Math.round(G.p.x), y:Math.round(G.p.y),
+      tm:Math.floor(G.time), pa:G.pacts||0,
+      wp:G.weapon?{n:G.weapon.n,r:G.weapon.rar,id:G.weapon.id,
+        dmg:G.weapon.dmg,cd:G.weapon.cd,rng:G.weapon.rng,arc:G.weapon.arc,
+        spells:G.weapon.spells,desc:G.weapon.desc,t:'weapon',bless:0}:null});
+    localStorage.setItem(TOMBKEY, JSON.stringify(t.slice(0,10)));
+  }catch(e){}
+}
+function renderTombs(){
+  const el=document.getElementById('tomb'); if(!el) return;
+  const t=loadTombs();
+  if(!t.length){ el.innerHTML=''; return; }
+  el.innerHTML='<div class="th">OSSUAIRE — CEUX QUI SONT DESCENDUS AVANT</div>'+
+    t.map(r=>'<div class="tr'+(r.w?' win':'')+'"><b>'+roman(r.d)+'</b>'+
+      '<span>rang '+r.lv+' · '+r.k+' morts'+(r.pa?' · '+r.pa+' pacte'+(r.pa>1?'s':''):'')+'</span>'+
+      '<i>'+(r.w?'ressorti':r.c)+'</i></div>').join('');
 }
 function epitaph(){
   const s=Math.floor(G.time);
@@ -2989,6 +3580,7 @@ document.getElementById('bHelp').addEventListener('click',()=>{
   '<p>La torche s\'épuise. Sans elle, vous voyez à deux pas. Les armes et armures ramassées peuvent être <b>bénies</b> ou <b>maudites</b> — on ne le sait qu\'une fois portées, et une pièce maudite ne se retire plus.</p>'+
   '<div class="close" onclick="closeModal()">Fermer</div>');
 });
+renderTombs();
 document.getElementById('bStart').addEventListener('click',()=>{
   const s=document.getElementById('seedin').value.trim();
   newGame(s);

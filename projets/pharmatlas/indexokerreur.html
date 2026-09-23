@@ -107,6 +107,14 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
 .thumb-wrap::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
   transform:translateX(-100%);animation:pa-skeleton-sweep 1.3s ease-in-out infinite}
 @keyframes pa-skeleton-sweep{to{transform:translateX(100%)}}
+/* Pastille « lame de microscopie disponible » — coin bas-droit de la vignette.
+   z-index 2 : la vignette elle-même est en z-index 1, le balayage squelette
+   en ::before sans index. */
+.pa-lame-dot{position:absolute;right:1px;bottom:1px;z-index:2;width:16px;height:16px;
+  border-radius:50%;background:#0a0f14;border:1.5px solid #7ec8e3;color:#bfe6f5;
+  font-size:8.5px;line-height:13px;text-align:center;font-style:normal;
+  box-shadow:0 1px 3px rgba(0,0,0,.4);pointer-events:none;user-select:none}
+body.pa-mobile .pa-lame-dot{width:14px;height:14px;font-size:7.5px;line-height:11px}
 .model-info{flex:1;min-width:0}
 .model-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .model-desc{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1878,6 +1886,12 @@ function _normaliseItemRaw(item,catId,base){
     file:         resolvePath(item.file,      base,catId),
     thumbnail:    resolveMedia(item.thumbnail,base,catId),
     image:        resolveMedia(item.image,    base,catId),
+    /* Galerie de photographies (Dispositifs Médicaux) : tableau d'URL.
+       Le champ était absent de cette liste, donc silencieusement supprimé —
+       les 22 galeries existantes n'étaient jamais rendues. */
+    photos:       Array.isArray(item.photos)
+                    ? item.photos.map(function(p){ return resolveMedia(p,base,catId); }).filter(Boolean)
+                    : null,
     portrait:     resolveMedia(item.portrait, base,catId),
     name:         item.name||item.titre||item.nom||item.nom_affiche||null,
     desc:         item.desc||item.objectif||null,
@@ -4412,6 +4426,12 @@ var GHS_SVG={
 
 function renderGHSPictograms(m){
   var ghs=m.ghs;
+  // Seize fiches portaient ghs sous forme de simple liste de pictogrammes.
+  // ghs.pictograms valait alors undefined et TOUT le bloc de danger
+  // disparaissait sans un mot — Colchicine et Ergotamine comprises. Les
+  // données ont été remises en forme, mais un import futur peut recréer le
+  // cas : mieux vaut afficher que se taire.
+  if(Array.isArray(ghs)) ghs={pictograms:ghs,signal_word:'',h_codes:[]};
   if(!ghs||!ghs.pictograms||!ghs.pictograms.length)return'';
   var pictos=ghs.pictograms.map(function(code){
     var d=GHS_SVG[code];if(!d)return'';
@@ -4782,9 +4802,21 @@ function _ptT12(s){
   if(f==null) return null;
   return v*f;
 }
-function _ptMW(m){return(m.chembl_mw!=null?m.chembl_mw:null)||_ptMolar(m.molar);}
-function _ptLP(m){return m.chembl_logp!=null?m.chembl_logp:null;}
-function _ptTPSA(m){return m.chembl_psa!=null?m.chembl_psa:null;}
+/* Un descripteur vide n'est pas une valeur.
+   77 fiches portent chembl_logp:"" — chaîne vide, pas null. Le test !=null
+   la laissait passer, et renderRadarDruglikeness appelait lp.toFixed(2) sur
+   une chaîne : TypeError, openSheet interrompu, LA FICHE NE S'OUVRAIT PAS.
+   La masse, elle, était rattrapée par le || qui suit ; le logP ne l'était
+   pas. C'est cette asymétrie qui empêchait d'ouvrir la Sénecionine, la
+   Vitamine E, la Silybine et 74 autres. */
+function _ptNum(v){
+  if(v===null||v===undefined||v==='') return null;
+  var n=(typeof v==='number')?v:parseFloat(String(v).replace(',','.'));
+  return isFinite(n)?n:null;
+}
+function _ptMW(m){return _ptNum(m.chembl_mw)||_ptMolar(m.molar);}
+function _ptLP(m){return _ptNum(m.chembl_logp);}
+function _ptTPSA(m){return _ptNum(m.chembl_psa);}
 
 /* ─── DRAW RADAR ─────────────────────────────────────────────── */
 function _drawRadarCanvas(cv){
@@ -4927,8 +4959,8 @@ function renderRadarDruglikeness(m){
   var MW=_ptMW(m),lp=_ptLP(m);
   if(MW==null&&lp==null)return'';
   lp=lp!=null?lp:2.5;MW=MW||300;
-  var hbd=m.chembl_hbd!=null?m.chembl_hbd:null,hba=m.chembl_hba!=null?m.chembl_hba:null;
-  var tpsa=_ptTPSA(m),rotb=m.chembl_rtb!=null?m.chembl_rtb:null;
+  var hbd=_ptNum(m.chembl_hbd),hba=_ptNum(m.chembl_hba);
+  var tpsa=_ptTPSA(m),rotb=_ptNum(m.chembl_rtb);
   var scMW  =Math.max(0,Math.min(100,Math.round(100-Math.max(0,MW-100)/4)));
   var scLP  =Math.max(0,Math.min(100,Math.round(100-Math.abs(lp-2.5)*14)));
   var scHBD =hbd!=null?Math.max(0,Math.min(100,Math.round(100-hbd*18))):50;
@@ -6091,6 +6123,18 @@ function renderFungariumViewer(m){
     +'<div class="herbarium-toggle-bar">'
     +'<button class="herb-toggle-btn active" id="fungBtnExs" onclick="_fungToggle(\'exs\')">🍄 Exsiccata</button>'
     +(has3D?'<button class="herb-toggle-btn" id="fungBtnModel" onclick="_fungToggle(\'3d\')">⬡ Modèle 3D</button>':'')
+    /* Comme les Plantes, les Champignons ont leur PROPRE barre d'onglets et
+       ne passent pas par _paViewerTabs : sans ce bouton, « Lame » n'apparaît
+       jamais sur une fiche de champignon, même quand la lame existe (constaté
+       sur le Coprin chevelu, lame 576). Appel isolé : une exception ici ferait
+       disparaître toute la barre, on est au milieu de la construction du HTML. */
+    +(function(){
+       try{
+         return (typeof resolveBioslide==='function' && resolveBioslide(m))
+           ? '<button class="herb-toggle-btn" id="fungBtnSlide" onclick="_fungToggle(\'lame\')">🔬 Lame</button>'
+           : '';
+       }catch(e){ return ''; }
+     })()
     +'</div>'
     +'<div class="herbarium-stage" id="fungStage"><div class="fung-skeleton"></div></div>'
     +'</div>';
@@ -6172,6 +6216,20 @@ function _fungToggle(mode){
   var btnExs=document.getElementById('fungBtnExs');
   var btnModel=document.getElementById('fungBtnModel');
   var stage=document.getElementById('fungStage');
+
+  if(mode==='lame'){
+    /* La lame remplace tout le viewer (le visualiseur BioSLiDES occupe le
+       conteneur entier) ; _paViewerTabs prend alors le relais pour le retour.
+       Testé AVANT la garde sur `stage` : la lame n'a pas besoin du stage. */
+    if(typeof sheetAnimId!=='undefined' && sheetAnimId){cancelAnimationFrame(sheetAnimId);sheetAnimId=null;}
+    var _m=_fungModel;
+    if(_m && typeof resolveBioslide==='function' && typeof initSheetRendererBioslides==='function'){
+      var _s=resolveBioslide(_m);
+      if(_s){ _m._paTab='lame'; initSheetRendererBioslides(_m,_s); return; }
+    }
+    return;
+  }
+
   if(!stage)return;
   if(mode==='exs'){
     if(btnExs)btnExs.classList.add('active');
@@ -10397,7 +10455,9 @@ else if(wt==='bootstrap_viz'){
       return map[p]||p;
     }
 
-    let dmH = imgHtml;
+    /* Les photographies partent dans le VIEWER (initSheetRendererDMGallery),
+       pas dans le corps de la fiche : on n'ajoute donc plus imgHtml ici. */
+    let dmH = '';
 
     /* ── Badges header ── */
     dmH += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center">';
@@ -10967,6 +11027,9 @@ function doLoad(url,res,rej){
   loader.load(url, g=>res(g.scene), undefined, e=>{
     console.error('[PharmAtlas] Erreur GLB:', url, e);
     if(typeof paLogDiag==='function') paLogDiag('glb-404', url);
+    /* On mémorise l'absence : la même fiche rouverte ne relancera pas
+       la requête, et l'onglet « Modèle 3D » ne sera plus proposé. */
+    if(typeof paGlbMarkMissing==='function') paGlbMarkMissing(url);
     rej(new Error(e.message||'Fichier introuvable'));
   });
 }
@@ -11456,7 +11519,8 @@ function _paViewerTabs(m, tabs, activeKey){
 /* Recense les sources visuelles disponibles pour une fiche. */
 function _paVisualTabs(m){
   var tabs=[];
-  if(m.file) tabs.push({key:'3d', label:'🧬 Modèle 3D',
+  if(m.file && (typeof paGlbAvailable!=='function' || !/\.glb$/i.test(m.file) || paGlbAvailable(m.file)))
+    tabs.push({key:'3d', label:'🧬 Modèle 3D',
       run:function(){
         m._paTab='3d';
         /* Plantes : le modèle 3D vit DANS le viewer herbier (bouton interne).
@@ -11465,6 +11529,14 @@ function _paVisualTabs(m){
         if(m._cat==='Plantes' && typeof renderHerbariumViewer==='function'){
           renderHerbariumViewer(m);
           setTimeout(function(){ try{ _herbToggle('3d'); }catch(e){} },80);
+          return;
+        }
+        /* Champignons : même architecture que les Plantes — le 3D vit dans le
+           viewer fongarium. Sans ce cas, revenir de la lame vers le 3D faisait
+           perdre l'accès aux exsiccata. */
+        if(m._cat==='Champignons' && typeof renderFungariumViewer==='function'){
+          renderFungariumViewer(m);
+          setTimeout(function(){ try{ _fungToggle('3d'); }catch(e){} },80);
           return;
         }
         initSheetRenderer(m);
@@ -11481,7 +11553,19 @@ function _paVisualTabs(m){
         else initSheetRenderer(m);
       }});
   }
-  else if(m._cat==='Champignons'||m._cat==='Parasites'||m._cat==='Bacteries'){
+  else if(m._cat==='Champignons'){
+    /* Retour vers le viewer fongarium, qui a sa PROPRE barre interne
+       (Exsiccata / Modèle 3D / Lame), exactement comme l'herbier des Plantes.
+       Passer par initSheetRendererGBIF ouvrirait un viewer générique et
+       ferait perdre les exsiccata et le modèle 3D. */
+    tabs.push({key:'gbif', label:'🍄 Photos',
+      run:function(){
+        m._paTab=null;
+        if(typeof renderFungariumViewer==='function') renderFungariumViewer(m);
+        else { m._paTab='gbif'; m._forcePdbOff=true; initSheetRendererGBIF(m,null,null); }
+      }});
+  }
+  else if(m._cat==='Parasites'||m._cat==='Bacteries'){
     /* GBIF ne renvoie des planches d'herbier que pour les végétaux. Pour un
        parasite ou une bactérie, ce sont des photographies d'observation :
        parler de « planches » avec une icône de plante était trompeur. */
@@ -11491,6 +11575,19 @@ function _paVisualTabs(m){
             :                                   '🦠 Photos';
     tabs.push({key:'gbif', label:_gl,
       run:function(){ m._paTab='gbif'; m._forcePdbOff=true; initSheetRendererGBIF(m,null,null); }});
+  }
+  else if(typeof organiteHas2D==='function' && organiteHas2D(m)){
+    /* Organite mappé : sa vue d'origine est la structure scientifique Mol*,
+       pas une galerie. Sans cet onglet, un organite SANS .glb qui possède une
+       lame n'aurait qu'un seul onglet — donc aucune barre (_paViewerTabs exige
+       au moins deux entrées) et aucun retour possible depuis la lame. */
+    tabs.push({key:'sci2d', label:'🔬 Structure',
+      run:function(){
+        m._paTab=null;
+        window._activeOrganite=m; window._organiteViewMode='2d';
+        if(typeof render2DScientific==='function') render2DScientific(m);
+        else initSheetRenderer(m);
+      }});
   }
   if(typeof resolveBioslide==='function' && resolveBioslide(m))
     tabs.push({key:'lame', label:'🔬 Lame',
@@ -11519,7 +11616,7 @@ function _paVisualTabs(m){
    n'étaient pas réaffirmées dans le même diff. */
 function resolveBioslide(m){
   if(!m || !m.bioslide) return null;
-  var e = m.bioslide;   // { id, base?, species? } — porté par la fiche elle-même
+  var e = m.bioslide;   // { id, base?, titre?, species? } — porté par la fiche
   /* Pyramide DZI : la collection publie, pour chaque lame, un dossier
      data/<id>/ contenant « <base>_Thumbnail.jpg », « <base>_Gallery.jpg » et
      le manifeste « <base>.dzi » (motif relevé dans la table de la collection).
@@ -11552,6 +11649,12 @@ function resolveBioslide(m){
   return {
     id: e.id,
     base: e.base || null,
+    /* Titre de la lame au catalogue (« Crataegus sp. - Leaf cross section
+       20x »). Distinct de `base`, qui est le nom de fichier allemand de la
+       pyramide DZI. Affiché sous la lame : il dit à l'étudiant quel organe et
+       quel grossissement il regarde, et surtout si la lame est au GENRE
+       (« sp. ») plutôt qu'à l'espèce de la fiche. */
+    titre: e.titre || null,
     dzi: dzi,
     label: m.name,   /* la donnée JSON ne duplique plus le libellé : il vient de la fiche */
     species: e.species || null,
@@ -11581,11 +11684,25 @@ window.initSheetRendererBioslides = function(m, slide){
     + '<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener" '
     + 'style="color:#7ec8e3">CC BY-SA 4.0</a>';
 
+  /* Titre de la lame + avertissement quand elle est au GENRE et non à
+     l'espèce. Le catalogue publie des lames « Crataegus sp. » que l'on
+     rapproche d'une fiche « Crataegus monogyna » : l'anatomie est bien celle
+     du genre, mais l'étudiant doit savoir qu'il ne regarde pas forcément
+     l'espèce de la fiche. Le taire serait une approximation silencieuse. */
+  var TITRE = '';
+  if(slide.titre){
+    var _sp = /\bsp{1,2}\.?(?=\s|$)/i.test(String(slide.titre).split(' - ')[0]);
+    TITRE = '<span style="opacity:.85">'+escHtml(slide.titre)+'</span>'
+      + (_sp ? ' <span style="color:#ffcc80" title="Lame du genre, pas de '
+             + 'l\'espèce de la fiche">⚠ lame du genre</span>' : '')
+      + ' · ';
+  }
+
   function legend(){
     var l=document.createElement('div');
     l.className='osd-legend';
     l.innerHTML='<div class="osd-legend-main">🔬 '+escHtml(slide.label||'')+'</div>'
-      + '<div class="osd-note" style="font-size:9.5px;opacity:.72">'+ATTR
+      + '<div class="osd-note" style="font-size:9.5px;opacity:.72">'+TITRE+ATTR
       + ' · <a href="'+escHtml(slide.url)+'" target="_blank" rel="noopener" style="color:#7ec8e3">'
       + 'fiche de la lame ↗</a></div>';
     return l;
@@ -11621,6 +11738,7 @@ window.initSheetRendererBioslides = function(m, slide){
       + 'background:rgba(8,12,20,.92);border-top:1px solid rgba(255,255,255,.12);'
       + 'font-size:9.5px;line-height:1.45;color:rgba(255,255,255,.6)';
     att.innerHTML='🔬 <strong style="color:rgba(255,255,255,.85)">'+escHtml(slide.label||'')+'</strong> · '
+      + TITRE
       + '<a href="'+escHtml(slide.url)+'" target="_blank" rel="noopener" style="color:#7ec8e3">'
       + 'vue complète ↗</a><br>' + ATTR;
     c.appendChild(att);
@@ -11737,7 +11855,111 @@ window.initSheetRendererBioslides = function(m, slide){
   probe(0);
 };
 
+/* ── Galerie photo — Dispositifs Médicaux ──────────────────────────────────
+   Les photographies (R2) étaient rendues DANS la fiche via imgHtml, à gauche
+   du texte. Elles ont vocation à occuper le viewer, comme les planches GBIF
+   ou les modèles 3D des autres catégories. Ce viewer les y affiche avec
+   navigation entre les clichés. */
+var _dmGal = { imgs: [], idx: 0 };
+
+window.dmGalPrev = function(){
+  if(!_dmGal.imgs.length) return;
+  _dmGal.idx = (_dmGal.idx - 1 + _dmGal.imgs.length) % _dmGal.imgs.length;
+  _dmGalShow();
+};
+window.dmGalNext = function(){
+  if(!_dmGal.imgs.length) return;
+  _dmGal.idx = (_dmGal.idx + 1) % _dmGal.imgs.length;
+  _dmGalShow();
+};
+function _dmGalShow(){
+  var st = document.getElementById('dm-gal-stage');
+  if(!st || !_dmGal.imgs.length) return;
+  st.innerHTML = '<img src="'+escHtml(_dmGal.imgs[_dmGal.idx])+'" alt="" '
+    + 'style="max-width:100%;max-height:100%;object-fit:contain;display:block" '
+    + 'onerror="this.parentNode.innerHTML=\'<div style=&quot;color:rgba(255,255,255,.4);'
+    + 'font-size:12px&quot;>Image indisponible</div>\'">';
+  var c = document.getElementById('dm-gal-counter');
+  if(c) c.textContent = (_dmGal.idx+1)+' / '+_dmGal.imgs.length;
+}
+
+function initSheetRendererDMGallery(m){
+  var c = document.getElementById('sheetViewer');
+  if(!c) return false;
+  /* On réunit image principale + galerie, sans doublon. */
+  var imgs = [];
+  if(m.image) imgs.push(m.image);
+  (m.photos||[]).forEach(function(p){ if(p && imgs.indexOf(p)===-1) imgs.push(p); });
+  if(!imgs.length) return false;
+
+  if(typeof sheetAnimId!=='undefined' && sheetAnimId){ cancelAnimationFrame(sheetAnimId); sheetAnimId=null; }
+  try{ osdDestroy(); }catch(e){}
+  while(c.firstChild) c.removeChild(c.firstChild);
+  c.setAttribute('data-mode','dm-gallery');
+  c.style.cssText='position:relative;overflow:hidden;background:#0d1117';
+
+  _dmGal = { imgs: imgs, idx: 0 };
+  var nav = imgs.length>1
+    ? '<button onclick="dmGalPrev()" aria-label="Photo précédente" style="position:absolute;left:8px;top:50%;'
+      + 'transform:translateY(-50%);z-index:5;background:rgba(0,0,0,.55);color:#fff;border:none;'
+      + 'border-radius:50%;width:34px;height:34px;font-size:17px;cursor:pointer">‹</button>'
+      + '<button onclick="dmGalNext()" aria-label="Photo suivante" style="position:absolute;right:8px;top:50%;'
+      + 'transform:translateY(-50%);z-index:5;background:rgba(0,0,0,.55);color:#fff;border:none;'
+      + 'border-radius:50%;width:34px;height:34px;font-size:17px;cursor:pointer">›</button>'
+      + '<div id="dm-gal-counter" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);'
+      + 'z-index:5;background:rgba(0,0,0,.55);color:rgba(255,255,255,.85);padding:3px 11px;'
+      + 'border-radius:12px;font-size:11px;font-weight:600"></div>'
+    : '';
+  c.innerHTML = '<div id="dm-gal-stage" style="position:absolute;inset:0;display:flex;'
+    + 'align-items:center;justify-content:center;padding:14px"></div>' + nav;
+  _dmGalShow();
+  return true;
+}
+
+/* ── Disponibilité des modèles 3D (.glb) ───────────────────────────────────
+   1 690 fiches déclarent un fichier .glb. Tant qu'ils ne sont pas publiés,
+   chaque ouverture de fiche déclenche une requête vouée au 404, pollue la
+   console et retarde l'affichage du repli.
+
+   Deux garde-fous, sans avoir à modifier les 1 690 fiches :
+
+   • PA_GLB_MANIFEST : liste blanche optionnelle des .glb réellement publiés.
+     Renseigner un tableau de noms de fichiers (ex. ['digoxine.glb', …]) ou
+     l'URL d'un JSON à charger. Tout fichier absent de la liste n'est jamais
+     demandé — le viewer passe directement à la source suivante (lame, photo,
+     structure PubChem…). Laisser à null = comportement historique.
+
+   • Mémoire des échecs : un .glb ayant renvoyé 404 n'est plus redemandé de
+     la session. Sans cela, revenir sur une fiche relançait la même requête.  */
+const PA_GLB_MANIFEST = null;
+var _glbMissing = Object.create(null);   // nom de fichier → true si 404 constaté
+var _glbAvailable = null;                // Set des .glb publiés, si manifeste
+
+(function _initGlbManifest(){
+  if(!PA_GLB_MANIFEST) return;
+  if(Array.isArray(PA_GLB_MANIFEST)){ _glbAvailable=new Set(PA_GLB_MANIFEST); return; }
+  if(typeof PA_GLB_MANIFEST==='string'){
+    fetch(PA_GLB_MANIFEST).then(function(r){return r.json();})
+      .then(function(list){ if(Array.isArray(list)) _glbAvailable=new Set(list); })
+      .catch(function(){ /* manifeste illisible : on retombe sur le comportement historique */ });
+  }
+})();
+
+/* true si le .glb a une chance d'exister — sinon on n'émet aucune requête. */
+function paGlbAvailable(file){
+  if(!file) return false;
+  var name=String(file).split('/').pop();
+  if(_glbMissing[name]) return false;
+  if(_glbAvailable && !_glbAvailable.has(name)) return false;
+  return true;
+}
+function paGlbMarkMissing(url){
+  var name=String(url||'').split('?')[0].split('/').pop();
+  if(name) _glbMissing[name]=true;
+}
+
 function resolveHistoSlide(m){
+
   if(!m) return null;
   return HISTO_SLIDE_MAP[m.name] || null;
 }
@@ -12656,9 +12878,24 @@ function initSheetRenderer(m){
   //    directement la structure scientifique Mol* (un seul onglet).
   if(typeof organiteHas2D==='function' && organiteHas2D(m)){
     window._activeOrganite = m;
+    /* Cette branche rendait la main AVANT le bloc « lame » plus bas : un
+       organite mappé qui possédait une lame ne pouvait jamais l'ouvrir, même
+       après un clic sur l'onglet. On honore donc _paTab ici. */
+    if(!m._forcePdbOff && m._paTab==='lame' && typeof resolveBioslide==='function'
+       && typeof initSheetRendererBioslides==='function'){
+      var _obs = resolveBioslide(m);
+      if(_obs){ window._organiteViewMode='lame'; initSheetRendererBioslides(m,_obs); return; }
+    }
     if(m.file){ window._organiteViewMode='3d'; _renderOrganiteGLB(m); }
     else { window._organiteViewMode='2d'; render2DScientific(m); }
     return;
+  }
+
+  // ── Dispositifs Médicaux : galerie photo dans le viewer ──────────────────────
+  //    Les clichés (R2) occupent le viewer au lieu d'être encastrés dans la
+  //    fiche. 27 fiches ont une image principale, 22 une galerie complète.
+  if(m._cat==='Dispositifs_Medicaux' && typeof initSheetRendererDMGallery==='function'){
+    if(initSheetRendererDMGallery(m)) return;
   }
 
   // ── Lame de microscopie (UDE BioSLiDES) ──────────────────────────────────────
@@ -13641,7 +13878,18 @@ function _org2dTabbar(has3D, active){
     ? '<button class="sci2d-tab'+(active==='3d'?' on':'')+'" onclick="switchOrganiteView(\'3d\', window._activeOrganite)">\u2B21 Mod\u00e8le 3D</button>'
     : '';
   var t2 = '<button class="sci2d-tab'+(active==='2d'?' on':'')+'" onclick="switchOrganiteView(\'2d\', window._activeOrganite)">\uD83D\uDD2C Structure scientifique</button>';
-  return '<div class="sci2d-tabbar" id="sci2dTabbar">'+t3+t2+'</div>';
+  /* Troisième barre privée du site (après l'herbier et le fongarium) : sans ce
+     bouton, un organite doté d'une lame n'y donnait aucun accès — constaté sur
+     la Vacuole (lame 175). Isolé : une exception ici ferait disparaître toute
+     la barre, donc aussi l'accès au 3D et à la structure scientifique. */
+  var tl = '';
+  try{
+    var _om = window._activeOrganite;
+    if(_om && typeof resolveBioslide==='function' && resolveBioslide(_om))
+      tl = '<button class="sci2d-tab'+(active==='lame'?' on':'')
+         + '" onclick="switchOrganiteView(\'lame\', window._activeOrganite)">🔬 Lame</button>';
+  }catch(e){}
+  return '<div class="sci2d-tabbar" id="sci2dTabbar">'+t3+t2+tl+'</div>';
 }
 
 window._organiteViewMode='3d';
@@ -13651,6 +13899,16 @@ window.switchOrganiteView=function(mode, m){
   if(!m) return;
   if(window._organiteViewMode===mode) return;
   window._organiteViewMode=mode;
+  if(mode==='lame'){
+    /* La lame remplace tout le viewer. On garde `_activeOrganite` : c'est lui
+       qui permet à _paViewerTabs, dessinée par le viewer de lame, de revenir
+       vers la structure scientifique ou le modèle 3D. */
+    if(typeof resolveBioslide==='function' && typeof initSheetRendererBioslides==='function'){
+      var _s=resolveBioslide(m);
+      if(_s){ m._paTab='lame'; initSheetRendererBioslides(m,_s); return; }
+    }
+    window._organiteViewMode='2d'; render2DScientific(m); return;
+  }
   if(mode==='2d'){ render2DScientific(m); }
   else { if(typeof _renderOrganiteGLB==='function') _renderOrganiteGLB(m); }
 };
@@ -16227,7 +16485,16 @@ function buildCard(m){
     var _qedStr=(m.chembl_qed!=null)?(' QED '+parseFloat(m.chembl_qed).toFixed(2)):'';
     qedBadgeHtml='<span style="display:inline-block;background:'+(_dlBg[_dl]||'#eee')+';color:'+(_dlCol[_dl]||'#333')+';font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-top:2px">'+(_dlIco[_dl]||'')+_qedStr+'</span>';
   }
-  card.innerHTML=`<div class="thumb-wrap">${th}</div><div class="model-info">
+  /* Pastille « lame » : signale, sans ouvrir la fiche, qu'une lame de
+     microscopie UDE BioSLiDES est disponible. Même garde que les onglets du
+     viewer — resolveBioslide() est la seule autorité sur la présence d'une
+     lame, pour qu'une pastille ne puisse jamais annoncer un onglet absent. */
+  var lameDot='';
+  try{
+    if(typeof resolveBioslide==='function' && resolveBioslide(m))
+      lameDot='<i class="pa-lame-dot" title="Lame de microscopie disponible">🔬</i>';
+  }catch(e){}
+  card.innerHTML=`<div class="thumb-wrap">${th}${lameDot}</div><div class="model-info">
     <div class="model-name">${highlightText(name, (typeof searchQuery!=='undefined'?searchQuery:''))}</div>
     ${m.desc&&!m._grouped?`<div class="model-desc">${escHtml(m.desc)}</div>`:''}
     ${medGroupBadge}
@@ -16354,7 +16621,11 @@ var _paViewer=(function(){
   function hasVisual(m){
     if(!m) return false;
     try{
-      if(m.file || m.image || m.thumbnail || m.pdb_id || m.smiles || m.pubchem_cid
+      /* Un .glb connu comme absent ne compte pas comme visuel : sans cela, la
+         fiche gardait un viewer ouvert sur une ressource introuvable. */
+      var _f = m.file;
+      if(_f && /\.glb$/i.test(_f) && typeof paGlbAvailable==='function' && !paGlbAvailable(_f)) _f=null;
+      if(_f || m.image || m.thumbnail || m.pdb_id || m.smiles || m.pubchem_cid
          || m.lame_idc || m.spectra_url || m.content_base64 || m.tool_mode
          || m.uniprot || m.icn3d_pdb || (m.photos&&m.photos.length)
          || (m.widget_def&&m.widget_def.html) || (m.ms_widget_def&&m.ms_widget_def.html)

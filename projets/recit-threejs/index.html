@@ -152,7 +152,7 @@
   .filebox{border:1px dashed var(--line);border-radius:var(--r);padding:12px;text-align:center;
     color:var(--ink-faint);cursor:pointer;line-height:1.5}
   .filebox:hover{border-color:var(--accent-dim);color:var(--ink-dim)}
-  .filebox.has{border-style:solid;color:var(--ink-dim);text-align:left}
+  .filebox.has{border-style:solid;color:var(--ink-dim);text-align:left;overflow-wrap:anywhere}
 
   .beat{border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px;background:var(--panel-2);overflow:hidden}
   .beat-h{display:flex;align-items:center;gap:6px;padding:8px 9px;cursor:pointer}
@@ -254,6 +254,27 @@
     background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);
     padding:9px 15px;opacity:0;transition:.25s;pointer-events:none;z-index:60;max-width:70vw}
   .toast.on{opacity:1;transform:translateX(-50%)}
+  /* diagnostic d'une vidéo défilée */
+  .vdiag{margin-top:8px;padding:8px 10px;border-radius:var(--r);border:1px solid var(--line);
+    border-left-width:3px;font-size:11px;line-height:1.55;color:var(--ink-dim)}
+  .vdiag b{display:block;font-weight:500;color:var(--ink);margin-bottom:2px}
+  .vdiag.ok{border-left-color:var(--accent)}
+  .vdiag.warn{border-left-color:var(--warn)}
+  .vdiag.bad{border-left-color:var(--bad)}
+  /* panneau de conversion : la vidéo doit rester visible pour que le
+     navigateur présente chacune de ses images */
+  .convbox{position:fixed;right:18px;bottom:18px;z-index:70;width:300px;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);
+    padding:10px;display:flex;flex-direction:column;gap:8px;
+    box-shadow:0 12px 40px #0008}
+  .convbox[hidden]{display:none}
+  .convbox video{width:100%;aspect-ratio:16/9;background:#000;border-radius:4px;object-fit:contain}
+  .convbox .cb-body{display:flex;flex-direction:column;gap:5px}
+  .convbox .cb-body b{font-weight:500}
+  .convbox .cb-stat{color:var(--ink-dim);font-size:11px;font-variant-numeric:tabular-nums}
+  .convbox .cb-note{color:var(--ink-faint);font-size:11px}
+  .convbox .cb-bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+  .convbox .cb-bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
 </style>
 </head>
 <body>
@@ -760,7 +781,7 @@ async function attachAsset(ch,file){
       toast('Le format spz n\u2019est pas lu par la bibliothèque de splats : convertissez-le en ply ou ksplat.','bad');
     const key=uid();
     ASSETS.set(key,{ name:safeName(file.name), mime:mimeOf(file.name,file.type), kind, bytes, b64:null });
-    if(ch.asset) ASSETS.delete(ch.asset);
+    if(ch.asset) dropAsset(ch.asset);
     ch.asset=key;
     if(!ch.name || /^(Modèle 3D|Vidéo)$/.test(ch.name))
       ch.name=file.name.replace(/\.[^.]+$/,'').slice(0,32);
@@ -789,6 +810,26 @@ function assetDataURL(key){
   const a=ASSETS.get(key); if(!a) return null;
   if(a.b64===null) a.b64=bytesToB64(a.bytes);
   return 'data:'+a.mime+';base64,'+a.b64;
+}
+/* L'aperçu reçoit des adresses blob: au lieu de data: — quelques dizaines
+   d'octets au lieu de centaines de mégaoctets recopiés dans la page à chaque
+   retouche. C'était la cause des « message handler took 329 ms » et des
+   vidéos qui peinaient à démarrer dans l'aperçu. L'adresse est créée une
+   fois par média et libérée quand il quitte le projet. */
+function assetURL(key){
+  const a=ASSETS.get(key); if(!a) return null;
+  if(!a.url) a.url=URL.createObjectURL(new Blob([a.bytes],{type:a.mime}));
+  return a.url;
+}
+/* libérée avec un délai : l'aperçu en cours peut encore lire le fichier
+   pendant qu'il se reconstruit */
+function revokeLater(url){
+  if(url) setTimeout(()=>{ try{ URL.revokeObjectURL(url); }catch(e){} },60000);
+}
+function dropAsset(key){
+  const a=key&&ASSETS.get(key); if(!a) return;
+  ASSETS.delete(key);
+  revokeLater(a.url);
 }
 
 /* ---------------------------------------------------------------
@@ -1444,38 +1485,108 @@ function buildButtons(el, ch) {
   });
 }
 
-/* Liseré de progression : discret au repos, il déplie le chapitrage au survol. */
-let railFill = null, railDots = [];
+/* Liseré de progression : discret au repos, il déplie le chapitrage au survol.
+   Il remplace la barre de défilement du navigateur, masquée dès qu'il
+   existe : on peut cliquer n'importe où sur la ligne pour s'y rendre, ou
+   la faire glisser comme un curseur. Chaque pastille est placée au début
+   réel de son chapitre, proportionnellement à sa longueur. */
+let railFill = null, railDots = [], railTrack = null;
 function buildRail() {
   if (S.chapters.length < 2) return;
+  document.documentElement.classList.add('has-rail');
   const nav = document.createElement('nav');
   nav.className = 'rail';
   nav.setAttribute('aria-label', 'Chapitres');
+  const track = document.createElement('div');
+  track.className = 'rtrack';
   const line = document.createElement('div');
   line.className = 'rline';
   const fill = document.createElement('div');
   fill.className = 'rfill';
   line.appendChild(fill);
-  nav.appendChild(line);
+  track.appendChild(line);
+  nav.appendChild(track);
   railFill = fill;
+  railTrack = track;
   railDots = S.chapters.map((ch, i) => {
     const a = document.createElement('button');
     a.type = 'button';
     a.className = 'rdot';
-    a.style.top = ((i + 0.5) / S.chapters.length * 100) + '%';
     const lab = document.createElement('span');
     lab.className = 'rlab';
-    lab.textContent = ch.name || 'Chapitre ' + (i + 1);
     a.appendChild(lab);
-    a.setAttribute('aria-label', lab.textContent);
-    a.addEventListener('click', () => {
-      const n = document.getElementById('anchor-' + i);
-      if (n) n.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
-    });
-    nav.appendChild(a);
+    /* au clavier seulement : la souris et le doigt passent par le liseré */
+    a.addEventListener('click', e => { if (e.detail === 0) goChapter(i); });
+    track.appendChild(a);
     return a;
   });
+  layoutRail();
+
+  /* Glisser n'importe où sur le liseré fait défiler la page, comme une
+     barre native — pastilles comprises, qui couvrent vite toute la ligne
+     quand les chapitres sont nombreux. Un simple clic sur une pastille
+     mène au début de son chapitre ; ailleurs, à la position visée. */
+  let drag = null;
+  const seek = (y, smooth) => {
+    const r = track.getBoundingClientRect();
+    if (!r.height) return;
+    const f = Math.max(0, Math.min(1, (y - r.top) / r.height));
+    const total = spacer.scrollHeight - innerHeight;
+    if (total <= 0) return;
+    if (smooth && !still) { scrollTo({ top: f * total, behavior: 'smooth' }); return; }
+    /* la page défile en douceur par défaut : pendant un glissé, la position
+       doit suivre le geste sans retard */
+    const html = document.documentElement, was = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'auto';
+    scrollTo(0, f * total);
+    html.style.scrollBehavior = was;
+  };
+  nav.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const d = e.target.closest('.rdot');
+    drag = { id: e.pointerId, y0: e.clientY, dot: d ? railDots.indexOf(d) : -1, moved: false };
+    try { nav.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  nav.addEventListener('pointermove', e => {
+    if (!drag || drag.id !== e.pointerId) return;
+    if (!drag.moved && Math.abs(e.clientY - drag.y0) < 4) return;
+    if (!drag.moved) { drag.moved = true; nav.classList.add('drag'); }
+    seek(e.clientY);
+  });
+  const end = e => {
+    if (!drag || drag.id !== e.pointerId) return;
+    const d = drag;
+    drag = null;
+    nav.classList.remove('drag');
+    try { nav.releasePointerCapture(e.pointerId); } catch (err) {}
+    if (e.type === 'pointercancel' || d.moved) return;
+    if (d.dot >= 0) goChapter(d.dot);
+    else seek(e.clientY, true);
+  };
+  nav.addEventListener('pointerup', end);
+  nav.addEventListener('pointercancel', end);
   document.body.appendChild(nav);
+}
+function goChapter(i) {
+  const n = document.getElementById('anchor-' + i);
+  if (n) n.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
+}
+/* position et nom des pastilles : recalculés à chaque retouche du récit */
+function layoutRail() {
+  if (!railDots.length) return;
+  const lens = S.chapters.map(c => Math.max(1, +c.len || 100));
+  const sum = lens.reduce((a, b) => a + b, 0);
+  let acc = 0;
+  railDots.forEach((a, i) => {
+    const ch = S.chapters[i];
+    if (!ch) return;
+    a.style.top = (acc / sum * 100) + '%';
+    acc += lens[i];
+    const name = ch.name || 'Chapitre ' + (i + 1);
+    const lab = a.firstChild;
+    if (lab.textContent !== name) { lab.textContent = name; a.setAttribute('aria-label', name); }
+  });
 }
 
 /* ---------- points chauds : pastille, diagonale, trait, texte ---------- */
@@ -1659,10 +1770,12 @@ function mount() {
 
     if (ch.type === 'video' && ch.src) {
       media = document.createElement('video');
-      media.dataset.src = ch.src;
+      /* propriété et non attribut : dans un fichier unique, l'adresse data:
+         pèse des dizaines de mégaoctets et n'a rien à faire dans le DOM */
+      media._src = ch.src;
       media.playsInline = true;
       media.muted = true;
-      media.loop = (ch.playMode === 'scrub' || ch.playMode === 'pointer') ? false : !!ch.loop;
+      media.loop = loops(ch);
       /* rien n'est téléchargé tant que le chapitre n'approche pas */
       media.preload = 'none';
       media.volume = 0;
@@ -1741,22 +1854,54 @@ function mount() {
     a.style.height = ch.len + 'dvh';
     spacer.appendChild(a);
   });
+  /* Le défilement s'arrête une hauteur d'écran avant le bas du document.
+     Sans cette réserve, le dernier chapitre n'était parcouru que sur
+     (longueur − 100 vh) : un texte placé au-delà n'apparaissait jamais. */
+  const tail = document.createElement('div');
+  tail.className = 'tail';
+  tail.style.height = '100dvh';
+  spacer.appendChild(tail);
   applyChapterSettings();
   buildRail();
   buildGate();
   if (semantic) semantic.hidden = true;   /* le texte brut ne sert qu'aux robots et lecteurs d'écran */
 }
 
+/* « En boucle » est le seul mode qui boucle. Le menu Lecture a remplacé
+   l'ancienne case loop, que le moteur continuait de lire : « Une seule
+   fois » n'avait donc aucun effet. Repli sur loop pour les vieux projets. */
+function loops(ch) { return ch.playMode ? ch.playMode === 'loop' : ch.loop !== false; }
+
 /* charge la vidéo du chapitre demandé, et seulement celle-là */
 function warm(i) {
   const el = layers[i];
   if (!el) return;
   const m = el._media;
-  if (m && m.tagName === 'VIDEO' && !m.src && m.dataset.src) {
+  if (m && m.tagName === 'VIDEO' && !m.src && m._src) {
     m.preload = 'auto';
-    m.src = m.dataset.src;
+    m.src = m._src;
     m.load();
   }
+}
+
+/* Les WebM de l'ancien convertisseur (enregistrés en direct) n'ont ni durée
+   ni index : Chrome annonce une durée infinie, et le défilement image par
+   image, qui a besoin de la durée pour placer la tête de lecture, ne
+   démarrait jamais. On oblige le navigateur à la mesurer en l'envoyant
+   chercher au-delà de la fin, puis on revient au début. */
+function fixDuration(v) {
+  if (v._durFix) return;
+  v._durFix = true;
+  const done = () => {
+    if (!isFinite(v.duration) || !(v.duration > 0)) return;
+    v.removeEventListener('durationchange', done);
+    v.removeEventListener('seeked', done);
+    try { v.currentTime = 0; } catch (e) {}
+    request();
+  };
+  v.addEventListener('durationchange', done);
+  v.addEventListener('seeked', done);
+  try { v.currentTime = 1e101; } catch (e) {}
 }
 
 /* Raccord : pour enchaîner sans noir entre deux plans, la vidéo suivante doit
@@ -1898,16 +2043,34 @@ function applyChapterSettings() {
     if (ch.bg) el.style.background = ch.bg;
     if (el._veil) el._veil.style.opacity = ch.dim || 0;
     if (el._media && el._media.tagName === 'VIDEO') {
-      el._media.style.objectFit = ch.fit || 'cover';
+      const v = el._media;
+      v.style.objectFit = ch.fit || 'cover';
       const driven = ch.playMode === 'scrub' || ch.playMode === 'pointer';
-      el._media.loop = driven ? false : !!ch.loop;
+      v.loop = loops(ch);
       /* en défilement image par image le son n'a pas de sens : il serait
          haché à chaque saut de position */
-      el._media.muted = driven ? true : ch.mute !== false;
+      v.muted = driven ? true : ch.mute !== false;
+      /* changement de mode de lecture pendant que le chapitre est à l'écran :
+         une vidéo passée en défilement continuait de jouer toute seule et
+         se battait avec le scroll ; l'inverse restait figée */
+      const mode = ch.playMode || (ch.loop === false ? 'once' : 'loop');
+      if (el._mode && el._mode !== mode && el.dataset.on === '1') {
+        if (driven) {
+          try { v.pause(); } catch (e) {}
+          el._scrub = null;
+          if (el._ptr) el._ptr.cur = null;
+        } else {
+          v.play().catch(() => {});
+        }
+      }
+      el._mode = mode;
+      if (ch.playMode !== 'pointer' && el._ptr) el.style.cursor = '';
+      if (ch.playMode === 'pointer' && el._ptr) el.style.cursor = 'ew-resize';
     }
     const a = document.getElementById('anchor-' + i);
     if (a) a.style.height = ch.len + 'dvh';
   });
+  layoutRail();
 }
 
 /* Reconstruire un ornement ou un bouton coupe net l'animation en cours.
@@ -2308,6 +2471,10 @@ function attachOrbit(el, st) {
 /* Une recherche vidéo est asynchrone : en relancer une avant la fin de la
    précédente fait vibrer l'image. On attend donc que la première aboutisse. */
 function seekTo(v, t, d) {
+  /* la fin d'une recherche relance l'image suivante : sans cela, une cible
+     posée pendant qu'une recherche était en cours n'était jamais atteinte
+     et la vidéo s'arrêtait à côté de la position voulue */
+  if (!v._seekHook) { v._seekHook = true; v.addEventListener('seeked', request); }
   if (v.seeking) return;
   const clamped = Math.max(0, Math.min(d - 0.05, t));
   if (Math.abs(clamped - v.currentTime) < 0.033) return;   /* déjà sur la bonne image */
@@ -2318,6 +2485,11 @@ function seekTo(v, t, d) {
 let ticking = false, clock = 0, last = performance.now();
 
 function frame(now) {
+  /* Le verrou est levé au début de l'image, pas à la fin : sinon toute
+     demande faite pendant l'image — lissage de la vidéo défilée ou pilotée
+     au curseur, inertie de l'orbite — était ignorée, et le mouvement
+     s'arrêtait avant sa cible dès que le geste cessait. */
+  ticking = false;
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now; clock += dt;
   const vh = innerHeight, y = scrollY;
@@ -2340,6 +2512,7 @@ function frame(now) {
         el.style.opacity = '0';
         el.style.visibility = 'hidden';
         if (el._media && el._media.pause) el._media.pause();
+        el._holdSince = 0;
         (el._ch.beats || []).forEach(b => { if (speaking && speaking.b === b) hush(0.4); });
       }
       continue;
@@ -2348,14 +2521,25 @@ function frame(now) {
     const cut = stitched(i);
     const h = cut ? 0 : (ch.hold == null ? 12 : ch.hold) / 100;
     let a = 1;
-    if (h > 0) { if (p < h) a = p / h; else if (p > 1 - h) a = (1 - p) / h; }
+    /* rien ne précède le premier chapitre ni ne suit le dernier : ils ne
+       se fondent pas dans le vide, sinon la page s'ouvrirait sur un écran
+       noir et se refermerait sur un autre */
+    if (h > 0) {
+      if (p < h) a = i === 0 ? 1 : p / h;
+      else if (p > 1 - h) a = i === layers.length - 1 ? 1 : (1 - p) / h;
+    }
     a = Math.min(1, Math.max(0, a));
 
     /* raccord franc : tant que la nouvelle image n'est pas décodée, on garde
        le dernier photogramme du plan précédent plutôt qu'un écran noir */
     if (cut) {
-      const ready = el._media && el._media.readyState >= 2;
+      /* sans limite, une vidéo absente (aperçu léger) ou illisible laissait
+         le chapitre invisible pour toujours */
+      if (!el._holdSince) el._holdSince = now;
+      const m = el._media;
+      const ready = !m || m.readyState >= 2 || now - el._holdSince > 1200;
       if (!ready) {
+        request();                /* on revient voir à l'image suivante */
         a = 0;
         const prev = layers[i - 1];
         prev.style.opacity = '1';
@@ -2399,7 +2583,8 @@ function frame(now) {
     if (ch.playMode === 'pointer' && el._media && el._media.readyState >= 1) {
       attachPointerScrub(el, ch);
       const v = el._media, d = v.duration;
-      if (d && isFinite(d)) {
+      if (d === Infinity) fixDuration(v);
+      else if (d > 0) {
         const target = el._ptr.t * d;
         const k = ch.pointerSmooth == null ? 0.22 : ch.pointerSmooth;
         if (el._ptr.cur == null) el._ptr.cur = target;
@@ -2420,7 +2605,8 @@ function frame(now) {
     if (ch.playMode === 'scrub' && el._media && el._media.readyState >= 1) {
       const v = el._media;
       const d = v.duration;
-      if (d && isFinite(d)) {
+      if (d === Infinity) fixDuration(v);
+      else if (d > 0) {
         const from = ch.scrubFrom == null ? 0 : ch.scrubFrom;
         const to = ch.scrubTo == null ? 1 : ch.scrubTo;
         const target = (from + (to - from) * q) * d;
@@ -2571,7 +2757,6 @@ function frame(now) {
       node.tabIndex = show ? 0 : -1;
     }
   }
-  ticking = false;
 }
 function request() { if (!ticking) { ticking = true; requestAnimationFrame(frame); } }
 addEventListener('scroll', request, { passive: true });
@@ -2615,42 +2800,38 @@ function storyPayload(mode){
   return value;
 }
 function buildPayload(mode){
+  /* aperçu : adresse blob: ; dossier : chemin relatif ; fichier unique :
+     data: (seul moyen d'emporter les médias dans un seul fichier) */
+  const srcOf = key=>{
+    const a=key&&ASSETS.get(key);
+    if(!a||mode==='light') return null;
+    if(mode==='folder') return 'assets/'+key+'_'+a.name;
+    if(mode==='preview') return assetURL(key);
+    return assetDataURL(key);
+  };
   const chapters = story.chapters.map(ch=>{
     const o=JSON.parse(JSON.stringify(ch));
     const a = ch.asset && ASSETS.get(ch.asset);
     o.assetKind = a ? a.kind : null;
     delete o.asset;
-    o.src = (!a || mode==='light') ? null
-          : mode==='folder' ? 'assets/'+ch.asset+'_'+a.name
-          : assetDataURL(ch.asset);
+    o.src = srcOf(ch.asset);
     if(o.music){
-      const mk=ch.music&&ch.music.asset, mv=mk&&ASSETS.get(mk);
-      o.music.src=(!mv||mode==='light')?null
-        : mode==='folder' ? 'assets/'+mk+'_'+mv.name : assetDataURL(mk);
+      o.music.src=srcOf(ch.music&&ch.music.asset);
       delete o.music.asset;
     }
     (o.sfx||[]).forEach((f,fi)=>{
-      const kk=ch.sfx[fi]&&ch.sfx[fi].asset, fv=kk&&ASSETS.get(kk);
-      f.src=(!fv||mode==='light')?null
-        : mode==='folder' ? 'assets/'+kk+'_'+fv.name : assetDataURL(kk);
+      f.src=srcOf(ch.sfx[fi]&&ch.sfx[fi].asset);
       delete f.asset;
       delete f.prompt;   /* la consigne de génération ne sert qu'à l'éditeur */
     });
     (o.beats||[]).forEach((b,bi)=>{
-      const key = ch.beats[bi] && ch.beats[bi].voice;
-      const va = key && ASSETS.get(key);
-      b.voiceSrc = (!va||mode==='light') ? null
-        : mode==='folder' ? 'assets/'+key+'_'+va.name
-        : assetDataURL(key);
+      b.voiceSrc = srcOf(ch.beats[bi] && ch.beats[bi].voice);
       delete b.voice;
     });
     return o;
   });
   const music = Object.assign({},story.theme && {}, story.music||{});
-  const ma = music.asset && ASSETS.get(music.asset);
-  music.src = (!ma||mode==='light') ? null
-    : mode==='folder' ? 'assets/'+music.asset+'_'+ma.name
-    : assetDataURL(music.asset);
+  music.src = srcOf(music.asset);
   delete music.asset;
   return {title:story.title, theme:story.theme, music:music,
           shapes:allShapes(), chapters:chapters};
@@ -2957,13 +3138,23 @@ body.editing .zone .hd{display:block}
 .choice:focus-visible{outline:2px solid ${t.accent};outline-offset:3px}
 
 
-/* liseré de chapitrage */
+/* liseré de chapitrage — il tient lieu de barre de défilement */
+html.has-rail{scrollbar-width:none}
+html.has-rail::-webkit-scrollbar{display:none}
 .rail{position:fixed;z-index:30;right:0;top:0;bottom:0;width:46px;
-  display:flex;align-items:center;pointer-events:auto}
-.rline{position:absolute;right:19px;top:12vh;bottom:12vh;width:1px;
-  background:${t.ink}22}
+  pointer-events:auto;touch-action:none;cursor:pointer;
+  -webkit-user-select:none;user-select:none}
+.rtrack{position:absolute;right:0;left:0;top:12vh;bottom:12vh}
+.rline{position:absolute;right:19px;top:0;bottom:0;width:1px;
+  background:${t.ink}22;transition:background .25s ease}
 .rfill{position:absolute;left:0;top:0;width:100%;background:${t.accent};
   transition:height .1s linear}
+.rfill::after{content:'';position:absolute;left:50%;bottom:0;width:9px;height:9px;
+  border-radius:50%;background:${t.accent};transform:translate(-50%,50%) scale(.4);
+  opacity:0;transition:opacity .25s ease,transform .25s ease}
+.rail:hover .rfill::after,.rail.drag .rfill::after{opacity:1;transform:translate(-50%,50%)}
+.rail.drag{cursor:grabbing}
+.rail.drag .rfill{transition:none}
 .rdot{position:absolute;right:12px;width:15px;height:15px;padding:0;
   transform:translateY(-50%);background:none;border:none;cursor:pointer;
   display:flex;align-items:center;justify-content:flex-end}
@@ -2976,9 +3167,9 @@ body.editing .zone .hd{display:block}
   color:${t.ink};background:${t.bg}d9;padding:.35em .8em;border-radius:3px;
   opacity:0;transform:translateX(8px);pointer-events:none;
   transition:opacity .25s ease,transform .25s ease}
-.rail:hover .rlab,.rdot:focus-visible .rlab{opacity:1;transform:none}
-.rail:hover .rline{background:${t.ink}44}
-@media (max-width:640px){.rail{width:26px}.rlab{display:none}}
+.rail:hover .rlab,.rail.drag .rlab,.rdot:focus-visible .rlab{opacity:1;transform:none}
+.rail:hover .rline,.rail.drag .rline{background:${t.ink}44}
+@media (max-width:640px){.rail{width:26px}.rlab{display:none}.rline{right:12px}.rdot{right:5px}}
 
 @media (max-width:640px){.beat{max-width:84vw!important}}
 @media (prefers-reduced-motion:reduce){
@@ -3261,7 +3452,7 @@ function renderRail(){
 }
 function removeChapter(id){
   const ch=story.chapters.find(c=>c.id===id);
-  if(ch&&ch.asset) ASSETS.delete(ch.asset);
+  if(ch&&ch.asset) dropAsset(ch.asset);
   story.chapters=story.chapters.filter(c=>c.id!==id);
   if(selId===id) selId=story.chapters.length?story.chapters[0].id:null;
   renderAll(true);
@@ -3305,9 +3496,9 @@ function renderInspector(){
   const keep=inspBody.scrollTop;
   inspBody.innerHTML='';
   requestAnimationFrame(()=>{ inspBody.scrollTop=keep; });
-  if(themeMode){ inspTitle.textContent='Ambiance'; buildTheme(inspBody); return; }
+  if(themeMode){ inspTitle.textContent='Ambiance'; guard('Ambiance',()=>buildTheme(inspBody)); return; }
   const ch=story.chapters.find(c=>c.id===selId);
-  if(!ch){ inspTitle.textContent='Ambiance'; buildTheme(inspBody); return; }
+  if(!ch){ inspTitle.textContent='Ambiance'; guard('Ambiance',()=>buildTheme(inspBody)); return; }
   inspTitle.textContent={model:'Modèle 3D',video:'Vidéo',text:'Texte',image:'Image'}[ch.type];
 
   const bar=document.createElement('div'); bar.className='tabs';
@@ -3323,15 +3514,32 @@ function renderInspector(){
   });
   inspBody.appendChild(bar);
 
-  if(insTab==='media')   buildMediaTab(ch);
-  if(insTab==='content'){ buildTimeline(inspBody,ch); buildBeatPanel(inspBody,ch); }
+  if(insTab==='media')   guard('Chapitre',()=>buildMediaTab(ch));
+  if(insTab==='content'){
+    guard('Frise',()=>buildTimeline(inspBody,ch));
+    guard('Textes',()=>buildBeatPanel(inspBody,ch));
+  }
   if(insTab==='decor'){
-    buildOrnPanel(inspBody,ch);
-    if(ch.type==='model') buildSpotPanel(inspBody,ch);
+    guard('Ornements',()=>buildOrnPanel(inspBody,ch));
+    if(ch.type==='model') guard('Points chauds',()=>buildSpotPanel(inspBody,ch));
   }
   if(insTab==='action'){
-    buildButtonPanel(inspBody,ch);
-    if(ch.type!=='text') buildZonePanel(inspBody,ch);
+    guard('Boutons',()=>buildButtonPanel(inspBody,ch));
+    if(ch.type!=='text') guard('Zones cliquables',()=>buildZonePanel(inspBody,ch));
+  }
+}
+
+/* Si un panneau échoue, on le dit à sa place et le reste reste utilisable,
+   au lieu d'un inspecteur vide et d'une erreur sans contexte. */
+function guard(name,fn){
+  try{ fn(); }
+  catch(e){
+    console.error('[Récit] panneau « '+name+' »',e);
+    const d=document.createElement('div'); d.className='hint';
+    d.style.cssText='color:var(--bad);padding:10px 12px';
+    d.textContent='Le panneau « '+name+' » n\u2019a pas pu s\u2019afficher : '+e.message+
+      '. Le reste du projet est intact.';
+    inspBody.appendChild(d);
   }
 }
 
@@ -3383,10 +3591,6 @@ function buildMediaTab(ch){
       sc.appendChild(labelled('Fin',range(ch,'scrubTo',0,1,0.01,v=>Math.round(v*100)+' %')));
       field(inspBody,'Portion parcourue',sc,
         'Permet de n\u2019exploiter qu\u2019une partie de la séquence, ou de la jouer à l\u2019envers en inversant les deux valeurs.');
-      const w=document.createElement('div'); w.className='hint';
-      w.style.color='var(--warn)';
-      w.textContent='Le défilement dépend des images-clés du fichier. Un MP4 ordinaire en contient peu et saccadera : convertissez-le en WebM avec le bouton ci-dessus, le résultat est bien plus fluide.';
-      inspBody.appendChild(w);
     }
     const driven = ch.playMode==='scrub'||ch.playMode==='pointer';
     if(!driven) field(inspBody,'',check2(ch,'mute','Garder le son de la vidéo',true));
@@ -3509,23 +3713,36 @@ function buildAsset(parent,ch){
   wrap.appendChild(box); wrap.appendChild(inp);
   if(ch.type==='video' && a){
     const conv=document.createElement('div');
+    const driven = ch.playMode==='scrub'||ch.playMode==='pointer';
+    const forScrub = convOpts.usage==='scrub' || (convOpts.usage==='auto' && driven);
+    const dg=videoDiag(ch.asset,driven);
+    if(dg) conv.appendChild(dg);
     const btn=document.createElement('button');
     btn.className='btn'; btn.style.width='100%'; btn.style.marginTop='7px';
-    btn.textContent = a.mime==='video/webm' ? 'Réencoder en WebM' : 'Convertir en WebM';
-    btn.disabled=!webmSupport();
+    btn.textContent = forScrub ? 'Préparer pour le défilement (WebM)'
+      : a.mime==='video/webm' ? 'Réencoder en WebM' : 'Convertir en WebM';
+    btn.disabled=!webcodecsSupport()||convBusy;
     btn.addEventListener('click',()=>convertChapterVideo(ch));
     conv.appendChild(btn);
-    const o=document.createElement('div'); o.className='two'; o.style.marginTop='7px';
+    const us=labelled('Usage',select(convOpts,'usage',
+      [['auto','Selon le mode de lecture choisi'],
+       ['scrub','Défilement ou curseur — images-clés serrées'],
+       ['play','Lecture normale — fichier le plus léger']]));
+    us.style.marginTop='7px';
+    conv.appendChild(us);
+    const o=document.createElement('div'); o.className='two';
     o.appendChild(labelled('Largeur maximale',select(convOpts,'maxW',
       [[3840,'3840 px'],[1920,'1920 px'],[1280,'1280 px'],[854,'854 px']])));
-    o.appendChild(labelled('Débit',select(convOpts,'mbps',
-      [[6,'6 Mb/s — fin'],[3.5,'3,5 Mb/s'],[2.2,'2,2 Mb/s — équilibré'],[1.2,'1,2 Mb/s — léger'],[0.6,'0,6 Mb/s — très léger']])));
+    o.appendChild(labelled('Débit vidéo',select(convOpts,'mbps',
+      [[6,'6 Mb/s (fin)'],[3.5,'3,5 Mb/s'],[2.2,'2,2 Mb/s (moyen)'],[1.2,'1,2 Mb/s (léger)'],[0.6,'0,6 Mb/s (mini)']])));
     conv.appendChild(o);
-    conv.appendChild(check(convOpts,'keepAudio','Conserver le son'));
+    if(!forScrub) conv.appendChild(check(convOpts,'keepAudio','Conserver le son'));
     const hh=document.createElement('div'); hh.className='hint';
-    hh.textContent = webmSupport()
-      ? 'Le réencodage se déroule au fil de la lecture : comptez la durée de la séquence. Ne fermez pas l\u2019onglet pendant ce temps.'
-      : 'Ce navigateur ne sait pas encoder le WebM. Essayez Chrome ou Edge.';
+    hh.textContent = !webcodecsSupport()
+      ? 'Ce navigateur ne sait pas encoder la vidéo image par image. Utilisez Chrome ou Edge.'
+      : forScrub
+      ? 'Chaque image est conservée et une image-clé est placée toutes les 6 : la vidéo suit le geste sans à-coup. Le fichier est plus lourd, c’est le prix de la fluidité. La vidéo est lue une fois pendant l’encodage : gardez l’onglet au premier plan.'
+      : 'La vidéo est lue une fois pendant l’encodage : gardez l’onglet au premier plan.';
     conv.appendChild(hh);
     wrap.appendChild(conv);
   }
@@ -4015,7 +4232,7 @@ function buildChapterSound(parent,ch){
       try{
         const bytes=await readFile(f); const key=uid();
         ASSETS.set(key,{name:safeName(f.name),mime:mimeOf(f.name,f.type),kind:'audio',bytes:bytes,b64:null});
-        if(M.asset) ASSETS.delete(M.asset);
+        if(M.asset) dropAsset(M.asset);
         M.asset=key; renderAll(true); toast(f.name+' — '+fmtBytes(bytes.length));
       }catch(e){ toast(e.message,'bad'); }
     };
@@ -4032,7 +4249,7 @@ function buildChapterSound(parent,ch){
       host.appendChild(labelled('Fondu enchaîné',range(M,'fade',0.3,8,0.1,v=>v.toFixed(1)+' s')));
       const rm=document.createElement('button'); rm.className='btn'; rm.style.width='100%';
       rm.textContent='Retirer cette musique';
-      rm.addEventListener('click',()=>{ ASSETS.delete(M.asset); M.asset=null; renderAll(true); });
+      rm.addEventListener('click',()=>{ dropAsset(M.asset); M.asset=null; renderAll(true); });
       host.appendChild(rm);
     }
   }else if(M.mode==='silence'){
@@ -4053,7 +4270,7 @@ function buildChapterSound(parent,ch){
     lbl.textContent=(f.label||f.prompt||'Bruitage '+(i+1)).slice(0,24);
     h.appendChild(lbl);
     const del=icon('✕','Supprimer',()=>{
-      if(f.asset) ASSETS.delete(f.asset);
+      if(f.asset) dropAsset(f.asset);
       ch.sfx.splice(i,1); renderAll(true);
     });
     del.classList.add('del'); h.appendChild(del);
@@ -4078,7 +4295,7 @@ function buildChapterSound(parent,ch){
     gen.addEventListener('click',()=>generateSfx(ch,f));
     const play=document.createElement('button'); play.className='btn';
     play.textContent='Écouter'; play.disabled=!fa;
-    play.addEventListener('click',()=>{ new Audio(assetDataURL(f.asset)).play().catch(()=>{}); });
+    play.addEventListener('click',()=>{ new Audio(assetURL(f.asset)).play().catch(()=>{}); });
     row.appendChild(gen); row.appendChild(play);
     body.appendChild(row);
 
@@ -4089,7 +4306,7 @@ function buildChapterSound(parent,ch){
       try{
         const bytes=await readFile(file); const key=uid();
         ASSETS.set(key,{name:safeName(file.name),mime:mimeOf(file.name,file.type),kind:'audio',bytes:bytes,b64:null});
-        if(f.asset) ASSETS.delete(f.asset);
+        if(f.asset) dropAsset(f.asset);
         f.asset=key; if(!f.label) f.label=file.name;
         renderAll(true);
       }catch(e){ toast(e.message,'bad'); }
@@ -4390,7 +4607,7 @@ function buildBeatPanel(parent,ch){
     const play=document.createElement('button'); play.className='btn';
     play.textContent=va?'Écouter':'—'; play.disabled=!va;
     play.addEventListener('click',()=>{
-      const a=new Audio(assetDataURL(b.voice)); a.play().catch(()=>{});
+      const a=new Audio(assetURL(b.voice)); a.play().catch(()=>{});
     });
     vrow.appendChild(gen); vrow.appendChild(play);
     g.appendChild(vrow);
@@ -4402,7 +4619,7 @@ function buildBeatPanel(parent,ch){
       const del=document.createElement('button'); del.className='btn';
       del.style.width='100%'; del.style.marginTop='6px';
       del.textContent='Retirer la voix';
-      del.addEventListener('click',()=>{ ASSETS.delete(b.voice); b.voice=null; renderAll(true); });
+      del.addEventListener('click',()=>{ dropAsset(b.voice); b.voice=null; renderAll(true); });
       g.appendChild(del);
     }
 
@@ -4422,7 +4639,7 @@ function buildBeatPanel(parent,ch){
     const last=ch.beats[ch.beats.length-1];
     const b=newBeat({kind:kind, text:kind==='title'?'Un titre':'Un paragraphe.',
       at:Math.min(0.9,last?last.at+0.2:0.15)});
-    if(kind==='title'){ b.unit='word'; b.anim='blur'; }
+    if(kind==='title'){ b.unit='word'; b.anim='blurIn'; }
     ch.beats.push(b); openBeat=b.id; selBeatId=b.id; renderAll();
   };
   addT.addEventListener('click',()=>push('title'));
@@ -4615,7 +4832,7 @@ function buildTheme(parent){
       const bytes=await readFile(f);
       const key=uid();
       ASSETS.set(key,{name:safeName(f.name),mime:mimeOf(f.name,f.type),kind:'audio',bytes:bytes,b64:null});
-      if(M.asset) ASSETS.delete(M.asset);
+      if(M.asset) dropAsset(M.asset);
       M.asset=key; renderAll(true); toast(f.name+' — '+fmtBytes(bytes.length));
     }catch(e){ toast(e.message,'bad'); }
   };
@@ -4638,12 +4855,12 @@ function buildTheme(parent){
     const pl=document.createElement('button'); pl.className='btn'; pl.textContent='Écouter';
     pl.addEventListener('click',()=>{
       if(window._mus){ window._mus.pause(); window._mus=null; pl.textContent='Écouter'; return; }
-      window._mus=new Audio(assetDataURL(M.asset));
+      window._mus=new Audio(assetURL(M.asset));
       window._mus.volume=M.volume; window._mus.play().catch(()=>{});
       pl.textContent='Arrêter';
     });
     const rm=document.createElement('button'); rm.className='btn'; rm.textContent='Retirer';
-    rm.addEventListener('click',()=>{ ASSETS.delete(M.asset); M.asset=null; renderAll(true); });
+    rm.addEventListener('click',()=>{ dropAsset(M.asset); M.asset=null; renderAll(true); });
     row.appendChild(pl); row.appendChild(rm);
     field(parent,'',row);
   }
@@ -4973,6 +5190,8 @@ const TIPS={
  'Début':'Première image de la séquence exploitée.',
  'Arrivée':'Dernière image exploitée. Plus petite que le début, la séquence joue à l\u2019envers.',
  'Largeur maximale':'Les images plus larges seront réduites à cette taille.',
+ 'Usage':'Défilement : une image-clé toutes les 6 images, pour que la vidéo suive le geste. Lecture normale : le fichier le plus léger possible.',
+ 'Débit vidéo':'Quantité de données par seconde de vidéo. Plus elle est haute, plus l’image est fine et le fichier lourd.',
  'Couleur du contour':'Teinte du filet tracé autour des lettres.',
  'Couleur du halo':'Teinte de l\u2019auréole diffuse.',
  'Couleur du néon':'Teinte des halos empilés.',
@@ -5114,14 +5333,22 @@ function lazyRail(){ clearTimeout(railT); railT=setTimeout(renderRail,220); }
 function range(obj,key,min,max,step,fmt){
   const w=document.createElement('div'); w.className='rangerow';
   const r=document.createElement('input');
-  r.type='range'; r.min=min; r.max=max; r.step=step; r.value=obj[key];
-  const n=document.createElement('span'); n.className='num'; n.textContent=fmt(obj[key]);
+  r.type='range'; r.min=min; r.max=max; r.step=step;
+  const n=document.createElement('span'); n.className='num';
+  /* valeur absente : on affiche un tiret au lieu de lever une erreur */
+  const show=v=>{
+    const x=typeof v==='number'?v:parseFloat(v);
+    if(!isFinite(x)) return '\u2014';
+    try{ return fmt(x); }catch(e){ return String(x); }
+  };
+  if(isFinite(parseFloat(obj[key]))) r.value=obj[key];
+  n.textContent=show(obj[key]);
   /* la portion parcourue colore la piste jusqu'au curseur */
   const paint=()=>r.style.setProperty('--fill',
     (((r.value-min)/(max-min))*100).toFixed(1)+'%');
   paint();
   r.addEventListener('input',()=>{
-    obj[key]=parseFloat(r.value); n.textContent=fmt(obj[key]); paint();
+    obj[key]=parseFloat(r.value); n.textContent=show(obj[key]); paint();
     /* le rail ne dépend que de la longueur du chapitre : inutile de le
        reconstruire à chaque pixel du curseur */
     if(key==='len') lazyRail();
@@ -5132,7 +5359,7 @@ function range(obj,key,min,max,step,fmt){
     const ref=(obj.kind!==undefined&&obj.text!==undefined)?newBeat({kind:obj.kind})
       :(obj.p!==undefined)?newSpot(obj.p):null;
     if(ref&&ref[key]!==undefined){
-      obj[key]=ref[key]; r.value=ref[key]; n.textContent=fmt(ref[key]); paint();
+      obj[key]=ref[key]; r.value=ref[key]; n.textContent=show(ref[key]); paint();
       syncPreview(); toast('Réglage réinitialisé');
     }
   });
@@ -5173,6 +5400,8 @@ function colorOpt(obj,key){
 function vec(obj,key,idx,min,max,step){
   const w=document.createElement('div'); w.className='rangerow';
   const r=document.createElement('input');
+  if(!Array.isArray(obj[key])) obj[key]=[0,0,0];
+  if(!isFinite(+obj[key][idx])) obj[key][idx]=0;
   r.type='range'; r.min=min; r.max=max; r.step=step; r.value=obj[key][idx];
   const n=document.createElement('span'); n.className='num';
   n.textContent=(+obj[key][idx]).toFixed(2);
@@ -5207,81 +5436,245 @@ function icon(glyph,title,fn){
 }
 
 /* ---------------------------------------------------------------
-   CONVERSION EN WEBM
-   Elle se fait à l'import : une fois la vidéo allégée, l'aperçu, le projet
-   enregistré et l'archive finale en profitent tous. Le navigateur réencode
-   en VP9 au fil de la lecture, donc l'opération dure aussi longtemps que
-   la séquence elle-même — c'est le prix à payer sans outil externe.
+   CONVERSION EN WEBM — WebCodecs
+   L'ancienne conversion filmait la lecture avec MediaRecorder. En 1080p
+   l'encodeur ne suivait pas : environ 7 images gardées sur 24, aucune
+   durée inscrite, aucun index, une seule image-clé pour tout le plan. Au
+   défilement, chaque recherche devait tout redécoder depuis le début.
+   On procède maintenant comme Motionsmith : la vidéo est lue, chaque
+   image affichée est capturée puis encodée en VP9 avec WebCodecs, en
+   plaçant soi-même les images-clés, et webm-muxer écrit la durée et
+   l'index. Si l'encodeur prend du retard, la lecture attend.
    --------------------------------------------------------------- */
-function webmSupport(){
-  if(typeof MediaRecorder==='undefined') return null;
-  const c=['video/webm;codecs=vp9,opus','video/webm;codecs=vp9',
-           'video/webm;codecs=vp8,opus','video/webm'];
-  for(const t of c) if(MediaRecorder.isTypeSupported(t)) return t;
+const MUXER_URL='https://cdn.jsdelivr.net/npm/webm-muxer@5.0.3/+esm';
+let muxerMod=null;
+async function loadMuxer(){
+  if(muxerMod) return muxerMod;
+  try{ muxerMod=await import(MUXER_URL); }
+  catch(e){ throw new Error('Le multiplexeur WebM n’a pas pu être chargé (connexion requise) : '+e.message); }
+  if(!muxerMod.Muxer||!muxerMod.ArrayBufferTarget) throw new Error('Multiplexeur WebM incomplet.');
+  return muxerMod;
+}
+function webcodecsSupport(){
+  return typeof VideoEncoder!=='undefined' && typeof VideoFrame!=='undefined' &&
+    typeof HTMLVideoElement!=='undefined' && 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
+}
+async function pickVideoConfig(W,H,bitrate){
+  for(const codec of ['vp09.00.10.08','vp8']){
+    const cfg={codec,width:W,height:H,bitrate,framerate:30,latencyMode:'quality'};
+    try{ const r=await VideoEncoder.isConfigSupported(cfg); if(r&&r.supported) return r.config||cfg; }
+    catch(e){}
+  }
   return null;
 }
 
-function convertToWebm(bytes, mime, opts, onProgress){
-  return new Promise((resolve,reject)=>{
-    const type=webmSupport();
-    if(!type) return reject(new Error('Ce navigateur ne sait pas encoder le WebM.'));
-    const url=URL.createObjectURL(new Blob([bytes],{type:mime}));
-    const v=document.createElement('video');
-    v.src=url; v.muted=!opts.keepAudio; v.playsInline=true; v.preload='auto';
+/* Le son est décodé d'un seul bloc, rééchantillonné à 48 kHz, puis
+   réencodé en Opus. Une vidéo sans piste son renvoie null. */
+async function encodeAudio(bytes){
+  if(typeof AudioEncoder==='undefined'||typeof AudioData==='undefined') return null;
+  let buf;
+  try{
+    const ctx=new OfflineAudioContext(2,1,48000);
+    buf=await ctx.decodeAudioData(bytes.slice().buffer);
+  }catch(e){ return null; }
+  const chn=Math.min(2,buf.numberOfChannels), sr=buf.sampleRate;
+  const cfg={codec:'opus',sampleRate:sr,numberOfChannels:chn,bitrate:128000};
+  let ok=null; try{ ok=await AudioEncoder.isConfigSupported(cfg); }catch(e){}
+  if(!ok||!ok.supported) return null;
+  const chunks=[]; let err=null;
+  const enc=new AudioEncoder({output:(c,m)=>chunks.push([c,m]), error:e=>{ err=e; }});
+  enc.configure(cfg);
+  const step=Math.round(sr/10);
+  for(let i=0;i<buf.length;i+=step){
+    const n=Math.min(step,buf.length-i);
+    const data=new Float32Array(n*chn);
+    for(let c=0;c<chn;c++) data.set(buf.getChannelData(c).subarray(i,i+n),c*n);
+    const ad=new AudioData({format:'f32-planar',sampleRate:sr,numberOfFrames:n,
+      numberOfChannels:chn,timestamp:Math.round(i/sr*1e6),data:data});
+    enc.encode(ad); ad.close();
+    if(err) throw err;
+  }
+  await enc.flush(); enc.close();
+  if(err) throw err;
+  return {chunks:chunks,sampleRate:sr,channels:chn};
+}
 
-    v.addEventListener('error',()=>{ URL.revokeObjectURL(url);
-      reject(new Error('Vidéo illisible par le navigateur.')); });
-
-    v.addEventListener('loadedmetadata',()=>{
-      const scale=Math.min(1,(opts.maxW||1920)/v.videoWidth);
-      const cv=document.createElement('canvas');
-      cv.width=Math.round(v.videoWidth*scale/2)*2;    /* dimensions paires */
-      cv.height=Math.round(v.videoHeight*scale/2)*2;
-      const cx=cv.getContext('2d',{alpha:false});
-      const stream=cv.captureStream(opts.fps||30);
-
-      if(opts.keepAudio){
-        try{
-          const cap = v.captureStream ? v.captureStream() : v.mozCaptureStream();
-          const at = cap.getAudioTracks()[0];
-          if(at) stream.addTrack(at);
-        }catch(e){ console.warn('[Récit] son non capturé',e); }
-      }
-
-      const rec=new MediaRecorder(stream,{
-        mimeType:type,
-        videoBitsPerSecond:Math.round((opts.mbps||2.2)*1e6)
-      });
-      const parts=[];
-      rec.ondataavailable=e=>{ if(e.data&&e.data.size) parts.push(e.data); };
-      rec.onerror=e=>{ URL.revokeObjectURL(url); reject(new Error('Encodage interrompu.')); };
-      rec.onstop=async()=>{
-        URL.revokeObjectURL(url);
-        try{
-          const blob=new Blob(parts,{type:'video/webm'});
-          resolve(new Uint8Array(await blob.arrayBuffer()));
-        }catch(e){ reject(e); }
-      };
-
-      let raf=0;
-      const draw=()=>{
-        if(v.ended||v.paused) return;
-        cx.drawImage(v,0,0,cv.width,cv.height);
-        if(onProgress&&v.duration) onProgress(v.currentTime/v.duration);
-        raf=requestAnimationFrame(draw);
-      };
-      v.addEventListener('ended',()=>{
-        cancelAnimationFrame(raf);
-        setTimeout(()=>{ try{ rec.stop(); }catch(e){} },220);
-      });
-
-      rec.start(1000);
-      v.play().then(draw).catch(e=>{
-        URL.revokeObjectURL(url);
-        reject(new Error('Lecture impossible : '+e.message));
-      });
-    });
+/* Un WebM sans durée inscrite annonce une durée infinie. En demandant une
+   position au-delà de la fin, le navigateur lit jusqu'au bout et la découvre. */
+function knownDuration(v){
+  return new Promise(res=>{
+    if(isFinite(v.duration)) return res();
+    const t0=setTimeout(back,8000);
+    function back(){
+      clearTimeout(t0);
+      v.removeEventListener('durationchange',check); v.removeEventListener('timeupdate',check);
+      v.addEventListener('seeked',()=>res(),{once:true});
+      try{ v.currentTime=0; }catch(e){ res(); }
+    }
+    function check(){ if(isFinite(v.duration)) back(); }
+    v.addEventListener('durationchange',check); v.addEventListener('timeupdate',check);
+    try{ v.currentTime=1e101; }catch(e){ back(); }
   });
+}
+
+/* Un passage : lecture à la vitesse donnée, chaque image présentée est
+   capturée avec son horodatage exact. Une image est retenue jusqu'à
+   l'arrivée de la suivante pour connaître sa durée réelle. */
+function encodePass(v,rate,o){
+  return new Promise((resolve,reject)=>{
+    const {M,cfg,W,H,audio,keyEvery,D,ui}=o;
+    const target=new M.ArrayBufferTarget();
+    const muxer=new M.Muxer({target:target,
+      video:{codec:cfg.codec.startsWith('vp09')?'V_VP9':'V_VP8',width:W,height:H},
+      audio:audio?{codec:'A_OPUS',sampleRate:audio.sampleRate,numberOfChannels:audio.channels}:undefined,
+      firstTimestampBehavior:'offset'});
+    const pendingAudio=audio?audio.chunks.slice():[];
+    /* les deux pistes doivent arriver dans l'ordre chronologique */
+    const audioUpTo=t=>{ while(pendingAudio.length&&pendingAudio[0][0].timestamp<=t){
+      const x=pendingAudio.shift(); muxer.addAudioChunk(x[0],x[1]); } };
+    let failed=null;
+    const enc=new VideoEncoder({
+      output:(chunk,meta)=>{ audioUpTo(chunk.timestamp); muxer.addVideoChunk(chunk,meta); },
+      error:e=>{ failed=e; }});
+    enc.configure(cfg);
+    const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+    const cx=cv.getContext('2d',{alpha:false});
+    const QMAX=W*H>3e6?3:6, QMIN=Math.max(1,QMAX-2);
+    let frames=0, lastT=-1, held=null, lost=0, lastPF=-1, started=false,
+        draining=false, done=false, seen=performance.now();
+    const deltas=[];
+    const emit=(f,t,d)=>{
+      const g=new VideoFrame(f,{timestamp:Math.round(t*1e6),duration:Math.max(1,Math.round(d*1e6))});
+      f.close();
+      enc.encode(g,{keyFrame:frames%keyEvery===0}); g.close();
+      frames++; deltas.push(d);
+    };
+    const grab=t=>{
+      if(t<=lastT+1e-6) return;
+      lastT=t;
+      cx.drawImage(v,0,0,W,H);
+      const f=new VideoFrame(cv,{timestamp:Math.round(t*1e6)});
+      if(held) emit(held.f,held.t,t-held.t);
+      held={f:f,t:t};
+    };
+    const stop=()=>{ v.removeEventListener('ended',onEnded);
+      document.removeEventListener('visibilitychange',onVis); clearInterval(dog); };
+    const fail=e=>{ if(done) return; done=true; stop();
+      try{ v.pause(); }catch(x){} if(held) held.f.close();
+      try{ enc.close(); }catch(x){} reject(e); };
+    const finish=async()=>{
+      if(done) return; done=true; stop();
+      try{
+        if(held){ const s=deltas.slice().sort((a,b)=>a-b);
+          emit(held.f,held.t,s.length?s[s.length>>1]:1/30); held=null; }
+        await enc.flush(); enc.close();
+        if(failed) throw failed;
+        audioUpTo(Infinity);
+        muxer.finalize();
+        resolve({bytes:new Uint8Array(target.buffer),frames:frames,lost:lost});
+      }catch(e){ reject(e); }
+    };
+    const onFrame=async(now,meta)=>{
+      if(done) return;
+      if(o.cancelled()) return fail(new Error('Conversion annulée.'));
+      if(failed) return fail(failed);
+      seen=performance.now();
+      if(started&&lastPF>=0&&meta.presentedFrames>lastPF+1) lost+=meta.presentedFrames-lastPF-1;
+      lastPF=meta.presentedFrames;
+      grab(meta.mediaTime);
+      ui.progress(Math.min(1,meta.mediaTime/D),frames);
+      v.requestVideoFrameCallback(onFrame);
+      if(!started){ started=true; v.playbackRate=rate; v.play().catch(fail); return; }
+      /* contre-pression : l'encodeur prend du retard, la lecture attend */
+      if(enc.encodeQueueSize>QMAX&&!draining){
+        draining=true; v.pause();
+        while(!done&&enc.encodeQueueSize>QMIN) await new Promise(r=>setTimeout(r,4));
+        draining=false;
+        if(!done&&!v.ended&&!document.hidden) v.play().catch(fail);
+      }
+    };
+    /* onglet masqué : le navigateur cesse de présenter les images, on attend */
+    const onVis=()=>{ if(done||!started) return;
+      if(document.hidden) v.pause(); else if(!draining&&!v.ended) v.play().catch(fail); };
+    const onEnded=()=>setTimeout(finish,80);
+    const dog=setInterval(()=>{
+      if(!done&&!draining&&!document.hidden&&performance.now()-seen>8000)
+        fail(new Error('La lecture de la vidéo s’est bloquée.'));
+      if(!done&&!started&&performance.now()-seen>1500){ started=true; v.playbackRate=rate; v.play().catch(fail); }
+    },500);
+    v.addEventListener('ended',onEnded);
+    document.addEventListener('visibilitychange',onVis);
+    v.pause();
+    v.requestVideoFrameCallback(onFrame);
+    try{ v.currentTime=0; }catch(e){}
+  });
+}
+
+async function convertToWebm(bytes,mime,opts,ui){
+  if(!webcodecsSupport()) throw new Error('Ce navigateur ne propose pas WebCodecs : utilisez Chrome ou Edge.');
+  const M=await loadMuxer();
+  const url=URL.createObjectURL(new Blob([bytes],{type:mime}));
+  const v=ui.video;
+  v.muted=true; v.playsInline=true; v.preload='auto'; v.src=url;
+  try{
+    await new Promise((res,rej)=>{ v.onloadedmetadata=res;
+      v.onerror=()=>rej(new Error('Vidéo illisible par ce navigateur.')); });
+    ui.status('Lecture de la durée…');
+    await knownDuration(v);
+    const D=isFinite(v.duration)&&v.duration>0?v.duration:1;
+    const scale=Math.min(1,(opts.maxW||1920)/v.videoWidth);
+    const W=Math.max(2,Math.round(v.videoWidth*scale/2)*2), H=Math.max(2,Math.round(v.videoHeight*scale/2)*2);
+    /* au défilement, les images-clés rapprochées coûtent du débit : on compense */
+    const bitrate=Math.round((opts.mbps||2.2)*1e6*(opts.scrub?1.8:1));
+    const cfg=await pickVideoConfig(W,H,bitrate);
+    if(!cfg) throw new Error('Aucun encodeur VP9 ni VP8 dans ce navigateur.');
+    let audio=null;
+    if(opts.keepAudio&&!opts.scrub){ ui.status('Encodage du son…'); audio=await encodeAudio(bytes); }
+    const keyEvery=opts.scrub?6:48;
+    const rates=[1,0.5,0.25];
+    for(let p=0;p<rates.length;p++){
+      /* l'ordinateur n'a pas suivi : on relit plus lentement plutôt que de
+         livrer un fichier troué (une perte infime est tolérée) */
+      ui.label = p ? 'Passe '+(p+1)+', lecture ralentie ×'+String(rates[p]).replace('.',',')+' — ' : '';
+      ui.status(p?ui.label+'aucune image ne doit manquer':'Encodage des images…');
+      const r=await encodePass(v,rates[p],{M,cfg,W,H,audio,keyEvery,D,ui,cancelled:ui.cancelled});
+      if(r.lost<=Math.floor(r.frames/100)||p===rates.length-1)
+        return {bytes:r.bytes,frames:r.frames,lost:r.lost,keyEvery:keyEvery,W:W,H:H,
+                codec:cfg.codec.startsWith('vp09')?'VP9':'VP8',audio:!!audio};
+    }
+  }finally{
+    try{ v.pause(); }catch(e){}
+    v.removeAttribute('src'); try{ v.load(); }catch(e){}
+    URL.revokeObjectURL(url);
+  }
+}
+
+/* Petit panneau de progression : la vidéo en cours y est visible, ce qui
+   garantit au passage que le navigateur présente bien chacune de ses images. */
+function convPanel(){
+  let box=document.getElementById('convBox');
+  if(!box){
+    box=document.createElement('div'); box.id='convBox'; box.className='convbox';
+    box.innerHTML='<video muted playsinline></video><div class="cb-body">'+
+      '<b>Conversion en WebM</b><span class="cb-stat"></span>'+
+      '<div class="cb-bar"><i></i></div>'+
+      '<span class="cb-note">Gardez cet onglet au premier plan.</span></div>'+
+      '<button class="btn ghost cb-x">Annuler</button>';
+    document.body.appendChild(box);
+  }
+  let cancel=false;
+  box.querySelector('.cb-x').onclick=()=>{ cancel=true; };
+  box.hidden=false;
+  const stat=box.querySelector('.cb-stat'), bar=box.querySelector('.cb-bar i');
+  return {
+    video:box.querySelector('video'),
+    status:t=>{ stat.textContent=t; },
+    label:'',
+    progress(k,n){ bar.style.width=(k*100).toFixed(1)+'%';
+      stat.textContent=this.label+Math.round(k*100)+' % — '+n+' images'; },
+    cancelled:()=>cancel,
+    close:()=>{ box.hidden=true; }
+  };
 }
 
 async function convertChapterVideo(ch){
@@ -5289,34 +5682,157 @@ async function convertChapterVideo(ch){
   if(!a) return;
   if(convBusy){ toast('Une conversion est déjà en cours','bad'); return; }
   convBusy=true;
+  const scrub = convOpts.usage==='scrub' ||
+    (convOpts.usage==='auto' && (ch.playMode==='scrub'||ch.playMode==='pointer'));
   const before=a.bytes.length;
+  const ui=convPanel();
   try{
-    toast('Conversion en cours\u2026 elle dure le temps de la séquence.');
-    const out=await convertToWebm(a.bytes,a.mime,convOpts,pr=>{
-      stageInfo.textContent='conversion '+Math.round(pr*100)+' %';
-    });
-    stageInfo.textContent='en direct';
-    if(out.length>=before){
-      toast('Le fichier obtenu n\u2019est pas plus léger ('+fmtBytes(out.length)+
-            ') : l\u2019original est conservé.','bad');
-      convBusy=false; return;
+    const r=await convertToWebm(a.bytes,a.mime,
+      {maxW:convOpts.maxW,mbps:convOpts.mbps,keepAudio:convOpts.keepAudio,scrub:scrub},ui);
+    ui.close();
+    /* pour la lecture normale, un fichier plus lourd ne sert à rien ; pour le
+       défilement, c'est le prix d'une navigation fluide et on le garde */
+    if(!scrub&&r.bytes.length>=before){
+      toast('Le fichier obtenu n’est pas plus léger ('+fmtBytes(r.bytes.length)+
+        ') : l’original est conservé. Essayez un débit plus bas.','bad');
+      return;
     }
     const key=uid();
     ASSETS.set(key,{ name:a.name.replace(/\.[^.]+$/,'')+'.webm', mime:'video/webm',
-                     kind:'video', bytes:out, b64:null });
-    ASSETS.delete(ch.asset);
+                     kind:'video', bytes:r.bytes, b64:null });
+    dropAsset(ch.asset);
     ch.asset=key;
     renderAll(true);
-    toast('Converti : '+fmtBytes(before)+' → '+fmtBytes(out.length)+
-          ' ('+(before/out.length).toFixed(1)+' fois plus léger)');
+    toast('Converti en '+r.codec+' : '+r.frames+' images, une image-clé toutes les '+r.keyEvery+
+      (r.audio?', son conservé':'')+' — '+fmtBytes(before)+' → '+fmtBytes(r.bytes.length)+
+      (r.lost?' ('+r.lost+' images perdues malgré la lecture ralentie)':''));
   }catch(e){
-    console.error(e); stageInfo.textContent='en direct';
+    console.error('[Récit] conversion',e); ui.close();
     toast(e.message,'bad');
-  }
-  convBusy=false;
+  }finally{ convBusy=false; }
 }
 let convBusy=false;
-const convOpts={ maxW:1920, mbps:2.2, fps:30, keepAudio:true };
+const convOpts={ maxW:1920, mbps:2.2, keepAudio:true, usage:'auto' };
+
+/* ---------------------------------------------------------------
+   DIAGNOSTIC D'UNE VIDÉO POUR LE DÉFILEMENT
+   Compte images et images-clés, et vérifie la présence de la durée et
+   de l'index, en lisant directement la structure du fichier.
+   --------------------------------------------------------------- */
+function videoReport(bytes){
+  const b=bytes, n=b.length;
+  const vint=(i,keepMark)=>{ const x=b[i]; let l=1,m=0x80;
+    while(l<=8&&!(x&m)){ l++; m>>=1; }
+    if(l>8) return null;
+    let v=keepMark?x:(x&(m-1)); let all=(x&(m-1))===(m-1);
+    for(let k=1;k<l;k++){ v=v*256+b[i+k]; if(b[i+k]!==255) all=false; }
+    return {v:v,l:l,unknown:!keepMark&&all}; };
+  if(b[0]===0x1A&&b[1]===0x45&&b[2]===0xDF&&b[3]===0xA3){
+    /* WebM : parcours à plat, on entre dans les éléments conteneurs */
+    const ENTER={0x18538067:1,0x1549A966:1,0x1654AE6B:1,0xAE:1,0x1F43B675:1,0xA0:1};
+    let i=0, dur=false, secs=null, tcs=1e6, cues=false, vtrack=null, curNum=null, curType=null, frames=0, keys=0,
+        clusterTC=0, lastTC=-1;
+    while(i<n-2){
+      const id=vint(i,true); if(!id) break; i+=id.l;
+      const sz=vint(i,false); if(!sz) break; i+=sz.l;
+      const ID=id.v;
+      if(ENTER[ID]){ if(ID===0xAE){ curNum=null; curType=null; } continue; }
+      if(ID===0x4489){ dur=true;
+        const dv=new DataView(b.buffer,b.byteOffset+i,sz.v);
+        secs = sz.v===8 ? dv.getFloat64(0) : sz.v===4 ? dv.getFloat32(0) : null; }
+      else if(ID===0x2AD7B1){ tcs=0; for(let k=0;k<sz.v;k++) tcs=tcs*256+b[i+k]; }
+      else if(ID===0x1C53BB6B) cues=true;
+      else if(ID===0xE7){ clusterTC=0; for(let k=0;k<sz.v;k++) clusterTC=clusterTC*256+b[i+k]; }
+      else if(ID===0xD7) { curNum=0; for(let k=0;k<sz.v;k++) curNum=curNum*256+b[i+k]; }
+      else if(ID===0x83) { curType=b[i]; if(curType===1&&curNum!=null&&vtrack==null) vtrack=curNum; }
+      else if(ID===0xA3||ID===0xA1){
+        const t=vint(i,false);
+        if(t&&(vtrack==null||t.v===vtrack)){ frames++; if(ID===0xA3&&(b[i+t.l+2]&0x80)) keys++;
+          /* horodatage relatif au bloc, sur 16 bits signés */
+          let rel=(b[i+t.l]<<8)|b[i+t.l+1]; if(rel>=0x8000) rel-=0x10000;
+          if(clusterTC+rel>lastTC) lastTC=clusterTC+rel; }
+      }
+      if(sz.unknown) continue;
+      i+=sz.v;
+    }
+    if(vtrack==null&&curType===1&&curNum!=null) vtrack=curNum;
+    /* sans durée inscrite, on l'estime d'après la dernière image */
+    let seconds = secs!=null&&isFinite(secs) ? secs*tcs/1e9 : null;
+    if(seconds==null && lastTC>0 && frames>1) seconds = lastTC*tcs/1e9*frames/(frames-1);
+    return {container:'WebM',frames:frames,keys:keys,duration:dur,index:cues,seconds:seconds};
+  }
+  /* MP4 : table des échantillons de la piste vidéo */
+  const u32=i=>((b[i]<<24)>>>0)+(b[i+1]<<16)+(b[i+2]<<8)+b[i+3];
+  const typ=i=>String.fromCharCode(b[i],b[i+1],b[i+2],b[i+3]);
+  let res=null;
+  (function walk(s,e,inVideo){
+    let i=s;
+    while(i+8<=e){
+      let size=u32(i); const t=typ(i+4); let h=8;
+      if(size===1){ size=u32(i+8)*4294967296+u32(i+12); h=16; } else if(size===0) size=e-i;
+      if(size<h) break;
+      if(t==='trak'){
+        const body=[i+h,i+size];
+        /* on repère la piste vidéo par son gestionnaire « vide » */
+        let isV=false; for(let k=body[0];k<body[1]-12;k++){ if(typ(k)==='hdlr'&&typ(k+12)==='vide'){ isV=true; break; } }
+        if(isV) walk(body[0],body[1],true);
+      }else if(['moov','mdia','minf','stbl'].indexOf(t)>=0) walk(i+h,i+size,inVideo);
+      else if(inVideo&&t==='stsz'){ res=res||{}; res.frames=u32(i+h+8); }
+      else if(inVideo&&t==='mdhd'){ res=res||{}; const v1=b[i+h]===1;
+        const ts=u32(i+h+(v1?20:12)), du=v1?u32(i+h+24)*4294967296+u32(i+h+28):u32(i+h+16);
+        if(ts) res.seconds=du/ts; }
+      else if(inVideo&&t==='stss'){ res=res||{}; res.keys=u32(i+h+4); }
+      i+=size;
+    }
+  })(0,n,false);
+  if(!res||!res.frames) return null;
+  return {container:'MP4',frames:res.frames,keys:res.keys==null?res.frames:res.keys,duration:true,index:true,
+          seconds:res.seconds||null};
+}
+function reportFor(key){
+  const a=ASSETS.get(key); if(!a) return null;
+  if(a.report===undefined){ try{ a.report=videoReport(a.bytes); }catch(e){ a.report=null; } }
+  return a.report;
+}
+/* Verdict affiché sous une vidéo : on dit pourquoi elle saccadera avant que
+   l'utilisateur ne le découvre. En lecture normale, seuls les défauts qui
+   se voient à la lecture sont signalés ; en défilement, tous. */
+function videoDiag(key,driven){
+  const r=reportFor(key);
+  const d=document.createElement('div'); d.className='vdiag';
+  const say=(cls,title,body)=>{
+    d.classList.add(cls);
+    const b=document.createElement('b'); b.textContent=title; d.appendChild(b);
+    if(body){ const s=document.createElement('span'); s.textContent=body; d.appendChild(s); }
+    return d;
+  };
+  if(!r) return driven ? say('warn','Structure du fichier non lue',
+    'Impossible de compter ses images-clés. S\u2019il saccade, préparez-le pour le défilement.') : null;
+  const fps = r.seconds>0 ? r.frames/r.seconds : null;
+  const rate = fps ? r.frames+' images pour '+r.seconds.toFixed(1).replace('.',',')+' s, soit '+
+    Math.round(fps)+' par seconde' : r.frames+' images';
+  const gop = r.keys ? r.frames/r.keys : r.frames;
+  const keysTxt = r.keys<=1 ? 'une seule image-clé' : 'une image-clé toutes les '+Math.round(gop)+' images';
+  const redo = driven ? '« Préparer pour le défilement »' : '« Convertir en WebM »';
+  if(r.container==='WebM' && !r.duration && !r.index && r.keys<=2)
+    return say('bad','WebM de l\u2019ancienne conversion',
+      rate+'. L\u2019enregistrement en direct a perdu des images en route : '+
+      (driven?'la vidéo démarre désormais, mais son mouvement restera haché. ':'la lecture est saccadée. ')+
+      'Rechargez la vidéo d\u2019origine, celle d\u2019avant la conversion, puis cliquez sur '+redo+'.');
+  if(fps && fps<15)
+    return say('warn','Seulement '+Math.round(fps)+' images par seconde',
+      rate+' : le mouvement restera haché, même bien encodé. Si vous avez la vidéo '+
+      'd\u2019origine, rechargez-la puis cliquez sur '+redo+'.');
+  if(!driven) return null;
+  if(gop>12)
+    return say('warn','Trop peu d\u2019images-clés pour le défilement',
+      rate+', '+keysTxt+'. Pour afficher une position, le navigateur doit décoder '+
+      'toutes les images depuis la dernière image-clé : le mouvement saccade. Préparez le fichier.');
+  if(r.container==='WebM' && (!r.duration || !r.index))
+    return say('warn','Fichier incomplet',
+      (r.duration?'':'Durée absente. ')+(r.index?'':'Index absent. ')+'Une conversion le corrige.');
+  return say('ok','Prêt pour le défilement', rate+', '+keysTxt+'.');
+}
 
 /* ---------------------------------------------------------------
    BRUITAGES — ElevenLabs, via le même relais
@@ -5371,7 +5887,7 @@ async function generateSfx(ch,f){
     const bytes=await elevenSfx(prompt,f.duration,f.influence);
     const key=uid();
     ASSETS.set(key,{name:'sfx_'+key+'.mp3',mime:'audio/mpeg',kind:'audio',bytes:bytes,b64:null});
-    if(f.asset) ASSETS.delete(f.asset);
+    if(f.asset) dropAsset(f.asset);
     f.asset=key;
     if(!f.label) f.label=prompt.slice(0,28);
     renderAll(true);
@@ -5461,7 +5977,7 @@ async function generateVoice(beat){
     const bytes=await humeSynth(text);
     const key=uid();
     ASSETS.set(key,{name:'voix_'+key+'.mp3',mime:'audio/mpeg',kind:'audio',bytes:bytes,b64:null});
-    if(beat.voice) ASSETS.delete(beat.voice);
+    if(beat.voice) dropAsset(beat.voice);
     beat.voice=key;
     renderAll(true);
     toast('Voix enregistrée — '+fmtBytes(bytes.length));
@@ -5483,48 +5999,139 @@ document.getElementById('btnSave').addEventListener('click',()=>{
     }
     const clean=JSON.parse(JSON.stringify(story));
     if(clean.voice) delete clean.voice.secret;   /* le mot de passe ne quitte pas la session */
-    download(new Blob([JSON.stringify({v:4,story:clean,assets:assets})],{type:'application/json'}),
+    download(new Blob([JSON.stringify({v:5,story:clean,assets:assets})],{type:'application/json'}),
       slug(story.title)+'.recit.json');
     toast('Projet enregistré');
   }catch(e){ console.error(e); toast('Enregistrement impossible : '+e.message,'bad'); }
 });
 
+/* ---------------------------------------------------------------
+   MISE À NIVEAU D'UN PROJET ENREGISTRÉ
+   Un projet construit au fil de plusieurs versions de l'outil n'a pas
+   les réglages apparus depuis. Avant, seuls les textes étaient complétés
+   à l'ouverture : un chapitre ancien arrivait sans ses réglages récents
+   et l'inspecteur s'arrêtait sur le premier curseur sans valeur. On
+   complète désormais chaque objet avec les valeurs par défaut de la
+   version courante — sans jamais toucher à ce qui a été réglé.
+   --------------------------------------------------------------- */
+const COLLECTIONS=['beats','spots','buttons','zones','orns','sfx'];
+/* noms des effets d'apparition dans les premières versions */
+const ANIM_ALIAS={rise:'slideUp',drop:'slideDown',left:'slideLeft',right:'slideRight',
+  blur:'blurIn',scale:'scaleUp',shrink:'scaleDown',wipe:'wipeUp',wipeX:'maskSlide',
+  flip:'flipX',spin:'rotateIn'};
+const isObj=x=>!!x&&typeof x==='object'&&!Array.isArray(x);
+const cloneVal=v=>(v&&typeof v==='object')?JSON.parse(JSON.stringify(v)):v;
+
+function fillDefaults(obj,def,count){
+  Object.keys(def).forEach(k=>{
+    const d=def[k], v=obj[k];
+    if(v===undefined||(v===null&&d!==null)){ obj[k]=cloneVal(d); if(count) count.n++; return; }
+    if(typeof d==='number'){
+      /* une valeur devenue NaN est enregistrée null par JSON : on la répare */
+      if(typeof v!=='number'||!isFinite(v)){
+        const x=parseFloat(v); obj[k]=isFinite(x)?x:d; if(count) count.n++;
+      }
+      return;
+    }
+    if(Array.isArray(d)){
+      if(!Array.isArray(v)){ obj[k]=cloneVal(d); if(count) count.n++; return; }
+      /* vecteurs de nombres : positions de caméra, point d'ancrage */
+      if(d.length&&d.every(x=>typeof x==='number')){
+        const fixed=d.map((x,i)=>(typeof v[i]==='number'&&isFinite(v[i]))?v[i]:x);
+        if(v.length!==d.length||fixed.some((x,i)=>x!==v[i])){ obj[k]=fixed; if(count) count.n++; }
+      }
+      return;
+    }
+    if(isObj(d)&&isObj(v)) fillDefaults(v,d,count);
+  });
+  return obj;
+}
+
+function fixAnim(o,stats){
+  const known=new Set(ANIMS.map(a=>a[0]));
+  if(ANIM_ALIAS[o.anim]){ o.anim=ANIM_ALIAS[o.anim]; stats.anims++; }
+  else if(!known.has(o.anim)){ o.anim='fade'; stats.anims++; }
+}
+
+function upgradeChapter(c,stats){
+  const type=['model','video','image','text'].indexOf(c.type)>=0?c.type:'text';
+  c.type=type;
+  const count={n:0};
+  /* avant le menu Lecture, seule la case « en boucle » existait */
+  if(type==='video'&&!c.playMode){ c.playMode=c.loop===false?'once':'loop'; count.n++; }
+  /* l'ancien bouton unique « chapitre suivant » rejoint la liste des boutons */
+  if(c.nextBtn&&!(Array.isArray(c.buttons)&&c.buttons.length)){
+    c.buttons=[newButton({label:c.nextLabel||'Continuer',target:'next'})]; count.n++;
+  }
+  delete c.nextBtn; delete c.nextLabel;
+
+  const def=newChapter(type);
+  COLLECTIONS.forEach(k=>{ def[k]=[]; c[k]=Array.isArray(c[k])?c[k].filter(isObj):[]; });
+  fillDefaults(c,def,count);
+  c.beats.forEach(b=>{ fillDefaults(b,newBeat({kind:b.kind==='title'?'title':'body'}),count); fixAnim(b,stats); });
+  c.buttons.forEach(b=>{ fillDefaults(b,newButton(),count); fixAnim(b,stats); });
+  c.spots.forEach(x=>fillDefaults(x,newSpot(),count));
+  c.zones.forEach(x=>fillDefaults(x,newZone(),count));
+  c.orns.forEach(x=>fillDefaults(x,newOrn(),count));
+  c.sfx.forEach(x=>fillDefaults(x,newSfx(),count));
+  if(count.n){ stats.chapters++; stats.fields+=count.n; }
+  return c;
+}
+
+function upgradeStory(raw){
+  if(!isObj(raw)) throw new Error('Ce fichier n\u2019est pas un projet Récit.');
+  const stats={chapters:0,fields:0,anims:0};
+  const base=blankStory(); base.chapters=[];
+  fillDefaults(raw,base);
+  if(!Array.isArray(raw.chapters)) raw.chapters=[];
+  /* les valeurs par défaut doivent prendre le thème du projet ouvert */
+  const prev=story;
+  story=raw;
+  try{ raw.chapters=raw.chapters.filter(isObj).map(c=>upgradeChapter(c,stats)); }
+  finally{ story=prev; }
+  const seen=new Set();
+  raw.chapters.forEach(c=>{ if(!c.id||seen.has(c.id)) c.id=uid(); seen.add(c.id); });
+  return {story:raw,stats:stats};
+}
+
+/* Tout est préparé avant de toucher à l'état courant : un fichier illisible
+   laisse l'éditeur tel qu'il était au lieu de le laisser à moitié chargé. */
+function loadProject(j){
+  if(!j||!isObj(j.story)) throw new Error('Ce fichier n\u2019est pas un projet Récit.');
+  const up=upgradeStory(j.story);
+  const assets=new Map(), src=j.assets||{};
+  Object.keys(src).forEach(k=>{
+    const a=src[k]; if(!a||typeof a.b64!=='string') return;
+    assets.set(k,{name:a.name,mime:a.mime,kind:a.kind||assetKindOf(a.name||''),
+      bytes:b64ToBytes(a.b64),b64:a.b64});
+  });
+  for(const old of ASSETS.values()) revokeLater(old.url);
+  ASSETS.clear(); assets.forEach((v,k)=>ASSETS.set(k,v));
+  story=up.story;
+  document.getElementById('storyTitle').value=story.title;
+  selId=story.chapters.length?story.chapters[0].id:null;
+  selBeatId=null; spotSel=-1; openBeat=null; openGroup=null; insTab='media';
+  return up.stats;
+}
+
 document.getElementById('btnOpen').addEventListener('click',()=>{
   const i=document.createElement('input'); i.type='file'; i.accept='.json';
   i.addEventListener('change',async()=>{
     const f=i.files[0]; if(!f) return;
+    let st;
     try{
-      const j=JSON.parse(await f.text());
-      if(!j.story) throw new Error('Ce fichier n\u2019est pas un projet Récit.');
-      ASSETS.clear();
-      const src=j.assets||{};
-      Object.keys(src).forEach(k=>{
-        const a=src[k];
-        ASSETS.set(k,{name:a.name,mime:a.mime,kind:a.kind||assetKindOf(a.name),
-          bytes:b64ToBytes(a.b64),b64:a.b64});
-      });
-      const blank=blankStory();
-      story=Object.assign(blank,j.story);
-      story.theme=Object.assign(blank.theme,j.story.theme||{});
-      story.music=Object.assign({asset:null,volume:.35,duck:.35,fade:1.5},j.story.music||{});
-      story.voice=Object.assign({endpoint:'',secret:'',
-        voiceId:'5b612d83-696a-4089-88a7-da3e8e8126e7',
-        provider:'HUME_AI',idMode:'id',description:'',
-        speed:1,trailingSilence:.35},j.story.voice||{});
-      story.shapes=j.story.shapes||{};
-      story.chapters.forEach(c=>{
-        c.orns=(c.orns||[]).map(o=>newOrn(o));
-        c.zones=(c.zones||[]).map(z=>newZone(z));
-        c.beats=(c.beats||[]).map(b=>newBeat(b));
-        c.spots=(c.spots||[]).map(s=>Object.assign(newSpot(s.p),s));
-        c.music=Object.assign({mode:'inherit',asset:null,volume:.35,fade:2},c.music||{});
-        c.sfx=(c.sfx||[]).map(f=>newSfx(f));
-        c.buttons=c.buttons||[];
-      });
-      document.getElementById('storyTitle').value=story.title;
-      selId=story.chapters.length?story.chapters[0].id:null;
-      renderAll(true); toast('Projet ouvert');
-    }catch(e){ console.error(e); toast(e.message,'bad'); }
+      toast('Lecture du projet\u2026');
+      st=loadProject(JSON.parse(await f.text()));
+    }catch(e){
+      console.error('[Récit] ouverture',e);
+      toast('Ouverture impossible : '+e.message,'bad');
+      return;
+    }
+    renderAll(true);
+    const parts=[];
+    if(st.chapters) parts.push(st.chapters+' chapitre'+(st.chapters>1?'s':'')+' mis à niveau');
+    if(st.anims) parts.push(st.anims+' effet'+(st.anims>1?'s':'')+' d\u2019apparition renommé'+(st.anims>1?'s':''));
+    toast('Projet ouvert'+(parts.length?' — '+parts.join(', '):''));
   });
   i.click();
 });
@@ -5706,15 +6313,15 @@ addEventListener('unhandledrejection',e=>{
 (function seed(){
   const a=newChapter('model'); a.name='La plante';
   a.beats=[ newBeat({kind:'title',text:'Angelica archangelica',at:0.1,span:0.65,
-    posY:82,size:3.8,unit:'word',anim:'blur',stagger:80,italic:true}) ];
+    posY:82,size:3.8,unit:'word',anim:'blurIn',stagger:80,italic:true}) ];
   a.spots=[ Object.assign(newSpot([0,0.7,0]),{label:'Ombelle',side:1,len:110}) ];
   const b=newChapter('video'); b.name='Première séquence';
   b.buttons=[ newButton({label:'Poursuivre le récit',target:'next',at:0.55,span:0.4}) ];
   b.beats=[
     newBeat({kind:'title',text:'Elle pousse là où l\u2019eau stagne',at:0.1,span:0.4,
-      posX:9,posY:26,align:'left',size:3.2,width:26,unit:'word',anim:'wipe',stagger:70}),
+      posX:9,posY:26,align:'left',size:3.2,width:26,unit:'word',anim:'wipeUp',stagger:70}),
     newBeat({text:'Introduite dans les jardins de simples au XVI\u1D49 siècle, l\u2019angélique y était cultivée pour ses tiges confites autant que pour sa réputation de plante protectrice.',
-      at:0.44,span:0.45,posX:9,posY:76,align:'left',width:50,anim:'rise',unit:'line',distance:22})
+      at:0.44,span:0.45,posX:9,posY:76,align:'left',width:50,anim:'slideUp',unit:'line',distance:22})
   ];
   story.chapters=[a,b]; selId=a.id;
   refreshEditorFonts();

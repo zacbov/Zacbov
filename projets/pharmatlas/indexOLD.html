@@ -115,6 +115,25 @@ aside{width:272px;background:rgba(255,255,255,.6);backdrop-filter:blur(20px) sat
   font-size:8.5px;line-height:13px;text-align:center;font-style:normal;
   box-shadow:0 1px 3px rgba(0,0,0,.4);pointer-events:none;user-select:none}
 body.pa-mobile .pa-lame-dot{width:14px;height:14px;font-size:7.5px;line-height:11px}
+/* Rangée de pastilles — bas-droit de la vignette.
+   Une fiche peut en porter plusieurs (lame ET modèle 3D) : une rangée en
+   flex les aligne au lieu de les superposer, quel que soit leur nombre.
+   La pastille « lame » garde son positionnement absolu d'origine et se
+   place dans la même rangée quand elle y figure. */
+.pa-dots{position:absolute;right:1px;bottom:1px;z-index:2;display:flex;gap:2px;
+  align-items:center;pointer-events:none}
+.pa-dots .pa-lame-dot{position:static;right:auto;bottom:auto}
+.pa-dot{width:16px;height:16px;border-radius:50%;background:#0a0f14;
+  font-size:8.5px;line-height:13px;text-align:center;font-style:normal;
+  box-shadow:0 1px 3px rgba(0,0,0,.4);pointer-events:none;user-select:none;
+  flex:0 0 auto}
+/* Modèle 3D : vert, la couleur des viewers de l'atlas. */
+.pa-dot-3d{border:1.5px solid #3ab09e;color:#a8e6da}
+/* Fiche de concept : ambre, et volontairement sans relief — elle informe,
+   elle n'alerte pas. Elle dit à l'étudiant que la fiche décrit une voie, une
+   classe ou une notion, et donc qu'il n'y trouvera ni structure ni radar. */
+.pa-dot-concept{border:1.5px solid #c89b3c;color:#f0d9a0;font-size:9.5px;line-height:13px}
+body.pa-mobile .pa-dot{width:14px;height:14px;font-size:7.5px;line-height:11px}
 .model-info{flex:1;min-width:0}
 .model-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .model-desc{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -6273,6 +6292,27 @@ async function openSheet(m){
     try{_3dmolViewer.removeAllModels();_3dmolViewer.removeAllSurfaces();_3dmolViewer.removeAllLabels();_3dmolViewer.removeAllShapes();}catch(e){}
     _3dmolViewer=null;
   }
+  /* Nettoyer NGL si actif.
+     closeSheet le faisait, openSheet non : passer d'une fiche à l'autre SANS
+     refermer laissait vivre le stage précédent — son contexte WebGL et sa
+     boucle requestAnimationFrame continuaient de tourner sur un canvas
+     détaché. D'où les « Framebuffer is incomplete: Attachment has zero size »
+     par centaines et les « requestAnimationFrame handler took 57ms » : autant
+     de stages orphelins que de fiches protéiques ouvertes à la suite.
+     Le viewer OpenSeadragon relevait du même oubli. */
+  if(typeof _nglStage!=='undefined' && _nglStage){
+    try{_nglStage.dispose();}catch(e){}
+    _nglStage=null;
+    if(typeof _nglComp!=='undefined') _nglComp=null;
+    /* _paAfStage est un ALIAS du même stage quand la structure vient
+       d'AlphaFold. Le laisser pointer sur un stage libéré faisait échouer
+       handleResize() à chaque redimensionnement de la fenêtre. */
+    if(typeof _paAfStage!=='undefined') _paAfStage=null;
+  }
+  if(typeof _osdViewer!=='undefined' && _osdViewer){
+    try{_osdViewer.destroy();}catch(e){}
+    _osdViewer=null;
+  }
 
   // ── Reset systématique sheetInfo/sheetViewer ──
   (function(){
@@ -10899,6 +10939,7 @@ function closeSheet(){
   if(_nglStage){
     try{_nglStage.dispose();}catch(e){}
     _nglStage=null;_nglComp=null;
+    if(typeof _paAfStage!=='undefined') _paAfStage=null;
   }
   if(_osdViewer){
     try{_osdViewer.destroy();}catch(e){}
@@ -12291,6 +12332,118 @@ function icn3dSwitchToGLB() {
   activeModel._forcePdbOff = false;
 }
 
+/* ── Quelle source 3D une fiche déclare-t-elle ? ────────────────────────
+   Sert à la pastille des vignettes. L'ordre reproduit EXACTEMENT celui du
+   dispatch de initSheetRenderer — c'est la condition pour que la pastille
+   ne promette jamais un viewer que la fiche n'ouvre pas. Le contrôle
+   `test_pastille_3d.js` confronte les deux sur tout le référentiel ; si le
+   dispatch change, il doit échouer.
+
+   CE QUE LA PASTILLE DIT, ET CE QU'ELLE NE DIT PAS.
+   Elle dit qu'une source est déclarée et que le viewer correspondant sera
+   lancé. Elle ne dit pas que le rendu aboutira : un .glb peut manquer du
+   serveur, PubChem peut ne pas avoir de conformère 3D, RCSB peut être
+   injoignable. Vérifier cela demanderait d'ouvrir chaque fiche avec le
+   réseau — ce que la pastille ne prétend pas faire. */
+function resolve3D(m) {
+  if (!m) return null;
+  /* Les identifiants de catégorie voyagent entre un nom de fichier, un JSON
+     et ce code : « Génétique » peut y être composé (NFC) ou décomposé (NFD).
+     Deux chaînes qui s'affichent pareil et ne sont pas égales, c'est ce qui
+     faisait passer Génétique et Pharmacocinétique au travers des listes
+     ci-dessous. On normalise une fois, ici. */
+  var cat = String(m._cat || '');
+  try { cat = cat.normalize('NFC'); } catch (e) {}
+  var f = String(m.file || '');
+  if (/\.(splat|ksplat|ply)$/i.test(f))
+    return { type: 'splat', label: 'Nuage de points 3D' };
+  var pid = null;
+  try { pid = (typeof resolvePdbId === 'function') ? resolvePdbId(m) : (m.pdb_id || null); }
+  catch (e) { pid = m.pdb_id || null; }
+  var uni = null;
+  try { uni = (typeof PA_AlphaFold !== 'undefined') ? PA_AlphaFold.uniprotOf(m) : null; }
+  catch (e) { uni = null; }
+  var protCats = ['Transporteurs', 'CYP450_Pharmacogénétique', 'Pharmacologie',
+                  'Biochimie', 'Organites', 'Immunologie', 'Physiologie'];
+  var hasWidget = m.ms_widget_def && m.ms_widget_def.html;
+  if (!hasWidget && (protCats.indexOf(cat) !== -1 || (!m.file && (pid || uni)))) {
+    if (pid) return { type: 'pdb', label: 'Structure expérimentale ' + pid + ' (PDB)' };
+    if (uni) return { type: 'alphafold', label: 'Modèle AlphaFold (' + uni + ')' };
+  }
+  /* Oncologie passe par une résolution nom→CID avant 3Dmol : dès qu'il y a
+     un CID ou un SMILES, c'est le viewer moléculaire qui est lancé. */
+  if (cat === 'Oncologie')
+    return (m.pubchem_cid || m.smiles || m.chembl_smiles)
+      ? { type: 'pubchem', label: m.pubchem_cid ? 'Structure 3D PubChem'
+                                                : 'Structure 3D calculée depuis le SMILES' }
+      : null;
+  /* Dans ces sept catégories, le viewer moléculaire PASSE AVANT le modèle
+     local : une fiche qui a les deux ouvre PubChem, pas son .glb. Se tromper
+     d'ordre ici, c'était annoncer un modèle que la fiche n'ouvre jamais —
+     l'écart que le contrôle a relevé sur le butan-1-ol et le cyclohexanol. */
+  var cats3Dmol = ['Chimie', 'Minéraux', 'Huiles_Essentielles', 'Biochimie',
+                   'Pharmacologie', 'Chimie_Inorganique', 'ChimieTherapeutique'];
+  if ((m.pubchem_cid || m.smiles) && cats3Dmol.indexOf(cat) !== -1)
+    return { type: 'pubchem', label: m.pubchem_cid ? 'Structure 3D PubChem'
+                                                   : 'Structure 3D calculée depuis le SMILES' };
+  /* Les virus ont leur propre chemin NGL, hors du bloc protéique. */
+  if (cat === 'Virus' && pid)
+    return { type: 'pdb', label: 'Structure expérimentale ' + pid + ' (PDB)' };
+  /* Ces catégories n'atteignent JAMAIS le repli « modèle local » : leur
+     dispatch s'arrête avant, sur une galerie photo (Bacteries, Parasites),
+     un widget (Physiologie, Pharmacocinétique, Chimie analytique,
+     Génétique) ou un retour immédiat (Microscopiques). Leur fiche porte
+     pourtant un .glb — la pastille s'y allumait pour un viewer qui ne
+     s'ouvre pas. Cent soixante-dix-huit fiches étaient dans ce cas ; c'est
+     le contrôle qui les a trouvées, pas la lecture du code. */
+  var SANS_GLB = ['Bacteries', 'Parasites', 'Microscopiques',
+                  'Pharmacocinétique', 'Génétique',
+                  'Physiologie', 'Chimie_Analytique'];
+  /* Choix assumé sur les deux dernières.
+     Une partie de leurs fiches atteint bel et bien le modèle local, l'autre
+     s'arrête avant — et le critère qui les sépare n'est pas la présence d'un
+     widget (les deux groupes n'en portent pas). Plutôt que d'inventer une
+     règle qui tiendrait par hasard, la pastille reste éteinte pour toute la
+     catégorie : elle rate ainsi une trentaine de fiches qui ont pourtant un
+     modèle, mais elle n'en annonce aucun qui ne s'ouvre pas.
+     Une pastille muette se corrige ; une pastille qui ment se paie. */
+  if (/\.(glb|gltf)$/i.test(f) && SANS_GLB.indexOf(cat) === -1)
+    return { type: 'glb', label: 'Modèle 3D' };
+  /* Pas de repli au-delà : hors des catégories ci-dessus, un `chembl_smiles`
+     seul n'ouvre aucun viewer — le dispatch teste `m.smiles`, pas lui. La
+     pastille aurait promis une structure sur l'Artémisinne et le
+     Parthénolide, qui n'en affichent pas. */
+  return null;
+}
+
+/* ── La fiche décrit-elle un corps pur, ou une notion ? ─────────────────
+   Dans les catégories de molécules, une fiche qui ne porte ni formule brute
+   analysable ni identifiant décrit une VOIE, une CLASSE ou un MÉLANGE :
+   « β-Oxydation des Acides Gras », « Alcaloïdes pyrrolizidiniques »,
+   « Huile essentielle de lavande ». La pastille le dit d'un coup d'œil, et
+   explique du même coup l'absence de structure et de radar.
+
+   Ailleurs, la pastille se tairait ou hurlerait : en Physiologie toutes les
+   fiches sont des notions, la marque n'y distinguerait rien. Les huiles
+   essentielles sont dans le même cas — treize fiches sur treize sont des
+   mélanges — et sont donc exclues aussi. Une pastille toujours allumée ne
+   dit rien. */
+var PA_CATS_MOLECULES = ['Chimie', 'ChimieTherapeutique', 'Biochimie',
+                         'Métabolites_Secondaires', 'Minéraux',
+                         'Chimie_Inorganique', 'Oncologie'];
+function estFicheConcept(m) {
+  if (!m) return false;
+  var cat = String(m._cat || '');
+  try { cat = cat.normalize('NFC'); } catch (e) {}
+  if (PA_CATS_MOLECULES.indexOf(cat) === -1) return false;
+  var brut = String(m.formula || '')
+    .replace(/[₀₁₂₃₄₅₆₇₈₉]/g, function (c) { return '0123456789'['₀₁₂₃₄₅₆₇₈₉'.indexOf(c)]; })
+    .replace(/[\s·⋅]/g, '').replace(/[+\-⁺⁻]+$/, '');
+  if (brut && /^(?:[A-Z][a-z]?\d*)+$/.test(brut)) return false;
+  if (String(m.cas || '').trim() || String(m.pubchem_cid || '').trim()) return false;
+  return !(m.smiles || m.chembl_smiles);
+}
+
 /* ── Résoudre le code PDB depuis l'entrée ─────────────────────── */
 function resolvePdbId(m) {
   if (m.pdb_id) return m.pdb_id.toUpperCase().trim();
@@ -12510,10 +12663,25 @@ function initSheetRendererNGL(m, pdbId, emdbId, structLabel) {
         return;
       }
 
-      // Redimensionnement automatique
-      window.addEventListener('resize', function(){ if (_nglStage) _nglStage.handleResize(); });
-      var ro = new ResizeObserver(function(){ if (_nglStage) _nglStage.handleResize(); });
-      ro.observe(viewport);
+      /* Redimensionnement automatique — posé UNE SEULE FOIS.
+         Cet écouteur et cet observateur étaient recréés à chaque ouverture
+         d'une fiche protéique, sans jamais être retirés : vingt structures
+         consultées, vingt écouteurs et vingt ResizeObserver actifs, tous
+         appelant handleResize() sur le même stage. Avec la boucle de rendu
+         de chaque stage orphelin, c'est ce qui faisait grimper les erreurs
+         NGL par milliers et déclenchait les violations de
+         requestAnimationFrame. */
+      if(!window._nglResizeLie){
+        window._nglResizeLie = true;
+        window.addEventListener('resize', function(){
+          if (_nglStage) { try { _nglStage.handleResize(); } catch(e){} }
+        });
+      }
+      if (window._nglRO) { try { window._nglRO.disconnect(); } catch(e){} }
+      window._nglRO = new ResizeObserver(function(){
+        if (_nglStage) { try { _nglStage.handleResize(); } catch(e){} }
+      });
+      window._nglRO.observe(viewport);
 
       // Charger d'abord en PDB (plus universel), .cif en fallback
       var urls = [
@@ -16134,7 +16302,19 @@ function _paLoadAlphaFoldNGL(uniprot, modelUrl){
         });
       }
       tryLoad(primary, isPdb?'pdb':'cif', true);
-      window.addEventListener('resize',function(){ if(_paAfStage) _paAfStage.handleResize(); });
+      /* Un SEUL écouteur de redimensionnement, pour toute la session.
+         Il était posé à chaque ouverture d'une structure AlphaFold : cinquante
+         fiches protéiques consultées, cinquante écouteurs sur window, chacun
+         appelant handleResize() sur un stage souvent déjà libéré. C'est l'une
+         des sources des milliers d'erreurs NGL et des violations
+         « requestAnimationFrame handler took 57ms ». L'écouteur lit désormais
+         la variable au moment où il se déclenche, ce qui suffit. */
+      if(!window._paAfResizeLie){
+        window._paAfResizeLie=true;
+        window.addEventListener('resize',function(){
+          if(_paAfStage){ try{_paAfStage.handleResize();}catch(e){} }
+        });
+      }
     }catch(e){
       host.innerHTML='<div style="color:#c88;padding:16px">Viewer 3D indisponible.</div>';
     }
@@ -16489,11 +16669,27 @@ function buildCard(m){
      microscopie UDE BioSLiDES est disponible. Même garde que les onglets du
      viewer — resolveBioslide() est la seule autorité sur la présence d'une
      lame, pour qu'une pastille ne puisse jamais annoncer un onglet absent. */
-  var lameDot='';
+  var dots='';
   try{
     if(typeof resolveBioslide==='function' && resolveBioslide(m))
-      lameDot='<i class="pa-lame-dot" title="Lame de microscopie disponible">🔬</i>';
+      dots+='<i class="pa-lame-dot" title="Lame de microscopie disponible">🔬</i>';
   }catch(e){}
+  /* Pastille « modèle 3D » : resolve3D() est la seule autorité, et elle suit
+     le dispatch de initSheetRenderer pas à pas. */
+  try{
+    if(typeof resolve3D==='function'){
+      var _s3=resolve3D(m);
+      if(_s3) dots+='<i class="pa-dot pa-dot-3d" title="'+escHtml(_s3.label)+'">◈</i>';
+    }
+  }catch(e){}
+  /* Pastille « fiche de concept » : une voie, une classe ou un mélange
+     plutôt qu'un corps pur — donc ni structure, ni radar, et c'est normal. */
+  try{
+    if(typeof estFicheConcept==='function' && estFicheConcept(m))
+      dots+='<i class="pa-dot pa-dot-concept" title="Fiche de concept : voie, '
+           +'classe ou mélange — pas un corps pur">≡</i>';
+  }catch(e){}
+  var lameDot=dots?'<span class="pa-dots">'+dots+'</span>':'';
   card.innerHTML=`<div class="thumb-wrap">${th}${lameDot}</div><div class="model-info">
     <div class="model-name">${highlightText(name, (typeof searchQuery!=='undefined'?searchQuery:''))}</div>
     ${m.desc&&!m._grouped?`<div class="model-desc">${escHtml(m.desc)}</div>`:''}

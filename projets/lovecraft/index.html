@@ -84,6 +84,12 @@ body::after{
   box-shadow:0 2px 8px rgba(0,0,0,0.5);
 }
 #story{font-size:1.08rem;line-height:1.85;white-space:pre-wrap;text-align:justify;color:var(--ink-text);}
+.epigraph{
+  font-family:'IM Fell English',serif;font-style:italic;font-size:0.95rem;line-height:1.6;
+  color:var(--phos-bright);border-left:2px solid var(--brass-dim);padding:4px 0 4px 16px;
+  margin-bottom:20px;opacity:0.9;
+}
+.epigraph .epi-source{display:block;margin-top:6px;font-style:normal;font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--brass-bright);opacity:0.8;}
 #sceneart{display:none;margin-bottom:22px;overflow:hidden;border-radius:2px;}
 #sceneart img{display:block;width:100%;max-height:420px;object-fit:cover;}
 #story::first-letter{font-family:'UnifrakturMaguntia',serif;font-size:2.6rem;color:var(--brass-bright);float:left;line-height:0.8;padding:6px 8px 0 0;text-shadow:0 0 12px rgba(203,171,106,0.3);}
@@ -383,6 +389,9 @@ body::after{
 #ritualCanvas{background:rgba(0,0,0,0.35);border:1px solid var(--brass-dim);touch-action:none;cursor:crosshair;display:block;margin:0 auto;}
 .ritual-btns{display:flex;gap:8px;justify-content:center;margin-top:14px;}
 #ritualFeedback{margin-top:12px;font-size:0.95rem;min-height:1.4em;color:var(--phos-bright);}
+#visionOverlay{position:absolute;inset:0;z-index:165;display:none;align-items:center;justify-content:center;background:rgba(3,8,10,0.94);}
+#visionOverlay .ritual-panel{border-color:var(--blood-bright);}
+#visionOverlay h3{font-family:'UnifrakturMaguntia',serif;color:var(--blood-bright);}
 
 /* ===== Termes clés surlignés dans le récit ===== */
 #story .kw-monster{color:var(--blood-bright);font-weight:600;}
@@ -440,6 +449,7 @@ body::after{
       <div id="actbanner"></div>
       <div id="secnum"></div>
       <div id="sceneart" class="aged-photo"><img id="sceneimg" alt="" onerror="this.parentElement.style.display='none'" onload="this.parentElement.style.display='block'"></div>
+      <div id="epigraph"></div>
       <div id="story"></div>
 
       <div id="choicesec"></div>
@@ -476,6 +486,14 @@ body::after{
         <button class="hbtn" id="ritualValidate">Valider le tracé</button>
       </div>
       <div id="ritualFeedback"></div>
+    </div>
+  </div>
+
+  <div id="visionOverlay">
+    <div class="ritual-panel">
+      <h3>Un instant de trop</h3>
+      <p id="visionText" style="font-style:italic;text-align:left;max-width:420px;line-height:1.7;"></p>
+      <div class="ritual-btns"><button class="hbtn" onclick="closeVision()">…</button></div>
     </div>
   </div>
 
@@ -558,7 +576,7 @@ const LOOT_TABLES = {
   goule: [
     { text:"Rien que de la terre de cimetière collée sous ses griffes." },
     { text:"Un fragment d'os taillé en pointe, poli par un usage prolongé.", item:"Os Taillé" },
-    { text:"Quelques pièces de monnaie anciennes, volées à un défunt plus récent que la Goule elle-même.", item:"Pièces Anciennes" },
+    { text:"Une amulette de jade verdâtre, sculptée en forme de molosse ailé accroupi, aux yeux étrangement vivants — une relique de facture bien plus ancienne que la tombe où la Goule l'avait trouvée.", item:"Amulette de Jade;CODEX:the-hound" },
     { text:"Rien d'utile, seulement des lambeaux de linceul." },
     { text:"Un petit sac de provisions volées à un fossoyeur imprudent.", item:"RATION:2" },
     { text:"Une antique dague de bronze verdi, exhumée d'une tombe bien plus ancienne que les autres — une relique de K'n-yan que la Goule gardait précieusement.", item:"Dague Rituelle de K'n-yan" }
@@ -594,6 +612,10 @@ const CODEX_DB = [
   { key:'nyarlathotep', name:'Nyarlathotep', lore:"Le Chaos Rampant, messager et âme des Dieux Extérieurs, capable de mille incarnations — dont celle, terrible, du Pharaon Noir. (L'Appel de Cthulhu, 1926 — Kadath, 1927)" },
   { key:'old-man-terrible', name:'Le Vieux Marin de la falaise', lore:"Zadok Sylla, ancien capitaine reclus dans une maison isolée, gardant des jarres de verre où des formes suspendues murmurent en plusieurs voix. Trois voleurs venus pour son or espagnol ont disparu sans laisser de trace. (Le Terrible Vieil Homme, 1920)" },
   { key:'nameless-city', name:'La Cité sans Nom', lore:"Cité de pierre plus vieille que Memphis, ensevelie sous les sables d'Arabie, bâtie par une race reptilienne antérieure à l'humanité. Abdul Alhazred y aurait séjourné avant de composer les premiers vers du Necronomicon. (La Cité sans Nom, 1921)" },
+  { key:'festival', name:'La Procession du Solstice', lore:"Un rite d'hiver immémorial, célébré par les vieilles familles des villages côtiers de Nouvelle-Angleterre : une procession silencieuse descendant sous terre par une tombe ancienne, jusqu'à un monde souterrain de flammes verdâtres et de fleuves huileux, où une forme amorphe joue du fifre dans l'ombre. (Le Festival, 1923)" },
+  { key:'ulthar-cats', name:'Les Chats d\'Ulthar', lore:"Dans la ville d'Ulthar, nulle personne n'a le droit de tuer un chat — une loi promulguée après qu'un vieux couple cruel eut disparu, dévoré par les chats du village qu'il martyrisait. Dans les Contrées du Rêve, les chats voient au-delà du voile et n'oublient jamais une gentillesse. (Les Chats d'Ulthar, 1920)" },
+  { key:'the-hound', name:'Le Molosse de Jade', lore:"Une amulette funéraire en forme de molosse ailé, pillée dans une tombe ancienne par des profanateurs qui furent ensuite traqués et déchiquetés par l'esprit vengeur qu'elle représente. Nul voleur de tombe ne devrait la garder longtemps. (Le Molosse, 1922)" },
+  { key:'atal-ulthar', name:"Atal d'Ulthar", lore:"Prêtre tricentenaire du Temple des Anciens à Ulthar, seul survivant d'une expédition qui gravit jadis le pic interdit de Hatheg-Kla, et gardien du dernier exemplaire des Manuscrits Pnakotiques — des textes d'un savoir antérieur à l'humanité éveillée. (Kadath l'Inconnue, 1926-27)" },
   { key:'cultiste', name:'Les Cultistes d\'Arkham', lore:"Fanatiques humains corrompus par le culte de Cthulhu, reconnaissables à leurs robes sombres et leurs couteaux rituels à la lame noircie. (L'Appel de Cthulhu, 1926)" },
   { key:'shantak', name:'Le Shantak', lore:"Immense créature volante à tête chevaline et aux ailes écailleuses, montures des puissances divines sur le chemin de Kadath. On dit qu'elles ne supportent pas l'odeur des Goules. (Kadath, 1927)" },
 ];
@@ -805,7 +827,7 @@ function rollDiceVisual(rows, dur){
 /* ---------- Sections de l'histoire ---------- */
 const SECTIONS = {
 
-"1":{t:"La gare de Portneuve n'est qu'un quai de bois pourri battu par un vent salé. Le village s'étire entre deux collines grises, ses toits d'ardoise luisant sous un ciel bas. Une odeur de poisson mort et d'algue flotte partout. Un vieil homme voûté balaie le quai sans vous regarder. Voulez-vous lui demander votre chemin vers la maison d'Ezra Marsh (Rendez-vous au 2), ou préférez-vous vous rendre directement à l'auberge du village pour y passer la nuit (Rendez-vous au 3) ?", g:[2,3]},
+"1":{epigraph:{text:"« J'écris ces lignes sous une tension mentale considérable, car avant ce soir je ne serai plus. Sans le sou, et à bout de cette drogue qui seule rend la vie supportable, je ne puis plus endurer ce supplice, et je vais me jeter par la fenêtre de ce grenier dans la rue sordide en contrebas. »", source:"H.P. Lovecraft, Dagon, 1917 — trad. libre"}, t:"La gare de Portneuve n'est qu'un quai de bois pourri battu par un vent salé. Le village s'étire entre deux collines grises, ses toits d'ardoise luisant sous un ciel bas. Une odeur de poisson mort et d'algue flotte partout. Un vieil homme voûté balaie le quai sans vous regarder. Voulez-vous lui demander votre chemin vers la maison d'Ezra Marsh (Rendez-vous au 2), ou préférez-vous vous rendre directement à l'auberge du village pour y passer la nuit (Rendez-vous au 3) ?", g:[2,3]},
 
 "2":{t:"Le vieil homme relève à peine la tête. « Marsh ? » grommelle-t-il. « Personne ne va plus chez Marsh. Sa maison est au bout de la Grand-Rue, près des quais. Mais si vous êtes sage, jeune homme, vous prendrez le premier train pour repartir. » Il reprend son balayage sans ajouter un mot. Vous décidez de vous rendre directement chez Ezra Marsh (Rendez-vous au 5), ou de passer d'abord par l'auberge pour vous renseigner davantage (Rendez-vous au 3).", g:[5,3]},
 
@@ -815,13 +837,13 @@ const SECTIONS = {
 
 "60":{t:"« Le vieux Zadok Sylla ? » L'aubergiste baisse la voix. « Un ancien capitaine au long cours, reclus dans sa maison de planches sur la falaise depuis trente ans. On raconte qu'il tient chez lui une bonne douzaine de jarres de verre, et que chacune contient quelque chose qui pend et se balance comme un pendule, et qui lui parle de plusieurs voix différentes, la nuit venue. Trois marins qui avaient cru le voler pour son or espagnol n'ont jamais reparu au village. » Il n'en dira pas plus. Voulez-vous gravir la falaise pour observer sa maison isolée avant la nuit (Rendez-vous au 62), ou laisser cette histoire de côté et monter dans votre chambre (Rendez-vous au 8) ?", g:[62,8]},
 
-"62":{t:"La maison du vieux Sylla se dresse, seule, au bord de la falaise — une bâtisse de planches grises battues par le vent du large, sans autre lumière qu'une lueur vacillante à l'une des fenêtres du rez-de-chaussée. En vous approchant, vous croyez entendre, à travers les murs, un curieux cliquetis rythmé, comme des pendules de bois s'entrechoquant, ponctué de murmures qui ne semblent pas tous appartenir à la même voix — ni, songez-vous avec un frisson, à la même langue. Voulez-vous frapper à sa porte (Rendez-vous au 64), observer par la fenêtre entrouverte (Rendez-vous au 66), ou vous glisser plutôt dans la remise à outils attenante, à l'écart de la maison elle-même (Rendez-vous au 165) ?", g:[64,66,165]},
+"62":{t:"La maison du vieux Sylla se dresse, seule, au bord de la falaise — une bâtisse de planches grises battues par le vent du large, sans autre lumière qu'une lueur vacillante à l'une des fenêtres du rez-de-chaussée. Dans la cour envahie d'herbes, parmi des arbres tordus par les embruns, vous distinguez une étrange collection de grosses pierres peintes, disposées avec un soin presque religieux — on dirait les idoles de quelque temple oriental oublié. En vous approchant de la maison, vous croyez entendre, à travers les murs, un curieux cliquetis rythmé, comme des pendules de bois s'entrechoquant, ponctué de murmures qui ne semblent pas tous appartenir à la même voix — ni, songez-vous avec un frisson, à la même langue. Voulez-vous frapper à sa porte (Rendez-vous au 64), observer par la fenêtre entrouverte (Rendez-vous au 66), ou vous glisser plutôt dans la remise à outils attenante, à l'écart de la maison elle-même (Rendez-vous au 165) ?", g:[64,66,165]},
 
 "165":{t:"Vous vous glissez dans la remise attenante à la maison, sombre et sentant l'huile de lin et le goudron marin. Parmi des filets en désordre et des casiers vides, vous trouvez, accroché à un clou rouillé, un vieux sextant de laiton corrodé par le sel — sans doute la seule relique honnête d'une vie de marin par ailleurs bien mystérieuse. Vous quittez les lieux sans que le vieux Sylla ne remarque votre passage. Rendez-vous au 8.", g:[8], addItem:"Sextant de Laiton"},
 
 "64":{t:"Vous frappez. Un long silence suit, puis la porte s'entrebâille sur un vieillard décharné, à la barbe blanche et aux yeux d'un bleu presque électrique malgré son grand âge. Il vous dévisage longuement sans un mot, puis un sourire édenté fend son visage tanné par le sel. « Un jeune curieux, comme les autres avant vous », dit-il d'une voix de fausset. « Ceux qui viennent chercher mon or repartent rarement. Ceux qui viennent chercher autre chose... » Il désigne du menton l'obscurité derrière lui, où le cliquetis reprend, plus insistant. « ...devraient réfléchir à deux fois avant d'apprendre ce que les jarres ont à raconter. Portneuve garde plus d'un secret sous ses eaux, jeune homme. Le mien n'est pas le pire. » Sur ces mots sibyllins, il referme doucement la porte. Vous redescendez vers le village, la mise en garde du Vieux Marin gravée dans votre mémoire. Rendez-vous au 8.", g:[8], addItem:"CODEX:old-man-terrible"},
 
-"66":{t:"Par l'interstice des volets mal joints, vous apercevez l'intérieur : une pièce nue, hormis une longue étagère où sont alignées une douzaine de jarres de verre épais. À l'intérieur de chacune, une forme sombre et allongée se balance doucement, comme mue par un vent que vous ne sentez pas, et un murmure indistinct, presque une psalmodie, s'en échappe. TESTEZ VOTRE LUCIDITÉ face à ce spectacle. Si vous êtes Chanceux, Rendez-vous au 68. Si vous êtes Malchanceux, Rendez-vous au 69.", g:[68,69], luckTest:true},
+"66":{t:"Par l'interstice des volets mal joints, vous apercevez l'intérieur : une pièce nue, hormis une longue étagère où sont alignées une douzaine de jarres de verre épais. À l'intérieur de chacune, un petit poids de plomb pend au bout d'une ficelle, comme un pendule minuscule, et se balance doucement sans qu'aucun courant d'air ne l'explique. Le vieux Sylla, assis face à elles, murmure des noms — Jack, Balafré, Long Tom, Joe l'Espagnol, Peters, le Second Ellis — d'anciens noms de matelots, semble-t-il, et chaque fois qu'il en prononce un, le pendule de la jarre correspondante frémit avec une précision qui n'a rien d'accidentel. TESTEZ VOTRE LUCIDITÉ face à ce spectacle. Si vous êtes Chanceux, Rendez-vous au 68. Si vous êtes Malchanceux, Rendez-vous au 69.", g:[68,69], luckTest:true},
 
 "68":{t:"Vous détournez le regard avant que votre esprit n'insiste trop longuement sur ce que vous venez de voir, et redescendez vers le village d'un pas rapide, le souvenir des jarres du Vieux Marin gravé dans votre mémoire. Rendez-vous au 8.", g:[8], addItem:"CODEX:old-man-terrible"},
 
@@ -831,7 +853,15 @@ const SECTIONS = {
 
 "6":{t:"À la mention du nom de Marsh, l'aubergiste pâlit visiblement. « Il fouinait du côté du Récif du Diable, ce vieux fou. Posait des questions sur... des choses qu'on ne nomme pas ici. » Il se penche vers vous, sa voix tombant en un murmure : « Si vous tenez à la vie, ne descendez pas sur la plage après le coucher du soleil. Les Profonds remontent avec la marée montante. » Il refuse d'en dire plus et retourne à ses verres. Vous gagnez cette information précieuse. Voulez-vous monter dans votre chambre pour la nuit (Rendez-vous au 8), ou sortir immédiatement vers la maison de Marsh malgré l'heure tardive (Rendez-vous au 5) ?", g:[8,5]},
 
-"8":{t:"Votre chambre est exiguë et sent le sel et le moisi. Par la fenêtre, vous apercevez la baie où des formes sombres semblent parfois briser la surface de l'eau — des poissons, sans doute. Vous vous endormez d'un sommeil agité, peuplé de rêves où des voix chantent sous l'océan des noms que votre esprit refuse de retenir. Au matin, vous êtes réveillé par des coups frénétiques à votre porte. C'est l'aubergiste, livide : « Le corps d'Ezra Marsh vient d'être retrouvé sur la plage ! » Rendez-vous au 10.", g:[10]},
+"8":{t:"Votre chambre est exiguë et sent le sel et le moisi. Par la fenêtre, vous apercevez la baie où des formes sombres semblent parfois briser la surface de l'eau — des poissons, sans doute. C'est alors qu'un son vous parvient, ténu mais insistant : une flûte, quelque part dans les rues en contrebas, jouant un air qui n'appartient à aucune gamme familière. Voulez-vous regarder par la fenêtre avant de vous coucher (Rendez-vous au 74), ou l'ignorer et vous endormir (Rendez-vous au 78) ?", g:[74,78]},
+
+"78":{t:"Vous vous endormez d'un sommeil agité, peuplé de rêves où des voix chantent sous l'océan des noms que votre esprit refuse de retenir. Au matin, vous êtes réveillé par des coups frénétiques à votre porte. C'est l'aubergiste, livide : « Le corps d'Ezra Marsh vient d'être retrouvé sur la plage ! » Rendez-vous au 10.", g:[10]},
+
+"74":{t:"Par la fenêtre entrouverte, vous apercevez une file de silhouettes encapuchonnées descendant en procession silencieuse la Grand-Rue, chacune tenant une lanterne éteinte. Elles convergent vers le vieux cimetière derrière l'église, où une forme amorphe et sans contour net, accroupie loin des lanternes, joue d'une flûte au son grêle et malsain, comme une plainte de fifre trop faible pour ce qu'elle semble commander. Devant une tombe ancienne, l'une des silhouettes soulève une dalle de pierre, révélant un escalier qui s'enfonce sous terre — vers un monde souterrain, songez-vous, plutôt que vers une simple crypte. TESTEZ VOTRE LUCIDITÉ face à ce spectacle. Si vous êtes Chanceux, Rendez-vous au 76. Si vous êtes Malchanceux, Rendez-vous au 77.", g:[76,77], luckTest:true},
+
+"76":{t:"Vous observez la scène avec la distance froide de l'enquêteur, notant chaque détail sans vous laisser submerger : la procession, l'escalier sous la tombe, cette forme accroupie près du fifre qui ne ressemble, remarquez-vous avec un frisson tardif, à aucun corps qu'un homme devrait porter. Vous refermez les volets et regagnez votre lit, glacé mais lucide. AJOUTEZ à votre carnet le souvenir de cette procession du solstice. Rendez-vous au 78.", g:[78], addItem:"CODEX:festival"},
+
+"77":{t:"Vous perdez 2 points de LUCIDITÉ : l'image de cette forme accroupie et sans contour net jouant du fifre, et de la dalle qui se referme sur la procession comme une bouche, s'imprime en vous plus profondément que vous ne l'auriez voulu. Vous refermez les volets d'une main tremblante. AJOUTEZ à votre carnet le souvenir de cette procession du solstice. Rendez-vous au 78.", g:[78], luckLoss:2, addItem:"CODEX:festival"},
 
 "5":{t:"La maison d'Ezra Marsh est une bâtisse délabrée aux volets clos, à quelques mètres seulement de la ligne de marée haute. La porte d'entrée est entrebâillée. À l'intérieur règne un désordre total : papiers éparpillés, meubles renversés. Sur le bureau, vous trouvez un carnet de notes couvert de croquis d'inspiration marine et d'une écriture fébrile. Voulez-vous lire le carnet (Rendez-vous au 11), ou fouiller le reste de la maison en premier (Rendez-vous au 13) ?", g:[11,13]},
 
@@ -841,7 +871,19 @@ const SECTIONS = {
 
 "9":{t:"Vous regagnez votre chambre à l'auberge et vous endormez d'un sommeil agité, peuplé de rêves où des voix chantent sous l'océan des noms que votre esprit refuse de retenir. Au matin, des coups frénétiques à votre porte vous réveillent en sursaut. C'est l'aubergiste, livide : « Le corps d'Ezra Marsh vient d'être retrouvé sur la plage ! » La nouvelle ne vous surprend qu'à moitié : vous avez déjà fouillé sa maison de fond en comble et savez, par ce que vous y avez trouvé, où chercher la suite. Plutôt que de perdre du temps auprès de la foule massée sur le sable, vous décidez de descendre directement vers le Récif du Diable. Rendez-vous au 14.", g:[14]},
 
-"14":{t:"Vous descendez vers la plage sous un ciel qui s'assombrit rapidement. Le sable est froid sous vos pieds, et le bruit des vagues résonne étrangement, comme ponctué de clapotis qui ne semblent pas naturels. Au loin, sur le Récif du Diable, une pierre dressée se découpe contre le ciel violet du crépuscule. Alors que vous approchez, deux silhouettes voûtées émergent de l'eau à une trentaine de mètres. Voulez-vous vous cacher derrière les rochers pour les observer (Rendez-vous au 16), continuer votre chemin en espérant ne pas être vu (Rendez-vous au 18), ou emprunter plutôt le sentier détourné qui longe le vieux cimetière du village, à l'écart de la plage (Rendez-vous au 45) ?", g:[16,18,45]},
+"14":{t:"Vous descendez vers la plage sous un ciel qui s'assombrit rapidement. Le sable est froid sous vos pieds, et le bruit des vagues résonne étrangement, comme ponctué de clapotis qui ne semblent pas naturels. Au loin, sur le Récif du Diable, une pierre dressée se découpe contre le ciel violet du crépuscule. Alors que vous approchez, deux silhouettes voûtées émergent de l'eau à une trentaine de mètres. Voulez-vous vous cacher derrière les rochers pour les observer (Rendez-vous au 16), continuer votre chemin en espérant ne pas être vu (Rendez-vous au 18), emprunter plutôt le sentier détourné qui longe le vieux cimetière du village, à l'écart de la plage (Rendez-vous au 73), ou tenter, d'un geste incertain, de tracer sur le sable un sigil entrevu en rêve — un cercle qui s'enroule sur lui-même comme une vague (Rendez-vous au 271) ?", g:[16,18,73,271]},
+
+"271":{t:"Sans trop savoir pourquoi, vous vous accroupissez et tracez du doigt, dans le sable humide, une spirale qui s'enroule sur elle-même — un geste qui vous semble monter d'une mémoire qui n'est pas tout à fait la vôtre.", g:[272,18], ritual:"dagonSigil"},
+
+"272":{t:"Les deux silhouettes s'immobilisent net, comme frappées d'une hésitation soudaine. Elles inclinent la tête, presque respectueusement, avant de se détourner et de regagner lentement les flots sans un regard pour vous. Le sigil de Dagon, tracé même maladroitement, suffit à vous faire passer pour l'un des leurs — ou du moins pour quelqu'un qu'il ne convient pas de déranger. Vous poursuivez votre chemin vers le récif, indemne. Rendez-vous au 26.", g:[26]},
+
+"73":{t:"En approchant du muret du cimetière, vous remarquez avec un malaise croissant que la terre elle-même semble bouger. Un fleuve continu de rats — des centaines, peut-être davantage — jaillit d'un caveau effondré et se déverse dans l'herbe haute, fuyant quelque chose qui remue encore plus profondément sous la pierre. Voulez-vous vous approcher du caveau effondré pour y jeter un œil (Rendez-vous au 79), ou poursuivre votre chemin sans vous attarder (Rendez-vous au 45) ?", g:[79,45]},
+
+"79":{t:"Vous risquez un œil dans l'obscurité béante du caveau. TESTEZ VOTRE LUCIDITÉ. Si vous êtes Chanceux, Rendez-vous au 80. Si vous êtes Malchanceux, Rendez-vous au 81.", g:[80,81], luckTest:true},
+
+"80":{t:"Parmi des ossements entremêlés, plus nombreux qu'aucune sépulture de famille n'en devrait contenir, vous distinguez un fragment de mâchoire aux dents étrangement limées — presque humaine, sans l'être tout à fait. Vous l'empochez, mal à l'aise, et rebroussez chemin vers le sentier. Rendez-vous au 45.", g:[45], addItem:"Mâchoire Ancestrale"},
+
+"81":{t:"L'obscurité du caveau semble vous rendre votre regard, et l'espace d'un instant vous croyez distinguer, tapies dans les profondeurs, des formes qui ne sont ni tout à fait rats, ni tout à fait autre chose. Vous perdez 2 points de LUCIDITÉ et reculez précipitamment vers le sentier. Rendez-vous au 45.", g:[45], luckLoss:2},
 
 "45":{t:"Le sentier du cimetière semble plus sûr, à l'écart de l'eau — jusqu'à ce qu'un murmure psalmodié en cadence vous fasse ralentir le pas. Dissimulés derrière les pierres tombales, trois silhouettes en robe sombre, le visage caché sous des capuches, tracent à la craie des symboles interdits sur le sol : des CULTISTES D'ARKHAM, reconnaissables à leurs couteaux rituels à la lame noircie. Voulez-vous les attaquer par surprise pendant qu'ils sont absorbés par leur rituel (Rendez-vous au 47), ou rebrousser chemin vers la plage pour éviter toute confrontation (Rendez-vous au 18) ?", g:[47,18]},
 
@@ -857,7 +899,7 @@ const SECTIONS = {
 
 "24":{t:"Les deux créatures s'effondrent sur le sable humide, leur sang noirâtre se mêlant à l'écume. Dans le filet, vous découvrez un jeune pêcheur, inconscient mais vivant, un bandeau de tissu maculé de sang autour de la tête. Il reprend connaissance en toussant et vous regarde avec une terreur animale avant de s'enfuir en boitant vers le village sans un mot de remerciement. Sur le corps de l'un des Profonds, vous trouvez un étrange Collier d'Écailles serti d'une perle noire. AJOUTEZ le Collier d'Écailles à votre inventaire. Vous reprenez votre chemin vers la pierre dressée du récif. Rendez-vous au 26.", g:[26], addItem:"Collier d'Écailles"},
 
-"26":{t:"La pierre dressée du Récif du Diable est couverte de lichen, mais en grattant la surface avec votre couteau, vous découvrez un symbole gravé profondément dans la roche : une étoile à cinq branches surmontée d'un œil flamboyant. C'est le SIGNE DES ANCIENS dont parlait le carnet d'Ezra Marsh. Voulez-vous copier soigneusement le symbole sur un morceau de papier pour l'étudier plus tard (Rendez-vous au 28), ou presser votre paume directement sur la pierre gravée (Rendez-vous au 30) ?", g:[28,30]},
+"26":{t:"La pierre dressée du Récif du Diable n'est pas un simple menhir : c'est un monolithe taillé de main d'homme, ou de quelque chose qui en tenait lieu il y a des ères de cela, dressé au bord d'un gouffre sous-marin que la marée basse laisse deviner. En grattant le lichen qui le recouvre, vous mettez au jour tout un système d'inscriptions — non pas une écriture que vous reconnaissez, mais une suite de symboles conventionnels représentant poissons, anguilles, poulpes, mollusques et créatures marines plus grasses et plus difformes qu'aucun poisson connu. Puis, gravé plus profondément que tout le reste, un symbole se détache : une étoile à cinq branches surmontée d'un œil flamboyant. C'est le SIGNE DES ANCIENS dont parlait le carnet d'Ezra Marsh. Voulez-vous copier soigneusement le symbole sur un morceau de papier pour l'étudier plus tard (Rendez-vous au 28), ou presser votre paume directement sur la pierre gravée (Rendez-vous au 30) ?", g:[28,30]},
 
 "28":{t:"Vous recopiez avec soin le symbole à la lueur de votre lampe de poche. AJOUTEZ le Croquis du Signe des Anciens à votre inventaire (utile plus tard : ce croquis pourra être gravé sur un objet pour vous protéger). Un bruit de pas mouillés vous fait sursauter — quelque chose approche depuis l'eau. Voulez-vous vous cacher (Rendez-vous au 32), ou faire face bravement (Rendez-vous au 34) ?", g:[32,34], addItem:"Croquis du Signe des Anciens"},
 
@@ -867,7 +909,7 @@ const SECTIONS = {
 
 "35":{t:"La vision vous submerge entièrement. Vous voyez, ou croyez voir, votre propre reflet se distordre en une forme squameuse et palmée. Vous perdez 2 points de LUCIDITÉ. Lorsque vous reprenez vos esprits, un bruit de pas mouillés retentit tout près. Voulez-vous vous cacher (Rendez-vous au 32), ou faire face, encore hébété (Rendez-vous au 34) ?", g:[32,34], luckLoss:2},
 
-"32":{t:"Vous vous glissez derrière la pierre dressée juste à temps. Un vieillard au dos voûté et à la démarche étrangement sautillante s'approche du récif, portant une lanterne. C'est le sacristain du village, que vous aviez aperçu à l'auberge. Il murmure des paroles rituelles dans une langue inconnue face à la pierre gravée, dépose un panier d'offrandes de poisson à son pied, puis rebrousse chemin vers le village. Vous attendez qu'il soit hors de vue avant de sortir de votre cachette. Rendez-vous au 36.", g:[36]},
+"32":{t:"Vous vous glissez derrière la pierre dressée juste à temps. Un vieillard au dos voûté et à la démarche étrangement sautillante s'approche du récif, portant une lanterne. C'est le sacristain du village, que vous aviez aperçu à l'auberge. Il murmure des paroles rituelles dans une langue inconnue face à la pierre gravée, puis dépose un panier d'offrandes de poisson à son pied. Un clapotis se fait entendre au loin dans l'obscurité de la marée montante — une masse sombre, presque humaine dans son contour général mais grotesquement disproportionnée, émerge un instant à la surface avant de replonger, comme pour recevoir l'offrande sans jamais tout à fait se montrer. Le sacristain s'incline, puis rebrousse chemin vers le village. Vous attendez qu'il soit hors de vue avant de sortir de votre cachette. Rendez-vous au 36.", g:[36]},
 
 "36":{t:"Le sacristain disparu dans la nuit sur le chemin du village, vous sortez de votre cachette. À la base du récif, la marée descendante découvre l'entrée d'une petite grotte marine à demi immergée. Rendez-vous au 42.", g:[42]},
 
@@ -885,15 +927,15 @@ const SECTIONS = {
 
 "46":{t:"Vous vous glissez dans la grotte, l'eau salée vous arrivant aux genoux. Le tunnel de roche noire s'enfonce profondément sous le récif, et le chant se fait de plus en plus distinct — une psalmodie en une langue gutturale, ponctuée d'un nom que votre esprit se refuse presque à entendre : « Cthulhu fhtagn... » TESTEZ VOTRE LUCIDITÉ avant de continuer. Si vous êtes Chanceux, Rendez-vous au 50. Si vous êtes Malchanceux, Rendez-vous au 52.", g:[50,52], luckTest:true},
 
-"50":{t:"Vous serrez les mâchoires et parvenez à garder votre sang-froid malgré l'horreur croissante du chant. Vous avancez encore et découvrez une vaste caverne éclairée d'une lumière phosphorescente verdâtre, où des dizaines de silhouettes squameuses dansent autour d'un autel de pierre noire. Ligoté sur cet autel, immobile, se trouve le corps d'Ezra Marsh — mort depuis plusieurs jours déjà, le visage figé dans une expression de terreur pure. Sur son corps, glissée dans sa poche, vous trouvez une lettre inachevée qui mentionne un fermier nommé Nahum Gardner et \"une lueur tombée du ciel, sur sa terre à l'ouest d'Arkham\". Vous quittez la grotte, glacé jusqu'aux os. Rendez-vous au 100.", g:[100]},
+"50":{t:"Vous serrez les mâchoires et parvenez à garder votre sang-froid malgré l'horreur croissante du chant. Vous avancez encore et découvrez une vaste caverne éclairée d'une lumière phosphorescente verdâtre, où des dizaines de silhouettes squameuses dansent, bondissent et hurlent autour d'un grand feu, dans un désordre extatique qui n'a plus rien d'humain. Au centre, sur un socle de pierre cyclopéenne, se dresse une idole verdâtre et visqueuse, haute de plusieurs mètres : une tête bulbeuse hérissée de tentacules surmonte un corps écailleux aux ailes rudimentaires, le tout sculpté avec une science qui semble antérieure à toute civilisation connue. Ligoté sur un autel plus modeste à ses pieds, immobile, se trouve le corps d'Ezra Marsh — mort depuis plusieurs jours déjà, le visage figé dans une expression de terreur pure. Sur son corps, glissée dans sa poche, vous trouvez une lettre inachevée qui mentionne un fermier nommé Nahum Gardner et \"une lueur tombée du ciel, sur sa terre à l'ouest d'Arkham\". Vous quittez la grotte, glacé jusqu'aux os. Rendez-vous au 100.", g:[100]},
 
 "52":{t:"L'horreur du chant s'insinue dans votre esprit comme une lame froide. Vous perdez 3 points de LUCIDITÉ. Des images de cités cyclopéennes englouties, de dieux endormis attendant leur réveil, envahissent votre conscience malgré vous. Dans un sursaut de volonté, vous rebroussez chemin en courant, trébuchant dans l'eau froide, et émergez de la grotte haletant, le cœur battant à tout rompre. Vous fuyez Portneuve dès le lever du jour, l'esprit ébranlé. Dans le train du retour, un journal local traîné sur la banquette relate une étrange affaire à l'ouest d'Arkham : un fermier du nom de Nahum Gardner, terres frappées par un objet tombé du ciel. Rendez-vous au 100.", g:[100], luckLoss:3},
 
-"100":{t:"Quelques jours plus tard, à la bibliothèque de l'Université Miskatonic, vous consultez les archives locales et confirmez la rumeur : à l'ouest d'Arkham, sur la ferme de Nahum Gardner, un objet serait tombé du ciel une nuit de juin, et la région serait devenue le théâtre de phénomènes que même les fermiers les plus taciturnes refusent de décrire en détail. Vous décidez de vous y rendre. Une route poussiéreuse vous mène à travers une campagne de plus en plus déserte, jusqu'à un carrefour où un vieil homme assis sur une souche vous héle. Voulez-vous vous arrêter pour lui parler (Rendez-vous au 102), ou continuer directement vers la ferme Gardner (Rendez-vous au 104) ?", g:[102,104]},
+"100":{epigraph:{text:"« À l'ouest d'Arkham, les collines se dressent, sauvages, et il existe des vallées aux bois profonds qu'aucune hache n'a jamais taillés. »", source:"H.P. Lovecraft, La Couleur tombée du ciel, 1927 — trad. libre"}, t:"Quelques jours plus tard, à la bibliothèque de l'Université Miskatonic, vous consultez les archives locales et confirmez la rumeur : à l'ouest d'Arkham, sur la ferme de Nahum Gardner, un objet serait tombé du ciel une nuit de juin, et la région serait devenue le théâtre de phénomènes que même les fermiers les plus taciturnes refusent de décrire en détail. Vous décidez de vous y rendre. Une route poussiéreuse vous mène à travers une campagne de plus en plus déserte, jusqu'à un carrefour où un vieil homme assis sur une souche vous héle. Voulez-vous vous arrêter pour lui parler (Rendez-vous au 102), ou continuer directement vers la ferme Gardner (Rendez-vous au 104) ?", g:[102,104]},
 
 "102":{t:"Le vieil homme, un certain Ammi Pierce, voisin le plus proche des Gardner, vous observe avec méfiance avant de se détendre légèrement. « Vous allez là-bas ? Ne buvez pas l'eau du puits, et ne restez pas après la tombée du jour. » Il vous raconte, d'une voix hachée, comment la nuit de la chute du météore, toute la campagne avait tremblé, comment la roche tombée s'était mise à rétrécir jusqu'à disparaître, et comment, depuis, tout ce qui pousse sur les terres de Gardner a pris une couleur qu'aucun mot ne saurait décrire — \"pas une vraie couleur du tout\", insiste-t-il. Avant de vous laisser partir, il vous glisse dans les mains un peu de pain et de viande séchée : « Ne mangez surtout rien qui vienne de là-bas. » Rendez-vous au 104.", g:[104], addItem:"RATION:2"},
 
-"104":{t:"La ferme Gardner apparaît au détour du chemin, et un malaise sourd vous saisit avant même d'en franchir la clôture. Les arbres qui l'entourent ont des formes tordues, anormales, et leur feuillage, d'un gris cendreux, ne bruisse pas dans le vent comme il le devrait — il reste étrangement immobile, comme figé. Le puits, au centre de la cour, exhale une odeur âcre. Voulez-vous examiner le puits de plus près (Rendez-vous au 106), ou vous diriger directement vers la maison silencieuse (Rendez-vous au 108) ?", g:[106,108]},
+"104":{t:"La ferme Gardner apparaît au détour du chemin, et un malaise sourd vous saisit avant même d'en franchir la clôture. Les mauvaises herbes et les ronces y règnent en maîtresses, et sur toute chose plane une sorte de brume d'inquiétude et d'oppression, comme si un élément vital de la perspective ou du clair-obscur s'y trouvait déréglé. Aucune couleur saine et normale n'y est visible, sinon dans l'herbe et le feuillage encore verts ; mais partout ailleurs se déploient ces variantes fiévreuses et prismatiques d'une teinte primaire maladive, sans nom parmi les nuances connues de la terre. Les arbres qui entourent la maison ont des formes tordues et leur feuillage, d'un gris cendreux, ne bruisse pas dans le vent comme il le devrait — il reste étrangement immobile, comme figé. Le puits, au centre de la cour, exhale une odeur âcre, ni tout à fait fétide ni tout à fait salée. Voulez-vous examiner le puits de plus près (Rendez-vous au 106), ou vous diriger directement vers la maison silencieuse (Rendez-vous au 108) ?", g:[106,108]},
 
 "106":{t:"Vous vous penchez au-dessus de la margelle du puits. L'eau, tout au fond, luit d'une teinte indéfinissable — ni verte, ni grise, ni d'aucune couleur que l'œil humain ait jamais dû contempler. Voulez-vous en puiser un peu pour l'examiner (Rendez-vous au 110), ou reculer, mal à l'aise, et vous diriger vers la maison (Rendez-vous au 108) ?", g:[110,108]},
 
@@ -907,9 +949,9 @@ const SECTIONS = {
 
 "172":{t:"Pendant que Nahum continue de marmonner sans vous voir vraiment, vous fouillez rapidement les placards de la cuisine. La plupart des provisions ont pris cette teinte grise et cassante qui semble avoir frappé toute la ferme, mais tout au fond d'un bocal resté hermétiquement fermé, vous trouvez encore quelques provisions séchées intactes. Vous les glissez dans votre sac avant de poursuivre votre exploration de la maison. Rendez-vous au 118.", g:[118], addItem:"RATION:1"},
 
-"116":{t:"Nahum Gardner, d'une voix de plus en plus hachée, vous raconte comment le météore tombé dans son verger avait d'abord semblé n'être qu'une roche étrange, tiède au toucher et parcourue de crevasses colorées. Les scientifiques venus de Miskatonic l'avaient prélevée pour analyse, mais elle avait fondu et disparu avant qu'ils ne puissent l'étudier, ne laissant derrière elle qu'un puits contaminé et des récoltes qui poussaient, gigantesques et luisantes, avant de se réduire en une poussière grise et cassante. « Ma femme... mes fils... » Sa voix se brise. « Le grenier. Ils sont montés au grenier et je... je n'ai plus pu monter les voir. » Vous gagnez cette information terrible. Voulez-vous monter au grenier (Rendez-vous au 120), ou sortir examiner le verger avant la tombée de la nuit (Rendez-vous au 122) ?", g:[120,122]},
+"116":{t:"Nahum Gardner, d'une voix de plus en plus hachée, vous raconte comment tout avait commencé par une pierre étrange, encore chaude, gisant dans un cratère fumant creusé au milieu de son verger. Les hommes venus du Collège l'avaient trouvée étonnamment molle, presque plastique, et en avaient prélevé un fragment à la pince pour l'emporter dans un seau de la cuisine. Mais le morceau avait rétréci, rétréci encore, jusqu'à disparaître tout à fait au fond du seau sous leurs yeux stupéfaits, sans laisser la moindre trace. Le spectroscope, disaient-ils, avait révélé des bandes de couleur qu'aucun élément connu de la Création ne pouvait produire. Aucun acide, aucun solvant n'avait le moindre effet sur la masse restée dans le cratère. Puis était venu l'orage : la foudre s'était abattue à plusieurs reprises sur ce même point du verger, nuit après nuit, comme attirée par quelque chose que la pierre appelait depuis le ciel — jusqu'à ce qu'au matin il ne reste plus qu'un trou irrégulier et vide, et que les récoltes se mettent à pousser, gigantesques et luisantes d'un éclat malsain, avant de se réduire en une poussière grise et cassante. « Ma femme... mes fils... » Sa voix se brise. « Le grenier. Ils sont montés au grenier et je... je n'ai plus pu monter les voir. » Vous gagnez cette information terrible. Voulez-vous monter au grenier (Rendez-vous au 120), ou sortir examiner le verger avant la tombée de la nuit (Rendez-vous au 121) ?", g:[120,121]},
 
-"118":{t:"Nahum ne répond plus à vos questions, murmurant seulement des fragments de phrases sans suite. Vous décidez d'explorer vous-même la maison. À l'étage, une porte de grenier fermée par un simple loquet attire votre attention. Voulez-vous monter au grenier (Rendez-vous au 120), ou ressortir examiner le verger avant la nuit (Rendez-vous au 122) ?", g:[120,122]},
+"118":{t:"Nahum ne répond plus à vos questions, murmurant seulement des fragments de phrases sans suite. Vous décidez d'explorer vous-même la maison. À l'étage, une porte de grenier fermée par un simple loquet attire votre attention. Voulez-vous monter au grenier (Rendez-vous au 120), ou ressortir examiner le verger avant la nuit (Rendez-vous au 121) ?", g:[120,121]},
 
 "120":{t:"Vous montez l'escalier étroit qui mène au grenier, le loquet cédant sous vos doigts avec un grincement sinistre. L'odeur qui vous assaille est indescriptible — un mélange de moisi et de quelque chose de chimique, d'électrique presque. Dans la pénombre, vous distinguez deux formes recroquevillées dans un coin, immobiles, leur peau prenant la même teinte grisâtre malsaine que celle de Nahum. TESTEZ VOTRE LUCIDITÉ avant de vous approcher. Si vous êtes Chanceux, Rendez-vous au 124. Si vous êtes Malchanceux, Rendez-vous au 126.", g:[124,126], luckTest:true},
 
@@ -919,15 +961,25 @@ const SECTIONS = {
 
 "128":{t:"Vous foncez à toutes jambes vers le portail de la ferme, sans vous retourner, la lueur grandissant derrière vous et projetant votre ombre démesurée sur le chemin. Vous entendez, ou croyez entendre, un grondement sourd et un souffle qui n'appartient à aucun phénomène naturel connu. Rendez-vous au 132.", g:[132]},
 
-"130":{t:"Vous vous précipitez vers la remise pour y chercher Nahum Gardner et le mettre à l'abri, mais lorsque vous entrez, vous ne trouvez que son fauteuil vide, et sur le plancher, une tache grisâtre et cristalline qui a la forme approximative d'un corps assis. TESTEZ VOTRE LUCIDITÉ. Si vous êtes Chanceux, Rendez-vous au 128. Si vous êtes Malchanceux, Rendez-vous au 134.", g:[128,134], luckTest:true},
+"130":{t:"Vous vous précipitez vers la remise pour y chercher Nahum Gardner et le mettre à l'abri. Vous le trouvez encore vivant dans son fauteuil, mais à peine reconnaissable — sa peau craquelée comme une vieille céramique, ses yeux fixés sur un point que vous ne pouvez pas voir. Il murmure, d'une voix qui n'est déjà presque plus la sienne : « Rien... rien... la couleur... ça brûle... froid et humide, mais ça brûle... ça vivait dans le puits... je l'ai vue... une sorte de fumée, pareille aux fleurs le printemps dernier... le puits brillait la nuit... Thad et Mernie et Zenas... tout ce qui vit... ça suce la vie de tout... c'est venu dans cette pierre, ça doit être venu dans cette pierre... ça a empoisonné tout l'endroit... cette chose ronde que les hommes du collège ont sortie de la roche, ils l'ont cassée... c'était la même couleur, exactement la même, comme les fleurs et les plantes... ça devait y en avoir d'autres... des graines... des graines... et elles ont poussé... ça a dû se renforcer avec Zenas, c'était un grand gaillard plein de vie... ça t'abat l'esprit, et puis ça t'attrape, et ça te brûle... l'eau du puits, j'avais raison, c'est de l'eau mauvaise... Zenas n'est jamais revenu du puits... on peut pas s'en aller, ça t'attire... tu sais que quelque chose arrive, mais ça sert à rien... où est Nabby ? Où est ma femme ?... j'ai plus toute ma tête... ça va l'avoir si on fait pas attention... rien qu'une couleur... son visage prend cette couleur, le soir, parfois... et ça brûle, et ça suce... ça vient d'un endroit où les choses ne sont pas comme ici, un des professeurs l'a dit, et il avait raison... » Sa voix se brise en un dernier souffle sifflant, et sous vos yeux, tout son corps se craquelle et s'effondre en une poussière grise qui se répand sur le siège du fauteuil. TESTEZ VOTRE LUCIDITÉ face à ce que vous venez de voir et d'entendre. Si vous êtes Chanceux, Rendez-vous au 128. Si vous êtes Malchanceux, Rendez-vous au 134.", g:[128,134], luckTest:true},
 
-"134":{t:"Vous perdez 3 points de LUCIDITÉ en comprenant ce qui est arrivé à Nahum Gardner. Pris de panique, vous vous ruez hors de la ferme vers le portail. Rendez-vous au 132.", g:[132], luckLoss:3},
+"134":{t:"Ce que vous venez de voir et d'entendre dépasse ce que votre esprit peut absorber d'un coup. Vous perdez 3 points de LUCIDITÉ, pris de panique, et vous ruez hors de la remise vers le portail de la ferme. Rendez-vous au 132.", g:[132], luckLoss:3},
+
+"121":{t:"Dehors, en plein jour encore, le verger de Nahum Gardner offre un spectacle que votre esprit peine à classer. Les buissons et les jeunes pousses de printemps ont atteint une taille et une abondance jamais vues, mais leurs formes sont subtilement fausses, leurs proportions légèrement erronées — et surtout, ils affichent des teintes que la palette de la nature n'a jamais mélangées. Ce ne sont pas les tons habituels du chou puant ou de la saxifrage, mais des variantes hectiques et prismatiques d'une couleur primaire malsaine, sans nom, sans place parmi les nuances connues de ce monde. Quand vous approchez la main, les feuilles semblent se rétracter légèrement, comme animées d'une sensibilité qu'aucune plante ne devrait posséder. Rendez-vous au 122.", g:[122]},
 
 "122":{t:"Dehors, le crépuscule tombe rapidement, et le verger de Nahum Gardner présente un spectacle hallucinant : les arbres, bien que d'apparence morte et cendreuse, commencent à luire faiblement d'une couleur indescriptible à mesure que la nuit s'installe — comme si l'obscurité seule leur permettait de révéler leur vraie nature. Le puits, au centre de la cour, se met soudain à irradier violemment de cette même lueur. Voulez-vous fuir immédiatement vers le portail de la ferme (Rendez-vous au 128), ou tenter d'abord de mettre Nahum Gardner à l'abri (Rendez-vous au 130) ?", g:[128,130]},
 
-"132":{t:"Vous atteignez le chemin principal, hors d'haleine, et vous retournez une dernière fois. Toute la ferme Gardner baigne à présent dans une lueur d'un vert-gris malsain, comme si le ciel lui-même s'était mis à saigner une couleur impossible. Puis, dans un silence absolu, la lueur se rassemble en une colonne verticale et s'élève dans le ciel nocturne, de plus en plus haut, jusqu'à disparaître parmi les étoiles — retournant, songez-vous avec un frisson glacé, vers l'endroit d'où elle était tombée. Derrière vous, la ferme entière s'effondre lentement en un tas de cendres grises, comme si des années de décomposition venaient de se produire en quelques secondes. Rendez-vous au 140.", g:[140]},
+"132":{t:"Vous atteignez le chemin principal, hors d'haleine, et vous retournez une dernière fois. Les arbres du verger, que vous croyiez morts, s'agitent maintenant sans le moindre souffle de vent, comme pris de convulsions, griffant de leurs branches nues les nuages éclairés par la lune. Une myriade de points lumineux, ténus et impies, hérisse chaque rameau d'une lueur qui n'appartient à aucune flamme connue. Puis, du puits, jaillit une fontaine de cette même couleur impossible, montant, montant encore, comme si toute la ferme n'avait été qu'un réservoir patiemment rempli pendant des mois pour cet unique instant. Le faisceau se rassemble en une colonne verticale et s'élève dans le ciel nocturne, de plus en plus haut, formant une constellation contre-nature qui efface un instant les étoiles véritables, avant de se disperser et de disparaître tout à fait — retournant, songez-vous avec un frisson glacé, vers l'endroit d'où elle était tombée, ou vers un autre endroit plus lointain encore. Derrière vous, la ferme entière s'effondre lentement en un tas de cendres grises, comme si des années de décomposition venaient de se produire en l'espace de quelques secondes. Rendez-vous au 140.", g:[140]},
 
-"140":{t:"Le lendemain matin, l'administration du comté décide de noyer la zone sous les eaux d'un nouveau barrage plutôt que d'expliquer l'inexplicable — la \"Lande Foudroyée\", comme la surnomment déjà les fermiers voisins, sera bientôt engloutie et oubliée. De retour à l'Université Miskatonic, vous rédigez un rapport que le doyen refuse catégoriquement de publier. \"Ce genre de récit\", vous dit-il froidement, \"nuit à la réputation de nos recherches sérieuses.\" Il vous suggère cependant, presque à contrecœur, de consulter un vieux professeur retraité du département d'archéologie, un certain Henry Armitage, réputé pour son intérêt discret envers \"les affaires non conventionnelles\". Voulez-vous chercher à rencontrer le professeur Armitage sans tarder (Rendez-vous au 150), ou d'abord vous reposer quelques jours pour recouvrer vos esprits (Rendez-vous au 152) ?", g:[150,152]},
+"140":{t:"Le lendemain matin, l'administration du comté décide de noyer la zone sous les eaux d'un nouveau barrage plutôt que d'expliquer l'inexplicable — la \"Lande Foudroyée\", comme la surnomment déjà les fermiers voisins, sera bientôt engloutie et oubliée. De retour à l'Université Miskatonic, vous rédigez un rapport que le doyen refuse catégoriquement de publier. \"Ce genre de récit\", vous dit-il froidement, \"nuit à la réputation de nos recherches sérieuses.\" Il vous suggère cependant, presque à contrecœur, de consulter un vieux professeur retraité du département d'archéologie, un certain Henry Armitage, réputé pour son intérêt discret envers \"les affaires non conventionnelles\". Voulez-vous chercher à rencontrer le professeur Armitage sans tarder (Rendez-vous au 150), d'abord vous reposer quelques jours pour recouvrer vos esprits (Rendez-vous au 152), ou consulter avant cela un médecin dont le nom vous a été chuchoté par un camarade, pour vos nerfs mis à rude épreuve (Rendez-vous au 145) ?", g:[150,152,145]},
+
+"145":{t:"Vous décidez de consulter ce médecin dont le nom vous a été chuchoté — un certain Docteur Muñoz, réputé pour des méthodes peu orthodoxes et des guérisons que la médecine ordinaire jugeait impossibles. Son cabinet, dans un immeuble discret, est maintenu à une température glaciale qui vous saisit dès le seuil franchi. Voulez-vous entrer malgré ce froid inhabituel (Rendez-vous au 146), ou rebrousser chemin, mal à l'aise (Rendez-vous au 150) ?", g:[146,150]},
+
+"146":{t:"Le Docteur Muñoz vous reçoit emmitouflé dans plusieurs couches de vêtements, le visage à demi dissimulé dans la pénombre volontaire du cabinet, entouré de blocs de glace qui fondent lentement dans des bassines disposées tout autour de son bureau. Sa voix reste pourtant étonnamment posée et précise tandis qu'il diagnostique chez vous un épuisement nerveux sévère, et vous tend un flacon de sa composition personnelle. « Une dose en cas de crise. Le froid préserve, jeune homme — retenez cette leçon, elle m'est plus utile qu'à quiconque. » TESTEZ VOTRE LUCIDITÉ en croisant un instant son regard trop fixe. Si vous êtes Chanceux, Rendez-vous au 148. Si vous êtes Malchanceux, Rendez-vous au 149.", g:[148,149], luckTest:true},
+
+"148":{t:"Vous détournez le regard à temps, mettant cette fixité sur le compte de la fatigue du médecin. Vous quittez le cabinet, flacon en poche, sans poser davantage de questions. Rendez-vous au 150.", g:[150], addItem:"POTION:Préparation du Docteur Muñoz"},
+
+"149":{t:"Une seconde de trop, et vous croyez distinguer, sous la couche de fard blanc qui recouvre son visage, quelque chose qui ne devrait plus tenir debout depuis bien longtemps. Vous perdez 2 points de LUCIDITÉ et quittez précipitamment le cabinet, le flacon serré dans une main tremblante. Rendez-vous au 150.", g:[150], luckLoss:2, addItem:"POTION:Préparation du Docteur Muñoz"},
 
 "152":{t:"Vous vous accordez quelques jours de repos dans votre chambre d'étudiant, mais le sommeil vous apporte peu de réconfort : vous rêvez sans cesse de cette couleur impossible, et de voix psalmodiant sous l'océan. Au bout du troisième jour, inquiet de votre propre état mental, vous décidez d'aller trouver le professeur Armitage. Rendez-vous au 150.", g:[150]},
 
@@ -935,9 +987,9 @@ const SECTIONS = {
 
 "190":{t:"Vous risquez un œil sur les papiers éparpillés du bureau d'Armitage. Parmi des notes de cours et des factures de librairie, une lettre inachevée attire votre attention, adressée à un certain « Randolph C. » et évoquant, en termes prudents, des voyages dans les Contrées du Rêve et un avertissement au sujet de Kadath. Vous glissez discrètement la lettre dans votre poche juste avant qu'Armitage ne revienne, son trousseau de clés à la main. Rendez-vous au 200.", g:[200], addItem:"Lettre inachevée d'Armitage"},
 
-"200":{t:"Le professeur Armitage vous conduit dans la Réserve, une salle voûtée et glaciale où trône, enchaîné à un pupitre de fer, un exemplaire du Necronomicon d'Abdul Alhazred, traduit du grec par Olaus Wormius. « Certains passages coûtent cher à la raison de qui les lit », vous prévient-il. « Choisissez avec prudence ce que vous voulez apprendre. » Voulez-vous lire le chapitre consacré aux Contrées du Rêve et à la Cité du Couchant, Kadath l'Inconnue (Rendez-vous au 202), celui consacré aux Grands Anciens et à leurs serviteurs (Rendez-vous au 204), ou plutôt le fragment relatant le séjour d'Alhazred lui-même dans une cité sans nom ensevelie sous les sables d'Arabie (Rendez-vous au 262) ?", g:[202,204,262]},
+"200":{epigraph:{text:"« Trois fois Randolph Carter rêva de la cité merveilleuse, et trois fois il en fut arraché alors qu'il s'attardait encore sur la haute terrasse qui la dominait. »", source:"H.P. Lovecraft, À la recherche de Kadath l'Inconnue, 1926-27 — trad. libre"}, t:"Le professeur Armitage vous conduit dans la Réserve, une salle voûtée et glaciale où trône, enchaîné à un pupitre de fer, un exemplaire du Necronomicon d'Abdul Alhazred, traduit du grec par Olaus Wormius. « Certains passages coûtent cher à la raison de qui les lit », vous prévient-il. « Choisissez avec prudence ce que vous voulez apprendre. » Voulez-vous lire le chapitre consacré aux Contrées du Rêve et à la Cité du Couchant, Kadath l'Inconnue (Rendez-vous au 202), celui consacré aux Grands Anciens et à leurs serviteurs (Rendez-vous au 204), ou plutôt le fragment relatant le séjour d'Alhazred lui-même dans une cité sans nom ensevelie sous les sables d'Arabie (Rendez-vous au 262) ?", g:[202,204,262]},
 
-"262":{t:"Le fragment décrit une cité de pierre plus vieille que Memphis ou Babylone, à demi engloutie par les dunes d'un désert que nul caravanier n'ose plus traverser. Alhazred y serait entré seul et en serait ressorti des mois plus tard, hagard, marmonnant des vers sur une race reptilienne antérieure à l'humanité qui aurait bâti la cité pour ses propres dieux, avant de s'enfoncer sous terre pour l'éternité. C'est là, prétend le texte, qu'il aurait composé pour la première fois le distique qui ouvre le Necronomicon tout entier — que ce qui n'est pas mort peut à jamais durer, et qu'au terme d'étranges éternités, même la mort peut périr. TESTEZ VOTRE LUCIDITÉ. Si vous êtes Chanceux, Rendez-vous au 264. Si vous êtes Malchanceux, Rendez-vous au 266.", g:[264,266], luckTest:true},
+"262":{t:"Le fragment décrit une cité de pierre plus vieille que Memphis ou Babylone, à demi engloutie par les dunes d'un désert que nul caravanier n'ose plus traverser. Alhazred y serait descendu seul dans des temples si bas de plafond qu'aucun homme n'y pouvait tenir debout, ni même s'agenouiller — bâtis à hauteur d'une race qui rampait plutôt qu'elle ne marchait. Dans les fresques et bas-reliefs qui tapissaient ces couloirs, il aurait reconnu des créatures au corps mi-crocodile mi-phoque, au front proéminent hérissé de cornes, sans nez, la mâchoire pareille à celle d'un reptile — les bâtisseurs eux-mêmes de la cité, antérieurs à l'humanité tout entière. Au fond d'un ultime passage, une porte de bronze ouvrait sur un abîme d'où soufflait un vent chargé de voix ; et de ce vent, dit le texte, avait jailli une horde entière de ces créatures rampantes, transparentes et déformées par la haine, avant que la porte ne se referme dans un carillon de métal. C'est là, prétend le manuscrit, qu'Alhazred aurait composé pour la première fois le distique qui ouvre le Necronomicon tout entier — que ce qui n'est pas mort peut à jamais durer, et qu'au terme d'étranges éternités, même la mort peut périr. TESTEZ VOTRE LUCIDITÉ. Si vous êtes Chanceux, Rendez-vous au 264. Si vous êtes Malchanceux, Rendez-vous au 266.", g:[264,266], luckTest:true},
 
 "264":{t:"Vous refermez le passage, troublé mais lucide, un frisson persistant à l'idée que la civilisation humaine ne serait peut-être qu'un locataire tardif et provisoire de cette planète. Armitage referme soigneusement le grimoire. Rendez-vous au 206.", g:[206], addItem:"CODEX:nameless-city"},
 
@@ -959,15 +1011,19 @@ const SECTIONS = {
 
 "211":{t:"« Sans clé, le passage sera plus périlleux, mais pas impossible pour un esprit suffisamment déterminé — ou suffisamment inconscient du danger », soupire Armitage. Il vous tend un petit brasero de cuivre et un sachet d'encens séché, extrait lui aussi des réserves de la bibliothèque. « Brûlez ceci en récitant la Formule ; cela devrait suffire à entrouvrir le seuil, au prix d'un peu plus... d'incertitude. » AJOUTEZ l'Encens des Seuils à votre inventaire. Rendez-vous au 210.", g:[210], addItem:"Encens des Seuils"},
 
-"210":{t:"Cette nuit-là, dans votre chambre, vous récitez la Formule du Sommeil Profond en tenant votre Clé d'Argent (ou en faisant brûler l'Encens des Seuils) devant vous. Le monde matériel se dissout lentement, comme un rideau de gaze qu'on écarte, et vous vous retrouvez debout sur un chemin pavé d'onyx, sous un ciel où deux lunes jumelles brillent d'une clarté improbable. Vous êtes entré dans les Contrées du Rêve. Au loin se dresse une cité aux tours élancées et scintillantes. Voulez-vous vous y rendre directement (Rendez-vous au 212), ou explorer d'abord les environs immédiats (Rendez-vous au 214) ?", g:[212,214]},
+"210":{t:"Cette nuit-là, dans votre chambre, vous récitez la Formule du Sommeil Profond en tenant votre Clé d'Argent (ou en faisant brûler l'Encens des Seuils) devant vous. Le monde matériel se dissout lentement, comme un rideau de gaze qu'on écarte, et vous vous retrouvez debout sur un chemin pavé d'onyx, sous un ciel où deux lunes jumelles brillent d'une clarté improbable. Vous êtes entré dans les Contrées du Rêve. Au loin se dresse une cité aux tours élancées et scintillantes. Un chat noir et mince, assis sur une borne du chemin, vous observe sans ciller. Voulez-vous vous rendre directement à la cité (Rendez-vous au 212), explorer d'abord les environs immédiats (Rendez-vous au 214), ou vous arrêter un instant auprès du chat (Rendez-vous au 85) ?", g:[212,214,85]},
+
+"85":{t:"Vous vous accroupissez près du chat, qui vous étudie de ses yeux reflétant les deux lunes sans manifester la moindre crainte. On raconte que dans ces contrées, à Ulthar, nul homme n'a le droit de faire du mal à un chat — et que les chats, en retour, n'oublient jamais une gentillesse. Possédez-vous des provisions à partager avec lui ? Si oui, Rendez-vous au 86. Si non, Rendez-vous au 214.", g:[86,214], choiceLabels:["Oui, partager quelques provisions","Non, poursuivre sans m'arrêter"]},
+
+"86":{t:"Vous déposez quelques provisions sur la pierre froide. Le chat s'approche avec une dignité presque royale, les dévore sans hâte, puis vous observe longuement de ses yeux qui reflètent les deux lunes. Vous jureriez presque qu'il comprend chacun de vos mots lorsque vous lui parlez à voix basse — après tout, on raconte que les chats d'Ulthar ont un jour marché en armée innombrable jusque sur la face cachée de la lune elle-même, pour y livrer bataille aux Crapauds Lunaires et à leurs alliés difformes. Il frotte enfin sa tête contre votre main, puis s'évanouit dans l'ombre entre deux battements de cœur. Vous sentez, sans savoir pourquoi, qu'il ne vous a pas oublié. AJOUTEZ à votre carnet ce moment. Rendez-vous au 214.", g:[214], addItem:"CODEX:ulthar-cats", setFlag:"catsFavor"},
 
 "214":{t:"Vous vous écartez du chemin et découvrez, tapie dans un bosquet d'arbres aux feuilles violettes, une petite créature à fourrure brune munie de tentacules à la place du nez — un Zoog des Contrées du Rêve. Elle vous observe avec curiosité plus que crainte. Voulez-vous essayer de lui parler (Rendez-vous au 216), ou la laisser tranquille et rejoindre la cité (Rendez-vous au 212) ?", g:[216,212]},
 
-"216":{t:"Le Zoog, après une hésitation méfiante, accepte d'échanger quelques mots dans un dialecte de rêve que, curieusement, vous comprenez sans effort. Il vous met en garde contre \"les Choses Sans Visage qui volent la nuit\" et vous indique un raccourci à travers la forêt qui évite la grand-route, plus surveillée. AJOUTEZ Itinéraire du Zoog à votre inventaire. Vous rejoignez ensuite la cité. Rendez-vous au 212.", g:[212], addItem:"Itinéraire du Zoog"},
+"216":{t:"Le Zoog, après une hésitation méfiante, accepte d'échanger quelques mots dans un dialecte de rêve que, curieusement, vous comprenez sans effort. Il vous met en garde contre \"les Choses Sans Visage qui volent la nuit\", et vous confie que nul Zoog ne connaît le chemin exact de Kadath — mais qu'à Ulthar, par-delà la rivière Skaï, vit encore un vieux prêtre nommé Atal, plus que tricentenaire, seul survivant d'une expédition qui gravit jadis le pic interdit de Hatheg-Kla, et gardien du dernier exemplaire des Manuscrits Pnakotiques. \"Si quelqu'un sait, c'est lui\", conclut la créature avant de vous indiquer un raccourci à travers la forêt qui évite la grand-route, plus surveillée. AJOUTEZ Itinéraire du Zoog à votre inventaire. Vous rejoignez ensuite la cité. Rendez-vous au 212.", g:[212], addItem:"Itinéraire du Zoog;CODEX:atal-ulthar"},
 
 "212":{t:"La cité de rêve grouille d'un peuple étrange aux visages tantôt magnifiques, tantôt à peine humains. Dans une taverne aux lanternes de verre coloré, vous remarquez un homme au visage étroit et intelligent qui vous fixe avec un intérêt particulier avant de s'approcher. « Vous n'êtes pas d'ici », dit-il simplement. « Peu de rêveurs errent encore d'un pas si assuré. Je m'appelle Pickman — je peux vous être utile, si vous cherchez le chemin de Kadath. » Voulez-vous accepter son aide (Rendez-vous au 218), ou vous méfier de cet inconnu et poursuivre seul (Rendez-vous au 220) ?", g:[218,220]},
 
-"218":{t:"Pickman sourit, dévoilant des dents étrangement pointues. « Sage décision. Le chemin de Kadath traverse les terres des Goules, et il vaut mieux y être accompagné d'un ami. » Il vous conduit vers un escalier dissimulé qui s'enfonce sous la cité, dans un lacis de tunnels où l'air se fait plus lourd, plus animal. C'est alors que vous comprenez : Pickman lui-même n'est plus tout à fait humain, ses mouvements devenus étrangement canins et bondissants. Il est devenu une GOULE. Malgré votre malaise, il vous guide sans encombre à travers plusieurs kilomètres de galeries souterraines. Rendez-vous au 222.", g:[222]},
+"218":{epigraph:{text:"« Tu n'as pas à me croire fou, Eliot — bien d'autres ont des préjugés plus étranges que celui-ci. »", source:"H.P. Lovecraft, Le Modèle de Pickman, 1926 — trad. libre"}, t:"Pickman sourit, dévoilant des dents étrangement pointues. « Sage décision. Le chemin de Kadath traverse les terres des Goules, et il vaut mieux y être accompagné d'un ami. » Il vous conduit vers un escalier dissimulé qui s'enfonce sous la cité, dans un lacis de tunnels où l'air se fait plus lourd, plus animal. « J'ai toujours peint depuis des caves, vous confie-t-il en chemin, sur un ton presque nostalgique. On disait que j'y captais l'esprit nocturne des choses anciennes, mieux que dans aucun atelier convenable. Il faut croire que j'étais plus doué pour ça que je ne l'imaginais moi-même — j'ai une aïeule pendue à Salem, en 1692, pour moins que ce que je peins aujourd'hui. » C'est alors que vous comprenez : Pickman lui-même n'est plus tout à fait humain, ses mouvements devenus étrangement canins et bondissants. Il est devenu une GOULE. Malgré votre malaise, il vous guide sans encombre à travers plusieurs kilomètres de galeries souterraines. Rendez-vous au 222.", g:[222]},
 
 "220":{t:"Vous déclinez poliment l'offre et sortez seul dans les rues tortueuses de la cité. Après plusieurs heures de marche, vous atteignez ses portes orientales, qui donnent sur une plaine crépusculaire semée d'ossements blanchis. Une odeur de charnier vous parvient depuis un cimetière voisin, d'où émergent des formes canines et voûtées qui creusent frénétiquement la terre. Voulez-vous les affronter pour passer (Rendez-vous au 224), ou contourner le cimetière par le nord, au risque de vous exposer à ciel ouvert (Rendez-vous au 226) ?", g:[224,226]},
 
@@ -975,7 +1031,11 @@ const SECTIONS = {
 
 "226":{t:"Vous contournez prudemment le cimetière par le nord, restant à découvert sous les deux lunes jumelles. Vous atteignez la plaine sans encombre, mais un frisson vous parcourt : dans un ciel autrement dépourvu de nuages, une ombre silencieuse et ailée a semblé, un instant, obscurcir l'une des deux lunes. Rendez-vous au 228.", g:[228]},
 
-"222":{t:"Au sortir des galeries de Goules (ou du cimetière), vous vous retrouvez dans une vaste plaine crépusculaire qui s'étend à perte de vue vers des montagnes lointaines et déchiquetées. C'est là, vous a assuré votre guide ou votre instinct, que se dresse Kadath l'Inconnue. Rendez-vous au 228.", g:[228]},
+"222":{t:"Au sortir des galeries de Goules (ou du cimetière), vous vous retrouvez dans une vaste plaine crépusculaire qui s'étend au-delà de la rivière Skaï, à perte de vue vers des montagnes lointaines et déchiquetées. Loin au nord-ouest scintillent, dit-on, les toits basaltiques du port de Dylath-Leen ; mais c'est vers l'est, vous a assuré votre guide ou votre instinct, que se dresse Kadath l'Inconnue. Possédez-vous l'Amulette de Jade ? Si oui, Rendez-vous au 223. Si non, Rendez-vous au 228.", g:[223,228], choiceLabels:["Continuer (avec l'Amulette de Jade)","Continuer"]},
+
+"223":{t:"Un hurlement lointain, presque canin mais infiniment plus vaste, roule sur la plaine crépusculaire — comme si quelque chose, quelque part, venait de flairer la relique de jade que vous portez sur vous. Voulez-vous vous en débarrasser en la jetant loin dans les herbes hautes (Rendez-vous au 225), ou la garder malgré le risque qu'elle semble représenter (Rendez-vous au 228) ?", g:[225,228], choiceLabels:["Jeter l'Amulette de Jade","La garder malgré tout"]},
+
+"225":{t:"Vous lancez l'amulette de jade aussi loin que possible dans les herbes hautes de la plaine. Le hurlement s'éloigne aussitôt, satisfait, comme si la chose qui le pousse n'en voulait qu'à la relique et non à vous. Vous poursuivez votre chemin vers les montagnes, plus léger mais les mains vides. Rendez-vous au 228.", g:[228], removeItem:"Amulette de Jade"},
 
 "228":{t:"Vous marchez depuis des heures dans cette plaine sans relief lorsqu'un bruissement d'ailes membraneuses, immense, s'élève au-dessus de vous. Une créature noire, sans visage, à la peau caoutchouteuse et luisante, plonge du ciel et vous saisit sous les bras avec une force irrésistible avant que vous ayez pu esquisser le moindre geste de défense. C'est un MAIGRE DE LA NUIT. Il ne cherche pas à vous blesser, mais à vous emporter, chatouillant silencieusement vos flancs de ses griffes tandis que vous vous débattez en vain. Voulez-vous tenter de vous libérer en luttant (Rendez-vous au 230), ou vous laisser porter, impuissant, pour économiser vos forces (Rendez-vous au 232) ?", g:[230,232]},
 
@@ -997,11 +1057,11 @@ const SECTIONS = {
 
 "246":{t:"Vous brandissez votre croquis du Signe des Anciens face au Crapaud Lunaire. Un frémissement d'horreur — ou de respect craintif — parcourt visiblement sa masse gélatineuse, et ses tentacules roses se rétractent brusquement. Il émet un gargouillis sifflant, et les Hommes de Leng s'écartent aussitôt de votre chemin, tête basse. Vous êtes libre de poursuivre votre route vers les montagnes que l'on vous désigne au loin. Rendez-vous au 250.", g:[250]},
 
-"248":{t:"Sans protection, vous êtes saisi par plusieurs Hommes de Leng qui vous ligotent solidement. Le Crapaud Lunaire s'approche, ses tentacules roses vibrant d'anticipation. Voulez-vous tenter de vous libérer par la force avant qu'ils ne resserrent vos liens (Rendez-vous au 252), ou attendre une occasion plus favorable de vous échapper (Rendez-vous au 254) ?", g:[252,254]},
+"248":{t:"Sans protection, vous êtes saisi par plusieurs Hommes de Leng qui vous ligotent solidement. Le Crapaud Lunaire s'approche, ses tentacules roses vibrant d'anticipation, tandis qu'au loin, sur une grève de galets noirs, vous apercevez une galère basse et sans mât, entièrement noire, que nul rameur visible ne semble pourtant manœuvrer — le genre d'embarcation, songez-vous avec effroi, qui doit conduire les captifs vers la face cachée de la lune elle-même. Voulez-vous tenter de vous libérer par la force avant qu'ils ne resserrent vos liens (Rendez-vous au 252), ou attendre une occasion plus favorable de vous échapper (Rendez-vous au 254) ?", g:[252,254]},
 
 "252":{t:"Dans un sursaut désespéré, vous rompez vos liens encore lâches et bousculez l'Homme de Leng le plus proche.\n\nSi vous êtes vainqueur, Rendez-vous au 250.", c:[["Homme de Leng Gardien",7,7]], g:[250]},
 
-"254":{t:"Vous vous laissez faire, cherchant patiemment une meilleure occasion. Vous êtes traîné jusqu'à un enclos rudimentaire où d'autres captifs, hagards, attendent en silence. Cette nuit-là, profitant du sommeil d'un garde négligent, vous parvenez à trancher vos liens avec un éclat de silex trouvé au sol. Vous perdez 1 point de LUCIDITÉ à l'idée de tout ce que vous venez d'entrevoir chez vos codétenus — des rêveurs d'autres mondes, certains à peine encore humains. Vous vous enfuyez dans l'obscurité vers les montagnes. Rendez-vous au 250.", g:[250], luckLoss:1},
+"254":{t:"Vous vous laissez faire, cherchant patiemment une meilleure occasion. Vous êtes traîné jusqu'à un enclos rudimentaire où d'autres captifs, hagards, attendent en silence. Cette nuit-là, profitant du sommeil d'un garde négligent, vous parvenez à trancher vos liens avec un éclat de silex trouvé au sol. Vous perdez 1 point de LUCIDITÉ à l'idée de tout ce que vous venez d'entrevoir chez vos codétenus — des rêveurs d'autres mondes, certains à peine encore humains. Vous vous enfuyez dans l'obscurité vers les montagnes. Rendez-vous au 250.", g:[250], luckLoss:1, luckLossFlag:"catsFavor", flagNote:{flag:"catsFavor", text:"Une forme silencieuse et féline se glisse entre les jambes de vos gardiens juste avant votre fuite, semant une confusion providentielle — le même chat, ou l'un de ses innombrables cousins d'Ulthar, n'a pas oublié votre geste."}},
 
 "250":{t:"Au-delà du Plateau de Leng, les montagnes se font plus hautes, plus noires, jusqu'à ce qu'un pic unique se détache des autres, coiffé d'un château fait d'onyx que nulle main humaine n'a jamais taillé — Kadath l'Inconnue elle-même. Un froid qui n'a rien de météorologique s'insinue en vous à mesure que vous approchez. Rendez-vous au 256.", g:[256]},
 
@@ -1017,9 +1077,15 @@ const SECTIONS = {
 
 "261":{t:"Le Shantak rejette la tête en arrière avec un hennissement métallique et fond sur vous, ses serres tendues.\n\nSi vous êtes vainqueur, Rendez-vous au 260.", c:[["Shantak",9,14]], g:[260]},
 
-"260":{t:"Aux portes du château d'onyx, gardées par nul soldat visible, une présence immatérielle vous accueille — une voix douce et flûtée qui semble sourdre des murs eux-mêmes plutôt que d'une bouche. « Ainsi, un rêveur mortel a trouvé le chemin jusqu'ici. Peu y parviennent. Moins encore en repartent tels qu'ils étaient venus. » C'est Nyarlathotep, le Chaos Rampant, qui prend ici la forme d'un pharaon svelte au visage d'une beauté troublante. Rendez-vous au 300.", g:[300]},
+"260":{t:"Le château qui coiffe Kadath dépasse en splendeur tous les palais du monde éveillé réunis. Ses tours d'onyx rejoignent des créneaux de chalcédoine polie, ses larges portes sont d'un ivoire jauni par des éternités, et au sommet de chaque flèche brûle, sans jamais vaciller ni se consumer, une flamme d'un feu à cinq couleurs qu'aucune torche terrestre ne saurait produire. Nul soldat ne garde ce seuil, et pourtant une présence immatérielle vous accueille dès que vous en franchissez l'ombre — une voix douce et flûtée qui semble sourdre des murs eux-mêmes plutôt que d'une bouche. « Ainsi, un rêveur mortel a trouvé le chemin jusqu'ici. Peu y parviennent. Moins encore en repartent tels qu'ils étaient venus. » C'est Nyarlathotep, le Chaos Rampant, qui prend ici la forme d'un pharaon svelte au visage d'une beauté troublante. Rendez-vous au 300.", g:[300]},
 
-"300":{t:"Nyarlathotep s'avance vers vous d'une démarche féline, un sourire aux lèvres qui n'atteint jamais ses yeux — deux puits noirs où semblent tourbillonner des galaxies entières. « Vous êtes venu de si loin, à travers Portneuve et ses Profonds, à travers la Lande où Gardner a péri, à travers Leng et ses esclavagistes gélatineux... pour quoi, au juste ? Pour me poser des questions que votre espèce n'est pas faite pour comprendre ? » Il incline la tête. « Que ferez-vous, petit rêveur ? » Voulez-vous vous prosterner devant lui, reconnaissant sa suprématie (Rendez-vous au 302), tirer votre épée pour l'affronter (Rendez-vous au 304), ou invoquer contre lui la protection du Signe des Anciens et le savoir arraché au Necronomicon (Rendez-vous au 306) ?", g:[302,304,306]},
+"300":{epigraph:{text:"« La chose la plus miséricordieuse au monde, je crois, est l'incapacité de l'esprit humain à mettre en relation tout ce qu'il contient. Nous vivons sur une île paisible d'ignorance au milieu de noires mers d'infini, et il n'était pas prévu que nous voguions bien loin. »", source:"H.P. Lovecraft, L'Appel de Cthulhu, 1926 — trad. libre"}, t:"Nyarlathotep s'avance vers vous d'une démarche féline, un sourire aux lèvres qui n'atteint jamais ses yeux — deux puits noirs où semblent tourbillonner des galaxies entières. « Vous êtes venu de si loin, à travers Portneuve et ses Profonds, à travers la Lande où Gardner a péri, à travers Leng et ses esclavagistes gélatineux... pour quoi, au juste ? Pour me poser des questions que votre espèce n'est pas faite pour comprendre ? » Il incline la tête. « Que ferez-vous, petit rêveur ? » Voulez-vous vous prosterner devant lui, reconnaissant sa suprématie (Rendez-vous au 302), tirer votre épée pour l'affronter (Rendez-vous au 304), invoquer contre lui la protection du Signe des Anciens et le savoir arraché au Necronomicon (Rendez-vous au 306), ou tracer, d'un geste que nul mortel sensé n'oserait, son propre sigil devant lui (Rendez-vous au 330) ?", g:[302,304,306,330]},
+
+"330":{t:"Contre toute raison, vous levez la main et tracez dans l'air les lignes brisées entrevues une seule fois, l'espace d'un battement de cœur, dans la marge la plus interdite du Necronomicon — la signature même du Chaos Rampant. L'air se tord autour de votre geste comme une flamme sous le vent.", g:[332,334], ritual:"nyarlathotepSigil"},
+
+"332":{t:"Nyarlathotep s'immobilise complètement — pour la première fois depuis votre arrivée, une expression que vous ne sauriez nommer traverse son visage parfait : de la surprise, peut-être, ou quelque chose que les dieux extérieurs n'éprouvent plus depuis des éternités. « Où avez-vous vu cela ? » Sa voix a perdu toute son ironie. Puis, lentement, un sourire différent se forme — non plus celui d'un prédateur amusé, mais celui, presque fraternel, de quelqu'un reconnaissant un des siens. « Vous portez ma marque sans le savoir, petit rêveur. Peu importe comment. Allez, et faites-en ce que vous voudrez — je serai curieux de voir ce qu'un mortel qui trace mon nom devient, avec le temps. » Vous vous réveillez à l'aube, dans votre lit d'étudiant, et découvrez sur votre paume une fine cicatrice en forme de sigil qui ne s'effacera jamais. Vous ignorez si vous venez d'échapper au Chaos Rampant, ou si vous venez, sans le vouloir, d'entrer à son service.", finale:true, finaleTitle:"LE COMPLICE INVOLONTAIRE"},
+
+"334":{t:"Le sigil que vous tracez dans l'air se déforme, se brise, refuse de prendre forme — vous n'êtes pas fait pour porter ce nom, et quelque chose, quelque part au-delà des étoiles, le remarque instantanément. Nyarlathotep n'a même pas besoin de bouger. « Présomptueux », murmure-t-il, et le mot seul suffit à vous arracher toute raison, toute mémoire de qui vous étiez avant d'oser prétendre le connaître. Ce que vous étiez cesse d'exister dans un éclat de rire silencieux qui n'appartient qu'à lui.", finale:true, finaleTitle:"L'IMPUDENCE CHÂTIÉE"},
 
 "302":{t:"Vous mettez un genou à terre devant le Chaos Rampant. Il éclate d'un rire léger, presque affectueux, et pose une main glacée sur votre front. « Voilà qui est sage — ou lâche, mais la différence, entre mortels, importe rarement. » Vous sentez votre volonté se dissoudre comme du sucre dans l'eau, votre identité se dissoudre à son tour. Vous ne vous réveillerez jamais tout à fait de ce rêve : votre corps reprendra le train pour Arkham, ira à ses cours, sourira à ses amis, mais quelque chose d'autre habitera désormais derrière vos yeux — un messager discret et souriant du Chaos Rampant, répandant sans le savoir la folie et le doute partout où il passera. Vous ne saurez jamais que vous avez perdu.", finale:true, finaleTitle:"SERVITEUR DU CHAOS"},
 
@@ -1136,6 +1202,18 @@ function updateStats(){
   $('lu').textContent = G.luck;
   $('engauge').style.width = Math.max(0,Math.min(100, (G.end/G.maxEnd)*100)) + '%';
   $('lugauge').style.width = Math.max(0,Math.min(100, (G.luck/G.maxLuck)*100)) + '%';
+  checkOutsiderVision();
+}
+const OUTSIDER_VISION_TEXT = "Vous surprenez votre reflet dans une vitre sombre, ou dans l'eau immobile d'une flaque — un visage émacié, aux yeux trop enfoncés, à la peau tendue sur des angles que vous ne reconnaissez qu'à moitié. L'espace d'un battement de cœur terrible, vous ne savez plus si c'est vous qui regardez cette chose, ou cette chose qui vous regarde à travers vos propres yeux. Puis l'instant passe, et vous êtes de nouveau vous-même — ou du moins, vous choisissez de le croire.";
+function checkOutsiderVision(){
+  if(G.luck > 0 && G.luck <= 3 && !G.flags.outsiderVision){
+    G.flags.outsiderVision = true;
+    $('visionText').textContent = OUTSIDER_VISION_TEXT;
+    $('visionOverlay').style.display = 'flex';
+  }
+}
+function closeVision(){
+  $('visionOverlay').style.display = 'none';
 }
 
 function toggleInv(){
@@ -1295,11 +1373,22 @@ function goTo(n){
   maybeShowActBanner(n);
   trySceneImage(n);
 
-  $('story').innerHTML = highlightStory(stripChoiceSentences(sec.t));
+  const epi = $('epigraph');
+  if(sec.epigraph){
+    epi.innerHTML = esc(sec.epigraph.text) + '<span class="epi-source">' + esc(sec.epigraph.source) + '</span>';
+    epi.className = 'epigraph';
+  } else {
+    epi.innerHTML = ''; epi.className = '';
+  }
+
+  let bodyText = sec.t;
+  if(sec.flagNote && G.flags[sec.flagNote.flag]) bodyText += ' ' + sec.flagNote.text;
+  $('story').innerHTML = highlightStory(stripChoiceSentences(bodyText));
   G.journal.push({ n, text: journalLine(sec.t) });
 
   if(sec.addItem){ addItem(sec.addItem); }
-  if(sec.luckLoss){ G.luck = Math.max(0, G.luck - sec.luckLoss); }
+  if(sec.removeItem){ G.inv = G.inv.filter(i=>i!==sec.removeItem); }
+  if(sec.luckLoss && !(sec.luckLossFlag && G.flags[sec.luckLossFlag])){ G.luck = Math.max(0, G.luck - sec.luckLoss); }
   if(sec.setFlag && !G.flags[sec.setFlag]){
     G.flags[sec.setFlag] = true;
     const p = PHOBIAS[sec.setFlag];
@@ -1396,6 +1485,29 @@ function buildTemplatesFromPath(corePoints){
   });
   return variants;
 }
+function buildTemplatesOpenPath(corePoints){
+  return [
+    normalizeStroke(resamplePoints(corePoints, 200)),
+    normalizeStroke(resamplePoints(corePoints.slice().reverse(), 200))
+  ];
+}
+function spiralPoints(turns, rStart, rEnd, n){
+  const pts=[];
+  for(let i=0;i<n;i++){
+    const t = i/(n-1);
+    const ang = t*turns*Math.PI*2;
+    const r = rStart + t*(rEnd-rStart);
+    pts.push({ x:r*Math.cos(ang), y:r*Math.sin(ang) });
+  }
+  return pts;
+}
+function drawSpiralGuide(ctx,w,h,turns,rStart,rEnd){
+  ctx.save(); ctx.strokeStyle='rgba(203,171,106,0.4)'; ctx.setLineDash([5,5]); ctx.lineWidth=2; ctx.beginPath();
+  const cx=w/2, cy=h/2, scale=w*0.0036;
+  const pts = spiralPoints(turns, rStart*scale, rEnd*scale, 60);
+  pts.forEach((p,i)=>{ const x=cx+p.x, y=cy+p.y; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+  ctx.stroke(); ctx.restore();
+}
 const SYMBOL_DEFS = {
   star: {
     title: 'Tracez le Signe des Anciens',
@@ -1434,11 +1546,31 @@ const SYMBOL_DEFS = {
       }
       ctx.stroke(); ctx.restore();
     }
+  },
+  dagonSigil: {
+    title: 'Tracez le Sigil de Dagon',
+    open: true,
+    core: spiralPoints(2.5, 100, 20, 40),
+    guide(ctx,w,h){ drawSpiralGuide(ctx,w,h,2.5,100,20); }
+  },
+  nyarlathotepSigil: {
+    title: 'Tracez le Sigil du Chaos Rampant',
+    core: [ {x:-100,y:-100}, {x:100,y:100}, {x:100,y:-100}, {x:-100,y:100} ],
+    guide(ctx,w,h){
+      ctx.save(); ctx.strokeStyle='rgba(203,171,106,0.4)'; ctx.setLineDash([5,5]); ctx.lineWidth=2; ctx.beginPath();
+      const cx=w/2, cy=h/2, s=w*0.32;
+      const pts = [[-s,-s],[s,s],[s,-s],[-s,s],[-s,-s]];
+      pts.forEach((p,i)=>{ const x=cx+p[0], y=cy+p[1]; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+      ctx.stroke(); ctx.restore();
+    }
   }
 };
 let TEMPLATE_CACHE = {};
 function getTemplates(key){
-  if(!TEMPLATE_CACHE[key]) TEMPLATE_CACHE[key] = buildTemplatesFromPath(SYMBOL_DEFS[key].core);
+  if(!TEMPLATE_CACHE[key]){
+    const def = SYMBOL_DEFS[key];
+    TEMPLATE_CACHE[key] = def.open ? buildTemplatesOpenPath(def.core) : buildTemplatesFromPath(def.core);
+  }
   return TEMPLATE_CACHE[key];
 }
 function recognizeShape(rawPoints, key){
@@ -1631,6 +1763,9 @@ async function combatRound(stance){
     if(G.inv.includes("Dague Rituelle de K'n-yan") && enemy.name.toLowerCase().includes('nyarlathotep')){
       dmg += 2; dmgNote = ' La lame de bronze verdi de K\'n-yan mord la chair qui ne devrait pas en avoir.';
     }
+    if(G.inv.includes('Amulette de Jade') && enemy.name.toLowerCase().includes('goule')){
+      dmg += 2; dmgNote = ' Le molosse de jade semble guider votre coup avec une précision qui n\'est pas tout à fait la vôtre.';
+    }
     if(G.flags.phobiaAiles && enemy.name.toLowerCase().includes('shantak')){
       dmg = Math.max(1, Math.round(dmg/2)); dmgNote = ' Votre terreur des ailes silencieuses affaiblit votre bras.';
     }
@@ -1693,13 +1828,13 @@ function fleeCombat(){
 /* ---------- Death / Victory ---------- */
 function death(text){
   document.querySelectorAll('.itemtoast').forEach(t=>t.remove());
-  hide('msgbox'); hide('choicesec'); hide('combatbox'); hide('dicetray'); hide('ritualOverlay');
+  hide('msgbox'); hide('choicesec'); hide('combatbox'); hide('dicetray'); hide('ritualOverlay'); hide('visionOverlay');
   $('deathtext').textContent = text;
   $('deathscreen').style.display='flex';
 }
 function showFinale(sec){
   document.querySelectorAll('.itemtoast').forEach(t=>t.remove());
-  hide('msgbox'); hide('choicesec'); hide('combatbox'); hide('dicetray'); hide('ritualOverlay');
+  hide('msgbox'); hide('choicesec'); hide('combatbox'); hide('dicetray'); hide('ritualOverlay'); hide('visionOverlay');
   document.querySelector('#victoryscreen h2').textContent = sec.finaleTitle || 'FIN DE L\'HISTOIRE';
   $('victorytext').textContent = sec.t;
   $('victoryscreen').style.display='flex';

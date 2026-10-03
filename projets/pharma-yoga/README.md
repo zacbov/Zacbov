@@ -1,201 +1,155 @@
-[# Respire — Cohérence & respiration guidée VR
+# Respire — respiration guidée en VR (Quest)
 
-Version indépendante de Clairière, focalisée uniquement sur la respiration
-guidée. Aucun appel réseau, aucun fichier lourd (pas d'EXR, de splat, de
-modèle 3D, ni de son de synthèse vocale) — tout est généré par code
-(dégradé de ciel, étoiles, sphère qui respire, carillon). Ça règle d'un coup
-tous les problèmes de chargement/WiFi rencontrés sur Clairière.
+Une sphère qui respire, des techniques présentées par ce qu'elles apportent
+(« Pause calme », « Évacuer le stress », « Avant de dormir »…), un décor vidéo
+360° en boucle, deux musiques enchaînées et des sons d'ambiance. Choisir une
+technique sur l'écran plat t'emmène **directement en VR**.
 
-## Contenu du dossier
-- `index.html` — l'application complète (menu, scène VR/AR, moteur de respiration)
-- `sw.js` — Service Worker pour le mode hors-ligne (cache très léger, rien à précharger)
-- `manifest.json` — permet d'installer un raccourci sur l'écran d'accueil du Quest
+## Arborescence attendue
 
-## Correctif : téléphones personnels, pas un téléphone partagé
-Point clarifié après coup : chaque personne utilise **son propre téléphone**,
-pas un appareil partagé au poste. Ça change deux choses :
-- La remarque sur l'hygiène de l'objectif (tour précédent) ne s'applique
-  plus — retirée, elle n'avait de sens que pour un téléphone commun.
-- **Vrai problème corrigé** : le code de séance fixe (`"default"`) aurait fait
-  se mélanger les mesures de personnes différentes dans le même compartiment
-  de données si deux personnes s'enchaînent rapidement sans que la précédente
-  ferme son onglet. Remplacé par un **code aléatoire à 5 caractères, généré à
-  chaque session** (`generateSessionCode()` dans `index.html`), affiché via
-  **QR code** (généré 100% côté client, sans appel réseau au moment de
-  l'affichage — bibliothèque `qrcode` via unpkg, mise en cache comme le reste).
+```
+index.html          battement.html (page téléphone, optionnelle)
+sw.js               manifest.json
+audio/
+  Weightless Drift.mp3     ← musique (enchaînée avec la suivante, en boucle)
+  Still Waters.mp3         ← musique
+  ruisseau.mp3             ← ambiance (boucle seule)
+  vague.mp3                ← ambiance (boucle seule)
+asset/                     ← (ou assets/, assets/video/, video/)
+  1.webm  2.webm  3.webm … ← décors vidéo 360°, numérotés sans trou
+```
+Les dossiers sont cherchés dans l'ordre indiqué par `AUDIO_DIRS` / `VIDEO_DIRS`
+(en haut de `index.html`). Les noms avec espaces sont gérés. Si un fichier audio
+manque, un avertissement orange s'affiche dans le menu.
 
-### Nouveau flux d'appairage
-1. Sur l'écran "Entrer en VR" (avant de mettre le casque), un QR code
-   s'affiche avec le lien vers `battement.html` — le code de séance est déjà
-   intégré dans l'URL (`?code=XXXXX`).
-2. La personne scanne avec **son** téléphone, la page s'ouvre avec le code
-   déjà pré-rempli (`battement.html` lit `?code=` dans l'URL) — rien à taper.
-3. Elle appuie sur "Démarrer la mesure", pose son doigt, et dès qu'une mesure
-   stable est obtenue (voir le système de qualité du tour précédent), le BPM
-   apparaît automatiquement dans le casque.
+## Commandes en VR (manettes Quest)
+Il n'y a pas de bouton à viser : tout passe par les boutons physiques.
 
-Comme la page se recharge normalement à chaque nouvelle session (nouvelle
-personne = nouveau chargement de `index.html`), un nouveau code aléatoire est
-généré à chaque fois — pas de risque de collision entre deux personnes qui se
-suivent sur le poste.
+| Action | Commande |
+|---|---|
+| Sons d'ambiance : aucun → ruisseau → vague → aucun | **Gâchette** (la 1ʳᵉ pression ferme le tutoriel) |
+| Musique on / off | **A** ou **X** |
+| Décor vidéo suivant | **Clic du joystick** |
+| Revenir au menu (changer de technique) | **Maintenir B ou Y pendant 2 s** (barre de progression) |
 
-## Nouveau : détection de qualité de signal (contexte poste en libre-service)
-Pensé pour un déploiement sans supervision (pause déjeuner, forte rotation
-d'utilisateurs) : une mesure douteuse doit être **impossible à manquer**, et
-surtout **ne doit jamais atteindre le casque silencieusement**.
+Choix volontaire : la gâchette latérale (grip) n'est **pas** utilisée, parce
+qu'on la presse sans le vouloir dès qu'on serre la manette — le retour au menu
+exige donc un geste long et délibéré. Les mêmes réglages (musique, ambiance,
+décor) existent aussi dans le menu avant d'entrer. Un tutoriel s'affiche
+14 s à l'entrée en VR, et une aide discrète reste visible sous le texte de respiration.
+Les deux boucles d'ambiance ne se mélangent jamais : une seule à la fois,
+bascule en fondu.
 
-### États affichés (grand anneau coloré + texte court, `battement.html`)
-- 🟡 **"Pose ton doigt sur la caméra arrière"** — luminosité trop élevée,
-  le doigt ne couvre probablement pas bien l'objectif
-- 🟡 **"Relâche un peu la pression"** — luminosité proche de zéro, doigt qui
-  écrase trop fort (plus aucune lumière ne passe)
-- 🟠 **"Reste immobile quelques secondes"** — signal trop erratique
-  (amplitude insuffisante ou intervalles entre battements trop irréguliers)
-- 🔵 **"Mesure en cours / Stabilisation…"** — signal exploitable mais pas
-  encore assez d'estimations cohérentes d'affilée (4 requises,
-  `goodStreakNeeded`)
-- 🟢 **"Mesure stable"** — c'est SEULEMENT à ce stade que le BPM s'affiche
-  et part vers le casque
+## Audio
+- **Musique** : les deux morceaux s'enchaînent en boucle avec fondu enchaîné de 4 s
+  (et fondu d'entrée/sortie à l'activation/désactivation).
+- **Ambiance** : une seule boucle (ruisseau **ou** vague), fondu enchaîné de 3 s
+  sur elle-même pour qu'on n'entende pas la jonction.
+- Plus aucun son aux changements de phase (le repère reste visuel).
+- Réglages par défaut : musique activée, ambiance désactivée (`DEFAULT_AUDIO`),
+  volumes (`MUSIC_VOLUME`, `AMBIENCE_VOLUME`) en haut de `index.html`.
 
-### Le point important : filtrage strict, pas juste un avertissement
-`sendHeartRate()` n'est appelé qu'à un seul endroit dans tout le code — la
-toute fin de `computeBPM()`, uniquement quand l'état "good" est atteint (4
-estimations cohérentes d'affilée, régularité des intervalles vérifiée). Une
-mesure de mauvaise qualité ne peut donc **jamais** arriver jusqu'au casque,
-même silencieusement : au pire, l'utilisateur VR voit "📱 En attente du
-téléphone…" plus longtemps, jamais un chiffre faux affiché avec assurance.
+## Décor vidéo 360°
+- Lecture en boucle, muette, sur une **sphère vue de l'intérieur**. (Un
+  `scene.background` Three.js ne se rafraîchit pas pour une vidéo — il
+  figerait la première image. Même remarque pour le décor vidéo de Clairière.)
+- **Format 1920×1080** : la vidéo est étirée sur toute la sphère, ce qui est
+  correct si elle a été exportée ainsi depuis du 360° (anamorphique, cas le
+  plus courant). Si elle contient en fait du 2:1 avec des bandes noires
+  haut/bas, règle `VIDEO_LETTERBOX` (ex. `0.0556`).
+- **Orientation** : `VIDEO_YAW_DEG` (défaut −90°) met le centre de l'image
+  face à l'utilisateur ; ajuste si l'horizon ou le « devant » ne convient pas.
+  `VIDEO_BRIGHTNESS` assombrit un peu pour la lisibilité du texte.
+- **Netteté** : 1920 px sur 360° = ~5 px/degré, un casque en résout 20 à 25.
+  Ça marchera mais restera doux ; si tu peux, privilégie 3840×1920 (ou au
+  moins 2880×1440) en VP9, débit modéré.
+- Menu : « Décor : Aléatoire / 1 / 2 / 3… » (les numéros détectés
+  automatiquement). Sans aucune vidéo trouvée, retour au ciel étoilé.
+- `.webm` (VP9) et `.mp4` (H.264) acceptés. Si une vidéo ne se lit pas sur le
+  casque, c'est presque toujours le codec : réencode en VP9 ou H.264.
 
-### Réinitialisation automatique entre utilisateurs
-Quand le doigt est retiré (retour à l'état "pose ton doigt"), l'historique de
-mesure est vidé (`resetMeasurementState()`) — la personne suivante démarre
-sur une mesure propre, sans pollution par les données de la précédente.
+## Relais gratuit du pouls (remplace kvdb.io, payant)
+Le casque ne peut pas lire un capteur Bluetooth (le navigateur Quest bloque le
+Web Bluetooth). Le téléphone mesure le pouls par la caméra (`battement.html`) et
+l'écrit dans une petite base en ligne que le casque relit toutes les 2 s.
 
-### ⚠️ Seuils à recalibrer sur place
-Tous les seuils de détection (`QUALITY_THRESHOLDS` en haut du script de
-`battement.html`) ont été fixés à vue, sans pouvoir tester sur du vrai
-matériel — les caméras/flashs varient beaucoup d'un téléphone à l'autre.
-**Teste avec 2-3 téléphones différents avant le déploiement** et ajuste :
-- `noFingerBrightness` / `overPressureBrightness` si les états "pose ton
-  doigt" ou "relâche la pression" se déclenchent alors que la mesure est
-  correcte (ou inversement, ne se déclenchent jamais)
-- `maxIntervalCV` si l'état "reste immobile" est trop strict (déclenché en
-  permanence) ou pas assez (accepte des mesures visiblement erratiques)
+**Pourquoi Firebase** : ntfy.sh public est limité à 250 messages/jour/IP (un
+WiFi de fac partage les IP), PubNub/Ably demandent des clés. Firebase Realtime
+Database est gratuit (offre Spark, sans carte bancaire — vérifie les limites
+actuelles dans la console), accessible par simple `fetch` depuis une page
+statique, et très largement au-dessus du besoin (quelques centaines d'octets
+par séance).
 
-### À considérer pour un déploiement en libre-service (au-delà du code)
-- **Batterie du téléphone de chaque personne** : le flash reste allumé
-  pendant la mesure — négligeable pour un usage bref (quelques minutes), pas
-  un vrai souci vu que c'est le téléphone personnel de chacun, pas un
-  appareil laissé allumé en continu au poste
-- **Bouton de réinitialisation manuel** : utile en complément du reset
-  automatique, si quelqu'un veut relancer une mesure sans retirer le doigt
-  entièrement (pas encore implémenté)
-- **Panneau explicatif près du casque** : une petite affiche/écran expliquant
-  "scanne ce QR avec ton téléphone si tu veux voir ton pouls pendant la
-  séance" aiderait — le QR apparaît déjà dans le casque avant l'entrée en VR,
-  mais une personne qui découvre le poste sans lire l'écran pourrait le rater
+**Mise en place (≈5 min, une seule fois)**
+1. <https://console.firebase.google.com> → *Ajouter un projet* (Analytics inutile).
+2. *Build → Realtime Database → Créer une base de données* (région Belgique
+   `europe-west1`, mode **verrouillé**).
+3. Onglet **Règles** → coller ceci → *Publier* :
+```json
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "hr": {
+      "$code": {
+        ".read": true,
+        ".write": true,
+        ".validate": "$code.matches(/^[A-Z0-9]{4,8}$/) && newData.hasChildren(['bpm', 't'])",
+        "bpm": { ".validate": "newData.isNumber() && newData.val() >= 30 && newData.val() <= 220" },
+        "t":   { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}
+```
+   (Seules des valeurs 30–220 sous un code de 4 à 8 caractères sont acceptées ;
+   la liste des codes n'est pas lisible.)
+4. Copie l'URL affichée en haut de l'onglet *Données*
+   (`https://…-default-rtdb.europe-west1.firebasedatabase.app`) dans
+   **`FIREBASE_DB_URL`**, dans `index.html` **et** `battement.html`.
 
-## Nouveau : particules respirantes, respiration du point de vue
-- **Particules respirantes** : 36 particules discrètes autour de la sphère,
-  montent à l'inspiration et redescendent à l'expiration (opacité qui varie
-  aussi) — écho du pollen de Clairière, mais synchronisé au souffle plutôt
-  qu'en dérive libre.
-- **Respiration du point de vue** : très légère amplitude verticale (quelques
-  millimètres) appliquée au rig, synchronisée à `breathProgress01` — monte à
-  l'inspiration, descend à l'expiration. Toujours appliquée au rig et jamais
-  à la caméra directement, pour rester compatible avec le tracking VR.
+**Utilisation** : bouton discret « 💓 Suivre mon pouls » sous le menu → un code
+de 5 caractères s'affiche. Sur son téléphone : ouvrir `battement.html`, taper le
+code, « Démarrer la mesure », doigt sur l'objectif. Le BPM apparaît dans le
+casque sous le texte. Tant que l'option n'est pas activée : aucun appel réseau
+pour le pouls, aucun panneau.
 
-## Nouveau : rythme cardiaque en temps réel (via une page téléphone séparée)
-Le casque Quest ne peut pas lire directement un capteur Bluetooth (le
-navigateur Quest bloque le Web Bluetooth, contrairement à Chrome Android —
-voir plus bas). Solution : une page dédiée à ouvrir sur le téléphone
-(`battement.html`), qui mesure le pouls **par la caméra** (méthode PPG
-classique : doigt sur l'objectif + flash, variation de luminosité du canal
-rouge à chaque battement, détection de pics) et envoie la valeur au casque
-via un petit relais en ligne gratuit.
+**Données** : un nombre et un horodatage sous un code aléatoire, sans aucune
+identité. À chaque retour au menu, le casque **efface** la valeur et **change de
+code** (la page peut rester ouverte d'un utilisateur à l'autre). C'est de la donnée
+de santé, même anonyme : si tu l'utilises à grande échelle à la fac, mieux vaut
+le dire aux utilisateurs.
 
-### Mise en place (une seule fois)
-1. Crée un bucket kvdb.io (gratuit, juste un email, pas de vrai compte) :
-   ```
-   curl -d 'email=ton@email.com' https://kvdb.io
-   ```
-   Ça renvoie un identifiant du type `Fd55uogXyxYdnXJvnyN8Xo`.
-2. Colle cet identifiant dans **`KVDB_BUCKET`**, à l'identique dans
-   `index.html` ET `battement.html`.
-3. Héberge normalement (même repo/dossier que le reste).
+**Qualité de mesure** (`battement.html`) : seuls les relevés stables
+(4 estimations cohérentes d'affilée, intervalles réguliers) sont envoyés ; sinon
+le casque affiche « en attente » plutôt qu'un chiffre faux. Seuils fixés à vue
+(`QUALITY_THRESHOLDS`) — à recalibrer sur 2-3 téléphones. Précision correcte
+pour un repère, pas pour un usage médical.
 
-### Utilisation
-1. Sur le téléphone : ouvre `battement.html`, appuie sur "Démarrer la
-   mesure", pose le doigt sur l'objectif arrière (et le flash s'il est juste
-   à côté) sans trop appuyer, reste immobile quelques secondes.
-2. Sur le casque : le BPM apparaît automatiquement sous le texte de
-   respiration dès que le téléphone commence à envoyer des valeurs (sondage
-   toutes les 2s). "📱 En attente du téléphone…" tant qu'aucune donnée n'est
-   arrivée depuis plus de 8s.
-3. Le "code de séance" (par défaut `default`) permet de distinguer plusieurs
-   séances en parallèle si besoin un jour — laisse tel quel pour un usage solo.
+## Corrections de cette version
+- **Horloge du moteur de respiration** : le démarrage utilisait `performance.now()`
+  alors que la boucle utilisait un compteur interne, ce qui pouvait empêcher
+  l'enchaînement des phases. Une seule horloge maintenant (vérifié par simulation
+  sur les 6 techniques, y compris avec un démarrage tardif).
+- **Étoiles** : quasi invisibles avant (réduites à 1-2 px par l'atténuation de
+  distance). Shader dédié : taille en pixels, disque doux, scintillement propre
+  à chaque étoile.
+- **Animations en VR** : plus de `requestAnimationFrame` maison (il ne tourne
+  pas pendant une session immersive) ; tout passe par la boucle de rendu.
+- AR retiré. Plus de carillon. QR code retiré (impossible à scanner depuis
+  l'intérieur du casque).
 
-### Limites à connaître
-- **Précision** : la méthode caméra est correcte pour un ordre de grandeur et
-  une tendance, mais moins précise qu'une vraie ceinture pectorale Bluetooth
-  (type Polar H10). Suffisant pour donner un repère pendant une séance de
-  respiration, pas pour un usage médical.
-- **Web Bluetooth sur Quest** : la vraie solution "casque lit directement un
-  capteur BLE" existe (protocole standard, gratuit, capteurs de ceinture
-  largement disponibles) mais le navigateur Quest la bloque actuellement
-  (rapporté par la communauté développeurs Meta, juillet 2025) — d'où ce
-  contournement par téléphone. Si Meta corrige ça un jour, on pourra
-  simplifier en lisant directement le capteur depuis le casque.
-- **Sécurité du bucket** : laissé en accès libre par défaut (comme conçu pour
-  ce cas d'usage) — largement suffisant pour un simple BPM à usage personnel,
-  mais à garder en tête si tu envisages d'y stocker un jour autre chose de
-  plus sensible (dans ce cas, utilise les clés d'accès kvdb.io documentées
-  sur kvdb.io/docs/api/).
+## Ce qui n'a PAS pu être testé (à valider sur le casque)
+Je n'ai pas accès à un Quest : la logique (fondus audio, moteur de respiration,
+cohérence du code) est testée par simulation, mais pas le rendu ni les manettes.
+À vérifier : l'orientation/la netteté de ta vidéo, que A/X, gâchette, clic
+joystick et B/Y réagissent comme prévu, la lecture des `.webm` sur le casque,
+et que le tutoriel est lisible à distance.
 
-## Comment ça marche
-1. **Menu de sélection** : 6 techniques au choix, chacune avec son propre
-   rythme de phases (`TECHNIQUES` dans `index.html`) :
-   - **Respiration en carré** : 4s inspire / 4s retiens / 4s expire / 4s retiens
-   - **4-7-8** : 4s inspire / 7s retiens / 8s expire
-   - **Cohérence cardiaque** : 5s inspire / 5s expire
-   - **Triangle (5-5-5)** : 5s inspire / 5s retiens / 5s expire
-   - **Respiration apaisante (4-8)** : 4s inspire / 8s expire (expiration longue)
-   - **Soupir physiologique** : double inspiration courte (2s + 1s) suivie
-     d'une longue expiration (6s) — technique de décharge rapide de tension
-2. **Sphère qui respire** : grossit à l'inspiration, se contracte à
-   l'expiration, reste stable pendant les temps de rétention. Teinte qui
-   varie doucement (plus froide à pleine inspiration). Le moteur interpole
-   désormais depuis l'échelle réelle au début de chaque phase (pas toujours
-   depuis min/max) — nécessaire pour le soupir physiologique, où la seconde
-   inspiration reprend là où la première s'est arrêtée plutôt que de repartir
-   de zéro.
-3. **Panneau texte** : mot de la phase en cours ("Inspirez"/"Retenez"/"Expirez")
-   + décompte en secondes, toujours tourné vers le spectateur.
-4. **Carillon doux** : une note différente à chaque début de phase (plus
-   aiguë pour inspirer, plus grave pour expirer), générée par Web Audio API
-   — aucun fichier audio.
-5. Aucun guidage vocal (choix assumé, pas de synthèse vocale ni de
-   speech-to-text dans cette version).
-
-## Installation / hébergement
-Même principe que Clairière : héberger en HTTPS (GitHub Pages, Netlify...),
-charger une première fois pour que le Service Worker mette tout en cache,
-puis "Ajouter à l'écran d'accueil" pour un raccourci utilisable hors-ligne
-ensuite. Vu la légèreté de cette version (aucun gros fichier), le premier
-chargement devrait être quasi instantané, même sur un WiFi limité.
-
-## Personnalisation facile
-- **Ajouter une technique** : une entrée dans `TECHNIQUES` (`index.html`),
-  avec sa liste de phases (`label`, `type`: `grow`/`shrink`/`hold`, `dur` en
-  secondes) — le moteur de respiration et l'UI s'adaptent automatiquement,
-  rien d'autre à modifier.
-- **Couleur/ambiance** : `makeSkyGradientTexture()` pour le dégradé de fond,
-  `sphereMat` pour la couleur de base de la sphère.
-- **Durée de session** : actuellement la session tourne en continu tant que
-  l'utilisateur reste en VR/AR (pas de minuteur de fin). Facile à ajouter si
-  souhaité (ex: fondu au noir après N cycles).
-
-## Pistes pour plus tard (non implémentées)
-- Minuteur de session avec fondu de fin en douceur
-- Sauvegarde de la technique préférée (`localStorage`/`window.storage`)
-- Vibration légère du contrôleur au changement de phase (retour haptique)
-](https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/)
+## Limites connues
+- Musiques/ambiances/vidéos ne sont pas mises en cache hors-ligne par le Service
+  Worker (les requêtes Range des médias s'y prêtent mal) : le cache HTTP du
+  navigateur s'en charge, mais un premier chargement sur un WiFi lent reste lent.
+- Pas de bouton à viser dans le casque (pas de lancer de rayon) : tout est sur
+  les boutons des manettes. Les mains seules (sans manette) ne pilotent rien.

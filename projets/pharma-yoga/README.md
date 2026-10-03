@@ -1,4 +1,4 @@
-# Respire — Cohérence & respiration guidée VR
+[# Respire — Cohérence & respiration guidée VR
 
 Version indépendante de Clairière, focalisée uniquement sur la respiration
 guidée. Aucun appel réseau, aucun fichier lourd (pas d'EXR, de splat, de
@@ -198,3 +198,4 @@ chargement devrait être quasi instantané, même sur un WiFi limité.
 - Minuteur de session avec fondu de fin en douceur
 - Sauvegarde de la technique préférée (`localStorage`/`window.storage`)
 - Vibration légère du contrôleur au changement de phase (retour haptique)
+](https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/)

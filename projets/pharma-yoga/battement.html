@@ -80,7 +80,7 @@ const sessionInput = document.getElementById('sessionInput');
 // ⚠️ Même URL de base Firebase que FIREBASE_DB_URL dans index.html (Respire).
 // Relais gratuit, sans carte bancaire — voir le README pour le créer (5 minutes).
 // ex : 'https://mon-projet-default-rtdb.europe-west1.firebasedatabase.app'
-const FIREBASE_DB_URL = '';
+const FIREBASE_DB_URL = 'https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/';
 
 // ===================== MESURE PPG PAR CAMÉRA =====================
 // Principe standard (utilisé par la plupart des apps "heart rate camera") :
@@ -341,7 +341,7 @@ async function sendHeartRate(bpm) {
   const code = sessionInput.value.trim().toUpperCase();
 
   if (!FIREBASE_DB_URL) {
-    syncStatus.textContent = '⚠ FIREBASE_DB_URL non configuré (voir README)';
+    syncStatus.textContent = 'https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/';
     return;
   }
   if (!/^[A-Z0-9]{4,8}$/.test(code)) {
@@ -350,7 +350,7 @@ async function sendHeartRate(bpm) {
   }
   try {
     // t = horodatage serveur Firebase : le casque s'en sert pour savoir si la mesure est fraîche
-    const res = await fetch(`${FIREBASE_DB_URL.replace(/\/$/, '')}/hr/${code}.json`, {
+    const res = await fetch(`${FIREBASE_DB_URL.replace(/\/$/, 'https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/')}/hr/${code}.json`, {
       method: 'PUT',
       body: JSON.stringify({ bpm, t: { '.sv': 'timestamp' } })
     });

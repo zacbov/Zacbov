@@ -28,11 +28,11 @@
   }
   #video { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
   #pulseCanvas { width:280px; height:60px; margin-top:16px; opacity:0.6; }
-  #sessionRow { margin-top:28px; font-size:12px; opacity:0.5; }
+  #sessionRow { margin-top:24px; font-size:15px; }
   #sessionRow input {
-    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2);
-    color:#eaf4ff; border-radius:6px; padding:4px 8px; font-size:12px; width:100px;
-    text-align:center; margin-left:6px;
+    background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3);
+    color:#eaf4ff; border-radius:8px; padding:8px 12px; font-size:20px; font-weight:700;
+    width:130px; letter-spacing:4px; text-align:center; margin-left:8px; text-transform:uppercase;
   }
   #syncStatus { font-size:12px; margin-top:8px; opacity:0.5; }
 </style>
@@ -40,6 +40,10 @@
 <body>
 <div id="app">
   <h1>🫀 Battement</h1>
+  <div id="sessionRow">
+    Code affiché sur le casque :
+    <input id="sessionInput" type="text" value="" placeholder="XXXXX" maxlength="8">
+  </div>
   <p>Pose délicatement le bout de ton index sur l'objectif de la caméra arrière
      (et le flash s'il est à côté) — recouvre-les complètement, sans trop
      appuyer. Reste immobile quelques secondes le temps que la mesure se stabilise.</p>
@@ -53,10 +57,6 @@
   <button id="startBtn">Démarrer la mesure</button>
   <canvas id="pulseCanvas" width="280" height="60"></canvas>
 
-  <div id="sessionRow">
-    Code de séance :
-    <input id="sessionInput" type="text" value="default">
-  </div>
   <div id="syncStatus">Pas encore envoyé au casque</div>
 
   <video id="video" autoplay playsinline muted></video>
@@ -77,15 +77,10 @@ const sampleCtx = sampleCanvas.getContext('2d');
 const syncStatus = document.getElementById('syncStatus');
 const sessionInput = document.getElementById('sessionInput');
 
-// Le code de séance arrive tout seul via le lien scanné (QR code affiché sur
-// le casque) — rien à taper. Repli sur "default" seulement si la page est
-// ouverte directement sans passer par le QR code (usage de test/dev).
-const urlCode = new URLSearchParams(window.location.search).get('code');
-if (urlCode) sessionInput.value = urlCode;
-
-// ⚠️ Même identifiant de bucket que dans index.html (Respire) — voir les
-// instructions dans le README pour en créer un (gratuit, une seule fois).
-const KVDB_BUCKET = 'TON_BUCKET_ID_ICI';
+// ⚠️ Même URL de base Firebase que FIREBASE_DB_URL dans index.html (Respire).
+// Relais gratuit, sans carte bancaire — voir le README pour le créer (5 minutes).
+// ex : 'https://mon-projet-default-rtdb.europe-west1.firebasedatabase.app'
+const FIREBASE_DB_URL = '';
 
 // ===================== MESURE PPG PAR CAMÉRA =====================
 // Principe standard (utilisé par la plupart des apps "heart rate camera") :
@@ -108,9 +103,9 @@ const HISTORY_WINDOW = 8; // secondes glissantes analysées pour le calcul du BP
 // recalibrer sur place avec plusieurs téléphones si le comportement observé
 // ne correspond pas (voir QUALITY_THRESHOLDS ci-dessous, regroupés exprès).
 const QUALITY_THRESHOLDS = {
-  noFingerBrightness: 165,   // au-dessus : le doigt ne couvre probablement pas l'objectif
+  noFingerBrightness: 165,    // au-dessus : le doigt ne couvre probablement pas l'objectif
   overPressureBrightness: 12, // en-dessous : doigt qui écrase trop fort, plus de lumière du tout
-  minAmplitude: 2.5,          // variation min sur la fenêtre récente pour espérer un signal exploitable
+  minAmplitude: 0.35,         // variation MIN sur le signal détendancé (AC) — beaucoup plus fine que la valeur brute
   maxIntervalCV: 0.22,        // coefficient de variation des intervalles entre pics (régularité du pouls)
   goodStreakNeeded: 4,        // nb d'estimations cohérentes d'affilée avant d'afficher/envoyer
 };
@@ -155,6 +150,16 @@ async function startMeasurement() {
     if (capabilities.torch) {
       await track.applyConstraints({ advanced: [{ torch: true }] }).catch(() => {});
     }
+    // Verrouille l'exposition/balance des blancs si le téléphone le permet —
+    // sans ça, la caméra "chasse" en continu son réglage automatique, ce qui
+    // noie le petit signal de pouls dans une dérive bien plus large. Best
+    // effort : ignoré silencieusement si non supporté (cas fréquent).
+    if (capabilities.exposureMode && capabilities.exposureMode.includes('manual')) {
+      await track.applyConstraints({ advanced: [{ exposureMode: 'manual' }] }).catch(() => {});
+    }
+    if (capabilities.whiteBalanceMode && capabilities.whiteBalanceMode.includes('manual')) {
+      await track.applyConstraints({ advanced: [{ whiteBalanceMode: 'manual' }] }).catch(() => {});
+    }
 
     sampling = true;
     startBtn.textContent = 'Mesure en cours…';
@@ -176,7 +181,10 @@ function sampleFrame() {
   const avgRed = sum / (frame.length / 4);
 
   const t = performance.now() / 1000;
-  brightnessHistory.push({ t, value: avgRed });
+  const prevT = brightnessHistory.length ? brightnessHistory[brightnessHistory.length-1].t : t;
+  const sample = { t, value: avgRed };
+  computeDetrended(sample, Math.max(0.001, t - prevT));
+  brightnessHistory.push(sample);
   while (brightnessHistory.length && t - brightnessHistory[0].t > HISTORY_WINDOW) {
     brightnessHistory.shift();
   }
@@ -187,16 +195,31 @@ function sampleFrame() {
   requestAnimationFrame(sampleFrame);
 }
 
+// Retire la dérive lente (exposition automatique, éclairage ambiant qui
+// change) via une moyenne mobile exponentielle — ne garde que la composante
+// rapide (le vrai signal pulsé), bien plus fiable à analyser que la valeur
+// brute. Constante de temps ~1.2s : un cycle cardiaque dure ~0.5-1.5s, donc
+// c'est assez lent pour ne pas effacer le pouls lui-même.
+let emaBaseline = null;
+const EMA_TIME_CONSTANT = 1.2;
+function computeDetrended(sample, dt) {
+  if (emaBaseline === null) emaBaseline = sample.value;
+  const alpha = 1 - Math.exp(-dt / EMA_TIME_CONSTANT);
+  emaBaseline += alpha * (sample.value - emaBaseline);
+  sample.baseline = emaBaseline;
+  sample.ac = sample.value - emaBaseline;
+}
+
 function drawPulseTrace() {
   pulseCtx.clearRect(0, 0, 280, 60);
   if (brightnessHistory.length < 2) return;
-  const values = brightnessHistory.map(h => h.value);
+  const values = brightnessHistory.map(h => h.ac ?? 0);
   const min = Math.min(...values), max = Math.max(...values) || min + 1;
   pulseCtx.strokeStyle = QUALITY_STYLES[qualityState].ring; pulseCtx.lineWidth = 2;
   pulseCtx.beginPath();
   brightnessHistory.forEach((h, i) => {
     const x = (i / (brightnessHistory.length - 1)) * 280;
-    const y = 55 - ((h.value - min) / (max - min)) * 50;
+    const y = 55 - (((h.ac ?? 0) - min) / (max - min)) * 50;
     if (i === 0) pulseCtx.moveTo(x, y); else pulseCtx.lineTo(x, y);
   });
   pulseCtx.stroke();
@@ -227,13 +250,14 @@ function resetMeasurementState() {
   brightnessHistory.length = 0;
   lastBpmValues = [];
   goodStreak = 0;
+  emaBaseline = null;
   bpmDisplay.textContent = '--';
 }
 
 let lastBpmValues = [];
 function computeBPM() {
-  const values = brightnessHistory.map(h => h.value);
-  const min = Math.min(...values), max = Math.max(...values);
+  const acValues = brightnessHistory.map(h => h.ac);
+  const min = Math.min(...acValues), max = Math.max(...acValues);
   const amplitude = max - min;
 
   if (amplitude < QUALITY_THRESHOLDS.minAmplitude) {
@@ -242,13 +266,14 @@ function computeBPM() {
     return;
   }
 
-  // Détection de pics simple : un point est un pic s'il est plus élevé que
-  // ses voisins immédiats et dépasse la moyenne locale.
-  const mean = values.reduce((a,b) => a+b, 0) / values.length;
+  // Détection de pics sur le signal détendancé (AC) : un point est un pic
+  // s'il est plus élevé que ses voisins immédiats et positif (au-dessus de
+  // la ligne de base locale) — bien plus net que sur la valeur brute, qui
+  // inclut la dérive lente de l'exposition automatique de la caméra.
   const peaks = [];
   for (let i = 2; i < brightnessHistory.length - 2; i++) {
-    const v = values[i];
-    if (v > mean && v > values[i-1] && v > values[i-2] && v >= values[i+1] && v >= values[i+2]) {
+    const v = acValues[i];
+    if (v > 0 && v > acValues[i-1] && v > acValues[i-2] && v >= acValues[i+1] && v >= acValues[i+2]) {
       peaks.push(brightnessHistory[i].t);
     }
   }
@@ -307,23 +332,34 @@ function computeBPM() {
   sendHeartRate(smoothed);
 }
 
-// ===================== ENVOI AU CASQUE (kvdb.io) =====================
+// ===================== ENVOI AU CASQUE (Firebase Realtime Database, gratuit) =====================
 let lastSendAt = 0;
 async function sendHeartRate(bpm) {
   const now = performance.now();
   if (now - lastSendAt < 1800) return; // pas plus d'un envoi ~2s
   lastSendAt = now;
-  const code = sessionInput.value.trim() || 'default';
+  const code = sessionInput.value.trim().toUpperCase();
+
+  if (!FIREBASE_DB_URL) {
+    syncStatus.textContent = '⚠ FIREBASE_DB_URL non configuré (voir README)';
+    return;
+  }
+  if (!/^[A-Z0-9]{4,8}$/.test(code)) {
+    syncStatus.textContent = '⚠ Entre d\'abord le code affiché sur le casque (en haut de la page)';
+    return;
+  }
   try {
-    const res = await fetch(`https://kvdb.io/${KVDB_BUCKET}/hr_${code}`, {
+    // t = horodatage serveur Firebase : le casque s'en sert pour savoir si la mesure est fraîche
+    const res = await fetch(`${FIREBASE_DB_URL.replace(/\/$/, '')}/hr/${code}.json`, {
       method: 'PUT',
-      body: String(bpm)
+      body: JSON.stringify({ bpm, t: { '.sv': 'timestamp' } })
     });
-    syncStatus.textContent = res.ok
-      ? '✓ Envoyé au casque (code "' + code + '")'
-      : '⚠ Échec de l\'envoi';
+    if (res.ok) syncStatus.textContent = '✓ Envoyé au casque (code "' + code + '")';
+    else if (res.status === 401 || res.status === 403)
+      syncStatus.textContent = '⚠ Accès refusé (HTTP ' + res.status + ') — règles Firebase mal collées ? (voir README)';
+    else syncStatus.textContent = '⚠ Échec de l\'envoi (HTTP ' + res.status + ')';
   } catch (e) {
-    syncStatus.textContent = '⚠ Hors-ligne ou relais injoignable';
+    syncStatus.textContent = '⚠ Hors-ligne ou relais injoignable : ' + e.message;
   }
 }
 

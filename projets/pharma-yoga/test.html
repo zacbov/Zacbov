@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<link rel="icon" type="image/x-icon" href="./favicon.ico">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Respire — respiration guidée en VR</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a1520">
+<style>
+  html, body { margin:0; padding:0; overflow:hidden; background:#000; height:100%; }
+  canvas { display:block; }
+  #VRButton { display:none !important; } /* déclenché par le clic sur une carte */
+
+  #overlay {
+    position:fixed; inset:0; display:flex; flex-direction:column; overflow-y:auto;
+    color:#eaf4ff; font-family: system-ui, sans-serif;
+    background:radial-gradient(ellipse at center, #12293a, #040d14);
+    z-index: 10; padding:20px; box-sizing:border-box;
+  }
+  #menuInner { margin:auto; text-align:center; max-width:680px; width:100%; }
+  #menuInner h1 { font-weight:300; letter-spacing:2px; margin:0 0 6px; }
+  #menuInner p { opacity:0.7; margin:0 0 4px; font-size:14px; }
+
+  #techGrid {
+    display:grid; grid-template-columns: repeat(3, 1fr); gap:14px;
+    margin-top:22px; width:100%;
+  }
+  .techCard {
+    cursor:pointer; border:2px solid rgba(111,184,240,0.25); border-radius:16px;
+    padding:18px 12px; background:rgba(111,184,240,0.06);
+    transition: transform 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .techCard:hover { transform:scale(1.04); border-color:#6fb8f0; background:rgba(111,184,240,0.14); }
+  .techCard h3 { margin:0 0 6px; font-size:19px; font-weight:600; }
+  .techCard p.techSubtitle { margin:0 0 8px; font-size:13px; opacity:0.8; line-height:1.35; }
+  .techCard p.techTechnical { margin:0; font-size:10.5px; opacity:0.4; letter-spacing:0.3px; }
+  @media (max-width: 560px) { #techGrid { grid-template-columns: 1fr; } }
+
+  #settings { margin-top:26px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .row { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:8px; }
+  .chip, .pill {
+    cursor:pointer; color:#eaf4ff; font-size:14px; border-radius:30px;
+    border:1px solid rgba(111,184,240,0.3); background:rgba(111,184,240,0.06);
+    padding:9px 18px; transition: background 0.15s, border-color 0.15s;
+  }
+  .pill { padding:6px 14px; font-size:13px; }
+  .chip.on, .pill.selected { background:rgba(111,184,240,0.28); border-color:#6fb8f0; }
+  .chip:hover, .pill:hover { border-color:#6fb8f0; }
+  #audioWarning { font-size:11px; color:#ffcf6b; max-width:520px; }
+  .rowLabel { font-size:12px; opacity:0.55; }
+
+  #hrToggleBtn { margin-top:20px; background:none; border:none; color:rgba(200,225,246,0.4); font-size:12px; text-decoration:underline; cursor:pointer; }
+  #hrPairing { display:none; margin:12px auto 0; padding:14px; max-width:340px; border:1px solid rgba(111,184,240,0.25); border-radius:14px; background:rgba(111,184,240,0.06); }
+  #roomCodeDisplay { font-size:34px; font-weight:700; letter-spacing:6px; color:#8cc7ff; margin:4px 0; }
+
+  #flatMenuBtn {
+    display:none; position:fixed; top:12px; left:12px; z-index:20; cursor:pointer;
+    color:#eaf4ff; background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.3);
+    border-radius:20px; padding:6px 14px; font:13px system-ui, sans-serif;
+  }
+  #status { position:fixed; bottom:10px; left:10px; color:#8cf; font:12px monospace; opacity:0.5; z-index:5; }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div id="menuInner">
+    <h1>🌬️ Respire</h1>
+    <p>Choisis ce dont tu as besoin, là, maintenant.</p>
+    <div id="techGrid"></div>
+
+    <div id="settings">
+      <div class="row">
+        <button id="musicBtn" class="chip">🎵 Musique</button>
+        <button id="ambienceBtn" class="chip">🌿 Sons d'ambiance</button>
+      </div>
+      <div class="row" id="ambiencePills">
+        <span class="rowLabel">Ambiance :</span>
+        <button class="pill" data-type="ruisseau">Ruisseau</button>
+        <button class="pill" data-type="vague">Vague</button>
+      </div>
+      <div class="row" id="decorRow" style="display:none;">
+        <span class="rowLabel">Décor :</span>
+        <span id="decorPills" class="row"></span>
+      </div>
+      <div id="audioWarning"></div>
+    </div>
+
+    <button id="hrToggleBtn">💓 Suivre mon pouls (optionnel, encore en test)</button>
+    <div id="hrPairing">
+      <p style="font-size:12px; opacity:0.75; margin:0 0 8px;">Avant de mettre le casque, ouvre <strong>battement.html</strong> sur ton téléphone et entre ce code :</p>
+      <div id="roomCodeDisplay"></div>
+      <p id="hrCodeNote" style="font-size:11px; color:#ffcf6b;"></p>
+    </div>
+
+    <p style="font-size:12px; opacity:0.45; margin-top:24px;">Choisir une technique t'emmène directement en VR.</p>
+  </div>
+</div>
+<button id="flatMenuBtn">↩ Menu</button>
+<div id="status"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { VRButton } from 'three/addons/webxr/VRButton.js';
+
+const $ = (id) => document.getElementById(id);
+const statusEl = $('status');
+const log = (m) => { statusEl.textContent = m; console.log(m); };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ============================================================================
+// CONFIGURATION — tout ce qu'on peut vouloir ajuster est regroupé ici
+// ============================================================================
+const AUDIO_DIRS = ['./audio/', './asset/', './assets/', './assets/audio/'];
+const MUSIC_FILES = ['Weightless Drift.mp3', 'Still Waters.mp3'];   
+const AMBIENCE_FILES = { ruisseau: 'ruisseau.mp3', vague: 'vague.mp3' }; 
+
+const VIDEO_DIRS = ['./asset/', './assets/', './assets/video/', './video/'];
+const VIDEO_EXTS = ['webm', 'mp4'];   
+const VIDEO_MAX = 12;
+const VIDEO_YAW_DEG = -90;     
+const VIDEO_BRIGHTNESS = 0.85; 
+const VIDEO_LETTERBOX = 0;     
+
+const MUSIC_VOLUME = 0.4, MUSIC_FADE_SEC = 4;
+const AMBIENCE_VOLUME = 0.55, AMBIENCE_FADE_SEC = 3;
+const DEFAULT_AUDIO = { musicOn: true, ambienceOn: false, ambienceType: 'ruisseau' };
+
+const FIREBASE_DB_URL = 'https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/';
+
+// ============================================================================
+// TECHNIQUES
+// ============================================================================
+const TECHNIQUES = {
+  coherence: {
+    useCase: 'Pause calme', subtitle: 'Le bon choix par défaut, à tout moment de la journée',
+    name: 'Cohérence cardiaque (5-5)',
+    phases: [
+      { label: 'Inspirez', type: 'grow',  dur: 5 },
+      { label: 'Expirez',  type: 'shrink',dur: 5 },
+    ]
+  },
+  extendedExhale: {
+    useCase: 'Évacuer le stress', subtitle: 'Fait retomber la pression après un moment tendu',
+    name: 'Respiration apaisante (4-8)',
+    phases: [
+      { label: 'Inspirez', type: 'grow',  dur: 4 },
+      { label: 'Expirez',  type: 'shrink',dur: 8 },
+    ]
+  },
+  fourSevenEight: {
+    useCase: 'Avant de dormir', subtitle: 'Idéale pour relâcher juste avant une sieste ou le coucher',
+    name: '4-7-8',
+    phases: [
+      { label: 'Inspirez', type: 'grow',  dur: 4 },
+      { label: 'Retenez',  type: 'hold',  dur: 7 },
+      { label: 'Expirez',  type: 'shrink',dur: 8 },
+    ]
+  },
+  physiologicalSigh: {
+    useCase: 'Décharge rapide', subtitle: 'Pour un coup de fatigue ou de tension immédiat, en 30 s',
+    name: 'Soupir physiologique',
+    phases: [
+      { label: 'Inspirez',    type: 'grow',  dur: 2 },
+      { label: 'Ré-inspirez', type: 'grow',  dur: 1 },
+      { label: 'Expirez',     type: 'shrink',dur: 6 },
+    ]
+  },
+  box: {
+    useCase: 'Se concentrer', subtitle: 'Reprendre le contrôle avant une tâche qui demande de l\'attention',
+    name: 'Respiration en carré (4-4-4-4)',
+    phases: [
+      { label: 'Inspirez', type: 'grow',  dur: 4 },
+      { label: 'Retenez',  type: 'hold',  dur: 4 },
+      { label: 'Expirez',  type: 'shrink',dur: 4 },
+      { label: 'Retenez',  type: 'hold',  dur: 4 },
+    ]
+  },
+  triangle: {
+    useCase: 'Premier essai', subtitle: 'La plus simple pour découvrir la respiration guidée',
+    name: 'Triangle (5-5-5)',
+    phases: [
+      { label: 'Inspirez', type: 'grow',  dur: 5 },
+      { label: 'Retenez',  type: 'hold',  dur: 5 },
+      { label: 'Expirez',  type: 'shrink',dur: 5 },
+    ]
+  },
+};
+let selectedTechnique = null;
+
+// ============================================================================
+// UTILITAIRES
+// ============================================================================
+const tweens = [];
+function tween(from, to, sec, onUpdate) {
+  return new Promise((resolve) => {
+    tweens.push({ from, to, dur: Math.max(0.0001, sec), t: 0, onUpdate, resolve });
+    onUpdate(from);
+  });
+}
+function updateTweens(dt) {
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const tw = tweens[i];
+    tw.t += dt;
+    const k = Math.min(1, tw.t / tw.dur);
+    const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    tw.onUpdate(tw.from + (tw.to - tw.from) * e);
+    if (k >= 1) { tweens.splice(i, 1); tw.resolve(); }
+  }
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+async function fileExists(url) {
+  try { const r = await fetch(url, { method: 'HEAD', cache: 'no-store' }); return r.ok; }
+  catch (e) { return false; }
+}
+
+// ============================================================================
+// SCÈNE
+// ============================================================================
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.05, 200);
+const rig = new THREE.Group();
+rig.add(camera);
+scene.add(rig);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.xr.enabled = true;
+renderer.xr.setReferenceSpaceType('local-floor'); 
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+function makeSkyGradientTexture() {
+  const c = document.createElement('canvas'); c.width = 2; c.height = 256;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, '#0d2436'); g.addColorStop(0.5, '#0a1826'); g.addColorStop(1, '#050d14');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 2, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+scene.background = makeSkyGradientTexture();
+scene.add(new THREE.HemisphereLight(0x6fa8d8, 0x0a1420, 0.5));
+const glowLight = new THREE.PointLight(0x8fd8ff, 1.2, 8);
+glowLight.position.set(0, 1.6, -1.5);
+scene.add(glowLight);
+
+const STAR_COUNT = 260;
+const starGeo = new THREE.BufferGeometry();
+const starPos = new Float32Array(STAR_COUNT * 3);
+const starPhase = new Float32Array(STAR_COUNT);
+const starSpeed = new Float32Array(STAR_COUNT);
+const starSize = new Float32Array(STAR_COUNT);
+for (let i = 0; i < STAR_COUNT; i++) {
+  const r = 40 + Math.random() * 30;
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.acos(2 * Math.random() - 1);
+  starPos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+  starPos[i*3+1] = Math.abs(r * Math.cos(phi)) * 0.7 + 2;
+  starPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
+  starPhase[i] = Math.random() * Math.PI * 2;
+  starSpeed[i] = 0.4 + Math.random() * 1.4;
+  starSize[i]  = 2.5 + Math.random() * 4.0;
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+starGeo.setAttribute('aPhase', new THREE.BufferAttribute(starPhase, 1));
+starGeo.setAttribute('aSpeed', new THREE.BufferAttribute(starSpeed, 1));
+starGeo.setAttribute('aSize', new THREE.BufferAttribute(starSize, 1));
+const starMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 } },
+  vertexShader: `
+    attribute float aPhase; attribute float aSpeed; attribute float aSize;
+    uniform float uTime; varying float vAlpha;
+    void main() {
+      float tw = 0.55 + 0.45 * sin(uTime * aSpeed + aPhase);
+      vAlpha = tw;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_PointSize = aSize * (0.65 + 0.35 * tw) * (200.0 / -mv.z

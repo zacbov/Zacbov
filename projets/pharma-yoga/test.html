@@ -296,4 +296,643 @@ const starMat = new THREE.ShaderMaterial({
       float tw = 0.55 + 0.45 * sin(uTime * aSpeed + aPhase);
       vAlpha = tw;
       vec4 mv = modelViewMatrix * vec4(position, 1.0);
-      gl_PointSize = aSize * (0.65 + 0.35 * tw) * (200.0 / -mv.z
+      gl_PointSize = aSize * (0.65 + 0.35 * tw) * (200.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `
+    varying float vAlpha;
+    void main() {
+      float d = length(gl_PointCoord - vec2(0.5));
+      if (d > 0.5) discard;
+      float edge = smoothstep(0.5, 0.1, d);
+      gl_FragColor = vec4(0.82, 0.92, 1.0, vAlpha * edge * 0.95);
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+});
+const stars = new THREE.Points(starGeo, starMat);
+scene.add(stars);
+
+// ============================================================================
+// DÉCOR VIDÉO 360° (OPTIMISÉ POUR LA FLUIDITÉ ET LE DÉCODAGE 8K WEBM)
+// ============================================================================
+let decorList = [];
+let decorChoice = 'random';   
+let decorIndex = -1, decorBusy = false, videoActive = false;
+let decorReady = false, decorRevealed = false, decorRevealWanted = false;
+
+const decorVideo = document.createElement('video');
+decorVideo.loop = true; 
+decorVideo.muted = true; 
+decorVideo.defaultMuted = true;
+decorVideo.playsInline = true;
+decorVideo.preload = 'auto'; 
+decorVideo.crossOrigin = 'anonymous';
+decorVideo.setAttribute('playsinline', '');
+decorVideo.addEventListener('ended', () => { decorVideo.currentTime = 0; decorVideo.play().catch(() => {}); }); 
+
+const decorTexture = new THREE.VideoTexture(decorVideo);
+decorTexture.colorSpace = THREE.SRGBColorSpace;
+decorTexture.minFilter = THREE.LinearFilter; 
+decorTexture.magFilter = THREE.LinearFilter;
+decorTexture.generateMipmaps = false; // Empêche la saturation VRAM en 8K
+decorTexture.anisotropy = 1;          // Évite de surcharger la carte graphique
+decorTexture.matrixAutoUpdate = false;
+
+if (VIDEO_LETTERBOX > 0) { decorTexture.repeat.set(1, 1 - 2 * VIDEO_LETTERBOX); decorTexture.offset.set(0, VIDEO_LETTERBOX); }
+
+const decorMat = new THREE.MeshBasicMaterial({
+  map: decorTexture, 
+  color: new THREE.Color(VIDEO_BRIGHTNESS, VIDEO_BRIGHTNESS, VIDEO_BRIGHTNESS),
+  toneMapped: false, 
+  transparent: true, 
+  opacity: 0, 
+  depthWrite: false,
+  depthTest: false // Évite les calculs de profondeur inutiles sur la sphère 360°
+});
+const decorGeo = new THREE.SphereGeometry(60, 64, 48);
+decorGeo.scale(-1, 1, 1); 
+const decorSphere = new THREE.Mesh(decorGeo, decorMat);
+decorSphere.position.set(0, 1.6, 0);
+decorSphere.rotation.y = THREE.MathUtils.degToRad(VIDEO_YAW_DEG);
+decorSphere.renderOrder = -10;
+decorSphere.visible = false;
+scene.add(decorSphere);
+
+function setDecorFallback() {
+  videoActive = false; decorReady = false; decorRevealed = false;
+  decorSphere.visible = false; decorMat.opacity = 0; stars.visible = true;
+}
+function revealDecor() {
+  decorRevealWanted = true;
+  if (!decorReady || decorRevealed) return;
+  decorRevealed = true;
+  tween(decorMat.opacity, 1, 1.8, (v) => { decorMat.opacity = v; });
+}
+async function loadDecor(index, { revealNow = false } = {}) {
+  if (index < 0 || !decorList.length) { setDecorFallback(); return; }
+  decorBusy = true; decorReady = false; decorRevealed = false; decorRevealWanted = revealNow;
+  if (decorSphere.visible && decorMat.opacity > 0.01) {
+    await tween(decorMat.opacity, 0, 0.5, (v) => { decorMat.opacity = v; });
+  }
+  decorIndex = index;
+  const ok = await new Promise((resolve) => {
+    const onOk = () => { cleanup(); resolve(true); };
+    const onKo = () => { cleanup(); resolve(false); };
+    const cleanup = () => { decorVideo.removeEventListener('loadeddata', onOk); decorVideo.removeEventListener('error', onKo); };
+    decorVideo.addEventListener('loadeddata', onOk);
+    decorVideo.addEventListener('error', onKo);
+    decorVideo.src = decorList[index];
+    decorVideo.load();
+    decorVideo.play().catch(() => {});
+  });
+  if (!ok) { log('Vidéo illisible : ' + decorList[index]); setDecorFallback(); decorBusy = false; return; }
+  videoActive = true; decorSphere.visible = true; stars.visible = false; decorReady = true;
+  decorBusy = false;
+  if (decorRevealWanted) revealDecor();
+}
+function pickInitialDecor() {
+  if (!decorList.length) return -1;
+  if (decorChoice === 'random') return Math.floor(Math.random() * decorList.length);
+  return Math.min(decorChoice, decorList.length - 1);
+}
+function nextDecor() {
+  if (decorBusy || decorList.length < 2) return;
+  loadDecor((decorIndex + 1) % decorList.length, { revealNow: true });
+  drawHud();
+}
+async function discoverDecors() {
+  let dir = null, ext = null;
+  outer: for (const d of VIDEO_DIRS) for (const e of VIDEO_EXTS) {
+    if (await fileExists(encodeURI(`${d}1.${e}`))) { dir = d; ext = e; break outer; }
+  }
+  if (!dir) return [];
+  const list = [encodeURI(`${dir}1.${ext}`)];
+  for (let i = 2; i <= VIDEO_MAX; i++) {
+    let found = null;
+    for (const e of VIDEO_EXTS) { const u = encodeURI(`${dir}${i}.${e}`); if (await fileExists(u)) { found = u; break; } }
+    if (!found) break;
+    list.push(found);
+  }
+  return list;
+}
+
+// ============================================================================
+// SPHÈRE QUI RESPIRE + HALO + PARTICULES
+// ============================================================================
+const MIN_SCALE = 0.55, MAX_SCALE = 1.35;
+const sphereMat = new THREE.MeshStandardMaterial({
+  color: 0x6fb8f0, emissive: 0x2a5a80, emissiveIntensity: 0.6,
+  roughness: 0.35, metalness: 0.1, transparent: true, opacity: 0.88
+});
+const breathSphere = new THREE.Mesh(new THREE.SphereGeometry(0.28, 48, 32), sphereMat);
+breathSphere.position.set(0, 1.5, -1.6);
+breathSphere.scale.setScalar(MIN_SCALE);
+scene.add(breathSphere);
+
+function makeGlowTexture() {
+  const size = 256;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  g.addColorStop(0, 'rgba(140,210,255,0.55)'); g.addColorStop(1, 'rgba(140,210,255,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const glowTexture = makeGlowTexture();
+const glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: glowTexture, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending
+}));
+glowSprite.position.copy(breathSphere.position);
+glowSprite.scale.setScalar(1.4);
+scene.add(glowSprite);
+
+const BREATH_PARTICLE_COUNT = 36;
+const particleGeo = new THREE.BufferGeometry();
+const particlePos = new Float32Array(BREATH_PARTICLE_COUNT * 3);
+const particleAngle = new Float32Array(BREATH_PARTICLE_COUNT);
+const particleRadius = new Float32Array(BREATH_PARTICLE_COUNT);
+const particleSeed = new Float32Array(BREATH_PARTICLE_COUNT);
+for (let i = 0; i < BREATH_PARTICLE_COUNT; i++) {
+  particleAngle[i] = Math.random() * Math.PI * 2;
+  particleRadius[i] = 0.4 + Math.random() * 0.35;
+  particleSeed[i] = Math.random();
+}
+particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+const particleMat = new THREE.PointsMaterial({
+  map: glowTexture, color: 0xbfe0ff, size: 0.03, transparent: true,
+  opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true
+});
+scene.add(new THREE.Points(particleGeo, particleMat));
+
+let breathProgress01 = 0; 
+function updateBreathParticles(t) {
+  const arr = particleGeo.attributes.position.array;
+  for (let i = 0; i < BREATH_PARTICLE_COUNT; i++) {
+    const baseHeight = -0.15 + breathProgress01 * 0.5;
+    const sway = Math.sin(t * 0.4 + particleSeed[i] * 10) * 0.04;
+    const a = particleAngle[i] + t * 0.05;
+    arr[i*3]   = breathSphere.position.x + Math.cos(a) * particleRadius[i];
+    arr[i*3+1] = breathSphere.position.y + baseHeight + particleSeed[i] * 0.3 + sway;
+    arr[i*3+2] = breathSphere.position.z + Math.sin(a) * particleRadius[i];
+  }
+  particleGeo.attributes.position.needsUpdate = true;
+  particleMat.opacity = 0.35 + breathProgress01 * 0.35;
+}
+
+// ============================================================================
+// PANNEAUX 3D
+// ============================================================================
+function makePanel(w, h, pw, ph, pos) {
+  const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent:true, depthWrite:false });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), material);
+  mesh.position.set(...pos); mesh.renderOrder = 10;
+  scene.add(mesh);
+  return { canvas, ctx, texture, material, mesh };
+}
+
+const textPanel = makePanel(512, 256, 0.6, 0.3, [0, 0.98, -1.6]);
+function drawBreathText(label, secondsLeft) {
+  const c = textPanel.ctx, W = textPanel.canvas.width, H = textPanel.canvas.height;
+  c.clearRect(0, 0, W, H);
+  c.fillStyle = 'rgba(5,15,25,0.38)'; roundRect(c, 60, 34, W-120, 180, 40); c.fill();
+  c.textAlign = 'center';
+  c.fillStyle = 'rgba(234,244,255,0.97)'; c.font = '600 56px system-ui, sans-serif';
+  c.fillText(label, W/2, 124);
+  c.font = '300 34px system-ui, sans-serif'; c.fillStyle = 'rgba(180,220,255,0.8)';
+  c.fillText(String(Math.max(1, Math.ceil(secondsLeft))), W/2, 180);
+  textPanel.texture.needsUpdate = true;
+}
+
+const hudPanel = makePanel(768, 150, 0.72, 0.14, [0, 0.62, -1.6]);
+hudPanel.material.opacity = 0.75;
+let menuHoldProgress = 0;
+function drawHud() {
+  const c = hudPanel.ctx, W = hudPanel.canvas.width, H = hudPanel.canvas.height;
+  c.clearRect(0, 0, W, H);
+  c.fillStyle = 'rgba(5,15,25,0.5)'; roundRect(c, 6, 6, W-12, H-12, 26); c.fill();
+  c.textAlign = 'center'; c.font = '25px system-ui, sans-serif'; c.fillStyle = 'rgba(225,238,252,0.92)';
+  const amb = audioState.ambienceOn ? (audioState.ambienceType === 'vague' ? 'Vague' : 'Ruisseau') : 'off';
+  c.fillText(`A/X 🎵 Musique : ${audioState.musicOn ? 'on' : 'off'}     Gâchette 🌿 Ambiance : ${amb}`, W/2, 50);
+  const decorTxt = decorList.length > 1 ? `Joystick (clic) ⟳ Décor ${decorIndex + 1}/${decorList.length}     ` : '';
+  c.fillText(`${decorTxt}Maintenir B/Y ↩ Menu`, W/2, 92);
+  if (menuHoldProgress > 0) {
+    c.fillStyle = 'rgba(111,184,240,0.9)';
+    roundRect(c, 40, H-26, (W-80) * menuHoldProgress, 10, 5); c.fill();
+  }
+  hudPanel.texture.needsUpdate = true;
+}
+
+const hrPanel = makePanel(320, 100, 0.28, 0.09, [0, 0.8, -1.6]);
+hrPanel.mesh.visible = false;
+function drawHeartRatePanel() {
+  const c = hrPanel.ctx, W = hrPanel.canvas.width, H = hrPanel.canvas.height;
+  c.clearRect(0, 0, W, H);
+  const stale = lastHeartRate === null || (performance.now() - lastHrChangeAt) > 8000;
+  c.textAlign = 'center';
+  if (stale) { c.font = '300 20px system-ui, sans-serif'; c.fillStyle = 'rgba(200,225,246,0.5)'; c.fillText('📱 En attente du téléphone…', W/2, 56); }
+  else { c.font = '600 34px system-ui, sans-serif'; c.fillStyle = 'rgba(255,190,190,0.9)'; c.fillText('♥ ' + lastHeartRate + ' bpm', W/2, 60); }
+  hrPanel.texture.needsUpdate = true;
+}
+
+const tutorialPanel = makePanel(800, 500, 0.92, 0.575, [0, 1.38, -1.0]);
+tutorialPanel.material.opacity = 0; tutorialPanel.mesh.visible = false;
+function drawTutorial() {
+  const c = tutorialPanel.ctx, W = tutorialPanel.canvas.width, H = tutorialPanel.canvas.height;
+  c.clearRect(0, 0, W, H);
+  c.fillStyle = 'rgba(8,20,32,0.9)'; roundRect(c, 8, 8, W-16, H-16, 30); c.fill();
+  c.strokeStyle = 'rgba(111,184,240,0.5)'; c.lineWidth = 2.5; roundRect(c, 8, 8, W-16, H-16, 30); c.stroke();
+  c.textAlign = 'center'; c.fillStyle = '#eaf4ff'; c.font = '600 40px system-ui, sans-serif';
+  c.fillText('Bienvenue', W/2, 74);
+  c.font = '25px system-ui, sans-serif'; c.fillStyle = 'rgba(222,236,250,0.92)';
+  [
+    '🔵  Suis la sphère avec ton souffle :',
+    'elle grossit → inspire · elle rétrécit → expire',
+    '',
+    '🌿  Gâchette : sons d\'ambiance (ruisseau · vague · aucun)',
+    '🎵  A ou X : musique on / off',
+    '⟳  Clic joystick : changer de décor',
+    '↩  Maintenir B ou Y (2 s) : revenir au menu',
+  ].forEach((line, i) => c.fillText(line, W/2, 128 + i * 44));
+  c.font = '20px system-ui, sans-serif'; c.fillStyle = 'rgba(180,215,245,0.6)';
+  c.fillText('(ce message disparaît tout seul — ou appuie sur la gâchette)', W/2, H - 30);
+  tutorialPanel.texture.needsUpdate = true;
+}
+let tutorialToken = 0;
+async function showTutorial() {
+  const my = ++tutorialToken;
+  tutorialPanel.mesh.visible = true;
+  await tween(tutorialPanel.material.opacity, 0.96, 0.8, (v) => { tutorialPanel.material.opacity = v; });
+  await sleep(14000);
+  if (my !== tutorialToken) return;
+  await tween(tutorialPanel.material.opacity, 0, 0.8, (v) => { tutorialPanel.material.opacity = v; });
+  if (my === tutorialToken) tutorialPanel.mesh.visible = false;
+}
+function hideTutorialNow() {
+  if (!tutorialPanel.mesh.visible) return false;
+  const my = ++tutorialToken;
+  tween(tutorialPanel.material.opacity, 0, 0.4, (v) => { tutorialPanel.material.opacity = v; })
+    .then(() => { if (my === tutorialToken) tutorialPanel.mesh.visible = false; });
+  return true;
+}
+
+// ============================================================================
+// AUDIO
+// ============================================================================
+class FadingLoop {
+  constructor(getUrls, { volume = 0.4, fadeSec = 4 } = {}) {
+    this.getUrls = getUrls; this.volume = volume; this.fadeSec = fadeSec;
+    this.slots = [this._newSlot(), this._newSlot()];
+    this.current = -1; this.nextIndex = 0; this.running = false;
+    this.timer = null; this.lastTick = 0;
+  }
+  _newSlot() { const el = new Audio(); el.preload = 'auto'; el.volume = 0; return { el, fade: 0, target: 0, active: false, scheduled: false }; }
+  start() {
+    if (this.running) return;
+    this.running = true;
+    const reviving = this.slots.findIndex((s) => s.active && s.target === 0 && !s.el.ended);
+    if (reviving >= 0) { this.slots[reviving].target = 1; this.current = reviving; }
+    else this._playNext();
+    this._ensureTimer();
+  }
+  stop() { this.running = false; this.slots.forEach((s) => { s.target = 0; }); this._ensureTimer(); }
+  crossfadeToNext() { if (!this.running) return; this._playNext(); this._ensureTimer(); }
+  _ensureTimer() { if (!this.timer) { this.lastTick = performance.now(); this.timer = setInterval(() => this._tick(), 100); } }
+  _playNext() {
+    const urls = this.getUrls();
+    if (!urls || !urls.length) return;
+    const url = urls[this.nextIndex % urls.length]; this.nextIndex++;
+    const idx = this.current === 0 ? 1 : 0;
+    const slot = this.slots[idx];
+    if (this.current >= 0 && this.current !== idx) this.slots[this.current].target = 0;
+    slot.el.src = url; slot.el.currentTime = 0; slot.el.volume = 0;
+    slot.fade = 0; slot.target = 1; slot.active = true; slot.scheduled = false;
+    slot.el.play().catch(() => {});
+    this.current = idx;
+  }
+  _tick() {
+    const now = performance.now(); const dt = Math.min(0.5, (now - this.lastTick) / 1000); this.lastTick = now;
+    let any = false;
+    for (const slot of this.slots) {
+      if (!slot.active) continue;
+      const step = dt / this.fadeSec;
+      if (slot.fade < slot.target) slot.fade = Math.min(slot.target, slot.fade + step);
+      else if (slot.fade > slot.target) slot.fade = Math.max(slot.target, slot.fade - step);
+      const eased = slot.fade * slot.fade * (3 - 2 * slot.fade);
+      slot.el.volume = Math.max(0, Math.min(1, this.volume * eased));
+      if (slot.fade <= 0 && slot.target === 0) { slot.el.pause(); slot.active = false; } else any = true;
+    }
+    if (this.running && this.current >= 0) {
+      const cur = this.slots[this.current];
+      if (cur.active && !cur.scheduled) {
+        const d = cur.el.duration, t = cur.el.currentTime;
+        const nearEnd = isFinite(d) && d > 0 && (d - t) <= this.fadeSec + 0.15;
+        if (nearEnd || cur.el.ended) { cur.scheduled = true; this._playNext(); } 
+      }
+    }
+    if (!any && !this.running) { clearInterval(this.timer); this.timer = null; }
+  }
+}
+
+const audioState = { ...DEFAULT_AUDIO };
+const audioUrls = { music: [], ruisseau: null, vague: null };
+let audioRunning = false;
+const musicLoop = new FadingLoop(() => audioUrls.music, { volume: MUSIC_VOLUME, fadeSec: MUSIC_FADE_SEC });
+const ambienceLoop = new FadingLoop(() => {
+  const u = audioUrls[audioState.ambienceType]; return u ? [u] : [];
+}, { volume: AMBIENCE_VOLUME, fadeSec: AMBIENCE_FADE_SEC });
+
+async function resolveAudio() {
+  const findFile = async (file) => {
+    for (const d of AUDIO_DIRS) { const u = encodeURI(d + file); if (await fileExists(u)) return u; }
+    return null;
+  };
+  const found = await Promise.all([...MUSIC_FILES.map(findFile), findFile(AMBIENCE_FILES.ruisseau), findFile(AMBIENCE_FILES.vague)]);
+  audioUrls.music = found.slice(0, MUSIC_FILES.length).filter(Boolean);
+  audioUrls.ruisseau = found[MUSIC_FILES.length];
+  audioUrls.vague = found[MUSIC_FILES.length + 1];
+  const missing = [];
+  MUSIC_FILES.forEach((f, i) => { if (!found[i]) missing.push(f); });
+  if (!audioUrls.ruisseau) missing.push(AMBIENCE_FILES.ruisseau);
+  if (!audioUrls.vague) missing.push(AMBIENCE_FILES.vague);
+  $('audioWarning').textContent = missing.length
+    ? '⚠ Fichier(s) audio introuvable(s) : ' + missing.join(', ') + ' — à placer dans un dossier « audio » à côté de la page.'
+    : '';
+}
+
+function refreshMusic() {
+  if (!audioRunning) return;
+  if (audioState.musicOn) musicLoop.start(); else musicLoop.stop();
+}
+function refreshAmbience({ typeChanged = false } = {}) {
+  if (!audioRunning) return;
+  if (!audioState.ambienceOn) { ambienceLoop.stop(); return; }
+  if (ambienceLoop.running && typeChanged) ambienceLoop.crossfadeToNext(); 
+  else ambienceLoop.start();
+}
+function setMusic(on) { audioState.musicOn = on; refreshMusic(); updateSettingsUI(); }
+function setAmbience(on, type) {
+  const typeChanged = type && type !== audioState.ambienceType;
+  if (type) audioState.ambienceType = type;
+  audioState.ambienceOn = on;
+  refreshAmbience({ typeChanged }); updateSettingsUI();
+}
+function cycleAmbience() {
+  if (!audioState.ambienceOn) setAmbience(true, 'ruisseau');
+  else if (audioState.ambienceType === 'ruisseau') setAmbience(true, 'vague');
+  else setAmbience(false);
+}
+
+// ============================================================================
+// MOTEUR DE RESPIRATION
+// ============================================================================
+function easeInOutSine(x) { return -(Math.cos(Math.PI * x) - 1) / 2; }
+let elapsedTotal = 0; 
+const breathState = { phaseIndex: 0, phaseStart: 0, running: false, startScale: MIN_SCALE };
+
+function startBreathingSession() {
+  breathState.phaseIndex = 0;
+  breathState.phaseStart = elapsedTotal;
+  breathState.startScale = MIN_SCALE;
+  breathState.running = true;
+  const first = TECHNIQUES[selectedTechnique].phases[0];
+  drawBreathText(first.label, first.dur);
+}
+function stopBreathingSession() { breathState.running = false; }
+
+let lastCountdownDraw = 0;
+function updateBreathing(t) {
+  if (!breathState.running || !selectedTechnique) return;
+  const phases = TECHNIQUES[selectedTechnique].phases;
+  const phase = phases[breathState.phaseIndex];
+  const elapsed = t - breathState.phaseStart;
+  const eased = easeInOutSine(Math.min(1, elapsed / phase.dur));
+
+  let scale;
+  if (phase.type === 'grow') scale = breathState.startScale + (MAX_SCALE - breathState.startScale) * eased;
+  else if (phase.type === 'shrink') scale = breathState.startScale - (breathState.startScale - MIN_SCALE) * eased;
+  else scale = breathState.startScale;
+
+  breathSphere.scale.setScalar(scale);
+  breathProgress01 = (scale - MIN_SCALE) / (MAX_SCALE - MIN_SCALE);
+  glowSprite.scale.setScalar(1.1 + (scale - MIN_SCALE) * 0.6);
+  const hue = 0.56 - breathProgress01 * 0.06;
+  sphereMat.color.setHSL(hue, 0.55, 0.62);
+  sphereMat.emissive.setHSL(hue, 0.6, 0.35);
+
+  if (t - lastCountdownDraw > 0.15) { drawBreathText(phase.label, phase.dur - elapsed); lastCountdownDraw = t; }
+  if (elapsed >= phase.dur) {
+    breathState.startScale = scale;
+    breathState.phaseIndex = (breathState.phaseIndex + 1) % phases.length;
+    breathState.phaseStart = t;
+    const next = phases[breathState.phaseIndex];
+    drawBreathText(next.label, next.dur);
+  }
+}
+
+// ============================================================================
+// POULS (optionnel)
+// ============================================================================
+function generateSessionCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
+  let code = ''; for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+let hrCode = generateSessionCode();
+let hrEnabled = false, lastHeartRate = null, lastHrT = null, lastHrChangeAt = 0;
+const hrBase = () => FIREBASE_DB_URL.replace(/\/$/, 'https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/');
+
+async function pollHeartRate() {
+  if (!hrEnabled || !FIREBASE_DB_URL) return;
+  try {
+    const res = await fetch(`${hrBase()}/hr/${hrCode}.json`, { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && typeof data.bpm === 'number') {
+      if (data.t !== lastHrT) { lastHrT = data.t; lastHrChangeAt = performance.now(); }
+      lastHeartRate = data.bpm;
+    }
+  } catch (e) { }
+}
+setInterval(pollHeartRate, 2000);
+setInterval(() => { if (hrPanel.mesh.visible) drawHeartRatePanel(); }, 1000);
+
+function endHeartRateSession() {
+  if (hrEnabled && FIREBASE_DB_URL) fetch(`${hrBase()}/hr/${hrCode}.json`, { method: 'DELETE' }).catch(() => {});
+  hrEnabled = false; lastHeartRate = null; lastHrT = null;
+  hrPanel.mesh.visible = false;
+  hrCode = generateSessionCode();
+  $('roomCodeDisplay').textContent = hrCode;
+  $('hrPairing').style.display = 'none';
+}
+
+// ============================================================================
+// MENU
+// ============================================================================
+function buildTechMenu() {
+  const grid = $('techGrid');
+  Object.entries(TECHNIQUES).forEach(([key, tech]) => {
+    const card = document.createElement('div'); card.className = 'techCard';
+    const h3 = document.createElement('h3'); h3.textContent = tech.useCase;
+    const sub = document.createElement('p'); sub.className = 'techSubtitle'; sub.textContent = tech.subtitle;
+    const small = document.createElement('p'); small.className = 'techTechnical'; small.textContent = tech.name;
+    card.append(h3, sub, small);
+    card.addEventListener('click', () => selectTechnique(key));
+    grid.appendChild(card);
+  });
+}
+
+function updateSettingsUI() {
+  $('musicBtn').textContent = '🎵 Musique : ' + (audioState.musicOn ? 'activée' : 'désactivée');
+  $('musicBtn').classList.toggle('on', audioState.musicOn);$('ambienceBtn').textContent = '🌿 Sons d\'ambiance : ' + (audioState.ambienceOn ? 'activés' : 'désactivés');
+  $('ambienceBtn').classList.toggle('on', audioState.ambienceOn);
+  document.querySelectorAll('#ambiencePills .pill').forEach((p) => p.classList.toggle('selected', p.dataset.type === audioState.ambienceType));
+  document.querySelectorAll('#decorPills .pill').forEach((p) => p.classList.toggle('selected', p.dataset.decor === String(decorChoice)));
+  drawHud();
+}
+function buildDecorPills() {
+  const wrap = $('decorPills'); wrap.innerHTML = '';
+  const mk = (label, value) => {
+    const b = document.createElement('button'); b.className = 'pill'; b.textContent = label; b.dataset.decor = String(value);
+    b.addEventListener('click', () => { decorChoice = value; updateSettingsUI(); });
+    wrap.appendChild(b);
+  };
+  mk('Aléatoire', 'random');
+  decorList.forEach((_, i) => mk(String(i + 1), i));
+  $('decorRow').style.display = decorList.length ? 'flex' : 'none';
+  updateSettingsUI();
+}
+
+$('musicBtn').addEventListener('click', () => setMusic(!audioState.musicOn));$('ambienceBtn').addEventListener('click', () => setAmbience(!audioState.ambienceOn));
+document.querySelectorAll('#ambiencePills .pill').forEach((p) => {
+  p.addEventListener('click', () => setAmbience(true, p.dataset.type)); 
+});
+$('hrToggleBtn').addEventListener('click', () => {
+  const panel = $('hrPairing');
+  const open = panel.style.display !== 'block';
+  panel.style.display = open ? 'block' : 'none';
+  hrEnabled = open;
+  $('roomCodeDisplay').textContent = hrCode;
+  $('hrCodeNote').textContent = FIREBASE_DB_URL ? 'https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/' : '⚠ Relais non configuré : FIREBASE_DB_URL est vide (voir README).';
+});
+
+// ============================================================================
+// ENTRÉE EN VR / RETOUR AU MENU
+// ============================================================================
+let menuVisible = true;
+const vrButtonEl = VRButton.createButton(renderer);
+document.body.appendChild(vrButtonEl); 
+
+function selectTechnique(key) {
+  selectedTechnique = key;
+  menuVisible = false;
+  $('overlay').style.display = 'none';$('flatMenuBtn').style.display = 'block'; 
+  audioRunning = true;
+  refreshMusic(); refreshAmbience();        
+  loadDecor(pickInitialDecor());
+  startBreathingSession();                  
+  setTimeout(revealDecor, 2500);            
+  vrButtonEl.click();
+}
+
+function returnToMenu() {
+  stopBreathingSession();
+  audioRunning = false; musicLoop.stop(); ambienceLoop.stop();
+  decorVideo.pause();
+  breathSphere.scale.setScalar(MIN_SCALE); breathProgress01 = 0;
+  tutorialToken++; tutorialPanel.mesh.visible = false;
+  endHeartRateSession();
+  menuVisible = true;
+  $('flatMenuBtn').style.display = 'none';$('overlay').style.display = 'flex';
+  updateSettingsUI();
+}
+$('flatMenuBtn').addEventListener('click', returnToMenu);
+
+renderer.xr.addEventListener('sessionstart', () => {
+  menuVisible = false;
+  startBreathingSession();
+  revealDecor();
+  hrPanel.mesh.visible = hrEnabled; if (hrEnabled) drawHeartRatePanel();
+  drawHud();
+  showTutorial();
+});
+renderer.xr.addEventListener('sessionend', returnToMenu);
+
+const btnPrev = {};
+let menuHoldStart = 0;
+function pollControllers(nowMs) {
+  const session = renderer.xr.getSession();
+  if (!session) return;
+  let holdingBack = false;
+  for (const src of session.inputSources) {
+    const gp = src.gamepad;
+    if (!gp || !gp.buttons) continue;
+    const hand = src.handedness || 'x';
+    const pressed = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
+    const rising = (i) => { const k = hand + i; const p = pressed(i); const r = p && !btnPrev[k]; btnPrev[k] = p; return r; };
+    if (rising(0)) { if (!hideTutorialNow()) { cycleAmbience(); } }
+    if (rising(3)) nextDecor();
+    if (rising(4)) setMusic(!audioState.musicOn);
+    if (pressed(5)) holdingBack = true;
+  }
+  if (holdingBack) {
+    if (!menuHoldStart) menuHoldStart = nowMs;
+    const p = Math.min(1, (nowMs - menuHoldStart) / 2000);
+    if (Math.abs(p - menuHoldProgress) >= 0.05 || p === 1) { menuHoldProgress = p; drawHud(); }
+    if (p >= 1) { menuHoldStart = 0; menuHoldProgress = 0; session.end(); }
+  } else if (menuHoldStart) {
+    menuHoldStart = 0; menuHoldProgress = 0; drawHud();
+  }
+}
+
+// ============================================================================
+// BOUCLE DE RENDU
+// ============================================================================
+const clock = new THREE.Clock();
+const tmpV = new THREE.Vector3();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  elapsedTotal += dt;
+  updateTweens(dt);
+  if (menuVisible && !renderer.xr.isPresenting) return; 
+
+  if (renderer.xr.isPresenting) pollControllers(performance.now());
+  starMat.uniforms.uTime.value = elapsedTotal;
+  updateBreathing(elapsedTotal);
+  updateBreathParticles(elapsedTotal);
+
+  camera.getWorldPosition(tmpV);
+  textPanel.mesh.lookAt(tmpV); hudPanel.mesh.lookAt(tmpV); hrPanel.mesh.lookAt(tmpV);
+  if (tutorialPanel.mesh.visible) tutorialPanel.mesh.lookAt(tmpV);
+
+  rig.position.y = breathProgress01 * 0.012;
+
+  renderer.render(scene, camera);
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ============================================================================
+// DÉMARRAGE
+// ============================================================================
+buildTechMenu();
+updateSettingsUI();
+drawTutorial(); drawHud();
+$('roomCodeDisplay').textContent = hrCode;
+resolveAudio();
+discoverDecors().then((list) => { decorList = list; buildDecorPills(); });
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+}
+</script>
+</body>
+</html>

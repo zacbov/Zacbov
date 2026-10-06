@@ -760,7 +760,7 @@ function generateSessionCode() {
 }
 let hrCode = generateSessionCode();
 let hrEnabled = false, lastHeartRate = null, lastHrT = null, lastHrChangeAt = 0;
-const hrBase = () => FIREBASE_DB_URL.replace(/\/$/, 'https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/');
+const hrBase = () => FIREBASE_DB_URL.replace(/\/$/, '');
 
 async function pollHeartRate() {
   if (!hrEnabled || !FIREBASE_DB_URL) return;
@@ -837,7 +837,7 @@ $('hrToggleBtn').addEventListener('click', () => {
   panel.style.display = open ? 'block' : 'none';
   hrEnabled = open;
   $('roomCodeDisplay').textContent = hrCode;
-  $('hrCodeNote').textContent = FIREBASE_DB_URL ? 'https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/' : '⚠ Relais non configuré : FIREBASE_DB_URL est vide (voir README).';
+  $('hrCodeNote').textContent = FIREBASE_DB_URL ? FIREBASE_DB_URL : '⚠ Relais non configuré : FIREBASE_DB_URL est vide (voir README).';
 });
 
 // ============================================================================

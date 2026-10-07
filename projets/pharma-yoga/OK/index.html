@@ -121,25 +121,31 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // ============================================================================
 // CONFIGURATION — tout ce qu'on peut vouloir ajuster est regroupé ici
 // ============================================================================
+// Dossiers cherchés dans l'ordre (le premier qui contient le fichier gagne).
+// Les noms avec espaces sont gérés. Le chemin est relatif à index.html.
 const AUDIO_DIRS = ['./audio/', './asset/', './assets/', './assets/audio/'];
-const MUSIC_FILES = ['Weightless Drift.mp3', 'Still Waters.mp3'];   
-const AMBIENCE_FILES = { ruisseau: 'ruisseau.mp3', vague: 'vague.mp3' }; 
+const MUSIC_FILES = ['Weightless Drift.mp3', 'Still Waters.mp3'];   // enchaînées en boucle
+const AMBIENCE_FILES = { ruisseau: 'ruisseau.mp3', vague: 'vague.mp3' }; // UNE seule boucle à la fois
 
 const VIDEO_DIRS = ['./asset/', './assets/', './assets/video/', './video/'];
-const VIDEO_EXTS = ['webm', 'mp4'];   
+const VIDEO_EXTS = ['webm', 'mp4'];   // fichiers nommés 1.webm, 2.webm, 3.webm...
 const VIDEO_MAX = 12;
-const VIDEO_YAW_DEG = -90;     
-const VIDEO_BRIGHTNESS = 0.85; 
-const VIDEO_LETTERBOX = 0;     
+const VIDEO_YAW_DEG = -90;     // place le CENTRE de l'image face à l'utilisateur
+const VIDEO_BRIGHTNESS = 0.85; // 1 = tel quel, <1 assombrit (aide la lisibilité du texte)
+const VIDEO_LETTERBOX = 0;     // fraction à rogner en haut ET en bas (ex: 0.0556 si la vidéo
+                               // 1920x1080 contient en fait du 2:1 avec des bandes noires)
 
 const MUSIC_VOLUME = 0.4, MUSIC_FADE_SEC = 4;
 const AMBIENCE_VOLUME = 0.55, AMBIENCE_FADE_SEC = 3;
 const DEFAULT_AUDIO = { musicOn: true, ambienceOn: false, ambienceType: 'ruisseau' };
 
+// Relais gratuit du pouls (téléphone → casque) : Firebase Realtime Database, offre
+// gratuite sans carte bancaire. Colle ici l'URL de ta base (voir README), ex :
+// 'https://mon-projet-default-rtdb.europe-west1.firebasedatabase.app'
 const FIREBASE_DB_URL = 'https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/';
 
 // ============================================================================
-// TECHNIQUES
+// TECHNIQUES — présentées par ce qu'elles APPORTENT, pas par leur nom technique
 // ============================================================================
 const TECHNIQUES = {
   coherence: {
@@ -199,8 +205,11 @@ const TECHNIQUES = {
 let selectedTechnique = null;
 
 // ============================================================================
-// UTILITAIRES
+// UTILITAIRES : tweens pilotés par la boucle de rendu
 // ============================================================================
+// IMPORTANT : window.requestAnimationFrame ne tourne pas pendant une session VR
+// immersive (seule celle de la session XR tourne) — tout ce qui doit s'animer
+// en VR est donc piloté par la boucle de rendu ci-dessous, jamais par un rAF maison.
 const tweens = [];
 function tween(from, to, sec, onUpdate) {
   return new Promise((resolve) => {
@@ -245,11 +254,12 @@ const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.xr.enabled = true;
-renderer.xr.setReferenceSpaceType('local-floor'); 
+renderer.xr.setReferenceSpaceType('local-floor'); // le sol réel est déjà pris en compte
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
+// Fond de repli (sans vidéo) : dégradé nocturne + étoiles qui scintillent
 function makeSkyGradientTexture() {
   const c = document.createElement('canvas'); c.width = 2; c.height = 256;
   const ctx = c.getContext('2d');
@@ -266,6 +276,10 @@ const glowLight = new THREE.PointLight(0x8fd8ff, 1.2, 8);
 glowLight.position.set(0, 1.6, -1.5);
 scene.add(glowLight);
 
+// ----- Étoiles : scintillement individuel (phase/vitesse propres à chaque étoile) -----
+// L'ancienne version était quasi invisible : un PointsMaterial avec atténuation par
+// distance réduisait des étoiles à 40-70 m à 1-2 pixels. Ici la taille est pilotée
+// en pixels par un shader dédié, avec un disque doux au lieu d'un carré.
 const STAR_COUNT = 260;
 const starGeo = new THREE.BufferGeometry();
 const starPos = new Float32Array(STAR_COUNT * 3);
@@ -313,44 +327,37 @@ const stars = new THREE.Points(starGeo, starMat);
 scene.add(stars);
 
 // ============================================================================
-// DÉCOR VIDÉO 360° (OPTIMISÉ POUR LA FLUIDITÉ ET LE DÉCODAGE 8K WEBM)
+// DÉCOR VIDÉO 360° (équirectangulaire), en boucle — fichiers 1.webm, 2.webm, ...
 // ============================================================================
+// Une sphère vue de l'intérieur, texturée par la vidéo. (On n'utilise PAS
+// scene.background : Three.js ne convertit une texture équirectangulaire qu'une
+// seule fois, la vidéo resterait figée sur sa première image.)
+// Note format : une vidéo 16:9 (1920x1080) est étirée sur toute la sphère, ce qui
+// est correct si elle a été exportée ainsi depuis du 360° (anamorphique). Si elle
+// contient du 2:1 avec des bandes noires, règle VIDEO_LETTERBOX.
 let decorList = [];
-let decorChoice = 'random';   
+let decorChoice = 'random';   // 'random' ou index (0 = vidéo n°1)
 let decorIndex = -1, decorBusy = false, videoActive = false;
 let decorReady = false, decorRevealed = false, decorRevealWanted = false;
 
 const decorVideo = document.createElement('video');
-decorVideo.loop = true; 
-decorVideo.muted = true; 
-decorVideo.defaultMuted = true;
-decorVideo.playsInline = true;
-decorVideo.preload = 'auto'; 
-decorVideo.crossOrigin = 'anonymous';
+decorVideo.loop = true; decorVideo.muted = true; decorVideo.playsInline = true;
+decorVideo.preload = 'auto'; decorVideo.crossOrigin = 'anonymous';
 decorVideo.setAttribute('playsinline', '');
-decorVideo.addEventListener('ended', () => { decorVideo.currentTime = 0; decorVideo.play().catch(() => {}); }); 
+decorVideo.addEventListener('ended', () => { decorVideo.currentTime = 0; decorVideo.play().catch(() => {}); }); // boucle de secours
 
 const decorTexture = new THREE.VideoTexture(decorVideo);
 decorTexture.colorSpace = THREE.SRGBColorSpace;
-decorTexture.minFilter = THREE.LinearFilter; 
-decorTexture.magFilter = THREE.LinearFilter;
-decorTexture.generateMipmaps = false; // Empêche la saturation VRAM en 8K
-decorTexture.anisotropy = 1;          // Évite de surcharger la carte graphique
-decorTexture.matrixAutoUpdate = false;
-
+decorTexture.minFilter = THREE.LinearFilter; decorTexture.magFilter = THREE.LinearFilter;
+decorTexture.generateMipmaps = false;
 if (VIDEO_LETTERBOX > 0) { decorTexture.repeat.set(1, 1 - 2 * VIDEO_LETTERBOX); decorTexture.offset.set(0, VIDEO_LETTERBOX); }
 
 const decorMat = new THREE.MeshBasicMaterial({
-  map: decorTexture, 
-  color: new THREE.Color(VIDEO_BRIGHTNESS, VIDEO_BRIGHTNESS, VIDEO_BRIGHTNESS),
-  toneMapped: false, 
-  transparent: true, 
-  opacity: 0, 
-  depthWrite: false,
-  depthTest: false // Évite les calculs de profondeur inutiles sur la sphère 360°
+  map: decorTexture, color: new THREE.Color(VIDEO_BRIGHTNESS, VIDEO_BRIGHTNESS, VIDEO_BRIGHTNESS),
+  toneMapped: false, transparent: true, opacity: 0, depthWrite: false
 });
 const decorGeo = new THREE.SphereGeometry(60, 64, 48);
-decorGeo.scale(-1, 1, 1); 
+decorGeo.scale(-1, 1, 1); // vue de l'intérieur, sans effet miroir
 const decorSphere = new THREE.Mesh(decorGeo, decorMat);
 decorSphere.position.set(0, 1.6, 0);
 decorSphere.rotation.y = THREE.MathUtils.degToRad(VIDEO_YAW_DEG);
@@ -417,7 +424,7 @@ async function discoverDecors() {
 }
 
 // ============================================================================
-// SPHÈRE QUI RESPIRE + HALO + PARTICULES
+// SPHÈRE QUI RESPIRE + halo + particules
 // ============================================================================
 const MIN_SCALE = 0.55, MAX_SCALE = 1.35;
 const sphereMat = new THREE.MeshStandardMaterial({
@@ -466,7 +473,7 @@ const particleMat = new THREE.PointsMaterial({
 });
 scene.add(new THREE.Points(particleGeo, particleMat));
 
-let breathProgress01 = 0; 
+let breathProgress01 = 0; // 0 = pleine expiration, 1 = pleine inspiration
 function updateBreathParticles(t) {
   const arr = particleGeo.attributes.position.array;
   for (let i = 0; i < BREATH_PARTICLE_COUNT; i++) {
@@ -482,7 +489,7 @@ function updateBreathParticles(t) {
 }
 
 // ============================================================================
-// PANNEAUX 3D
+// PANNEAUX 3D (texte de respiration, aide, pouls, tutoriel)
 // ============================================================================
 function makePanel(w, h, pw, ph, pos) {
   const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
@@ -495,6 +502,7 @@ function makePanel(w, h, pw, ph, pos) {
   return { canvas, ctx, texture, material, mesh };
 }
 
+// --- Texte de phase + décompte (avec fond sombre : lisible même sur une vidéo claire)
 const textPanel = makePanel(512, 256, 0.6, 0.3, [0, 0.98, -1.6]);
 function drawBreathText(label, secondsLeft) {
   const c = textPanel.ctx, W = textPanel.canvas.width, H = textPanel.canvas.height;
@@ -508,6 +516,7 @@ function drawBreathText(label, secondsLeft) {
   textPanel.texture.needsUpdate = true;
 }
 
+// --- Aide discrète (états + commandes), mise à jour quand quelque chose change
 const hudPanel = makePanel(768, 150, 0.72, 0.14, [0, 0.62, -1.6]);
 hudPanel.material.opacity = 0.75;
 let menuHoldProgress = 0;
@@ -527,6 +536,7 @@ function drawHud() {
   hudPanel.texture.needsUpdate = true;
 }
 
+// --- Pouls (visible seulement si l'option a été activée dans le menu)
 const hrPanel = makePanel(320, 100, 0.28, 0.09, [0, 0.8, -1.6]);
 hrPanel.mesh.visible = false;
 function drawHeartRatePanel() {
@@ -539,6 +549,7 @@ function drawHeartRatePanel() {
   hrPanel.texture.needsUpdate = true;
 }
 
+// --- Tutoriel d'entrée en VR
 const tutorialPanel = makePanel(800, 500, 0.92, 0.575, [0, 1.38, -1.0]);
 tutorialPanel.material.opacity = 0; tutorialPanel.mesh.visible = false;
 function drawTutorial() {
@@ -581,7 +592,8 @@ function hideTutorialNow() {
 }
 
 // ============================================================================
-// AUDIO
+// AUDIO : musique (2 morceaux enchaînés) + ambiance (1 boucle au choix),
+// avec fondus enchaînés. Aucun son au changement de phase.
 // ============================================================================
 class FadingLoop {
   constructor(getUrls, { volume = 0.4, fadeSec = 4 } = {}) {
@@ -594,6 +606,7 @@ class FadingLoop {
   start() {
     if (this.running) return;
     this.running = true;
+    // bascule rapide off→on : on rallume la piste qui était en train de s'éteindre
     const reviving = this.slots.findIndex((s) => s.active && s.target === 0 && !s.el.ended);
     if (reviving >= 0) { this.slots[reviving].target = 1; this.current = reviving; }
     else this._playNext();
@@ -631,7 +644,7 @@ class FadingLoop {
       if (cur.active && !cur.scheduled) {
         const d = cur.el.duration, t = cur.el.currentTime;
         const nearEnd = isFinite(d) && d > 0 && (d - t) <= this.fadeSec + 0.15;
-        if (nearEnd || cur.el.ended) { cur.scheduled = true; this._playNext(); } 
+        if (nearEnd || cur.el.ended) { cur.scheduled = true; this._playNext(); } // fondu enchaîné vers la suite
       }
     }
     if (!any && !this.running) { clearInterval(this.timer); this.timer = null; }
@@ -671,7 +684,7 @@ function refreshMusic() {
 function refreshAmbience({ typeChanged = false } = {}) {
   if (!audioRunning) return;
   if (!audioState.ambienceOn) { ambienceLoop.stop(); return; }
-  if (ambienceLoop.running && typeChanged) ambienceLoop.crossfadeToNext(); 
+  if (ambienceLoop.running && typeChanged) ambienceLoop.crossfadeToNext(); // bascule ruisseau ⇄ vague en fondu
   else ambienceLoop.start();
 }
 function setMusic(on) { audioState.musicOn = on; refreshMusic(); updateSettingsUI(); }
@@ -681,6 +694,7 @@ function setAmbience(on, type) {
   audioState.ambienceOn = on;
   refreshAmbience({ typeChanged }); updateSettingsUI();
 }
+// Gâchette en VR : off → ruisseau → vague → off (jamais les deux en même temps)
 function cycleAmbience() {
   if (!audioState.ambienceOn) setAmbience(true, 'ruisseau');
   else if (audioState.ambienceType === 'ruisseau') setAmbience(true, 'vague');
@@ -691,7 +705,7 @@ function cycleAmbience() {
 // MOTEUR DE RESPIRATION
 // ============================================================================
 function easeInOutSine(x) { return -(Math.cos(Math.PI * x) - 1) / 2; }
-let elapsedTotal = 0; 
+let elapsedTotal = 0; // UNE seule horloge pour tout (évite les décalages entre démarrage et boucle)
 const breathState = { phaseIndex: 0, phaseStart: 0, running: false, startScale: MIN_SCALE };
 
 function startBreathingSession() {
@@ -712,6 +726,8 @@ function updateBreathing(t) {
   const elapsed = t - breathState.phaseStart;
   const eased = easeInOutSine(Math.min(1, elapsed / phase.dur));
 
+  // Interpolation depuis l'échelle réelle au début de la phase (gère deux
+  // inspirations d'affilée, ex. soupir physiologique)
   let scale;
   if (phase.type === 'grow') scale = breathState.startScale + (MAX_SCALE - breathState.startScale) * eased;
   else if (phase.type === 'shrink') scale = breathState.startScale - (breathState.startScale - MIN_SCALE) * eased;
@@ -735,16 +751,16 @@ function updateBreathing(t) {
 }
 
 // ============================================================================
-// POULS (optionnel)
+// POULS (optionnel) : le téléphone écrit, le casque lit — via Firebase Realtime DB
 // ============================================================================
 function generateSessionCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans caractères ambigus
   let code = ''; for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
   return code;
 }
 let hrCode = generateSessionCode();
 let hrEnabled = false, lastHeartRate = null, lastHrT = null, lastHrChangeAt = 0;
-const hrBase = () => FIREBASE_DB_URL.replace(/\/$/, 'https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/');
+const hrBase = () => FIREBASE_DB_URL.replace(/\/$/, '');
 
 async function pollHeartRate() {
   if (!hrEnabled || !FIREBASE_DB_URL) return;
@@ -756,12 +772,14 @@ async function pollHeartRate() {
       if (data.t !== lastHrT) { lastHrT = data.t; lastHrChangeAt = performance.now(); }
       lastHeartRate = data.bpm;
     }
-  } catch (e) { }
+  } catch (e) { /* on retente au prochain sondage */ }
 }
 setInterval(pollHeartRate, 2000);
 setInterval(() => { if (hrPanel.mesh.visible) drawHeartRatePanel(); }, 1000);
 
 function endHeartRateSession() {
+  // Hygiène : on efface la valeur côté serveur et on change de code pour la
+  // personne suivante (la page peut rester ouverte d'un utilisateur à l'autre).
   if (hrEnabled && FIREBASE_DB_URL) fetch(`${hrBase()}/hr/${hrCode}.json`, { method: 'DELETE' }).catch(() => {});
   hrEnabled = false; lastHeartRate = null; lastHrT = null;
   hrPanel.mesh.visible = false;
@@ -771,7 +789,7 @@ function endHeartRateSession() {
 }
 
 // ============================================================================
-// MENU
+// MENU (écran plat, avant d'entrer en VR)
 // ============================================================================
 function buildTechMenu() {
   const grid = $('techGrid');
@@ -788,7 +806,8 @@ function buildTechMenu() {
 
 function updateSettingsUI() {
   $('musicBtn').textContent = '🎵 Musique : ' + (audioState.musicOn ? 'activée' : 'désactivée');
-  $('musicBtn').classList.toggle('on', audioState.musicOn);$('ambienceBtn').textContent = '🌿 Sons d\'ambiance : ' + (audioState.ambienceOn ? 'activés' : 'désactivés');
+  $('musicBtn').classList.toggle('on', audioState.musicOn);
+  $('ambienceBtn').textContent = '🌿 Sons d\'ambiance : ' + (audioState.ambienceOn ? 'activés' : 'désactivés');
   $('ambienceBtn').classList.toggle('on', audioState.ambienceOn);
   document.querySelectorAll('#ambiencePills .pill').forEach((p) => p.classList.toggle('selected', p.dataset.type === audioState.ambienceType));
   document.querySelectorAll('#decorPills .pill').forEach((p) => p.classList.toggle('selected', p.dataset.decor === String(decorChoice)));
@@ -807,9 +826,10 @@ function buildDecorPills() {
   updateSettingsUI();
 }
 
-$('musicBtn').addEventListener('click', () => setMusic(!audioState.musicOn));$('ambienceBtn').addEventListener('click', () => setAmbience(!audioState.ambienceOn));
+$('musicBtn').addEventListener('click', () => setMusic(!audioState.musicOn));
+$('ambienceBtn').addEventListener('click', () => setAmbience(!audioState.ambienceOn));
 document.querySelectorAll('#ambiencePills .pill').forEach((p) => {
-  p.addEventListener('click', () => setAmbience(true, p.dataset.type)); 
+  p.addEventListener('click', () => setAmbience(true, p.dataset.type)); // choisir une boucle l'active
 });
 $('hrToggleBtn').addEventListener('click', () => {
   const panel = $('hrPairing');
@@ -817,7 +837,7 @@ $('hrToggleBtn').addEventListener('click', () => {
   panel.style.display = open ? 'block' : 'none';
   hrEnabled = open;
   $('roomCodeDisplay').textContent = hrCode;
-  $('hrCodeNote').textContent = FIREBASE_DB_URL ? 'https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/' : '⚠ Relais non configuré : FIREBASE_DB_URL est vide (voir README).';
+  $('hrCodeNote').textContent = FIREBASE_DB_URL ? FIREBASE_DB_URL : '⚠ Relais non configuré : FIREBASE_DB_URL est vide (voir README).';
 });
 
 // ============================================================================
@@ -825,17 +845,19 @@ $('hrToggleBtn').addEventListener('click', () => {
 // ============================================================================
 let menuVisible = true;
 const vrButtonEl = VRButton.createButton(renderer);
-document.body.appendChild(vrButtonEl); 
+document.body.appendChild(vrButtonEl); // masqué en CSS (#VRButton), déclenché par un clic de carte
 
+// Un clic sur une carte = on entre directement dans la technique, en VR.
 function selectTechnique(key) {
   selectedTechnique = key;
   menuVisible = false;
-  $('overlay').style.display = 'none';$('flatMenuBtn').style.display = 'block'; 
+  $('overlay').style.display = 'none';
+  $('flatMenuBtn').style.display = 'block'; // visible seulement hors casque (aperçu écran plat)
   audioRunning = true;
-  refreshMusic(); refreshAmbience();        
+  refreshMusic(); refreshAmbience();        // dans le geste utilisateur → lecture autorisée
   loadDecor(pickInitialDecor());
-  startBreathingSession();                  
-  setTimeout(revealDecor, 2500);            
+  startBreathingSession();                  // (aperçu écran plat ; relancé à l'entrée en VR)
+  setTimeout(revealDecor, 2500);            // si aucune session VR n'a démarré (PC), on révèle quand même
   vrButtonEl.click();
 }
 
@@ -847,7 +869,8 @@ function returnToMenu() {
   tutorialToken++; tutorialPanel.mesh.visible = false;
   endHeartRateSession();
   menuVisible = true;
-  $('flatMenuBtn').style.display = 'none';$('overlay').style.display = 'flex';
+  $('flatMenuBtn').style.display = 'none';
+  $('overlay').style.display = 'flex';
   updateSettingsUI();
 }
 $('flatMenuBtn').addEventListener('click', returnToMenu);
@@ -862,6 +885,12 @@ renderer.xr.addEventListener('sessionstart', () => {
 });
 renderer.xr.addEventListener('sessionend', returnToMenu);
 
+// ----- Commandes des manettes (pas de lancer de rayon : boutons physiques) -----
+//   Gâchette        : ambiance off → ruisseau → vague → off  (ferme d'abord le tutoriel)
+//   A ou X          : musique on / off
+//   Clic joystick   : décor suivant
+//   Maintenir B / Y : retour au menu (2 s, volontairement long pour éviter les fausses manips)
+// La gâchette latérale (grip) n'est PAS utilisée : on la presse sans le vouloir en tenant la manette.
 const btnPrev = {};
 let menuHoldStart = 0;
 function pollControllers(nowMs) {
@@ -898,7 +927,7 @@ renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.1);
   elapsedTotal += dt;
   updateTweens(dt);
-  if (menuVisible && !renderer.xr.isPresenting) return; 
+  if (menuVisible && !renderer.xr.isPresenting) return; // rien à dessiner derrière le menu
 
   if (renderer.xr.isPresenting) pollControllers(performance.now());
   starMat.uniforms.uTime.value = elapsedTotal;
@@ -909,6 +938,8 @@ renderer.setAnimationLoop(() => {
   textPanel.mesh.lookAt(tmpV); hudPanel.mesh.lookAt(tmpV); hrPanel.mesh.lookAt(tmpV);
   if (tutorialPanel.mesh.visible) tutorialPanel.mesh.lookAt(tmpV);
 
+  // Respiration du point de vue : quelques millimètres, synchronisée au souffle.
+  // Appliquée au rig (jamais à la caméra) pour rester compatible avec le tracking VR.
   rig.position.y = breathProgress01 * 0.012;
 
   renderer.render(scene, camera);

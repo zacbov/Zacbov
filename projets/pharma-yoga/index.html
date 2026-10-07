@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<link rel="icon" type="image/x-icon" href="./favicon.ico">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Respire — respiration guidée en VR</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="./favicon.ico">
 <meta name="theme-color" content="#0a1520">
 <style>
   html, body { margin:0; padding:0; overflow:hidden; background:#000; height:100%; }
@@ -23,10 +23,11 @@
   #menuInner p { opacity:0.7; margin:0 0 4px; font-size:14px; }
 
   #techGrid {
-    display:grid; grid-template-columns: repeat(3, 1fr); gap:14px;
+    display:flex; flex-wrap:wrap; justify-content:center; gap:14px;
     margin-top:22px; width:100%;
   }
   .techCard {
+    flex: 0 1 calc((100% - 28px) / 3); box-sizing:border-box;
     cursor:pointer; border:2px solid rgba(111,184,240,0.25); border-radius:16px;
     padding:18px 12px; background:rgba(111,184,240,0.06);
     transition: transform 0.15s, border-color 0.15s, background 0.15s;
@@ -35,7 +36,7 @@
   .techCard h3 { margin:0 0 6px; font-size:19px; font-weight:600; }
   .techCard p.techSubtitle { margin:0 0 8px; font-size:13px; opacity:0.8; line-height:1.35; }
   .techCard p.techTechnical { margin:0; font-size:10.5px; opacity:0.4; letter-spacing:0.3px; }
-  @media (max-width: 560px) { #techGrid { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) { .techCard { flex-basis: 100%; } }
 
   #settings { margin-top:26px; display:flex; flex-direction:column; align-items:center; gap:10px; }
   .row { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:8px; }
@@ -85,13 +86,16 @@
         <span id="decorPills" class="row"></span>
       </div>
       <div id="audioWarning"></div>
+      <div id="decorWarning" style="font-size:11px; color:#ffcf6b; max-width:520px;"></div>
     </div>
 
     <button id="hrToggleBtn">💓 Suivre mon pouls (optionnel, encore en test)</button>
     <div id="hrPairing">
       <p style="font-size:12px; opacity:0.75; margin:0 0 8px;">Avant de mettre le casque, ouvre <strong>battement.html</strong> sur ton téléphone et entre ce code :</p>
       <div id="roomCodeDisplay"></div>
+      <p id="hrLive" style="font-size:12px; margin:6px 0 0;"></p>
       <p id="hrCodeNote" style="font-size:11px; color:#ffcf6b;"></p>
+      <button id="hrNewCodeBtn" class="pill" style="margin-top:6px;">🔄 Nouveau code (utilisateur suivant)</button>
     </div>
 
     <p style="font-size:12px; opacity:0.45; margin-top:24px;">Choisir une technique t'emmène directement en VR.</p>
@@ -128,12 +132,30 @@ const MUSIC_FILES = ['Weightless Drift.mp3', 'Still Waters.mp3'];   // enchaîn�
 const AMBIENCE_FILES = { ruisseau: 'ruisseau.mp3', vague: 'vague.mp3' }; // UNE seule boucle à la fois
 
 const VIDEO_DIRS = ['./asset/', './assets/', './assets/video/', './video/'];
-const VIDEO_EXTS = ['webm', 'mp4'];   // fichiers nommés 1.webm, 2.webm, 3.webm...
-const VIDEO_MAX = 12;
+const VIDEO_EXTS = ['webm', 'mp4'];
+// Décors vidéo 360°, cherchés PAR NOM (ex : asset/plage.webm). L'ordre ici est
+// l'ordre du menu et du « décor suivant ». Plusieurs orthographes acceptées ;
+// les majuscules initiales (Plage.webm) sont aussi trouvées automatiquement.
+const DECORS = [
+  { label: 'Ruisseau', names: ['ruisseau'] },
+  { label: 'Plage',    names: ['plage'] },
+  { label: 'Forêt',    names: ['forêt', 'foret', 'fôret'] },
+  { label: 'Phare',    names: ['phare'] },
+];
 const VIDEO_YAW_DEG = -90;     // place le CENTRE de l'image face à l'utilisateur
 const VIDEO_BRIGHTNESS = 0.85; // 1 = tel quel, <1 assombrit (aide la lisibilité du texte)
 const VIDEO_LETTERBOX = 0;     // fraction à rogner en haut ET en bas (ex: 0.0556 si la vidéo
                                // 1920x1080 contient en fait du 2:1 avec des bandes noires)
+// Vidéo affichée par le COMPOSITEUR du casque (couche média WebXR) au lieu d'une
+// texture WebGL : c'est ce qui permet la 8K sans scintillement (voir README).
+// Repli automatique sur la sphère WebGL si le navigateur ne sait pas faire.
+const USE_XR_MEDIA_LAYER = true;
+const VIDEO_STEREO = 'mono';   // 'mono' | 'stereo-top-bottom' | 'stereo-left-right' (couche média seulement)
+
+// Affichage en VR
+const SHOW_BREATH_SPHERE = false; // la sphère qui respire (+ halo, particules) ; false = texte seul
+const BREATH_TEXT_WIDTH = 0.36;   // largeur du texte « Inspirez / Expirez » en mètres (avant : 0.6)
+const HUD_AUTOHIDE_SEC = 4;       // l'aide des commandes s'efface après ce délai sans toucher les manettes
 
 const MUSIC_VOLUME = 0.4, MUSIC_FADE_SEC = 4;
 const AMBIENCE_VOLUME = 0.55, AMBIENCE_FADE_SEC = 3;
@@ -142,7 +164,7 @@ const DEFAULT_AUDIO = { musicOn: true, ambienceOn: false, ambienceType: 'ruissea
 // Relais gratuit du pouls (téléphone → casque) : Firebase Realtime Database, offre
 // gratuite sans carte bancaire. Colle ici l'URL de ta base (voir README), ex :
 // 'https://mon-projet-default-rtdb.europe-west1.firebasedatabase.app'
-const FIREBASE_DB_URL = 'https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app/';
+const FIREBASE_DB_URL = 'https://pharma-yoga-default-rtdb.europe-west1.firebasedatabase.app';
 
 // ============================================================================
 // TECHNIQUES — présentées par ce qu'elles APPORTENT, pas par leur nom technique
@@ -161,15 +183,6 @@ const TECHNIQUES = {
     name: 'Respiration apaisante (4-8)',
     phases: [
       { label: 'Inspirez', type: 'grow',  dur: 4 },
-      { label: 'Expirez',  type: 'shrink',dur: 8 },
-    ]
-  },
-  fourSevenEight: {
-    useCase: 'Avant de dormir', subtitle: 'Idéale pour relâcher juste avant une sieste ou le coucher',
-    name: '4-7-8',
-    phases: [
-      { label: 'Inspirez', type: 'grow',  dur: 4 },
-      { label: 'Retenez',  type: 'hold',  dur: 7 },
       { label: 'Expirez',  type: 'shrink',dur: 8 },
     ]
   },
@@ -246,11 +259,14 @@ async function fileExists(url) {
 // ============================================================================
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.05, 200);
+camera.position.set(0, 1.45, 0); // aperçu écran plat à hauteur des yeux (en VR, le casque impose sa position)
 const rig = new THREE.Group();
 rig.add(camera);
 scene.add(rig);
 
-const renderer = new THREE.WebGLRenderer({ antialias:true });
+// alpha : la couche de rendu doit pouvoir être transparente pour laisser voir la
+// couche vidéo du compositeur placée DERRIÈRE (mode couche média, voir décor).
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.xr.enabled = true;
@@ -270,7 +286,8 @@ function makeSkyGradientTexture() {
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
-scene.background = makeSkyGradientTexture();
+const skyTexture = makeSkyGradientTexture();
+scene.background = skyTexture;
 scene.add(new THREE.HemisphereLight(0x6fa8d8, 0x0a1420, 0.5));
 const glowLight = new THREE.PointLight(0x8fd8ff, 1.2, 8);
 glowLight.position.set(0, 1.6, -1.5);
@@ -327,18 +344,26 @@ const stars = new THREE.Points(starGeo, starMat);
 scene.add(stars);
 
 // ============================================================================
-// DÉCOR VIDÉO 360° (équirectangulaire), en boucle — fichiers 1.webm, 2.webm, ...
+// DÉCOR VIDÉO 360° (équirectangulaire), en boucle — fichiers nommés (plage.webm…)
 // ============================================================================
-// Une sphère vue de l'intérieur, texturée par la vidéo. (On n'utilise PAS
-// scene.background : Three.js ne convertit une texture équirectangulaire qu'une
-// seule fois, la vidéo resterait figée sur sa première image.)
-// Note format : une vidéo 16:9 (1920x1080) est étirée sur toute la sphère, ce qui
-// est correct si elle a été exportée ainsi depuis du 360° (anamorphique). Si elle
-// contient du 2:1 avec des bandes noires, règle VIDEO_LETTERBOX.
-let decorList = [];
-let decorChoice = 'random';   // 'random' ou index (0 = vidéo n°1)
+// DEUX façons d'afficher la vidéo :
+//  1. COUCHE MÉDIA WebXR (dans le casque, par défaut) : la vidéo est confiée
+//     directement au compositeur du Quest (XRMediaBinding.createEquirectLayer).
+//     Aucune copie image par image dans une texture WebGL, et l'image est
+//     échantillonnée une seule fois, à la résolution de l'écran : c'est la seule
+//     voie réaliste pour de la 8K (et la 4K y gagne aussi en netteté).
+//  2. SPHÈRE WebGL (repli : écran plat, navigateur sans couches, letterbox) : la
+//     vidéo est recopiée à chaque image dans une texture plaquée sur une sphère
+//     vue de l'intérieur. Bien jusqu'à ~4K. En 8K, la copie de ~33 Mpx par image
+//     sature le GPU et sa mémoire (images sautées, artefacts) et, sans mipmaps,
+//     les détails trop fins scintillent — d'où les défauts constatés.
+// (On n'utilise PAS scene.background pour la vidéo : Three.js ne convertit une
+// texture équirectangulaire qu'une fois, la vidéo resterait figée.)
+let decorList = [];           // [{ label, url }] — seulement les décors trouvés
+let decorChoice = 'random';   // 'random' ou index dans decorList
 let decorIndex = -1, decorBusy = false, videoActive = false;
 let decorReady = false, decorRevealed = false, decorRevealWanted = false;
+let decorOpacity = 0;         // 0 = décor invisible, 1 = pleinement visible (fondus)
 
 const decorVideo = document.createElement('video');
 decorVideo.loop = true; decorVideo.muted = true; decorVideo.playsInline = true;
@@ -365,22 +390,94 @@ decorSphere.renderOrder = -10;
 decorSphere.visible = false;
 scene.add(decorSphere);
 
+// Voile noir (mode couche média) : la couche vidéo est DERRIÈRE notre rendu et
+// n'a pas d'opacité réglable — on fait donc les fondus avec un voile noir
+// par-dessus. Il applique aussi VIDEO_BRIGHTNESS.
+const veilMat = new THREE.MeshBasicMaterial({
+  color: 0x000000, side: THREE.BackSide, transparent: true, opacity: 1, depthWrite: false, toneMapped: false
+});
+const veil = new THREE.Mesh(new THREE.SphereGeometry(30, 32, 16), veilMat);
+veil.renderOrder = -9; veil.visible = false;
+scene.add(veil);
+
+let mediaLayerMode = false;   // vrai si la session VR en cours affiche la vidéo par couche média
+let mediaBinding = null, mediaLayer = null;
+
+function canUseMediaLayer(session) {
+  if (!USE_XR_MEDIA_LAYER || VIDEO_LETTERBOX > 0 || !session) return false;
+  if (typeof XRMediaBinding === 'undefined' || typeof XRRigidTransform === 'undefined') return false;
+  if (session.renderState.layers === undefined) return false;      // navigateur sans « layers »
+  const base = renderer.xr.getBaseLayer();
+  return !!base && typeof XRProjectionLayer !== 'undefined' && base instanceof XRProjectionLayer;
+}
+function attachMediaLayer() {
+  const session = renderer.xr.getSession();
+  if (!mediaLayerMode || !session || !videoActive) return;
+  try {
+    if (!mediaBinding) mediaBinding = new XRMediaBinding(session);
+    // Même convention que la sphère : VIDEO_YAW_DEG = -90 ⇒ centre de l'image devant soi.
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(VIDEO_YAW_DEG + 90));
+    const layer = mediaBinding.createEquirectLayer(decorVideo, {
+      space: renderer.xr.getReferenceSpace(),
+      layout: VIDEO_STEREO,
+      transform: new XRRigidTransform({ x: 0, y: 0, z: 0, w: 1 }, { x: q.x, y: q.y, z: q.z, w: q.w }),
+      radius: 0, // 0 = sphère infinie (comme un ciel, sans parallaxe)
+      centralHorizontalAngle: Math.PI * 2, upperVerticalAngle: Math.PI / 2, lowerVerticalAngle: -Math.PI / 2,
+    });
+    const old = mediaLayer;
+    session.updateRenderState({ layers: [layer, renderer.xr.getBaseLayer()] }); // vidéo derrière, notre rendu devant
+    mediaLayer = layer;
+    if (old && old.destroy) { try { old.destroy(); } catch (e) {} }
+  } catch (e) {
+    log('Couche média indisponible, repli sur la sphère WebGL : ' + e.message);
+    mediaLayerMode = false; mediaLayer = null;
+  }
+  applyDecorDisplay();
+}
+function detachMediaLayer() {
+  const session = renderer.xr.getSession();
+  if (session && mediaLayer) { try { session.updateRenderState({ layers: [renderer.xr.getBaseLayer()] }); } catch (e) {} }
+  if (mediaLayer && mediaLayer.destroy) { try { mediaLayer.destroy(); } catch (e) {} }
+  mediaLayer = null;
+}
+
+// Applique l'état courant (vidéo ou ciel, couche média ou sphère, opacité)
+function applyDecorDisplay() {
+  if (!videoActive) {
+    decorSphere.visible = false; veil.visible = false;
+    stars.visible = true; scene.background = skyTexture;
+    return;
+  }
+  stars.visible = false;
+  if (mediaLayerMode && mediaLayer) {
+    decorSphere.visible = false;
+    scene.background = null;              // rendu transparent → on voit la couche vidéo derrière
+    veil.visible = true;
+    veilMat.opacity = 1 - decorOpacity * VIDEO_BRIGHTNESS;
+  } else {
+    veil.visible = false;
+    scene.background = skyTexture;
+    decorSphere.visible = true;
+    decorMat.opacity = decorOpacity;
+  }
+}
+function setDecorOpacity(v) { decorOpacity = v; applyDecorDisplay(); }
+
 function setDecorFallback() {
-  videoActive = false; decorReady = false; decorRevealed = false;
-  decorSphere.visible = false; decorMat.opacity = 0; stars.visible = true;
+  videoActive = false; decorReady = false; decorRevealed = false; decorOpacity = 0;
+  detachMediaLayer();
+  applyDecorDisplay();
 }
 function revealDecor() {
   decorRevealWanted = true;
   if (!decorReady || decorRevealed) return;
   decorRevealed = true;
-  tween(decorMat.opacity, 1, 1.8, (v) => { decorMat.opacity = v; });
+  tween(decorOpacity, 1, 1.8, setDecorOpacity);
 }
 async function loadDecor(index, { revealNow = false } = {}) {
   if (index < 0 || !decorList.length) { setDecorFallback(); return; }
   decorBusy = true; decorReady = false; decorRevealed = false; decorRevealWanted = revealNow;
-  if (decorSphere.visible && decorMat.opacity > 0.01) {
-    await tween(decorMat.opacity, 0, 0.5, (v) => { decorMat.opacity = v; });
-  }
+  if (videoActive && decorOpacity > 0.01) await tween(decorOpacity, 0, 0.5, setDecorOpacity);
   decorIndex = index;
   const ok = await new Promise((resolve) => {
     const onOk = () => { cleanup(); resolve(true); };
@@ -388,14 +485,19 @@ async function loadDecor(index, { revealNow = false } = {}) {
     const cleanup = () => { decorVideo.removeEventListener('loadeddata', onOk); decorVideo.removeEventListener('error', onKo); };
     decorVideo.addEventListener('loadeddata', onOk);
     decorVideo.addEventListener('error', onKo);
-    decorVideo.src = decorList[index];
+    decorVideo.src = decorList[index].url;
     decorVideo.load();
     decorVideo.play().catch(() => {});
   });
-  if (!ok) { log('Vidéo illisible : ' + decorList[index]); setDecorFallback(); decorBusy = false; return; }
-  videoActive = true; decorSphere.visible = true; stars.visible = false; decorReady = true;
-  decorBusy = false;
+  if (!ok) { log('Vidéo illisible : ' + decorList[index].url); setDecorFallback(); decorBusy = false; drawHud(); return; }
+  videoActive = true; decorReady = true; decorBusy = false;
+  if (mediaLayerMode) attachMediaLayer(); else applyDecorDisplay();
+  if (tutorialPanel.mesh.visible) drawTutorial();
+  if (decorVideo.videoWidth > 4096 && renderer.xr.isPresenting && !mediaLayerMode) {
+    log('⚠ Vidéo > 4K sans couche média : scintillement probable (voir README)');
+  }
   if (decorRevealWanted) revealDecor();
+  drawHud();
 }
 function pickInitialDecor() {
   if (!decorList.length) return -1;
@@ -405,21 +507,35 @@ function pickInitialDecor() {
 function nextDecor() {
   if (decorBusy || decorList.length < 2) return;
   loadDecor((decorIndex + 1) % decorList.length, { revealNow: true });
-  drawHud();
+}
+
+// Recherche des décors par NOM, dans tous les dossiers/extensions/orthographes.
+// Les accents sont essayés sous les deux formes Unicode (NFC et NFD : un fichier
+// « forêt » créé sur Mac n'a pas les mêmes octets que sur Windows/Linux).
+function nameVariants(name) {
+  const out = new Set();
+  for (const n of [name, name.charAt(0).toUpperCase() + name.slice(1)]) {
+    out.add(n.normalize('NFC')); out.add(n.normalize('NFD'));
+  }
+  return [...out];
+}
+async function findDecorFile(decor) {
+  const candidates = [];
+  for (const d of VIDEO_DIRS) for (const n of decor.names) for (const v of nameVariants(n)) for (const e of VIDEO_EXTS) {
+    candidates.push(encodeURI(`${d}${v}.${e}`));
+  }
+  const unique = [...new Set(candidates)];
+  const found = await Promise.all(unique.map(fileExists));
+  const i = found.indexOf(true);  // ordre de priorité : dossier, puis orthographe, puis extension
+  return i >= 0 ? unique[i] : null;
 }
 async function discoverDecors() {
-  let dir = null, ext = null;
-  outer: for (const d of VIDEO_DIRS) for (const e of VIDEO_EXTS) {
-    if (await fileExists(encodeURI(`${d}1.${e}`))) { dir = d; ext = e; break outer; }
-  }
-  if (!dir) return [];
-  const list = [encodeURI(`${dir}1.${ext}`)];
-  for (let i = 2; i <= VIDEO_MAX; i++) {
-    let found = null;
-    for (const e of VIDEO_EXTS) { const u = encodeURI(`${dir}${i}.${e}`); if (await fileExists(u)) { found = u; break; } }
-    if (!found) break;
-    list.push(found);
-  }
+  const urls = await Promise.all(DECORS.map(findDecorFile));
+  const list = [], missing = [];
+  DECORS.forEach((d, i) => { if (urls[i]) list.push({ label: d.label, url: urls[i] }); else missing.push(d.names[0]); });
+  $('decorWarning').textContent = !list.length
+    ? '⚠ Aucun décor vidéo trouvé (ruisseau.webm, plage.webm… dans un dossier « asset ») — ciel étoilé à la place.'
+    : missing.length ? '⚠ Décor(s) introuvable(s) : ' + missing.join(', ') + ' (.webm ou .mp4 dans « asset »)' : '';
   return list;
 }
 
@@ -471,7 +587,11 @@ const particleMat = new THREE.PointsMaterial({
   map: glowTexture, color: 0xbfe0ff, size: 0.03, transparent: true,
   opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true
 });
-scene.add(new THREE.Points(particleGeo, particleMat));
+const breathParticles = new THREE.Points(particleGeo, particleMat);
+scene.add(breathParticles);
+// Sphère, halo et particules masqués si SHOW_BREATH_SPHERE = false (le souffle
+// continue d'être calculé : texte, décompte et léger mouvement du point de vue).
+breathSphere.visible = glowSprite.visible = breathParticles.visible = glowLight.visible = SHOW_BREATH_SPHERE;
 
 let breathProgress01 = 0; // 0 = pleine expiration, 1 = pleine inspiration
 function updateBreathParticles(t) {
@@ -502,8 +622,13 @@ function makePanel(w, h, pw, ph, pos) {
   return { canvas, ctx, texture, material, mesh };
 }
 
+// Disposition verticale : sans la sphère, le texte prend sa place (hauteur du regard).
+const LAYOUT = SHOW_BREATH_SPHERE
+  ? { text: 0.98, hr: 0.80, hud: 0.62 }
+  : { text: 1.40, hr: 1.25, hud: 1.10 };
+
 // --- Texte de phase + décompte (avec fond sombre : lisible même sur une vidéo claire)
-const textPanel = makePanel(512, 256, 0.6, 0.3, [0, 0.98, -1.6]);
+const textPanel = makePanel(512, 256, BREATH_TEXT_WIDTH, BREATH_TEXT_WIDTH / 2, [0, LAYOUT.text, -1.6]);
 function drawBreathText(label, secondsLeft) {
   const c = textPanel.ctx, W = textPanel.canvas.width, H = textPanel.canvas.height;
   c.clearRect(0, 0, W, H);
@@ -511,15 +636,27 @@ function drawBreathText(label, secondsLeft) {
   c.textAlign = 'center';
   c.fillStyle = 'rgba(234,244,255,0.97)'; c.font = '600 56px system-ui, sans-serif';
   c.fillText(label, W/2, 124);
-  c.font = '300 34px system-ui, sans-serif'; c.fillStyle = 'rgba(180,220,255,0.8)';
+  c.font = '400 42px system-ui, sans-serif'; c.fillStyle = 'rgba(180,220,255,0.85)';
   c.fillText(String(Math.max(1, Math.ceil(secondsLeft))), W/2, 180);
   textPanel.texture.needsUpdate = true;
 }
 
 // --- Aide discrète (états + commandes), mise à jour quand quelque chose change
-const hudPanel = makePanel(768, 150, 0.72, 0.14, [0, 0.62, -1.6]);
-hudPanel.material.opacity = 0.75;
+// S'efface après HUD_AUTOHIDE_SEC sans toucher les manettes ; réapparaît dès
+// qu'on touche/presse un bouton ou qu'on bouge le joystick.
+const hudPanel = makePanel(768, 150, 0.72, 0.14, [0, LAYOUT.hud, -1.6]);
+const HUD_OPACITY = 0.75;
+hudPanel.material.opacity = HUD_OPACITY;
 let menuHoldProgress = 0;
+let hudLastActivity = 0, hudFade = 1;
+function wakeHud() { hudLastActivity = elapsedTotal; }
+function updateHudFade(dt) {
+  const want = (elapsedTotal - hudLastActivity < HUD_AUTOHIDE_SEC || menuHoldProgress > 0) ? 1 : 0;
+  const speed = want ? 1 / 0.25 : 1 / 1.2;          // apparition rapide, disparition douce
+  hudFade = want > hudFade ? Math.min(1, hudFade + dt * speed) : Math.max(0, hudFade - dt * speed);
+  hudPanel.material.opacity = HUD_OPACITY * hudFade;
+  hudPanel.mesh.visible = hudFade > 0.005;
+}
 function drawHud() {
   const c = hudPanel.ctx, W = hudPanel.canvas.width, H = hudPanel.canvas.height;
   c.clearRect(0, 0, W, H);
@@ -527,7 +664,8 @@ function drawHud() {
   c.textAlign = 'center'; c.font = '25px system-ui, sans-serif'; c.fillStyle = 'rgba(225,238,252,0.92)';
   const amb = audioState.ambienceOn ? (audioState.ambienceType === 'vague' ? 'Vague' : 'Ruisseau') : 'off';
   c.fillText(`A/X 🎵 Musique : ${audioState.musicOn ? 'on' : 'off'}     Gâchette 🌿 Ambiance : ${amb}`, W/2, 50);
-  const decorTxt = decorList.length > 1 ? `Joystick (clic) ⟳ Décor ${decorIndex + 1}/${decorList.length}     ` : '';
+  const decorName = decorList[decorIndex] ? decorList[decorIndex].label : '';
+  const decorTxt = decorList.length > 1 ? `Joystick (clic) ⟳ Décor : ${decorName}     ` : '';
   c.fillText(`${decorTxt}Maintenir B/Y ↩ Menu`, W/2, 92);
   if (menuHoldProgress > 0) {
     c.fillStyle = 'rgba(111,184,240,0.9)';
@@ -537,15 +675,29 @@ function drawHud() {
 }
 
 // --- Pouls (visible seulement si l'option a été activée dans le menu)
-const hrPanel = makePanel(320, 100, 0.28, 0.09, [0, 0.8, -1.6]);
+// Affiche le code attendu tant que rien n'arrive : on voit tout de suite si le
+// téléphone et le casque ne parlent pas du même code.
+const hrPanel = makePanel(512, 110, 0.36, 0.077, [0, LAYOUT.hr, -1.6]);
 hrPanel.mesh.visible = false;
+const HR_FRESH_SEC = 12, HR_KEEP_SEC = 45;
+function hrAgeSec() { return lastHeartRate === null ? Infinity : (performance.now() - lastHrChangeAt) / 1000; }
 function drawHeartRatePanel() {
   const c = hrPanel.ctx, W = hrPanel.canvas.width, H = hrPanel.canvas.height;
   c.clearRect(0, 0, W, H);
-  const stale = lastHeartRate === null || (performance.now() - lastHrChangeAt) > 8000;
   c.textAlign = 'center';
-  if (stale) { c.font = '300 20px system-ui, sans-serif'; c.fillStyle = 'rgba(200,225,246,0.5)'; c.fillText('📱 En attente du téléphone…', W/2, 56); }
-  else { c.font = '600 34px system-ui, sans-serif'; c.fillStyle = 'rgba(255,190,190,0.9)'; c.fillText('♥ ' + lastHeartRate + ' bpm', W/2, 60); }
+  const age = hrAgeSec();
+  if (age < HR_FRESH_SEC) {
+    c.font = '600 46px system-ui, sans-serif'; c.fillStyle = 'rgba(255,190,190,0.92)';
+    c.fillText('♥ ' + lastHeartRate + ' bpm', W/2, 68);
+  } else if (age < HR_KEEP_SEC) {            // mesure récente mais interrompue : on la garde, en grisé
+    c.font = '600 40px system-ui, sans-serif'; c.fillStyle = 'rgba(255,190,190,0.45)';
+    c.fillText('♥ ' + lastHeartRate + ' bpm', W/2, 56);
+    c.font = '22px system-ui, sans-serif'; c.fillStyle = 'rgba(200,225,246,0.5)';
+    c.fillText('signal du téléphone interrompu', W/2, 94);
+  } else {
+    c.font = '26px system-ui, sans-serif'; c.fillStyle = hrError ? 'rgba(255,207,107,0.85)' : 'rgba(200,225,246,0.6)';
+    c.fillText(hrError ? '⚠ ' + hrError : '📱 Code ' + hrCode + ' — en attente du téléphone', W/2, 64);
+  }
   hrPanel.texture.needsUpdate = true;
 }
 
@@ -561,16 +713,23 @@ function drawTutorial() {
   c.fillText('Bienvenue', W/2, 74);
   c.font = '25px system-ui, sans-serif'; c.fillStyle = 'rgba(222,236,250,0.92)';
   [
-    '🔵  Suis la sphère avec ton souffle :',
-    'elle grossit → inspire · elle rétrécit → expire',
+    ...(SHOW_BREATH_SPHERE
+      ? ['🔵  Suis la sphère avec ton souffle :', 'elle grossit → inspire · elle rétrécit → expire']
+      : ['🌬️  Suis les mots et le décompte :', 'Inspirez · Retenez · Expirez']),
     '',
     '🌿  Gâchette : sons d\'ambiance (ruisseau · vague · aucun)',
     '🎵  A ou X : musique on / off',
     '⟳  Clic joystick : changer de décor',
     '↩  Maintenir B ou Y (2 s) : revenir au menu',
-  ].forEach((line, i) => c.fillText(line, W/2, 128 + i * 44));
+    '👋  L\'aide s\'efface seule — touche une manette pour la revoir',
+  ].forEach((line, i) => c.fillText(line, W/2, 120 + i * 42));
   c.font = '20px system-ui, sans-serif'; c.fillStyle = 'rgba(180,215,245,0.6)';
   c.fillText('(ce message disparaît tout seul — ou appuie sur la gâchette)', W/2, H - 30);
+  // Mode d'affichage de la vidéo, pour vérifier sur le casque que la couche média est active
+  if (renderer.xr.isPresenting && videoActive) {
+    c.textAlign = 'right'; c.font = '15px system-ui, sans-serif'; c.fillStyle = 'rgba(180,215,245,0.4)';
+    c.fillText(mediaLayerMode ? 'vidéo : couche média' : 'vidéo : sphère WebGL', W - 30, 40);
+  }
   tutorialPanel.texture.needsUpdate = true;
 }
 let tutorialToken = 0;
@@ -759,33 +918,58 @@ function generateSessionCode() {
   return code;
 }
 let hrCode = generateSessionCode();
-let hrEnabled = false, lastHeartRate = null, lastHrT = null, lastHrChangeAt = 0;
+let hrEnabled = false, lastHeartRate = null, lastHrT = null, lastHrChangeAt = 0, hrError = '';
 const hrBase = () => FIREBASE_DB_URL.replace(/\/$/, '');
 
 async function pollHeartRate() {
-  if (!hrEnabled || !FIREBASE_DB_URL) return;
+  if (!hrEnabled) return;
+  if (!FIREBASE_DB_URL) { hrError = 'Relais non configuré'; updateHrLive(); return; }
+  const code = hrCode;
   try {
-    const res = await fetch(`${hrBase()}/hr/${hrCode}.json`, { cache: 'no-store' });
-    if (!res.ok) return;
-    const data = await res.json();
-    if (data && typeof data.bpm === 'number') {
-      if (data.t !== lastHrT) { lastHrT = data.t; lastHrChangeAt = performance.now(); }
-      lastHeartRate = data.bpm;
+    const res = await fetch(`${hrBase()}/hr/${code}.json`, { cache: 'no-store' });
+    if (code !== hrCode) return;                     // le code a changé pendant la requête
+    if (!res.ok) {
+      hrError = (res.status === 401 || res.status === 403)
+        ? `Lecture refusée (HTTP ${res.status}) — règles Firebase` : `Relais : erreur HTTP ${res.status}`;
+    } else {
+      hrError = '';
+      const data = await res.json();
+      if (data && typeof data.bpm === 'number' && data.t !== lastHrT) {
+        lastHrT = data.t; lastHrChangeAt = performance.now(); lastHeartRate = data.bpm;
+      }
     }
-  } catch (e) { /* on retente au prochain sondage */ }
+  } catch (e) { hrError = 'Relais injoignable (réseau)'; }
+  updateHrLive();
 }
-setInterval(pollHeartRate, 2000);
-setInterval(() => { if (hrPanel.mesh.visible) drawHeartRatePanel(); }, 1000);
+setInterval(pollHeartRate, 1500);
+setInterval(() => { if (hrPanel.mesh.visible) drawHeartRatePanel(); updateHrLive(); }, 1000);
 
-function endHeartRateSession() {
-  // Hygiène : on efface la valeur côté serveur et on change de code pour la
-  // personne suivante (la page peut rester ouverte d'un utilisateur à l'autre).
+// Retour visible dès le menu : on peut vérifier que le téléphone arrive bien
+// AVANT de mettre le casque.
+function updateHrLive() {
+  const el = $('hrLive');
+  if (!hrEnabled) { el.textContent = ''; return; }
+  const age = hrAgeSec();
+  if (age < HR_FRESH_SEC) { el.style.color = '#7ee89a'; el.textContent = `✓ Reçu du téléphone : ${lastHeartRate} bpm (il y a ${Math.round(age)} s)`; }
+  else if (hrError) { el.style.color = '#ffcf6b'; el.textContent = '⚠ ' + hrError; }
+  else { el.style.color = 'rgba(200,225,246,0.6)'; el.textContent = '… en attente du téléphone (code ' + hrCode + ')'; }
+}
+
+function clearHeartRateValue() {
+  // Hygiène : on efface la dernière valeur côté serveur à chaque retour au menu.
   if (hrEnabled && FIREBASE_DB_URL) fetch(`${hrBase()}/hr/${hrCode}.json`, { method: 'DELETE' }).catch(() => {});
-  hrEnabled = false; lastHeartRate = null; lastHrT = null;
+  lastHeartRate = null; lastHrT = null; hrError = '';
   hrPanel.mesh.visible = false;
+}
+// Le code reste le MÊME d'une séance à l'autre (avant, il changeait à chaque
+// retour au menu et le téléphone continuait d'écrire sous l'ancien code : les
+// données arrivaient sur Firebase mais plus jamais au casque). Pour la personne
+// suivante : bouton « Nouveau code ».
+function newHeartRateCode() {
+  clearHeartRateValue();
   hrCode = generateSessionCode();
   $('roomCodeDisplay').textContent = hrCode;
-  $('hrPairing').style.display = 'none';
+  updateHrLive();
 }
 
 // ============================================================================
@@ -821,7 +1005,7 @@ function buildDecorPills() {
     wrap.appendChild(b);
   };
   mk('Aléatoire', 'random');
-  decorList.forEach((_, i) => mk(String(i + 1), i));
+  decorList.forEach((d, i) => mk(d.label, i));
   $('decorRow').style.display = decorList.length ? 'flex' : 'none';
   updateSettingsUI();
 }
@@ -837,8 +1021,11 @@ $('hrToggleBtn').addEventListener('click', () => {
   panel.style.display = open ? 'block' : 'none';
   hrEnabled = open;
   $('roomCodeDisplay').textContent = hrCode;
-  $('hrCodeNote').textContent = FIREBASE_DB_URL ? FIREBASE_DB_URL : '⚠ Relais non configuré : FIREBASE_DB_URL est vide (voir README).';
+  $('hrCodeNote').textContent = FIREBASE_DB_URL ? '' : '⚠ Relais non configuré : FIREBASE_DB_URL est vide (voir README).';
+  updateHrLive();
+  if (open) pollHeartRate();
 });
+$('hrNewCodeBtn').addEventListener('click', newHeartRateCode);
 
 // ============================================================================
 // ENTRÉE EN VR / RETOUR AU MENU
@@ -853,6 +1040,7 @@ function selectTechnique(key) {
   menuVisible = false;
   $('overlay').style.display = 'none';
   $('flatMenuBtn').style.display = 'block'; // visible seulement hors casque (aperçu écran plat)
+  wakeHud();
   audioRunning = true;
   refreshMusic(); refreshAmbience();        // dans le geste utilisateur → lecture autorisée
   loadDecor(pickInitialDecor());
@@ -867,7 +1055,7 @@ function returnToMenu() {
   decorVideo.pause();
   breathSphere.scale.setScalar(MIN_SCALE); breathProgress01 = 0;
   tutorialToken++; tutorialPanel.mesh.visible = false;
-  endHeartRateSession();
+  clearHeartRateValue();
   menuVisible = true;
   $('flatMenuBtn').style.display = 'none';
   $('overlay').style.display = 'flex';
@@ -877,13 +1065,23 @@ $('flatMenuBtn').addEventListener('click', returnToMenu);
 
 renderer.xr.addEventListener('sessionstart', () => {
   menuVisible = false;
+  // Vidéo par le compositeur si possible (8K), sinon sphère WebGL
+  mediaLayerMode = canUseMediaLayer(renderer.xr.getSession());
+  log(mediaLayerMode ? 'Décor : couche média WebXR' : 'Décor : sphère WebGL (couche média indisponible)');
+  if (mediaLayerMode && videoActive) attachMediaLayer(); else applyDecorDisplay();
+  drawTutorial();
   startBreathingSession();
   revealDecor();
+  wakeHud();
   hrPanel.mesh.visible = hrEnabled; if (hrEnabled) drawHeartRatePanel();
   drawHud();
   showTutorial();
 });
-renderer.xr.addEventListener('sessionend', returnToMenu);
+renderer.xr.addEventListener('sessionend', () => {
+  mediaLayerMode = false; mediaLayer = null; mediaBinding = null; // la session les emporte avec elle
+  applyDecorDisplay();
+  returnToMenu();
+});
 
 // ----- Commandes des manettes (pas de lancer de rayon : boutons physiques) -----
 //   Gâchette        : ambiance off → ruisseau → vague → off  (ferme d'abord le tutoriel)
@@ -892,6 +1090,7 @@ renderer.xr.addEventListener('sessionend', returnToMenu);
 //   Maintenir B / Y : retour au menu (2 s, volontairement long pour éviter les fausses manips)
 // La gâchette latérale (grip) n'est PAS utilisée : on la presse sans le vouloir en tenant la manette.
 const btnPrev = {};
+const touchPrev = {}, axisPrev = {};
 let menuHoldStart = 0;
 function pollControllers(nowMs) {
   const session = renderer.xr.getSession();
@@ -903,6 +1102,17 @@ function pollControllers(nowMs) {
     const hand = src.handedness || 'x';
     const pressed = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
     const rising = (i) => { const k = hand + i; const p = pressed(i); const r = p && !btnPrev[k]; btnPrev[k] = p; return r; };
+    // Réveil de l'aide : un bouton qu'on commence à toucher/presser, ou un joystick
+    // qu'on pousse. Uniquement sur FRONT montant : un pouce posé en permanence sur
+    // le joystick (capteur tactile) ne la garde pas affichée.
+    gp.buttons.forEach((b, i) => {
+      const k = hand + i, act = !!(b && (b.pressed || b.touched));
+      if (act && !touchPrev[k]) wakeHud();
+      touchPrev[k] = act;
+    });
+    const moved = (gp.axes || []).some((v) => Math.abs(v) > 0.5);
+    if (moved && !axisPrev[hand]) wakeHud();
+    axisPrev[hand] = moved;
     if (rising(0)) { if (!hideTutorialNow()) { cycleAmbience(); } }
     if (rising(3)) nextDecor();
     if (rising(4)) setMusic(!audioState.musicOn);
@@ -928,11 +1138,12 @@ renderer.setAnimationLoop(() => {
   elapsedTotal += dt;
   updateTweens(dt);
   if (menuVisible && !renderer.xr.isPresenting) return; // rien à dessiner derrière le menu
+  updateHudFade(dt);
 
   if (renderer.xr.isPresenting) pollControllers(performance.now());
   starMat.uniforms.uTime.value = elapsedTotal;
   updateBreathing(elapsedTotal);
-  updateBreathParticles(elapsedTotal);
+  if (SHOW_BREATH_SPHERE) updateBreathParticles(elapsedTotal);
 
   camera.getWorldPosition(tmpV);
   textPanel.mesh.lookAt(tmpV); hudPanel.mesh.lookAt(tmpV); hrPanel.mesh.lookAt(tmpV);
@@ -944,6 +1155,9 @@ renderer.setAnimationLoop(() => {
 
   renderer.render(scene, camera);
 });
+
+// Aperçu écran plat : la souris ou le clavier font réapparaître l'aide
+['mousemove', 'keydown', 'touchstart'].forEach((ev) => window.addEventListener(ev, () => { if (!menuVisible) wakeHud(); }, { passive: true }));
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth/window.innerHeight;

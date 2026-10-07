@@ -5,7 +5,7 @@
 // ici : les éléments <audio>/<video> demandent des plages d'octets (requêtes
 // Range, réponses 206) que le cache du Service Worker gère mal, et ces fichiers
 // sont lourds. Le cache HTTP normal du navigateur s'en occupe très bien.
-const CACHE_NAME = 'respire-v8';
+const CACHE_NAME = 'respire-v7';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -42,22 +42,16 @@ self.addEventListener('fetch', (event) => {
   const isUnpkg = url.startsWith('https://unpkg.com');
   if (!isSameOrigin && !isUnpkg) return;                  // Firebase, etc. : jamais interceptés
 
-  // Pages et fichiers du site : RÉSEAU D'ABORD, cache seulement en secours hors-ligne.
-  // (Avant, c'était « cache d'abord » : le casque continuait d'afficher l'ancienne
-  // version de index.html — par ex. sans l'URL Firebase — même après mise à jour.)
-  // Three.js (unpkg, version figée) : cache d'abord.
-  const fromNetwork = () => fetch(req).then((response) => {
-    if (response.ok && response.status === 200) {
-      const clone = response.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(req, clone)).catch(() => {});
-    }
-    return response;
-  });
-  const offline = () => new Response('', { status: 504, statusText: 'Network error (Service Worker)' });
-
-  if (isUnpkg) {
-    event.respondWith(caches.match(req).then((cached) => cached || fromNetwork().catch(offline)));
-  } else {
-    event.respondWith(fromNetwork().catch(() => caches.match(req).then((cached) => cached || offline())));
-  }
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
+      return fetch(req).then((response) => {
+        if (response.ok && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone)).catch(() => {});
+        }
+        return response;
+      }).catch(() => new Response('', { status: 504, statusText: 'Network error (Service Worker)' }));
+    })
+  );
 });

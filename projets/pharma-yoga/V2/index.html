@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Respire — respiration guidée en VR</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="./favicon.ico">
 <meta name="theme-color" content="#0a1520">
 <style>
   html, body { margin:0; padding:0; overflow:hidden; background:#000; height:100%; }
@@ -136,10 +137,13 @@ const VIDEO_EXTS = ['webm', 'mp4'];
 // l'ordre du menu et du « décor suivant ». Plusieurs orthographes acceptées ;
 // les majuscules initiales (Plage.webm) sont aussi trouvées automatiquement.
 const DECORS = [
-  { label: 'Ruisseau', names: ['ruisseau'] },
-  { label: 'Plage',    names: ['plage'] },
-  { label: 'Forêt',    names: ['forêt', 'foret', 'fôret'] },
-  { label: 'Phare',    names: ['phare'] },
+  { label: 'Ruisseau', names: ['ruisseau', '2'] },
+  { label: 'Plage',    names: ['plage', '1'] },
+  { label: 'Forêt',    names: ['Philippines', 'foret', 'fôret', '5'] },
+  { label: 'Phare',    names: ['phare', '3'] },
+  { label: 'Phare',    names: ['test', '4'] },
+  { label: 'Phare',    names: ['lac zyuratkul', '6'] },
+  { label: 'Phare',    names: ['Alpes', '7'] },
 ];
 const VIDEO_YAW_DEG = -90;     // place le CENTRE de l'image face à l'utilisateur
 const VIDEO_BRIGHTNESS = 0.85; // 1 = tel quel, <1 assombrit (aide la lisibilité du texte)
@@ -155,9 +159,6 @@ const VIDEO_STEREO = 'mono';   // 'mono' | 'stereo-top-bottom' | 'stereo-left-ri
 const SHOW_BREATH_SPHERE = false; // la sphère qui respire (+ halo, particules) ; false = texte seul
 const BREATH_TEXT_WIDTH = 0.36;   // largeur du texte « Inspirez / Expirez » en mètres (avant : 0.6)
 const HUD_AUTOHIDE_SEC = 4;       // l'aide des commandes s'efface après ce délai sans toucher les manettes
-const GLASS_FROM_VIDEO = true;    // verre dépoli « réel » (décor flouté derrière le texte) ; false = verre fumé uni
-const GLASS_BLUR = 0.05;          // intensité du flou du verre (fraction de la largeur du panneau)
-const GLASS_TINT = 0.5;           // assombrissement du verre (0 = transparent, 1 = opaque) : plus haut = plus lisible
 
 const MUSIC_VOLUME = 0.4, MUSIC_FADE_SEC = 4;
 const AMBIENCE_VOLUME = 0.55, AMBIENCE_FADE_SEC = 3;
@@ -366,40 +367,21 @@ let decorChoice = 'random';   // 'random' ou index dans decorList
 let decorIndex = -1, decorBusy = false, videoActive = false;
 let decorReady = false, decorRevealed = false, decorRevealWanted = false;
 let decorOpacity = 0;         // 0 = décor invisible, 1 = pleinement visible (fondus)
-let decorWanted = null;       // décor demandé pendant un chargement (menu VR) → chargé ensuite
 
-// DEUX lecteurs vidéo qui alternent (A/B). Changer la source d'une vidéo encore
-// reliée à la couche média du casque, ou détruire cette couche à la main, peut
-// faire fermer la session VR par le navigateur du Quest (c'est ce qui renvoyait
-// au menu au clic du joystick). Désormais, sous voile noir : on retire la couche,
-// on libère l'ancien lecteur (une seule 8K décodée à la fois), puis on charge le
-// décor suivant dans l'AUTRE lecteur et on lui crée une couche neuve.
-function makeDecorVideo() {
-  const v = document.createElement('video');
-  v.loop = true; v.muted = true; v.playsInline = true;
-  v.preload = 'auto'; v.crossOrigin = 'anonymous';
-  v.setAttribute('playsinline', '');
-  v.addEventListener('ended', () => { v.currentTime = 0; v.play().catch(() => {}); }); // boucle de secours
-  return v;
-}
-const decorVideos = [makeDecorVideo(), makeDecorVideo()];
-let activeSlot = 0;
-const activeVideo = () => decorVideos[activeSlot];
-function unloadVideo(v) {
-  try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {}
-}
+const decorVideo = document.createElement('video');
+decorVideo.loop = true; decorVideo.muted = true; decorVideo.playsInline = true;
+decorVideo.preload = 'auto'; decorVideo.crossOrigin = 'anonymous';
+decorVideo.setAttribute('playsinline', '');
+decorVideo.addEventListener('ended', () => { decorVideo.currentTime = 0; decorVideo.play().catch(() => {}); }); // boucle de secours
 
-const decorTextures = decorVideos.map((v) => {
-  const t = new THREE.VideoTexture(v);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.minFilter = THREE.LinearFilter; t.magFilter = THREE.LinearFilter;
-  t.generateMipmaps = false;
-  if (VIDEO_LETTERBOX > 0) { t.repeat.set(1, 1 - 2 * VIDEO_LETTERBOX); t.offset.set(0, VIDEO_LETTERBOX); }
-  return t;
-});
+const decorTexture = new THREE.VideoTexture(decorVideo);
+decorTexture.colorSpace = THREE.SRGBColorSpace;
+decorTexture.minFilter = THREE.LinearFilter; decorTexture.magFilter = THREE.LinearFilter;
+decorTexture.generateMipmaps = false;
+if (VIDEO_LETTERBOX > 0) { decorTexture.repeat.set(1, 1 - 2 * VIDEO_LETTERBOX); decorTexture.offset.set(0, VIDEO_LETTERBOX); }
 
 const decorMat = new THREE.MeshBasicMaterial({
-  map: decorTextures[0], color: new THREE.Color(VIDEO_BRIGHTNESS, VIDEO_BRIGHTNESS, VIDEO_BRIGHTNESS),
+  map: decorTexture, color: new THREE.Color(VIDEO_BRIGHTNESS, VIDEO_BRIGHTNESS, VIDEO_BRIGHTNESS),
   toneMapped: false, transparent: true, opacity: 0, depthWrite: false
 });
 const decorGeo = new THREE.SphereGeometry(60, 64, 48);
@@ -438,17 +420,18 @@ function attachMediaLayer() {
     if (!mediaBinding) mediaBinding = new XRMediaBinding(session);
     // Même convention que la sphère : VIDEO_YAW_DEG = -90 ⇒ centre de l'image devant soi.
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(VIDEO_YAW_DEG + 90));
-    const layer = mediaBinding.createEquirectLayer(activeVideo(), {
+    const layer = mediaBinding.createEquirectLayer(decorVideo, {
       space: renderer.xr.getReferenceSpace(),
       layout: VIDEO_STEREO,
       transform: new XRRigidTransform({ x: 0, y: 0, z: 0, w: 1 }, { x: q.x, y: q.y, z: q.z, w: q.w }),
       radius: 0, // 0 = sphère infinie (comme un ciel, sans parallaxe)
       centralHorizontalAngle: Math.PI * 2, upperVerticalAngle: Math.PI / 2, lowerVerticalAngle: -Math.PI / 2,
     });
+    const old = mediaLayer;
     session.updateRenderState({ layers: [layer, renderer.xr.getBaseLayer()] }); // vidéo derrière, notre rendu devant
-    mediaLayer = layer;   // (l'ancienne couche n'est pas détruite à la main : le navigateur s'en charge)
+    mediaLayer = layer;
+    if (old && old.destroy) { try { old.destroy(); } catch (e) {} }
   } catch (e) {
-    vrNotice('Couche média indisponible, mode compatibilité');
     log('Couche média indisponible, repli sur la sphère WebGL : ' + e.message);
     mediaLayerMode = false; mediaLayer = null;
   }
@@ -457,6 +440,7 @@ function attachMediaLayer() {
 function detachMediaLayer() {
   const session = renderer.xr.getSession();
   if (session && mediaLayer) { try { session.updateRenderState({ layers: [renderer.xr.getBaseLayer()] }); } catch (e) {} }
+  if (mediaLayer && mediaLayer.destroy) { try { mediaLayer.destroy(); } catch (e) {} }
   mediaLayer = null;
 }
 
@@ -468,11 +452,11 @@ function applyDecorDisplay() {
     return;
   }
   stars.visible = false;
-  if (mediaLayerMode) {
+  if (mediaLayerMode && mediaLayer) {
     decorSphere.visible = false;
     scene.background = null;              // rendu transparent → on voit la couche vidéo derrière
-    veil.visible = true;                  // (noir pendant un changement de décor)
-    veilMat.opacity = mediaLayer ? 1 - decorOpacity * VIDEO_BRIGHTNESS : 1;
+    veil.visible = true;
+    veilMat.opacity = 1 - decorOpacity * VIDEO_BRIGHTNESS;
   } else {
     veil.visible = false;
     scene.background = skyTexture;
@@ -496,58 +480,27 @@ function revealDecor() {
 async function loadDecor(index, { revealNow = false } = {}) {
   if (index < 0 || !decorList.length) { setDecorFallback(); return; }
   decorBusy = true; decorReady = false; decorRevealed = false; decorRevealWanted = revealNow;
-  try {
-    if (videoActive && decorOpacity > 0.01) await tween(decorOpacity, 0, 0.5, setDecorOpacity);
-    // Sous voile noir : couche retirée AVANT de toucher aux vidéos, ancien lecteur libéré
-    detachMediaLayer();
-    unloadVideo(activeVideo());
-    activeSlot = 1 - activeSlot;
-    decorMat.map = decorTextures[activeSlot]; decorMat.needsUpdate = true;
-    decorIndex = index;
-    const v = activeVideo();
-    const ok = await new Promise((resolve) => {
-      const onOk = () => { cleanup(); resolve(true); };
-      const onKo = () => { cleanup(); resolve(false); };
-      const timer = setTimeout(onKo, 20000);
-      const cleanup = () => { clearTimeout(timer); v.removeEventListener('loadeddata', onOk); v.removeEventListener('error', onKo); };
-      v.addEventListener('loadeddata', onOk);
-      v.addEventListener('error', onKo);
-      v.src = decorList[index].url;
-      v.load();
-      v.play().catch(() => {});
-    });
-    if (!ok) {
-      vrNotice('Vidéo illisible : ' + decorList[index].label);
-      log('Vidéo illisible : ' + decorList[index].url); setDecorFallback(); return;
-    }
-    videoActive = true; decorReady = true;
-    if (mediaLayerMode) attachMediaLayer(); else applyDecorDisplay();
-    if (tutorialPanel.mesh.visible) drawTutorial();
-    if (v.videoWidth > 4096 && renderer.xr.isPresenting && !mediaLayerMode) {
-      log('⚠ Vidéo > 4K sans couche média : scintillement probable (voir README)');
-    }
-    if (decorRevealWanted) revealDecor();
-  } catch (e) {
-    vrNotice('Erreur décor : ' + e.message);
-    log('Erreur décor : ' + e.message);
-  } finally {
-    decorBusy = false;
-    drawHud(); if (vrMenuOpen) drawVrMenu();
-    // Un autre décor a été choisi pendant le chargement (menu VR) : on l'enchaîne
-    if (decorWanted !== null && decorWanted !== decorIndex) { const w = decorWanted; decorWanted = null; loadDecor(w, { revealNow: true }); }
-    else decorWanted = null;
+  if (videoActive && decorOpacity > 0.01) await tween(decorOpacity, 0, 0.5, setDecorOpacity);
+  decorIndex = index;
+  const ok = await new Promise((resolve) => {
+    const onOk = () => { cleanup(); resolve(true); };
+    const onKo = () => { cleanup(); resolve(false); };
+    const cleanup = () => { decorVideo.removeEventListener('loadeddata', onOk); decorVideo.removeEventListener('error', onKo); };
+    decorVideo.addEventListener('loadeddata', onOk);
+    decorVideo.addEventListener('error', onKo);
+    decorVideo.src = decorList[index].url;
+    decorVideo.load();
+    decorVideo.play().catch(() => {});
+  });
+  if (!ok) { log('Vidéo illisible : ' + decorList[index].url); setDecorFallback(); decorBusy = false; drawHud(); return; }
+  videoActive = true; decorReady = true; decorBusy = false;
+  if (mediaLayerMode) attachMediaLayer(); else applyDecorDisplay();
+  if (tutorialPanel.mesh.visible) drawTutorial();
+  if (decorVideo.videoWidth > 4096 && renderer.xr.isPresenting && !mediaLayerMode) {
+    log('⚠ Vidéo > 4K sans couche média : scintillement probable (voir README)');
   }
-}
-// Demande de décor « en douceur » (menu VR) : attend que le choix se stabilise
-let decorRequestTimer = null;
-function requestDecor(index) {
-  decorWanted = index;
-  clearTimeout(decorRequestTimer);
-  decorRequestTimer = setTimeout(() => {
-    if (decorBusy || decorWanted === null) return;          // enchaîné à la fin du chargement en cours
-    const w = decorWanted; decorWanted = null;
-    if (w !== decorIndex || !videoActive) loadDecor(w, { revealNow: true });
-  }, 700);
+  if (decorRevealWanted) revealDecor();
+  drawHud();
 }
 function pickInitialDecor() {
   if (!decorList.length) return -1;
@@ -557,7 +510,6 @@ function pickInitialDecor() {
 function nextDecor() {
   if (decorBusy || decorList.length < 2) return;
   loadDecor((decorIndex + 1) % decorList.length, { revealNow: true });
-  vrNotice('Décor : ' + decorList[(decorIndex + 1) % decorList.length].label);
 }
 
 // Recherche des décors par NOM, dans tous les dossiers/extensions/orthographes.
@@ -678,86 +630,18 @@ const LAYOUT = SHOW_BREATH_SPHERE
   ? { text: 0.98, hr: 0.80, hud: 0.62 }
   : { text: 1.40, hr: 1.25, hud: 1.10 };
 
-// --- Verre dépoli : le fond d'un panneau = la portion du décor vidéo qui se
-// trouve DERRIÈRE lui, floutée, assombrie et légèrement teintée. On calcule la
-// direction (lacet/tangage) du panneau vu depuis les yeux et on découpe la zone
-// correspondante dans l'image équirectangulaire. Si la vidéo n'est pas lisible
-// (pas de décor, couche média qui ne laisse pas relire l'image…), repli sur un
-// verre fumé uni, plus opaque — lisible dans tous les cas.
-const _eye = new THREE.Vector3(), _pp = new THREE.Vector3();
-function drawFrostedGlass(c, x, y, w, h, r, panel, pw, ph) {
-  c.save();
-  roundRect(c, x, y, w, h, r); c.clip();
-  let ok = false;
-  const v = activeVideo();
-  if (GLASS_FROM_VIDEO && videoActive && decorOpacity > 0.05 && v.readyState >= 2 && v.videoWidth) {
-    try {
-      camera.getWorldPosition(_eye); panel.mesh.getWorldPosition(_pp);
-      const dx = _pp.x - _eye.x, dy = _pp.y - _eye.y, dz = _pp.z - _eye.z;
-      const horiz = Math.hypot(dx, dz), dist = Math.max(0.2, Math.hypot(horiz, dy));
-      const yaw = THREE.MathUtils.radToDeg(Math.atan2(dx, -dz)), pitch = THREE.MathUtils.radToDeg(Math.atan2(dy, horiz));
-      const angW = THREE.MathUtils.radToDeg(2 * Math.atan(pw / 2 / dist)), angH = THREE.MathUtils.radToDeg(2 * Math.atan(ph / 2 / dist));
-      let VW = v.videoWidth, VH = v.videoHeight;
-      if (VIDEO_STEREO === 'stereo-top-bottom') VH /= 2;
-      if (VIDEO_STEREO === 'stereo-left-right') VW /= 2;
-      const u = (((0.5 + (VIDEO_YAW_DEG + 90 + yaw) / 360) % 1) + 1) % 1;
-      const vv = 0.5 - pitch / 180;
-      const sw = Math.min(VW, angW / 360 * VW), sh = Math.min(VH, angH / 180 * VH);
-      const sx = Math.max(0, Math.min(VW - sw, u * VW - sw / 2)), sy = Math.max(0, Math.min(VH - sh, vv * VH - sh / 2));
-      const CW = c.canvas.width, CH = c.canvas.height, blur = Math.round(GLASS_BLUR * CW), m = blur * 2;
-      c.filter = `blur(${blur}px) saturate(1.15)`;
-      c.drawImage(v, sx, sy, sw, sh, -m, -m, CW + 2 * m, CH + 2 * m);   // la toile entière = le panneau entier
-      c.filter = 'none';
-      ok = true;
-    } catch (e) { c.filter = 'none'; }
-  }
-  c.fillStyle = `rgba(10,22,34,${ok ? GLASS_TINT : Math.min(0.85, GLASS_TINT + 0.2)})`;   // teinte du verre
-  c.fillRect(x, y, w, h);
-  const g = c.createLinearGradient(0, y, 0, y + h);                       // reflet en haut
-  g.addColorStop(0, 'rgba(255,255,255,0.16)'); g.addColorStop(0.5, 'rgba(255,255,255,0.03)'); g.addColorStop(1, 'rgba(255,255,255,0)');
-  c.fillStyle = g; c.fillRect(x, y, w, h);
-  c.restore();
-  c.save();
-  roundRect(c, x + 1.5, y + 1.5, w - 3, h - 3, r); c.strokeStyle = 'rgba(255,255,255,0.30)'; c.lineWidth = 2.5; c.stroke();
-  c.restore();
-}
-function glassText(c, text, x, y, font, color) {
-  c.font = font; c.fillStyle = color;
-  c.shadowColor = 'rgba(0,0,0,0.55)'; c.shadowBlur = 10; c.shadowOffsetY = 1;
-  c.fillText(text, x, y);
-  c.shadowColor = 'transparent'; c.shadowBlur = 0; c.shadowOffsetY = 0;
-}
-
-// --- Texte de phase + décompte, sur verre dépoli
+// --- Texte de phase + décompte (avec fond sombre : lisible même sur une vidéo claire)
 const textPanel = makePanel(512, 256, BREATH_TEXT_WIDTH, BREATH_TEXT_WIDTH / 2, [0, LAYOUT.text, -1.6]);
 function drawBreathText(label, secondsLeft) {
   const c = textPanel.ctx, W = textPanel.canvas.width, H = textPanel.canvas.height;
   c.clearRect(0, 0, W, H);
-  drawFrostedGlass(c, 44, 26, W - 88, 204, 46, textPanel, BREATH_TEXT_WIDTH, BREATH_TEXT_WIDTH / 2);
+  c.fillStyle = 'rgba(5,15,25,0.38)'; roundRect(c, 60, 34, W-120, 180, 40); c.fill();
   c.textAlign = 'center';
-  glassText(c, label, W/2, 124, '600 58px system-ui, sans-serif', 'rgba(255,255,255,0.98)');
-  glassText(c, String(Math.max(1, Math.ceil(secondsLeft))), W/2, 188, '400 44px system-ui, sans-serif', 'rgba(205,232,255,0.92)');
+  c.fillStyle = 'rgba(234,244,255,0.97)'; c.font = '600 56px system-ui, sans-serif';
+  c.fillText(label, W/2, 124);
+  c.font = '400 42px system-ui, sans-serif'; c.fillStyle = 'rgba(180,220,255,0.85)';
+  c.fillText(String(Math.max(1, Math.ceil(secondsLeft))), W/2, 180);
   textPanel.texture.needsUpdate = true;
-}
-
-// --- Petit message temporaire en VR (décor chargé, erreur…) : on n'a pas de
-// console dans le casque, c'est le seul moyen de voir ce qui se passe.
-const noticePanel = makePanel(640, 80, 0.48, 0.06, [0, LAYOUT.hud - 0.11, -1.6]);
-noticePanel.mesh.visible = false;
-let noticeUntil = 0;
-function vrNotice(msg) {
-  const c = noticePanel.ctx, W = noticePanel.canvas.width, H = noticePanel.canvas.height;
-  c.clearRect(0, 0, W, H);
-  c.fillStyle = 'rgba(8,18,28,0.72)'; roundRect(c, 4, 4, W - 8, H - 8, 34); c.fill();
-  c.textAlign = 'center'; c.font = '28px system-ui, sans-serif'; c.fillStyle = 'rgba(230,242,255,0.95)';
-  c.fillText(msg, W/2, 51);
-  noticePanel.texture.needsUpdate = true;
-  noticeUntil = elapsedTotal + 2.8;
-}
-function updateNotice() {
-  const left = noticeUntil - elapsedTotal;
-  noticePanel.mesh.visible = left > 0 && !menuVisible;
-  noticePanel.material.opacity = Math.min(1, Math.max(0, left / 0.6));
 }
 
 // --- Aide discrète (états + commandes), mise à jour quand quelque chose change
@@ -766,10 +650,11 @@ function updateNotice() {
 const hudPanel = makePanel(768, 150, 0.72, 0.14, [0, LAYOUT.hud, -1.6]);
 const HUD_OPACITY = 0.75;
 hudPanel.material.opacity = HUD_OPACITY;
+let menuHoldProgress = 0;
 let hudLastActivity = 0, hudFade = 1;
 function wakeHud() { hudLastActivity = elapsedTotal; }
 function updateHudFade(dt) {
-  const want = (!vrMenuOpen && elapsedTotal - hudLastActivity < HUD_AUTOHIDE_SEC) ? 1 : 0;
+  const want = (elapsedTotal - hudLastActivity < HUD_AUTOHIDE_SEC || menuHoldProgress > 0) ? 1 : 0;
   const speed = want ? 1 / 0.25 : 1 / 1.2;          // apparition rapide, disparition douce
   hudFade = want > hudFade ? Math.min(1, hudFade + dt * speed) : Math.max(0, hudFade - dt * speed);
   hudPanel.material.opacity = HUD_OPACITY * hudFade;
@@ -781,10 +666,14 @@ function drawHud() {
   c.fillStyle = 'rgba(5,15,25,0.5)'; roundRect(c, 6, 6, W-12, H-12, 26); c.fill();
   c.textAlign = 'center'; c.font = '25px system-ui, sans-serif'; c.fillStyle = 'rgba(225,238,252,0.92)';
   const amb = audioState.ambienceOn ? (audioState.ambienceType === 'vague' ? 'Vague' : 'Ruisseau') : 'off';
-  c.fillText(`A/X 🎵 Musique : ${audioState.musicOn ? 'on' : 'off'}     Gâchette 🌿 Ambiance : ${amb}`, W/2, 58);
+  c.fillText(`A/X 🎵 Musique : ${audioState.musicOn ? 'on' : 'off'}     Gâchette 🌿 Ambiance : ${amb}`, W/2, 50);
   const decorName = decorList[decorIndex] ? decorList[decorIndex].label : '';
   const decorTxt = decorList.length > 1 ? `Joystick (clic) ⟳ Décor : ${decorName}     ` : '';
-  c.fillText(`${decorTxt}B/Y ☰ Menu`, W/2, 100);
+  c.fillText(`${decorTxt}Maintenir B/Y ↩ Menu`, W/2, 92);
+  if (menuHoldProgress > 0) {
+    c.fillStyle = 'rgba(111,184,240,0.9)';
+    roundRect(c, 40, H-26, (W-80) * menuHoldProgress, 10, 5); c.fill();
+  }
   hudPanel.texture.needsUpdate = true;
 }
 
@@ -834,7 +723,7 @@ function drawTutorial() {
     '🌿  Gâchette : sons d\'ambiance (ruisseau · vague · aucun)',
     '🎵  A ou X : musique on / off',
     '⟳  Clic joystick : changer de décor',
-    '☰  B ou Y : menu (décor, technique, quitter la VR)',
+    '↩  Maintenir B ou Y (2 s) : revenir au menu',
     '👋  L\'aide s\'efface seule — touche une manette pour la revoir',
   ].forEach((line, i) => c.fillText(line, W/2, 120 + i * 42));
   c.font = '20px system-ui, sans-serif'; c.fillStyle = 'rgba(180,215,245,0.6)';
@@ -968,11 +857,10 @@ function setAmbience(on, type) {
   refreshAmbience({ typeChanged }); updateSettingsUI();
 }
 // Gâchette en VR : off → ruisseau → vague → off (jamais les deux en même temps)
-function cycleAmbience(dir = 1) {
-  const states = ['off', 'ruisseau', 'vague'];
-  const cur = audioState.ambienceOn ? states.indexOf(audioState.ambienceType) : 0;
-  const next = states[(cur + dir + states.length) % states.length];
-  if (next === 'off') setAmbience(false); else setAmbience(true, next);
+function cycleAmbience() {
+  if (!audioState.ambienceOn) setAmbience(true, 'ruisseau');
+  else if (audioState.ambienceType === 'ruisseau') setAmbience(true, 'vague');
+  else setAmbience(false);
 }
 
 // ============================================================================
@@ -1014,7 +902,7 @@ function updateBreathing(t) {
   sphereMat.color.setHSL(hue, 0.55, 0.62);
   sphereMat.emissive.setHSL(hue, 0.6, 0.35);
 
-  if (t - lastCountdownDraw > 0.25) { drawBreathText(phase.label, phase.dur - elapsed); lastCountdownDraw = t; }
+  if (t - lastCountdownDraw > 0.15) { drawBreathText(phase.label, phase.dur - elapsed); lastCountdownDraw = t; }
   if (elapsed >= phase.dur) {
     breathState.startScale = scale;
     breathState.phaseIndex = (breathState.phaseIndex + 1) % phases.length;
@@ -1143,119 +1031,6 @@ $('hrToggleBtn').addEventListener('click', () => {
 $('hrNewCodeBtn').addEventListener('click', newHeartRateCode);
 
 // ============================================================================
-// MENU DANS LA VR (bouton B/Y) — on reste dans le casque pour changer de décor,
-// de technique, de musique ou d'ambiance. Pas de rayon à viser : joystick ↕ pour
-// choisir une ligne, ↔ pour modifier, gâchette (ou A/X) pour valider, B pour
-// reprendre. Le décor change en direct derrière le menu (aperçu).
-// ============================================================================
-const VR_MENU_W = 0.72, VR_MENU_H = VR_MENU_W * 820 / 1024;
-const vrMenuPanel = makePanel(1024, 820, VR_MENU_W, VR_MENU_H, [0, 1.4, -1.2]);
-vrMenuPanel.mesh.visible = false; vrMenuPanel.mesh.renderOrder = 20;
-let vrMenuOpen = false, vrMenuSel = 0, vrMenuLastDraw = 0;
-const techKeys = Object.keys(TECHNIQUES);
-
-function decorLabelShown() {
-  const i = decorWanted !== null ? decorWanted : decorIndex;
-  if (!decorList[i]) return '—';
-  return decorList[i].label + ((decorWanted !== null || decorBusy) ? ' …' : '');
-}
-function vrMenuItems() {
-  const items = [{
-    label: 'Technique', value: TECHNIQUES[selectedTechnique].useCase,
-    change: (d) => { const i = techKeys.indexOf(selectedTechnique); selectedTechnique = techKeys[(i + d + techKeys.length) % techKeys.length]; },
-  }];
-  if (decorList.length) items.push({
-    label: 'Décor', value: decorLabelShown(),
-    change: (d) => {
-      const n = decorList.length, base = decorWanted !== null ? decorWanted : Math.max(0, decorIndex);
-      decorChoice = (base + d + n) % n;
-      requestDecor(decorChoice);
-    },
-  });
-  items.push({ label: 'Musique', value: audioState.musicOn ? 'activée' : 'coupée', change: () => setMusic(!audioState.musicOn) });
-  items.push({
-    label: 'Ambiance', value: audioState.ambienceOn ? (audioState.ambienceType === 'vague' ? 'Vague' : 'Ruisseau') : 'aucune',
-    change: (d) => cycleAmbience(d),
-  });
-  items.push({ label: '▶  Reprendre la séance', action: () => closeVrMenu() });
-  items.push({ label: 'Quitter la VR', action: () => {
-    const session = renderer.xr.getSession();
-    if (session) session.end(); else { closeVrMenu({ resume: false }); returnToMenu(); }
-  } });
-  return items;
-}
-
-function openVrMenu() {
-  if (vrMenuOpen || menuVisible) return;
-  vrMenuOpen = true;
-  hideTutorialNow();
-  stopBreathingSession();
-  textPanel.mesh.visible = false; hrPanel.mesh.visible = false;
-  // Le menu apparaît là où l'on regarde (à l'horizontale), à 1,15 m
-  camera.getWorldPosition(_eye);
-  const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0;
-  if (dir.lengthSq() < 1e-4) dir.set(0, 0, -1);
-  dir.normalize();
-  vrMenuPanel.mesh.position.set(_eye.x + dir.x * 1.15, _eye.y - 0.06, _eye.z + dir.z * 1.15);
-  vrMenuPanel.mesh.lookAt(_eye);
-  const decorRow = vrMenuItems().findIndex((it) => it.label === 'Décor');
-  vrMenuSel = decorRow >= 0 ? decorRow : 0;
-  vrMenuPanel.mesh.visible = true;
-  drawVrMenu();
-}
-function closeVrMenu({ resume = true } = {}) {
-  if (!vrMenuOpen) return;
-  vrMenuOpen = false;
-  vrMenuPanel.mesh.visible = false;
-  textPanel.mesh.visible = true;
-  hrPanel.mesh.visible = hrEnabled && !menuVisible;
-  if (resume && !menuVisible) { startBreathingSession(); wakeHud(); drawHud(); }
-}
-function vrMenuInput(action) {
-  const items = vrMenuItems();
-  const it = items[vrMenuSel];
-  if (action === 'up') vrMenuSel = (vrMenuSel - 1 + items.length) % items.length;
-  else if (action === 'down') vrMenuSel = (vrMenuSel + 1) % items.length;
-  else if (action === 'left' && it.change) it.change(-1);
-  else if (action === 'right' && it.change) it.change(1);
-  else if (action === 'ok') { if (it.action) it.action(); else if (it.change) it.change(1); }
-  else if (action === 'back') closeVrMenu();
-  if (vrMenuOpen) drawVrMenu();
-}
-function drawVrMenu() {
-  const c = vrMenuPanel.ctx, W = vrMenuPanel.canvas.width, H = vrMenuPanel.canvas.height;
-  vrMenuLastDraw = elapsedTotal;
-  c.clearRect(0, 0, W, H);
-  drawFrostedGlass(c, 14, 14, W - 28, H - 28, 56, vrMenuPanel, VR_MENU_W, VR_MENU_H);
-  c.textAlign = 'center';
-  glassText(c, 'Pause', W/2, 98, '600 56px system-ui, sans-serif', 'rgba(255,255,255,0.97)');
-  const items = vrMenuItems();
-  const top = 150, rowH = 92;
-  items.forEach((it, i) => {
-    const y = top + i * rowH;
-    if (i === vrMenuSel) {
-      c.fillStyle = 'rgba(111,184,240,0.30)'; roundRect(c, 60, y, W - 120, rowH - 14, 30); c.fill();
-      c.strokeStyle = 'rgba(160,215,255,0.85)'; c.lineWidth = 3; roundRect(c, 60, y, W - 120, rowH - 14, 30); c.stroke();
-    }
-    const mid = y + (rowH - 14) / 2 + 13;
-    if (it.action) {
-      c.textAlign = 'center';
-      glassText(c, it.label, W/2, mid, '600 36px system-ui, sans-serif', 'rgba(255,255,255,0.96)');
-    } else {
-      c.textAlign = 'left';
-      glassText(c, it.label, 100, mid, '34px system-ui, sans-serif', 'rgba(215,232,250,0.78)');
-      c.textAlign = 'right';
-      const arrows = i === vrMenuSel ? `◀  ${it.value}  ▶` : it.value;
-      glassText(c, arrows, W - 100, mid, '600 38px system-ui, sans-serif', 'rgba(255,255,255,0.98)');
-    }
-  });
-  c.textAlign = 'center';
-  glassText(c, 'Joystick ↕ choisir · ↔ modifier · Gâchette valider · B reprendre', W/2, H - 46,
-    '24px system-ui, sans-serif', 'rgba(205,225,245,0.7)');
-  vrMenuPanel.texture.needsUpdate = true;
-}
-
-// ============================================================================
 // ENTRÉE EN VR / RETOUR AU MENU
 // ============================================================================
 let menuVisible = true;
@@ -1278,10 +1053,9 @@ function selectTechnique(key) {
 }
 
 function returnToMenu() {
-  closeVrMenu({ resume: false });
   stopBreathingSession();
   audioRunning = false; musicLoop.stop(); ambienceLoop.stop();
-  activeVideo().pause();
+  decorVideo.pause();
   breathSphere.scale.setScalar(MIN_SCALE); breathProgress01 = 0;
   tutorialToken++; tutorialPanel.mesh.visible = false;
   clearHeartRateValue();
@@ -1294,7 +1068,6 @@ $('flatMenuBtn').addEventListener('click', returnToMenu);
 
 renderer.xr.addEventListener('sessionstart', () => {
   menuVisible = false;
-  closeVrMenu({ resume: false });
   // Vidéo par le compositeur si possible (8K), sinon sphère WebGL
   mediaLayerMode = canUseMediaLayer(renderer.xr.getSession());
   log(mediaLayerMode ? 'Décor : couche média WebXR' : 'Décor : sphère WebGL (couche média indisponible)');
@@ -1314,26 +1087,18 @@ renderer.xr.addEventListener('sessionend', () => {
 });
 
 // ----- Commandes des manettes (pas de lancer de rayon : boutons physiques) -----
-// Pendant la séance :
 //   Gâchette        : ambiance off → ruisseau → vague → off  (ferme d'abord le tutoriel)
 //   A ou X          : musique on / off
 //   Clic joystick   : décor suivant
-//   B ou Y          : ouvre le menu VR (pause) — on reste dans le casque
-// Dans le menu VR : joystick ↕ / ↔, gâchette ou A/X pour valider, B/Y pour reprendre.
+//   Maintenir B / Y : retour au menu (2 s, volontairement long pour éviter les fausses manips)
 // La gâchette latérale (grip) n'est PAS utilisée : on la presse sans le vouloir en tenant la manette.
-const btnPrev = {}, touchPrev = {}, axisPrev = {}, stickPrev = {};
-function stickDirection(gp) {
-  const ax = gp.axes || [];
-  // Profil « xr-standard » : joystick en axes[2]/[3] (axes[0]/[1] = pavé tactile, absent sur Quest)
-  const x = ax.length >= 4 ? ax[2] : (ax[0] || 0), y = ax.length >= 4 ? ax[3] : (ax[1] || 0);
-  if (Math.abs(y) > 0.6 && Math.abs(y) >= Math.abs(x)) return y < 0 ? 'up' : 'down';
-  if (Math.abs(x) > 0.6) return x < 0 ? 'left' : 'right';
-  if (Math.abs(x) < 0.3 && Math.abs(y) < 0.3) return null;
-  return 'hold';                                    // zone morte intermédiaire : pas de répétition
-}
-function pollControllers() {
+const btnPrev = {};
+const touchPrev = {}, axisPrev = {};
+let menuHoldStart = 0;
+function pollControllers(nowMs) {
   const session = renderer.xr.getSession();
   if (!session) return;
+  let holdingBack = false;
   for (const src of session.inputSources) {
     const gp = src.gamepad;
     if (!gp || !gp.buttons) continue;
@@ -1343,31 +1108,26 @@ function pollControllers() {
     // Réveil de l'aide : un bouton qu'on commence à toucher/presser, ou un joystick
     // qu'on pousse. Uniquement sur FRONT montant : un pouce posé en permanence sur
     // le joystick (capteur tactile) ne la garde pas affichée.
-    gp.buttons.forEach((bt, i) => {
-      const k = hand + i, act = !!(bt && (bt.pressed || bt.touched));
+    gp.buttons.forEach((b, i) => {
+      const k = hand + i, act = !!(b && (b.pressed || b.touched));
       if (act && !touchPrev[k]) wakeHud();
       touchPrev[k] = act;
     });
     const moved = (gp.axes || []).some((v) => Math.abs(v) > 0.5);
     if (moved && !axisPrev[hand]) wakeHud();
     axisPrev[hand] = moved;
-
-    // Fronts montants calculés pour TOUS les boutons à chaque image (mémoire à jour)
-    const r0 = rising(0), r3 = rising(3), r4 = rising(4), r5 = rising(5);
-    const dir = stickDirection(gp);
-    const dirRising = dir && dir !== 'hold' && !stickPrev[hand] ? dir : null;
-    if (dir !== 'hold') stickPrev[hand] = dir;
-
-    if (vrMenuOpen) {
-      if (dirRising) vrMenuInput(dirRising);
-      if (r0 || r4) vrMenuInput('ok');
-      if (r5) vrMenuInput('back');
-    } else {
-      if (r0) { if (!hideTutorialNow()) { cycleAmbience(); } }
-      if (r3) nextDecor();
-      if (r4) setMusic(!audioState.musicOn);
-      if (r5) openVrMenu();
-    }
+    if (rising(0)) { if (!hideTutorialNow()) { cycleAmbience(); } }
+    if (rising(3)) nextDecor();
+    if (rising(4)) setMusic(!audioState.musicOn);
+    if (pressed(5)) holdingBack = true;
+  }
+  if (holdingBack) {
+    if (!menuHoldStart) menuHoldStart = nowMs;
+    const p = Math.min(1, (nowMs - menuHoldStart) / 2000);
+    if (Math.abs(p - menuHoldProgress) >= 0.05 || p === 1) { menuHoldProgress = p; drawHud(); }
+    if (p >= 1) { menuHoldStart = 0; menuHoldProgress = 0; session.end(); }
+  } else if (menuHoldStart) {
+    menuHoldStart = 0; menuHoldProgress = 0; drawHud();
   }
 }
 
@@ -1382,10 +1142,8 @@ renderer.setAnimationLoop(() => {
   updateTweens(dt);
   if (menuVisible && !renderer.xr.isPresenting) return; // rien à dessiner derrière le menu
   updateHudFade(dt);
-  updateNotice();
-  if (vrMenuOpen && elapsedTotal - vrMenuLastDraw > 0.25) drawVrMenu();   // rafraîchit le verre dépoli
 
-  if (renderer.xr.isPresenting) pollControllers();
+  if (renderer.xr.isPresenting) pollControllers(performance.now());
   starMat.uniforms.uTime.value = elapsedTotal;
   updateBreathing(elapsedTotal);
   if (SHOW_BREATH_SPHERE) updateBreathParticles(elapsedTotal);
@@ -1393,8 +1151,6 @@ renderer.setAnimationLoop(() => {
   camera.getWorldPosition(tmpV);
   textPanel.mesh.lookAt(tmpV); hudPanel.mesh.lookAt(tmpV); hrPanel.mesh.lookAt(tmpV);
   if (tutorialPanel.mesh.visible) tutorialPanel.mesh.lookAt(tmpV);
-  noticePanel.mesh.lookAt(tmpV);
-  if (vrMenuOpen) vrMenuPanel.mesh.lookAt(tmpV);
 
   // Respiration du point de vue : quelques millimètres, synchronisée au souffle.
   // Appliquée au rig (jamais à la caméra) pour rester compatible avec le tracking VR.
@@ -1403,16 +1159,6 @@ renderer.setAnimationLoop(() => {
   renderer.render(scene, camera);
 });
 
-// Aperçu écran plat : le clavier pilote aussi le menu VR (Échap/M ouvre/ferme,
-// flèches, Entrée) — pratique pour tester sur PC.
-window.addEventListener('keydown', (e) => {
-  if (menuVisible) return;
-  const k = e.key;
-  if (k === 'Escape' || k === 'm' || k === 'M') { vrMenuOpen ? closeVrMenu() : openVrMenu(); e.preventDefault(); return; }
-  if (!vrMenuOpen) return;
-  const map = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', ' ': 'ok' };
-  if (map[k]) { vrMenuInput(map[k]); e.preventDefault(); }
-});
 // Aperçu écran plat : la souris ou le clavier font réapparaître l'aide
 ['mousemove', 'keydown', 'touchstart'].forEach((ev) => window.addEventListener(ev, () => { if (!menuVisible) wakeHud(); }, { passive: true }));
 

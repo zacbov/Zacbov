@@ -34,10 +34,6 @@
     color:#eaf4ff; border-radius:8px; padding:8px 12px; font-size:20px; font-weight:700;
     width:130px; letter-spacing:4px; text-align:center; margin-left:8px; text-transform:uppercase;
   }
-  #gauge { position:relative; width:200px; height:6px; border-radius:3px; background:rgba(255,255,255,0.12); margin-top:14px; overflow:hidden; }
-  #gaugeFill { height:100%; width:0; border-radius:3px; background:#8cc7ff; transition: width 0.4s, background 0.4s; }
-  #gaugeMark { position:absolute; top:0; bottom:0; width:2px; background:rgba(255,255,255,0.6); }
-  #diag { font:11px ui-monospace, Menlo, monospace; opacity:0.4; margin-top:6px; }
   #syncStatus, #torchStatus { font-size:12px; margin-top:8px; opacity:0.55; max-width:320px; }
 </style>
 </head>
@@ -56,7 +52,6 @@
     <div id="bpmDisplay">--</div>
     <div id="bpmLabel">bpm</div>
   </div>
-  <div id="gauge" title="Netteté du signal"><div id="gaugeFill"></div><div id="gaugeMark"></div></div>
   <div id="qualityText">Appuie sur « Démarrer » pour commencer</div>
 
   <button id="startBtn">Démarrer la mesure</button>
@@ -64,7 +59,6 @@
 
   <div id="torchStatus"></div>
   <div id="syncStatus">Pas encore envoyé au casque</div>
-  <div id="diag"></div>
 
   <video id="video" autoplay playsinline muted></video>
   <canvas id="sampleCanvas" width="32" height="32" style="display:none;"></canvas>
@@ -75,7 +69,6 @@ const $ = (id) => document.getElementById(id);
 const bpmDisplay = $('bpmDisplay'), qualityRing = $('qualityRing'), qualityText = $('qualityText');
 const startBtn = $('startBtn'), video = $('video'), syncStatus = $('syncStatus'), torchStatus = $('torchStatus');
 const sessionInput = $('sessionInput');
-const gaugeFill = $('gaugeFill'), diagEl = $('diag');
 const pulseCanvas = $('pulseCanvas'), pulseCtx = pulseCanvas.getContext('2d');
 const sampleCanvas = $('sampleCanvas'), sampleCtx = sampleCanvas.getContext('2d', { willReadFrequently: true });
 
@@ -110,32 +103,17 @@ sessionInput.addEventListener('input', () => { try { localStorage.setItem('batte
 //    plus robuste au bruit. Le score de ressemblance sert d'indice de qualité.
 //  • chaque vraie image de la caméra est échantillonnée une seule fois, avec
 //    son horodatage réel (requestVideoFrameCallback quand il existe).
-// Version 3 (stabilisation) :
-//  • le canal (rouge ou vert) est choisi sur TOUTE la fenêtre, selon celui qui
-//    donne le signal le plus net — avant, la bascule se faisait image par image
-//    quand le rouge frôlait la saturation, ce qui créait des sauts énormes ;
-//  • si le signal est faible, une fenêtre plus longue (12 s) est aussi essayée ;
-//  • les à-coups (doigt qui glisse une fraction de seconde) sont écrêtés au lieu
-//    de ruiner 8 s de mesure ;
-//  • seule la zone CENTRALE de l'image est lue (les bords prennent de la lumière
-//    parasite) ;
-//  • une perte du doigt de moins de 1,5 s ne remet plus la mesure à zéro ;
-//  • une seule horloge pour tous les échantillons.
 
 // Seuils regroupés — à ajuster sur place si besoin.
 const Q = {
-  fingerRedRatio: 1.15,   // doigt présent si rouge > 1,15 × vert ET > 1,15 × bleu
-  fingerLossResetSec: 1.5,// doigt absent plus longtemps que ça : on recommence la mesure
-  sampleZone: 0.6,        // fraction centrale de l'image analysée
+  fingerRedRatio: 1.35,   // doigt présent si rouge > 1,35 × vert ET > 1,35 × bleu
   tooDarkRed: 4,          // rouge moyen sous ce niveau : image noire, rien à mesurer
   dimRed: 25,             // en dessous (et signal faible) : conseiller plus de lumière
   minQuality: 0.5,        // autocorrélation minimale (0–1) pour accepter une estimation
   maxJumpBpm: 10,         // deux estimations successives doivent être à ±10 bpm
-  goodNeeded: 5,          // estimations cohérentes d'affilée avant affichage/envoi (~2,5 s)
+  goodNeeded: 4,          // estimations cohérentes d'affilée avant affichage/envoi (~2 s)
   badTolerated: 2,        // estimations ratées tolérées une fois stable (pas de clignotement)
   motionRelRange: 0.25,   // variation brute > 25 % en 1,5 s : le doigt a bougé
-  saturated: 250,         // canal saturé (moyenne au-dessus) : inutilisable
-  maxRepaired: 0.35,      // part maximale du signal réparée (à-coups) pour faire confiance à une estimation
   warmupSec: 6,           // durée minimale de signal avant la première estimation
 };
 
@@ -236,71 +214,6 @@ function estimateBpm(y, fs) {
 }
 function median(arr) { const s = [...arr].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
 
-// Écrête les à-coups : tout ce qui dépasse 4 écarts-types robustes (MAD) est
-// ramené à la limite, au lieu de dominer l'autocorrélation.
-function clipOutliers(y) {
-  const a = Array.from(y, Math.abs).sort((p, q) => p - q);
-  const lim = 4 * 1.4826 * (a[a.length >> 1] || 0);
-  if (!lim) return y;
-  return y.map((v) => Math.max(-lim, Math.min(lim, v)));
-}
-// Répare les à-coups dans le signal BRUT (avant filtrage) : un doigt qui glisse
-// une fraction de seconde fait sauter la luminosité de 10-30 %, vingt fois plus
-// que le pouls. Filtré tel quel, ce saut « sonne » pendant plus d'une seconde et
-// ruine la mesure. On compare chaque point à la médiane glissante (0,7 s) ; les
-// points trop éloignés (± 0,15 s de marge) sont remplacés par interpolation.
-// Renvoie aussi la part du signal réparée (trop élevée = doigt qui bouge).
-function repairArtifacts(x, fs) {
-  const n = x.length, half = Math.round(0.35 * fs), med = new Float64Array(n), res = new Float64Array(n);
-  for (let i = 0; i < n; i++) {
-    const w = Array.prototype.slice.call(x, Math.max(0, i - half), Math.min(n, i + half + 1)).sort((a, b) => a - b);
-    med[i] = w[w.length >> 1]; res[i] = x[i] - med[i];
-  }
-  const absr = Array.from(res, Math.abs).sort((a, b) => a - b);
-  const sigma = 1.4826 * (absr[n >> 1] || 0);
-  const bad = new Uint8Array(n), margin = Math.round(0.15 * fs);
-  for (let i = 0; i < n; i++) {
-    if (Math.abs(res[i]) > Math.max(6 * sigma, 0.03 * Math.abs(med[i]))) {
-      for (let k = Math.max(0, i - margin); k <= Math.min(n - 1, i + margin); k++) bad[k] = 1;
-    }
-  }
-  let nbad = 0; for (let i = 0; i < n; i++) nbad += bad[i];
-  if (!nbad || nbad === n) return { x, badFrac: nbad / n };
-  const y = Float64Array.from(x);
-  let i = 0;
-  while (i < n) {
-    if (!bad[i]) { i++; continue; }
-    let j = i; while (j < n && bad[j]) j++;
-    const a = i > 0 ? y[i - 1] : y[j], b = j < n ? y[j] : y[i - 1];
-    for (let k = i; k < j; k++) y[k] = a + (b - a) * (k - i + 1) / (j - i + 1);
-    i = j;
-  }
-  return { x: y, badFrac: nbad / n };
-}
-
-// Analyse complète d'une fenêtre : essaie rouge et vert (et 12 s si possible),
-// garde la combinaison au signal le plus périodique.
-// samples : [{ t, r, g }] ; held = durée depuis la pose du doigt (s)
-function analyseSignal(samples, t, held, q) {
-  const wins = held >= 12 ? [8, 12] : [Math.min(WINDOW_SEC, held)];
-  let best = null;
-  for (const ch of ['r', 'g']) {
-    const recent = samples.filter((s) => t - s.t <= 2);
-    const mean = recent.reduce((a, s) => a + s[ch], 0) / Math.max(1, recent.length);
-    if (mean > q.saturated || mean < 1) continue;           // saturé ou noir : inutilisable
-    const pts = samples.map((s) => ({ t: s.t, v: s[ch] }));
-    for (const w of wins) {
-      const fixed = repairArtifacts(resampleUniform(pts, t, w, FS), FS);
-      const y = clipOutliers(bandpass(fixed.x, FS));
-      const e = estimateBpm(y, FS);
-      // Trop de signal réparé : estimation non fiable (le doigt bouge sans arrêt)
-      if (fixed.badFrac > q.maxRepaired) e.quality = Math.min(e.quality, q.minQuality - 0.01);
-      if (!best || e.quality > best.quality) best = { ...e, channel: ch, win: w, y, badFrac: fixed.badFrac };
-    }
-  }
-  return best;
-}
-
 // Suivi dans le temps : n'affiche/envoie une valeur qu'après plusieurs
 // estimations cohérentes, et tolère quelques ratés une fois stable.
 function newTracker() { return { recent: [], good: 0, bad: 0, stable: false }; }
@@ -327,8 +240,7 @@ function trackEstimate(tr, est, q) {
 
 // ===================== ÉTAT DE LA MESURE =====================
 let stream = null, track = null, sampling = false, wakeLock = null;
-let samples = [];                 // { t, r, g } — 13 s glissantes
-let frameTimes = [], lastRGB = null;
+let samples = [];                 // { t, v, r } — 12 s glissantes
 let fingerSince = null, fingerLostAt = null;
 let lastEstimateAt = 0, tracker = newTracker();
 let lastFiltered = null;
@@ -392,30 +304,16 @@ async function enableTorch() {
 // Une vraie image caméra = un échantillon (sinon requestAnimationFrame à 60 Hz
 // lit deux fois la même image à 30 Hz, ce qui crée de faux plateaux).
 const hasRVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
-// Une seule horloge pour toute la mesure : l'heure de capture de la caméra si
-// elle est fournie ET sur la même base de temps que la page, sinon l'heure
-// d'affichage. (Mélanger les deux décalerait les échantillons entre eux.)
-let clockMode = null;
-function frameTime(now, meta) {
-  const cap = meta && typeof meta.captureTime === 'number' ? meta.captureTime : null;
-  if (clockMode === null) clockMode = (cap !== null && Math.abs(cap - performance.now()) < 1000) ? 'capture' : 'display';
-  if (clockMode === 'capture') {
-    if (cap !== null) return cap;
-    clockMode = 'display'; resetMeasurement();               // horloge perdue : on repart proprement
-  }
-  return now;
-}
 function scheduleNextFrame() {
   if (!sampling) return;
-  if (hasRVFC) video.requestVideoFrameCallback((now, meta) => onFrame(frameTime(now, meta)));
+  if (hasRVFC) video.requestVideoFrameCallback((now, meta) => onFrame(meta.captureTime || meta.expectedDisplayTime || now));
   else requestAnimationFrame((now) => onFrame(now));
 }
 
 let prevSum = -1;
 function onFrame(nowMs) {
   if (!sampling) return;
-  const vw = video.videoWidth || 320, vh = video.videoHeight || 240, z = Q.sampleZone;
-  sampleCtx.drawImage(video, vw * (1 - z) / 2, vh * (1 - z) / 2, vw * z, vh * z, 0, 0, 32, 32); // zone centrale
+  sampleCtx.drawImage(video, 0, 0, 32, 32);
   const px = sampleCtx.getImageData(0, 0, 32, 32).data;
   let r = 0, g = 0, b = 0;
   for (let i = 0; i < px.length; i += 4) { r += px[i]; g += px[i + 1]; b += px[i + 2]; }
@@ -429,37 +327,31 @@ function onFrame(nowMs) {
 }
 
 function processSample(t, r, g, b) {
-  lastRGB = { r, g, b };
-  frameTimes.push(t); while (frameTimes.length && t - frameTimes[0] > 2) frameTimes.shift();
-  // --- Doigt présent ? (reconnu à sa couleur). Une perte brève (< 1,5 s) ne
-  // remet pas tout à zéro : on met juste la mesure en pause.
+  // --- Doigt présent ? (reconnu à sa couleur, avec 0,6 s de tolérance)
   const finger = r >= Q.tooDarkRed && r > Q.fingerRedRatio * g && r > Q.fingerRedRatio * b;
   const black = r < Q.tooDarkRed && g < Q.tooDarkRed;
   if (!finger) {
     if (fingerLostAt === null) fingerLostAt = t;
-    if (t - fingerLostAt > Q.fingerLossResetSec && fingerSince !== null) { fingerSince = null; resetMeasurement(); }
-    if (t - fingerLostAt > 0.4) {
+    if (t - fingerLostAt > 0.6) {
+      if (fingerSince !== null) { fingerSince = null; resetMeasurement(); }
       if (black) setQuality('dark', '🔦 Image noire — il faut de la lumière derrière le doigt (flash ou lampe)');
       else setQuality('noFinger', '👆 Pose ton doigt sur la caméra arrière');
+      drawPulseTrace();
+      return;
     }
-    updateDiag(null);
-    return;
+  } else {
+    fingerLostAt = null;
+    if (fingerSince === null) { fingerSince = t; resetMeasurement(); }
   }
-  if (fingerLostAt !== null && fingerSince !== null) {
-    // retour du doigt après une courte absence : on décale le début pour ne pas
-    // analyser le trou comme du signal
-    samples = samples.filter((s) => s.t < fingerLostAt);
-  }
-  fingerLostAt = null;
-  if (fingerSince === null) { fingerSince = t; resetMeasurement(); }
 
-  samples.push({ t, r, g });
-  while (samples.length && t - samples[0].t > 13) samples.shift();
+  // --- Canal : rouge, sauf s'il sature (flash puissant) → vert
+  const v = r > 245 ? g : r;
+  samples.push({ t, v, r });
+  while (samples.length && t - samples[0].t > 12) samples.shift();
 
-  const held = samples.length ? t - samples[0].t : 0;
+  const held = fingerSince === null ? 0 : t - fingerSince;
   if (held < Q.warmupSec) {
     setQuality('measuring', '⏳ Mesure en cours, ne bouge plus…');
-    setGauge(held / Q.warmupSec * 0.3, false);
     return;
   }
   if (t - lastEstimateAt < 0.5) return;  // une estimation toutes les 0,5 s suffit
@@ -468,48 +360,28 @@ function processSample(t, r, g, b) {
 }
 
 function estimate(t, held) {
-  const best = analyseSignal(samples, t, held, Q);
-  if (!best) { setQuality('dark', '🔦 Image saturée ou noire — ajuste la lumière'); return; }
-  lastFiltered = best.y;
+  const win = Math.min(WINDOW_SEC, held);
+  const x = resampleUniform(samples, t, win, FS);
+  const y = bandpass(x, FS);
+  lastFiltered = y;
   drawPulseTrace();
-  updateDiag(best);
-  setGauge(best.quality, best.quality >= Q.minQuality);
-  const { ok, shown } = trackEstimate(tracker, best, Q);
+  const { ok, shown } = trackEstimate(tracker, estimateBpm(y, FS), Q);
   if (shown !== null) {
     setQuality('good', '✓ Mesure stable');
     bpmDisplay.textContent = shown;
     sendHeartRate(shown);    // SEUL chemin d'envoi : jamais de valeur incertaine vers le casque
     return;
   }
-  if (ok) {
-    // Valeur provisoire, en couleur « mesure » : on voit la mesure converger
-    bpmDisplay.textContent = Math.round(best.bpm);
-    setQuality('measuring', '⏳ Stabilisation… (' + tracker.good + '/' + Q.goodNeeded + ')');
-    return;
-  }
   bpmDisplay.textContent = '--';
+  if (ok) { setQuality('measuring', '⏳ Stabilisation… (' + tracker.good + '/' + Q.goodNeeded + ')'); return; }
 
   // Pas encore bon : on dit pourquoi, sans accuser la pression à tort
-  const ch = best.channel;
-  const last = samples.filter((s) => t - s.t <= 1.5).map((s) => s[ch]);
+  const last = samples.filter((s) => t - s.t <= 1.5).map((s) => s.v);
   const lo = Math.min(...last), hi = Math.max(...last);
   const meanR = samples.slice(-15).reduce((a, s) => a + s.r, 0) / Math.min(15, samples.length);
   if ((hi - lo) / Math.max(hi, 20) > Q.motionRelRange) setQuality('moving', '🤚 Le doigt bouge — reste bien immobile');
   else if (meanR < Q.dimRed) setQuality('dark', '🔦 Signal faible : trop peu de lumière traverse le doigt');
   else setQuality('weak', '〰 Signal faible — pose le doigt plus légèrement, sans écraser');
-}
-
-// Jauge de netteté du signal (sous l'anneau) + ligne de diagnostic
-function setGauge(q, ok) {
-  const pct = Math.max(0, Math.min(1, q)) * 100;
-  gaugeFill.style.width = pct.toFixed(0) + '%';
-  gaugeFill.style.background = ok ? '#7ee89a' : (q > Q.minQuality * 0.7 ? '#8cc7ff' : '#ff9b6b');
-}
-function updateDiag(best) {
-  const fps = frameTimes.length > 1 ? (frameTimes.length - 1) / (frameTimes[frameTimes.length - 1] - frameTimes[0]) : 0;
-  const rgb = lastRGB ? `R ${lastRGB.r.toFixed(0)} V ${lastRGB.g.toFixed(0)} B ${lastRGB.b.toFixed(0)}` : '';
-  const q = best ? ` · canal ${best.channel === 'r' ? 'rouge' : 'vert'} · netteté ${best.quality.toFixed(2)} · ${best.win.toFixed(0)} s` : '';
-  diagEl.textContent = `${fps.toFixed(0)} img/s · ${rgb}${q}`;
 }
 
 function drawPulseTrace() {
@@ -527,8 +399,6 @@ function drawPulseTrace() {
   });
   pulseCtx.stroke();
 }
-
-$('gaugeMark').style.left = (Q.minQuality * 100) + '%';   // repère : seuil d'acceptation
 
 // ===================== ENVOI AU CASQUE (Firebase Realtime Database) =====================
 let lastSendAt = 0;

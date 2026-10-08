@@ -35,23 +35,7 @@ Il n'y a pas de bouton à viser : tout passe par les boutons physiques.
 | Sons d'ambiance : aucun → ruisseau → vague → aucun | **Gâchette** (la 1ʳᵉ pression ferme le tutoriel) |
 | Musique on / off | **A** ou **X** |
 | Décor vidéo suivant | **Clic du joystick** |
-| Ouvrir le **menu VR** (pause) | **B ou Y** |
-
-### Menu dans la VR
-B ou Y met la séance en pause et ouvre un menu sur verre dépoli, là où l'on
-regarde, **sans sortir du casque** :
-
-| Ligne | Effet |
-|---|---|
-| Technique | ◀ ▶ change la technique (appliquée à la reprise) |
-| Décor | ◀ ▶ change le décor **en direct** derrière le menu (chargé 0,7 s après le dernier choix, pour pouvoir faire défiler sans tout charger) |
-| Musique / Ambiance | ◀ ▶ ou gâchette |
-| Reprendre la séance | gâchette — ou B/Y n'importe où dans le menu |
-| Quitter la VR | gâchette : retour au menu de l'écran plat |
-
-Navigation : **joystick ↕** pour choisir une ligne, **↔** pour modifier,
-**gâchette ou A/X** pour valider. Sur PC (aperçu), **Échap ou M**, les flèches et
-Entrée font la même chose.
+| Revenir au menu (changer de technique) | **Maintenir B ou Y pendant 2 s** (barre de progression) |
 
 L'aide des commandes **s'efface au bout de 4 s** sans toucher les manettes
 (`HUD_AUTOHIDE_SEC`) et revient dès qu'on pose le doigt sur un bouton, qu'on en
@@ -59,10 +43,8 @@ presse un ou qu'on pousse un joystick. Un pouce posé en permanence sur le
 joystick ne la garde pas affichée (seul le début du contact compte).
 
 Choix volontaire : la gâchette latérale (grip) n'est **pas** utilisée, parce
-qu'on la presse sans le vouloir dès qu'on serre la manette. Ouvrir le menu VR
-ne fait que mettre en pause : un appui par erreur est sans conséquence.
-Un petit message s'affiche quelques secondes sous le texte quand un décor est
-chargé ou en cas d'erreur (il n'y a pas de console dans le casque). Les mêmes réglages (musique, ambiance,
+qu'on la presse sans le vouloir dès qu'on serre la manette — le retour au menu
+exige donc un geste long et délibéré. Les mêmes réglages (musique, ambiance,
 décor) existent aussi dans le menu avant d'entrer. Un tutoriel s'affiche
 14 s à l'entrée en VR, et une aide discrète reste visible sous le texte de respiration.
 Les deux boucles d'ambiance ne se mélangent jamais : une seule à la fois,
@@ -89,15 +71,6 @@ bascule en fondu.
   (« vidéo : couche média » ou « vidéo : sphère WebGL »).
 - `VIDEO_STEREO` : `'mono'` par défaut ; `'stereo-top-bottom'` si un jour tu as
   des vidéos 3D dessus/dessous.
-
-### Changement de décor qui faisait sortir de la VR (corrigé)
-Le clic joystick changeait la source de la vidéo **encore reliée** à la couche
-média du casque, puis détruisait cette couche à la main ; le navigateur du Quest
-pouvait alors fermer la session. Maintenant, deux lecteurs vidéo alternent : sous
-un voile noir, la couche est retirée, l'ancien lecteur est vidé (une seule 8K
-décodée à la fois), le nouveau décor est chargé dans l'autre lecteur avec une
-couche neuve. La couche n'est plus détruite à la main. Ordre des opérations
-vérifié avec une couche simulée ; reste à confirmer sur le casque.
 
 ### Pourquoi la 8K scintillait
 Ce n'est pas la géométrie de la sphère, c'est le trajet de l'image. En mode
@@ -195,36 +168,28 @@ personne suivante, bouton **« 🔄 Nouveau code »** dans le menu. C'est de la 
 de santé, même anonyme : si tu l'utilises à grande échelle à la fac, mieux vaut
 le dire aux utilisateurs.
 
-**Qualité de mesure** (`battement.html`) :
-- L'exposition n'est pas verrouillée (elle se figeait sur la lumière de la pièce,
-  d'où l'ancien « relâche la pression » permanent).
-- Doigt reconnu à sa couleur (rouge dominant, tolérant au flash puissant) ; une
-  perte de moins de 1,5 s ne remet plus la mesure à zéro.
-- Seule la zone centrale de l'image est lue.
-- **À-coups réparés** : un doigt qui glisse une fraction de seconde fait sauter
-  la luminosité bien plus que le pouls ; ces passages sont repérés dans le signal
-  brut et remplacés par interpolation au lieu de ruiner 8 s de mesure.
-- Canal rouge **ou** vert choisi sur toute la fenêtre (le plus net) — avant, la
-  bascule image par image près de la saturation créait des sauts.
-- Fenêtre de 12 s essayée en plus quand le signal est faible.
-- Rythme par autocorrélation, filtre anti « moitié/double » ; 5 estimations
-  cohérentes avant d'envoyer.
-- Valeur provisoire (en bleu) pendant la stabilisation, **jauge de netteté** sous
-  l'anneau (le trait = seuil d'acceptation) et une ligne de diagnostic en bas
-  (images/s, niveaux R/V/B, canal, netteté) pour régler les seuils `Q` sur place.
+**Qualité de mesure** (`battement.html`) — refaite :
+- L'exposition n'est plus verrouillée au démarrage. Elle se figeait sur la
+  lumière de la pièce, puis le doigt plongeait l'image dans le noir, ce que
+  l'ancienne version prenait pour « doigt trop appuyé » (d'où le message
+  permanent).
+- Le doigt est reconnu à sa couleur (rouge dominant), pas à une luminosité
+  absolue qui varie d'un téléphone à l'autre.
+- Rythme calculé par autocorrélation sur 8 s (au lieu de compter les pics),
+  avec un score de qualité. Seules des valeurs stables (4 estimations cohérentes)
+  sont envoyées ; filtre contre les erreurs « moitié/double ».
+- Chaque image caméra est lue une seule fois avec son horodatage réel.
+- Messages ciblés : doigt absent, image noire / trop peu de lumière, doigt qui
+  bouge, signal faible (là seulement : « pose le doigt plus légèrement »).
+- Le flash est allumé quand le téléphone le permet (pas sur iPhone : se mettre
+  face à une lampe). L'écran reste allumé pendant la mesure.
 
-Simulation (40 s, 20 séances par cas) :
-
-| Cas | 1ʳᵉ valeur | Temps avec une valeur affichée |
-|---|---|---|
-| Flash, doigt immobile (55-140 bpm) | ~8 s | 93 % |
-| Flash, rouge saturé | ~8 s | 93 % |
-| Flash + à-coups du doigt toutes les 5-10 s | ~8 s | 80-91 % (avant : 4-29 %) |
-| Sans flash, signal faible, 55-75 bpm | 9-15 s | 45-80 % |
-| Bruit pur (pas de doigt) | jamais (0 faux pouls sur 240 séances) | 0 % |
-
-Sans flash et au-delà de ~100 bpm, la mesure se stabilise rarement : elle
-n'envoie alors rien plutôt qu'un chiffre faux. Précision correcte pour un repère, pas pour un usage médical.
+Testé par simulation (signaux de pouls réalistes, bruit, dérive d'exposition,
+images perdues) : avec flash, valeur juste à ±3 bpm en ~8 s, de 48 à 140 bpm ;
+aucun faux pouls sur du bruit pur. Sans flash et avec un signal très faible, la
+mesure peut ne jamais se stabiliser (elle n'envoie alors rien), et au-delà de
+~120 bpm elle peut parfois afficher la moitié. Seuils regroupés dans `Q`.
+Précision correcte pour un repère, pas pour un usage médical.
 
 ## Corrections de cette version
 - **Horloge du moteur de respiration** : le démarrage utilisait `performance.now()`
@@ -239,20 +204,12 @@ n'envoie alors rien plutôt qu'un chiffre faux. Précision correcte pour un rep�
 - AR retiré. Plus de carillon. QR code retiré (impossible à scanner depuis
   l'intérieur du casque).
 
-## Verre dépoli (texte de respiration et menu VR)
-Le fond du panneau est la portion du décor **qui se trouve derrière lui**,
-floutée et assombrie, avec un reflet et un liseré clair ; le texte a une ombre
-douce. Réglages : `GLASS_TINT` (0,5 : plus haut = plus sombre et plus lisible),
-`GLASS_BLUR` (flou), `GLASS_FROM_VIDEO` (`false` = verre fumé uni, si jamais
-ça ralentit le casque ou si l'image relue reste noire en mode couche média — le
-texte reste lisible dans les deux cas).
-
 ## Autres changements de cette version
 - Sphère qui respire retirée (`SHOW_BREATH_SPHERE = false` ; `true` la remet).
   Le texte prend sa place à hauteur du regard.
 - Texte « Inspirez / Expirez » réduit : `BREATH_TEXT_WIDTH` (0,36 m, avant 0,6).
 - Technique « Avant de dormir » (4-7-8) retirée.
-- Service worker : pages en « réseau d'abord » (`respire-v9`).
+- Service worker : pages en « réseau d'abord » (`respire-v8`).
 
 ## Ce qui n'a PAS pu être testé (à valider sur le casque)
 **Nouveau, à vérifier en priorité** : que le tutoriel indique bien « vidéo :

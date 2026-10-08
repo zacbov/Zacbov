@@ -5,7 +5,7 @@
 // ici : les éléments <audio>/<video> demandent des plages d'octets (requêtes
 // Range, réponses 206) que le cache du Service Worker gère mal, et ces fichiers
 // sont lourds. Le cache HTTP normal du navigateur s'en occupe très bien.
-const CACHE_NAME = 'respire-v9';
+const CACHE_NAME = 'respire-v8';
 
 const ASSETS_TO_CACHE = [
   './',

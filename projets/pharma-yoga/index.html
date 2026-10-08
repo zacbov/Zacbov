@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Respire — respiration guidée en VR</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="./favicon.ico">
 <meta name="theme-color" content="#0a1520">
 <style>
   html, body { margin:0; padding:0; overflow:hidden; background:#000; height:100%; }
@@ -136,10 +137,13 @@ const VIDEO_EXTS = ['webm', 'mp4'];
 // l'ordre du menu et du « décor suivant ». Plusieurs orthographes acceptées ;
 // les majuscules initiales (Plage.webm) sont aussi trouvées automatiquement.
 const DECORS = [
-  { label: 'Ruisseau', names: ['ruisseau'] },
-  { label: 'Plage',    names: ['plage'] },
-  { label: 'Forêt',    names: ['forêt', 'foret', 'fôret'] },
-  { label: 'Phare',    names: ['phare'] },
+  { label: 'Ruisseau', names: ['ruisseau', '2'] },
+  { label: 'Plage',    names: ['plage', '1'] },
+  { label: 'Forêt',    names: ['Philippines', 'foret', 'fôret', '5'] },
+  { label: 'Phare',    names: ['phare', '3'] },
+  { label: 'Phare',    names: ['test', '4'] },
+  { label: 'Phare',    names: ['lac zyuratkul', '6'] },
+  { label: 'Phare',    names: ['Alpes', '7'] },
 ];
 const VIDEO_YAW_DEG = -90;     // place le CENTRE de l'image face à l'utilisateur
 const VIDEO_BRIGHTNESS = 0.85; // 1 = tel quel, <1 assombrit (aide la lisibilité du texte)

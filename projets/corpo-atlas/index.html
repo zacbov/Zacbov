@@ -4,8 +4,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CorpoAtlas 3D</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwZjExMTciLz4KICA8IS0tIFNpbGhvdWV0dGUgc3R5bGlzw6llIDogdMOqdGUsIHRyb25jLCBtZW1icmVzIC0tPgogIDxjaXJjbGUgY3g9IjMyIiBjeT0iMTciIHI9IjcuNSIgZmlsbD0iI2U4YTg3YyIvPgogIDxwYXRoIGQ9Ik0zMiAyNmMtNyAwLTEyIDQtMTIgMTB2MTFjMCAyIDEuNSAzLjUgMy41IDMuNWgxLjV2OGMwIDEuNiAxLjMgMyAzIDNzMy0xLjQgMy0zdi04aDJ2OGMwIDEuNiAxLjMgMyAzIDNzMy0xLjQgMy0zdi04aDEuNWMyIDAgMy41LTEuNSAzLjUtMy41VjM2YzAtNi01LTEwLTEyLTEweiIgZmlsbD0iI2U4YTg3YyIgb3BhY2l0eT0iLjU1Ii8+CiAgPCEtLSBDxZN1ciA6IG1hcnF1ZXVyIGFuYXRvbWlxdWUgLS0+CiAgPHBhdGggZD0iTTMyIDQwYy0zLjQtMy02LjItNS02LjItOCAwLTIgMS41LTMuNCAzLjMtMy40IDEuMiAwIDIuMy42IDIuOSAxLjYuNi0xIDEuNy0xLjYgMi45LTEuNiAxLjggMCAzLjMgMS40IDMuMyAzLjQgMCAzLTIuOCA1LTYuMiA4eiIgZmlsbD0iIzdlY2ZhOCIvPgo8L3N2Zz4K">
-<link rel="alternate icon" type="image/png" sizes="64x64" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAB40lEQVR4nO1bMXKDMBBcadJnUuUJNPmWC6fNO9zGhb/lhidQMbwgqfAwQkhI6O5A3HYWQrrd2xMSHgwS8P7x+ZfSXwpD35m1faMdj0J6CTExbOji0ckDcQ5edWog7oPPDTMH1Eoe8HOzsQ61weUYXAPOgJcAZ8j+iClX6zacBSPnN6kA2vtl1tZcH+xxGIDXAT7iLriEGPrOmL2RH8ElAttTIIV8Tv9csAiQS4ZDBN0HUE+wNYvULlAHSAcgDRVAOgBpkAuwdUNDvSFSB3BMkptFju0wmwNSyVR3FgDWk+I8FrOeBqfYzfsAagHa++W2dYzm+vgpEYsPpCVQgnzJcXwgE6B00FQikJRAKNjf5utl5+/2eYu1uyhdDsUFWCI/JbgWS0KUFEF3ghyT5GR/y30pUAdIByANFgFCqzrFfSlQB3BNlJpNjuwDzA5YS4qLPKAlwC9ALLuc2QfUATICLGWZO/uAoANcshLkAS0BWQHGrEtlH9iBAyTJAwQCUL7ApBifxAFUIlCMS1YCpYOlEpV0DSgVNGVZif0ztBeIPwWkYVM+MKoNQ98ZdYB0ANKwQNp3drVg5GzdhjNgylVLYPrjDC5wOc4cULMIPm5BsrXsEkNJDa4BNbghxiGJ4FEckZK4f1//xnFxXEk5AAAAAElFTkSuQmCC">
+<link rel="icon" href="/favicon.ico">
 <style>
 :root{
   /* ── Surfaces ── */
@@ -445,9 +444,11 @@ kbd{font-size:14px;font-family:monospace;background:var(--bg5);border:.5px solid
   <!-- Section Systèmes -->
   <div class="tb-section">
     <span class="tb-section-lbl">Systèmes</span>
-    <button class="tbtn" id="btblood" onclick="toggleBlood()" title="Flux sanguin 3D">🩸 Flux</button>
-    <button class="tbtn" id="btcalcul" onclick="toggleCalcul()" title="Calcul rénal">🪨 Calcul</button>
-    <button class="tbtn" id="btdouleur" onclick="toggleDouleur()" title="Propagation douleur">⚡ Douleur</button>
+    <button class="tbtn" id="btblood" onclick="toggleBlood()" title="Flux sanguin 3D">🩸<span class="tbl"> Flux</span></button>
+    <button class="tbtn" id="btcalcul" onclick="toggleCalcul()" title="Calcul rénal">🪨<span class="tbl"> Calcul</span></button>
+    <button class="tbtn" id="btdouleur" onclick="toggleDouleur()" title="Propagation douleur">⚡<span class="tbl"> Douleur</span></button>
+    <button class="tbtn" id="btheart" onclick="toggleHeartbeat()" title="Cœur battant : cycle cardiaque, ECG, Wiggers, pharmacologie">💓<span class="tbl"> Cœur</span></button>
+    <button class="tbtn" id="btbrain" onclick="toggleBrainAtlas()" title="Atlas cérébral coloré (Allen, 141 structures) + coupes">🧠<span class="tbl"> Atlas</span></button>
     <!-- Bouton overflow → tous les autres modes -->
     <div id="tb-overflow">
       <button id="tb-overflow-btn" onclick="toggleOverflowMenu(event)" title="Tous les modes">
@@ -5302,7 +5303,7 @@ function getGroupKey(raw) {
 
   // ── Cerveau : structures bilatérales → enlever _L/_R final ──
   // puis regrouper par famille anatomique
-  const nb = n.replace(/_[LR]$/, '');
+  const nb = (/^Allen_/.test(raw) && typeof atlasTrueBase==='function') ? atlasTrueBase(n.replace(/_[LR]$/, '')) : n.replace(/_[LR]$/, '');
 
   // Ventricules cérébraux
   if (/ventricle|aqueduct|central_canal/.test(nb)) return '🧠 Ventricules cérébraux';
@@ -6434,6 +6435,7 @@ function renderSlice(planeid) {
     }
   }
 
+  if(typeof atlasOverlayApply==='function') atlasOverlayApply(d,planeid,sliceW,sliceH);
   const offC=new OffscreenCanvas(sliceW,sliceH);
   offC.getContext('2d').putImageData(imgData,0,0);
   ctx.fillStyle='#010108'; ctx.fillRect(0,0,W,H);
@@ -8418,7 +8420,7 @@ function buildBloodSystem() {
 function animateBlood() {
   if(!bloodMode) return;
   bloodAnimId = requestAnimationFrame(animateBlood);
-  const dt = 0.004 * _bloodSpeedMul;
+  const dt = 0.004 * _bloodSpeedMul * ((typeof heartMode!=='undefined' && heartMode && typeof hbFlowFactor==='function') ? hbFlowFactor() : 1);
   bloodParticles.forEach(p => {
     p.t += dt * p.speed;
     if(p.t > 1) p.t -= 1;
@@ -8428,10 +8430,10 @@ function animateBlood() {
       p.curve.getTangentAt(Math.min(p.t+0.01, 0.999))
     ));
   });
-  const beat = 0.25 + 0.25*Math.abs(Math.sin(Date.now()*0.00165*Math.PI));
+  const beat = (typeof heartMode!=='undefined' && heartMode && HB.S && HB.S.aor!=null) ? 0.16+0.5*HB.S.aor : 0.25 + 0.25*Math.abs(Math.sin(Date.now()*0.00165*Math.PI));
   bloodTubes.forEach(t => { if(t.material) t.material.emissiveIntensity = beat; });
   const bpmEl = document.getElementById('blood-bpm');
-  if(bpmEl) bpmEl.textContent = '♥ ~'+Math.round(60+10*Math.abs(Math.sin(Date.now()*0.001)))+' bpm — 5 L/min';
+  if(bpmEl) bpmEl.textContent = (typeof heartMode!=='undefined' && heartMode && HB.S && HB.S.sv) ? '♥ '+Math.round(HB.hr)+' bpm — '+(HB.hr*HB.S.sv/1000).toFixed(1)+' L/min (cœur battant)' : '♥ ~'+Math.round(60+10*Math.abs(Math.sin(Date.now()*0.001)))+' bpm — 5 L/min';
 }
 
 function buildBloodPanel() {
@@ -9310,7 +9312,7 @@ const LM_HEART=['VH_F_left_ventricle','VH_F_right_ventricle','VH_F_left_cardiac_
 const LM_SPLEEN=['VH_F_gastric_surface_of_spleen','VH_F_diaphragmatic_surface_of_spleen','VH_F_colic_surface_of_spleen','VH_F_hilum_of_spleen','VH_F_renal_surface_of_spleen'];
 const LM_CEREBRUM=['Allen_white_matter_of_forebrain_L','Allen_white_matter_of_forebrain_R'];
 const LM_BRAIN=['Allen_white_matter_of_forebrain_L','Allen_white_matter_of_forebrain_R','Allen_lateral_hemisphere_of_cerebellum_L','Allen_lateral_hemisphere_of_cerebellum_R'];
-const LM_VENTRICLES=['Allen_anterior_horn_of_lateral_ventricle_L','Allen_anterior_horn_of_lateral_ventricle_R','Allen_body_of_lateral_ventricle_L','Allen_body_of_lateral_ventricle_R','Allen_posterior_horn_of_lateral_ventricle_L','Allen_posterior_horn_of_lateral_ventricle_R','Allen_inferior_horn_of_lateral_ventricle_L','Allen_inferior_horn_of_lateral_ventricle_R','Allen_atrium_of_lateral_ventricle_L','Allen_atrium_of_lateral_ventricle_R','Allen_third_ventricle_L','Allen_third_ventricle_R','Allen_cerebral_aqueduct_L','Allen_cerebral_aqueduct_R','Allen_fourth_ventricle_L','Allen_fourth_ventricle_R'];
+const LM_VENTRICLES=['Allen_anterior_horn_of_lateral_ventricle_L','Allen_anterior_horn_of_lateral_ventricle_R','Allen_body_of_lateral_ventricle_L','Allen_body_of_lateral_ventricle_R','Allen_posterior_horn_of_lateral_ventricle_L','Allen_posterior_horn_of_lateral_ventricle_R','Allen_inferior_horn_of_lateral_ventricle_L','Allen_inferior_horn_of_lateral_ventricle_R','Allen_perirhinal_gyrus_rostral_part_of_FuGt_L','Allen_perirhinal_gyrus_rostral_part_of_FuGt_R','Allen_third_ventricle_L','Allen_third_ventricle_R','Allen_cerebral_aqueduct_L','Allen_cerebral_aqueduct_R','Allen_fourth_ventricle_L','Allen_fourth_ventricle_R'];
 /* Aorte : ligne centrale mesurée (valve → bifurcation) */
 const AORTA_REF=[[3.1,67.6,-9.2],[1.5,69.4,-9.0],[0.6,71.9,-8.6],[-0.5,73.7,-8.6],[-0.45,75.5,-8.85],[-0.1,77.3,-9.1],[0.84,78.4,-9.7],[1.68,79.48,-10.44],[2.37,80.03,-11.51],[3.35,80.28,-13.42],[4.02,79.91,-15.03],[4.25,79.25,-16.36],[4.34,77.9,-17.7],[4.58,74.57,-19.09],[5.02,71.52,-19.77],[5.34,68.47,-20.23],[5.51,65.42,-20.38],[5.64,62.37,-20.24],[5.49,59.33,-19.6],[5.3,56.2,-18.6],[4.59,50.63,-17.17],[4.07,47.09,-16.31],[3.56,43.56,-15.3],[3.07,40.03,-14.31],[2.84,36.5,-13.42],[2.75,32.97,-12.5],[2.76,29.44,-11.14],[2.21,25.9,-10.45],[1.67,22.37,-10.23],[1.3,20.4,-10.2]];
 /* points de l'aorte jusqu'à une ordonnée donnée (après la crosse) */
@@ -10855,7 +10857,8 @@ function buildAVCSystem(){
   ud.core=core;
 
   // 1. Triangles corticaux du territoire, triés par distance au cœur
-  const names=Object.keys((typeof meshByName==='object')?meshByName:{}).filter(n=>/^Allen_/.test(n)&&AVC_CORTEX_RE.test(n)&&(LM(n).x-c.x)*side>0.3*K);
+  const _tr=n=>(typeof atlasTrueRaw==='function')?atlasTrueRaw(n):n;
+  const names=Object.keys((typeof meshByName==='object')?meshByName:{}).filter(n=>/^Allen_/.test(n)&&AVC_CORTEX_RE.test(_tr(n))&&(LM(n).x-c.x)*side>0.3*K);
   const chunks=[]; let nt=0;
   names.forEach(n=>{
     const w=lmWorldVerts(n); if(!w) return;
@@ -10863,7 +10866,7 @@ function buildAVCSystem(){
     for(let t=0;t<T;t++){
       const a=idx?idx[t*3]:t*3, b=idx?idx[t*3+1]:t*3+1, e=idx?idx[t*3+2]:t*3+2;
       const p={x:(w.P[a*3]+w.P[b*3]+w.P[e*3])/3, y:(w.P[a*3+1]+w.P[b*3+1]+w.P[e*3+1])/3, z:(w.P[a*3+2]+w.P[b*3+2]+w.P[e*3+2])/3};
-      if(avcTerr(n,p,side,c,K)!==art) continue;
+      if(avcTerr(_tr(n),p,side,c,K)!==art) continue;
       keep.push(a,b,e,Math.hypot(p.x-core.x,p.y-core.y,p.z-core.z));
     }
     if(keep.length){ chunks.push({w,keep}); nt+=keep.length/4; }
@@ -11266,7 +11269,7 @@ function buildAlzheimerSystem(){
   }
 
   // Ventricules latéraux dilatés (atrophie ex vacuo)
-  const vset=LM_VENTRICLES.filter(n=>/lateral_ventricle|third_ventricle/.test(n));
+  const vset=LM_VENTRICLES.filter(n=>/lateral_ventricle|third_ventricle|perirhinal_gyrus/.test(n));
   const vc=LM(vset);
   const vm=new THREE.MeshPhongMaterial({color:0x66aaff,emissive:0x112244,emissiveIntensity:0.3,transparent:true,opacity:0.45,depthWrite:false,side:THREE.DoubleSide});
   lmCloneSet(vset,vm,scaleAbout(vc,1+SL*0.3),alzheimerGroup);
@@ -11947,9 +11950,9 @@ function toggleLimbic(){
     toggleEP:       {on:()=>epMode,        focus:()=>({c:lmP(6,18,-10),r:60,dir:V(0.35,0.1,1)}),            ghost:{base:0.1,skin:0.05,keep:[[/vena_cava|iliac_vein/,0.45],[/right_ventricle$|right_cardiac_atrium$|pulmonary_trunk|pulmonary_artery/,0.45],[/femur/,0.25]]}},
     toggleEndo:     {on:()=>endoMode,      focus:()=>({c:LM(LM_HEART),r:17,dir:V(0.3,0.15,1)}),             ghost:{base:0.1,skin:0.04,keep:[[/(left|right)_ventricle$|cardiac_atrium$|interventricular_septum/,0.22],[/_valve$/,0.85],[/aort/,0.3]]}},
     toggleAVC:      {on:()=>avcMode,       focus:()=>{ const t=AVC_TERRITORIES[avcTerritory]||AVC_TERRITORIES.ACM_G; return {c:lmP(6*t.side,121.5,-11),r:13,dir:V(t.side,0.3,0.3)}; }, ghost:{base:0.12,skin:0.03,keep:[[BRAIN,1.0]]}},
-    toggleMeningite:{on:()=>meningiteMode, focus:()=>({c:LM(LM_BRAIN),r:16,dir:V(0.55,0.2,1)}),             ghost:{base:0.1,skin:0.05,keep:[[BRAIN,0.1]],hide:[/^Allen_.*(ventricle|aqueduct)/]}},
+    toggleMeningite:{on:()=>meningiteMode, focus:()=>({c:LM(LM_BRAIN),r:16,dir:V(0.55,0.2,1)}),             ghost:{base:0.1,skin:0.05,keep:[[BRAIN,0.1]],hide:[/^Allen_(?!atrium_of).*(ventricle|aqueduct)|^Allen_perirhinal_gyrus/]}},
     toggleGB:       {on:()=>gbMode,        focus:()=>({c:lmP(0,-5,-8),r:118,dir:V(0.15,0.08,1)}),           ghost:{base:0.2,skin:0.1,keep:[[/spinal_cord/,0.5],[/femur|tibia|fibula/,0.3]]}},
-    toggleAlzheimer:{on:()=>alzheimerMode, focus:()=>({c:lmP(0,119.5,-11),r:10.5,dir:V(1,0.25,0.5)}),       ghost:{base:0.1,skin:0.03,keep:[[BRAIN,0.07]],hide:[/^Allen_(head|body|tail)_of_hippocampus|^Allen_.*(lateral_ventricle|third_ventricle)/]}},
+    toggleAlzheimer:{on:()=>alzheimerMode, focus:()=>({c:lmP(0,119.5,-11),r:10.5,dir:V(1,0.25,0.5)}),       ghost:{base:0.1,skin:0.03,keep:[[BRAIN,0.07]],hide:[/^Allen_(head|body|tail)_of_hippocampus|^Allen_(?!atrium_of).*(lateral_ventricle|third_ventricle)|^Allen_perirhinal_gyrus/]}},
     toggleRetino:   {on:()=>retinoMode,    focus:()=>({c:LM('VH_F_sclera_L'),r:2.4,dir:V(0.18,0.05,1)}),    ghost:{base:0.08,skin:0.02,hide:[/(cornea|lens|iris|aqueous_humor|vitreous_humor|pupil|ciliary_body|ciliary_muscle|ciliary_processes|bulbar_conjunctiva|trabecular_meshwork|schlemms_canal|corneo_scleral_junction|retina|ora_serrata_of_retina|optic_choroid)_L$/,/eyelid/]}},
     toggleSOPK:     {on:()=>sopkMode,      focus:()=>({c:LM(['VH_F_left_ovary','VH_F_right_ovary']),r:17,dir:V(0,0.25,1)}), ghost:{base:0.1,skin:0.03,keep:[[/uter|fallop|mesosalpinx|mesovarium|broad_ligament|cornua|cervix/,0.4]],hide:[/(left|right)_ovary$/]}},
     togglePNO:      {on:()=>pnoMode,       focus:()=>({c:LM(LM_RLUNG),r:20,dir:V(-0.45,0.12,1)}),           ghost:{base:0.12,skin:0.04,keep:[[/^VH_F_(left|lingula)_.*bronchopulmonary/,0.22],[/trachea|bronchus/,0.3]],hide:[/^VH_F_right_.*bronchopulmonary_segm/]}},
@@ -12017,6 +12020,1354 @@ function refreshModeBtnStates(){
   const origToggle=window.toggleBlood;
   if(origToggle) window.toggleBlood=function(){origToggle();refreshModeBtnStates();};
 })();
+
+/* ══════════════════════════════════════════════════════
+   🧠 ATLAS CÉRÉBRAL — données (v19)
+   Allen Human Reference Atlas 3D (Ding et al., 2016, J Comp Neurol)
+   CC BY 4.0 — volume d’étiquettes 0,5 mm aligné sur ICBM 2009 (MNI),
+   version optimisée NiiVue (niivue-demo-images, dossier Allen).
+   • ATLAS_LABELS[i] = [abréviation, R, G, B] (couleurs officielles Allen)
+   • ATLAS_MESH : nom de base du mesh HRA → abréviation. Huit meshes du
+     modèle HRA portent le nom d’une structure voisine (décalage dans la
+     liste) : la correspondance est établie par la géométrie, pas par le nom.
+   • ATLAS_AFFINE : MNI (mm, RAS) → repère de référence du modèle (lmP).
+══════════════════════════════════════════════════════ */
+const ATLAS_URL='https://raw.githubusercontent.com/niivue/niivue-demo-images/main/Allen/AllenAtlas.nii.gz';
+const ATLAS_LABELS=[["Air",0,0,0],["OB",209,206,226],["AON",170,157,198],["Pir",170,157,198],["FI",193,166,143],["TI",181,150,127],["CaH",145,160,110],["CaB",153,166,119],["CaT",145,160,110],["Pu",168,180,133],["NAC",145,160,110],["GPe",215,224,191],["GPi",208,217,178],["Cla",170,219,206],["BF",221,221,175],["SEP",202,202,146],["AMY",201,226,177],["AAA",192,221,157],["CEN",175,213,138],["La",166,209,122],["BL",137,186,70],["BM",156,204,102],["CoA",137,186,70],["CoP",146,200,81],["Me",156,204,102],["AHA",137,186,70],["BNST",169,215,174],["THM",228,204,227],["ANC",191,137,188],["LD",182,123,180],["MD",176,103,169],["Re",149,73,138],["LP",176,103,169],["Pul",176,103,169],["VA",165,84,160],["VL",176,103,169],["VPL",158,76,148],["VPM",158,76,148],["DLG",140,70,133],["MG",182,123,180],["CM",182,123,180],["Pf",176,103,169],["HN",182,123,180],["Pin",119,54,113],["ZI",176,103,169],["STH",183,153,196],["HTH",228,201,217],["HTHpo",219,171,200],["HTHso",207,151,185],["HTHtub",219,171,200],["HTHma",196,132,169],["FWM",242,241,240],["ac",242,241,240],["cc",242,241,240],["fx",242,241,240],["mtt",242,241,240],["ot",242,241,240],["aLV",35,31,32],["bLV",35,31,32],["pLV",35,31,32],["iLV",35,31,32],["3V",35,31,32],["CBV",118,162,213],["CbDN",62,128,186],["HWM",242,241,240],["olt",242,241,240],["PrCG",237,207,55],["SFG",212,178,53],["MFG",212,178,53],["IFGtr",194,163,53],["IFGop",194,163,53],["ReG",184,162,109],["MOrG",202,183,129],["AOrG",202,183,129],["POrG",202,183,129],["LOrG",171,145,88],["PCLr",237,207,55],["FrO",194,163,53],["PoCG",236,129,59],["SPL",228,156,51],["SMG",211,142,50],["AnG",211,142,50],["PrCun",228,156,51],["PCLc",228,156,51],["STG",214,112,160],["MTG",213,92,146],["ITG",213,92,146],["FuGt",213,92,146],["TTG",214,112,160],["PLT",214,112,160],["TP",200,83,139],["PLP",214,112,160],["OP",193,51,49],["Cun",193,51,49],["LiG",193,51,49],["FuGo",209,77,70],["IOG",209,77,70],["SOG",209,77,70],["CgGr",226,104,128],["CgGc",223,79,114],["IsCPH",196,173,154],["SCG",226,104,128],["APH",210,191,178],["PPH",193,81,132],["AG",210,191,178],["HiH",170,157,198],["HiB",170,157,198],["HiT",170,157,198],["LIG",196,85,57],["SIG",209,97,70],["LI",208,208,209],["PTR",160,199,213],["MTg",82,152,174],["RN",108,169,191],["SN",108,169,191],["SC",126,179,201],["IC",126,179,201],["cpd",242,241,240],["scp",242,241,240],["Aq",35,31,32],["CBPV",74,142,204],["CBL",74,142,204],["PnBa",120,147,199],["PnTg",101,134,191],["MoPy",151,158,203],["MoTg",131,139,193],["IO",62,77,137],["icp",242,241,240],["mcp",242,241,240],["4V",35,31,32],["cec",35,31,32],["MiN",165,84,160],["LOG",170,157,198],["PaO",232,175,102],["PuPV",168,180,133],["PaCG",234,166,175],["RoG",184,162,109],["FMG",238,207,56],["FP",234,209,128],["PRG",213,92,146],["or",242,241,240],["xLV",35,31,32]];
+const ATLAS_INFO={"OB":["Bulbe olfactif","olf"],"AON":["Noyau olfactif antérieur","olf"],"Pir":["Cortex piriforme","olf"],"FI":["Insula agranulaire frontale","ins"],"TI":["Insula agranulaire temporale","ins"],"CaH":["Tête du noyau caudé","bg"],"CaB":["Corps du noyau caudé","bg"],"CaT":["Queue du noyau caudé","bg"],"Pu":["Putamen","bg"],"NAC":["Noyau accumbens","bg"],"GPe":["Pallidum externe","bg"],"GPi":["Pallidum interne","bg"],"Cla":["Claustrum","bg"],"BF":["Télencéphale basal (noyau de Meynert)","bg"],"SEP":["Noyaux septaux","lim"],"AMY":["Complexe amygdalien","lim"],"AAA":["Aire amygdalienne antérieure","lim"],"CEN":["Noyau central de l’amygdale","lim"],"La":["Noyau latéral de l’amygdale","lim"],"BL":["Noyau basolatéral de l’amygdale","lim"],"BM":["Noyau basomédian de l’amygdale","lim"],"CoA":["Noyau cortical antérieur (amygdale)","lim"],"CoP":["Noyau cortical postérieur (amygdale)","lim"],"Me":["Noyau médian de l’amygdale","lim"],"AHA":["Aire amygdalo-hippocampique","lim"],"BNST":["Noyau du lit de la strie terminale","lim"],"THM":["Thalamus","thal"],"ANC":["Noyaux antérieurs du thalamus","thal"],"LD":["Noyau latéral dorsal du thalamus","thal"],"MD":["Noyau dorsomédian du thalamus","thal"],"Re":["Noyau reuniens du thalamus","thal"],"LP":["Noyau latéral postérieur du thalamus","thal"],"Pul":["Pulvinar","thal"],"VA":["Noyau ventral antérieur du thalamus","thal"],"VL":["Noyau ventral latéral du thalamus","thal"],"VPL":["Noyau ventral postérolatéral (VPL)","thal"],"VPM":["Noyau ventral postéromédian (VPM)","thal"],"DLG":["Corps géniculé latéral","thal"],"MG":["Corps géniculé médian","thal"],"CM":["Noyau centre médian du thalamus","thal"],"Pf":["Noyau parafasciculaire du thalamus","thal"],"HN":["Noyaux habénulaires","thal"],"Pin":["Glande pinéale (épiphyse)","thal"],"ZI":["Zona incerta","thal"],"STH":["Noyau subthalamique","bg"],"HTH":["Hypothalamus","hyp"],"HTHpo":["Région préoptique (hypothalamus)","hyp"],"HTHso":["Région supraoptique (hypothalamus)","hyp"],"HTHtub":["Région tubérale (hypothalamus)","hyp"],"HTHma":["Région mamillaire (hypothalamus)","hyp"],"FWM":["Substance blanche des hémisphères","wm"],"ac":["Commissure blanche antérieure","wm"],"cc":["Corps calleux","wm"],"fx":["Fornix","lim"],"mtt":["Faisceau mamillo-thalamique","lim"],"ot":["Tractus optique","wm"],"aLV":["Corne frontale du ventricule latéral","vent"],"bLV":["Corps du ventricule latéral","vent"],"pLV":["Corne occipitale du ventricule latéral","vent"],"iLV":["Corne temporale du ventricule latéral","vent"],"3V":["Troisième ventricule","vent"],"CBV":["Vermis cérébelleux","cereb"],"CbDN":["Noyaux profonds du cervelet","cereb"],"HWM":["Substance blanche du cervelet et du tronc","cereb"],"olt":["Tractus olfactif","olf"],"PrCG":["Gyrus précentral (cortex moteur primaire)","front"],"SFG":["Gyrus frontal supérieur","front"],"MFG":["Gyrus frontal moyen","front"],"IFGtr":["Gyrus frontal inférieur, partie triangulaire (Broca)","front"],"IFGop":["Gyrus frontal inférieur, partie operculaire (Broca)","front"],"ReG":["Gyrus droit (gyrus rectus)","front"],"MOrG":["Gyrus orbitaire médial","front"],"AOrG":["Gyrus orbitaire antérieur","front"],"POrG":["Gyrus orbitaire postérieur","front"],"LOrG":["Gyrus orbitaire latéral","front"],"PCLr":["Lobule paracentral, partie antérieure","front"],"FrO":["Opercule frontal","front"],"PoCG":["Gyrus postcentral (cortex somesthésique)","par"],"SPL":["Lobule pariétal supérieur","par"],"SMG":["Gyrus supramarginal","par"],"AnG":["Gyrus angulaire","par"],"PrCun":["Précunéus","par"],"PCLc":["Lobule paracentral, partie postérieure","par"],"STG":["Gyrus temporal supérieur","temp"],"MTG":["Gyrus temporal moyen","temp"],"ITG":["Gyrus temporal inférieur","temp"],"FuGt":["Gyrus fusiforme, partie temporale","temp"],"TTG":["Gyrus de Heschl (cortex auditif primaire)","temp"],"PLT":["Planum temporale (aire de Wernicke)","temp"],"TP":["Pôle temporal","temp"],"PLP":["Planum polare","temp"],"OP":["Pôle occipital (cortex visuel primaire)","occ"],"Cun":["Cunéus","occ"],"LiG":["Gyrus lingual","occ"],"FuGo":["Gyrus fusiforme, partie occipitale","occ"],"IOG":["Gyrus occipital inférieur","occ"],"SOG":["Gyrus occipital supérieur","occ"],"CgGr":["Gyrus cingulaire antérieur","lim"],"CgGc":["Gyrus cingulaire postérieur","lim"],"IsCPH":["Isthme cingulo-parahippocampique","lim"],"SCG":["Gyrus subcalleux (paraolfactif)","lim"],"APH":["Gyrus parahippocampique antérieur (cortex entorhinal)","lim"],"PPH":["Gyrus parahippocampique postérieur","lim"],"AG":["Gyrus ambiens","lim"],"HiH":["Tête de l’hippocampe","lim"],"HiB":["Corps de l’hippocampe","lim"],"HiT":["Queue de l’hippocampe","lim"],"LIG":["Gyri longs de l’insula","ins"],"SIG":["Gyri courts de l’insula","ins"],"LI":["Limen de l’insula","ins"],"PTR":["Région prétectale","tronc"],"MTg":["Tegmentum du mésencéphale (aire tegmentale ventrale)","tronc"],"RN":["Noyau rouge","tronc"],"SN":["Substance noire","tronc"],"SC":["Colliculus supérieur","tronc"],"IC":["Colliculus inférieur","tronc"],"cpd":["Pédoncule cérébral","tronc"],"scp":["Pédoncule cérébelleux supérieur","cereb"],"Aq":["Aqueduc du mésencéphale (Sylvius)","vent"],"CBPV":["Paravermis du cervelet","cereb"],"CBL":["Hémisphère cérébelleux","cereb"],"PnBa":["Pied du pont","tronc"],"PnTg":["Tegmentum du pont (locus coeruleus)","tronc"],"MoPy":["Pyramide bulbaire","tronc"],"MoTg":["Tegmentum du bulbe","tronc"],"IO":["Olive bulbaire","tronc"],"icp":["Pédoncule cérébelleux inférieur","cereb"],"mcp":["Pédoncule cérébelleux moyen","cereb"],"4V":["Quatrième ventricule","vent"],"cec":["Canal central du bulbe","vent"],"MiN":["Noyaux de la ligne médiane du thalamus","thal"],"LOG":["Gyrus olfactif latéral","olf"],"PaO":["Opercule pariétal","par"],"PuPV":["Putamen postéro-ventral","bg"],"PaCG":["Gyrus paracingulaire","front"],"RoG":["Gyrus rostral","front"],"FMG":["Gyrus frontomarginal","front"],"FP":["Pôle frontal","front"],"PRG":["Gyrus périrhinal","lim"],"or":["Radiations optiques","wm"],"xLV":["Carrefour (atrium) du ventricule latéral","vent"]};
+const ATLAS_GROUPS=[["front","Frontal","#2f6fe4","Motricité volontaire (gyrus précentral), planification, jugement, langage articulé (aire de Broca, hémisphère dominant). Voie dopaminergique mésocorticale : cible des antipsychotiques."],["par","Pariétal","#f4b400","Sensibilité somesthésique (gyrus postcentral), intégration spatiale, schéma corporel. Une lésion pariétale droite donne une négligence de l’espace gauche."],["temp","Temporal","#22a356","Audition (gyrus de Heschl), compréhension du langage (aire de Wernicke), mémoire sémantique. Siège fréquent des épilepsies focales (carbamazépine, lamotrigine…)."],["occ","Occipital","#e8457c","Vision : cortex visuel primaire de part et d’autre de la scissure calcarine. Une atteinte unilatérale donne une hémianopsie latérale homonyme."],["ins","Insula","#ff7f11","Intéroception, goût, douleur viscérale, dégoût ; rôle dans le craving des addictions."],["lim","Limbique","#d62828","Mémoire (hippocampe, circuit de Papez), émotions et peur (amygdale), motivation. Cible des anxiolytiques et antidépresseurs ; l’hippocampe est atteint tôt dans la maladie d’Alzheimer."],["olf","Olfactif","#b5895a","Voies olfactives : seul sens projetant vers le cortex sans relais thalamique. L’anosmie est un signe précoce de la maladie de Parkinson."],["bg","Noyaux gris centraux","#8b4fd6","Contrôle du mouvement (voie nigro-striée) et récompense (noyau accumbens). Parkinson : L-DOPA, agonistes dopaminergiques, IMAO-B ; les neuroleptiques donnent un syndrome extrapyramidal."],["thal","Thalamus & épithalamus","#00b3b3","Relais sensitif et moteur vers le cortex, vigilance. L’épiphyse sécrète la mélatonine (rythme veille-sommeil)."],["hyp","Hypothalamus","#ff7ad9","Homéostasie (température, faim, soif), commande de l’hypophyse. Voie tubéro-infundibulaire : les antagonistes D2 lèvent l’inhibition de la prolactine (hyperprolactinémie)."],["tronc","Tronc cérébral","#8d6e63","Centres vitaux (respiration, fréquence cardiaque), noyaux des nerfs crâniens, substance noire (dopamine), locus coeruleus (noradrénaline), raphé (sérotonine). Les opioïdes y dépriment la respiration."],["cereb","Cervelet","#9ccc65","Coordination, équilibre, apprentissage moteur. Syndrome cérébelleux en cas de surdosage (lithium, phénytoïne) ou d’intoxication alcoolique."],["wm","Substance blanche","#ece6d6","Faisceaux d’axones myélinisés reliant les régions entre elles (corps calleux entre les deux hémisphères). Cible de la sclérose en plaques."],["vent","Ventricules","#6ec6ff","Production (plexus choroïdes) et circulation du liquide cérébrospinal ; dilatés dans l’hydrocéphalie."]];
+const ATLAS_MESH={"olfactory_bulb":"OB","anterior_olfactory_nucleus":"AON","piriform_region":"Pir","frontal_agranular_insular_cortex_area_Fl":"FI","temporal_agranular_insular_cortex_area_Tl":"TI","head_of_caudate":"CaH","body_of_caudate":"CaB","tail_of_caudate":"CaT","putamen":"Pu","nucleus_accumbens":"NAC","external_segment_of_globus_pallidus":"GPe","internal_segment_of_globus_pallidus":"GPi","claustrum":"Cla","basal_forebrain":"BF","septal_nuclei":"SEP","amygdaloid_complex":"AMY","anterior_amygdaloid_area":"AAA","central_nuclear_group":"CEN","lateral_nucleus":"La","basolateral_nucleus_basal_nucleus":"BL","basomedial_nucleus_accessory_basal_nucleus":"BM","anterior_cortical_nucleus":"CoA","posterior_cortical_nucleus":"CoP","medial_nucleus":"Me","amygdalohippocampal_area":"AHA","bed_nucleus_of_stria_terminalis":"BNST","thalamus":"THM","anterior_nuclear_complex_of_thalamus":"ANC","lateral_dorsal_nucleus_of_thalamus":"LD","mediodorsal_nucleus_of_thalamus":"MD","reuniens_nucleus_medioventral_nucleus_of_thalamus":"Re","lateral_posterior_nucleus_of_thalamus":"LP","pulvinar_of_thalamus":"Pul","ventral_anterior_nucleus_of_thalamus":"VA","ventral_lateral_nucleus_of_thalamus":"VL","ventral_posterior_lateral_nucleus":"VPL","ventral_posterior_medial_nucleus":"VPM","dorsal_lateral_geniculate_nucleus":"DLG","medial_geniculate_nuclei":"MG","centromedian_nucleus_of_thalamus":"CM","parafascicular_nucleus_of_thalamus":"Pf","habenular_nuclei":"HN","pineal_body":"Pin","zona_incerta":"ZI","supraoptic_region_of_HTH":"HTHso","preoptic_region_of_HTH":"HTHpo","tuberal_region_of_HTH":"HTHtub","white_matter_of_forebrain":"FWM","anterior_commissure":"ac","corpus_callosum":"cc","fornix":"fx","mammillothalamic_tract":"mtt","optic_tract":"ot","anterior_horn_of_lateral_ventricle":"aLV","body_of_lateral_ventricle":"bLV","posterior_horn_of_lateral_ventricle":"pLV","inferior_horn_of_lateral_ventricle":"iLV","third_ventricle":"3V","cerebellar_vermis":"CBV","cerebellar_deep_nuclei":"CbDN","white_matter_of_hindbrain":"HWM","olfactory_tract":"olt","precentral_gyrus":"PrCG","superior_frontal_gyrus":"SFG","middle_frontal_gyrus":"MFG","inferior_frontal_gyrus_triangular_part":"IFGtr","inferior_frontal_gyrus_opercular_part":"IFGop","gyrus_rectus_straight_gyrus":"ReG","medial_orbital_gyrus":"MOrG","anterior_intermediate_orbital_gyrus":"AOrG","posterior_intermediate_orbital_gyrus":"POrG","lateral_orbital_gyrus":"LOrG","paracentral_lobule_rostral_part":"PCLr","frontal_operculum":"FrO","postcentral_gyrus":"PoCG","supraparietal_lobule":"SPL","supramarginal_gyrus":"SMG","angular_gyrus":"AnG","precuneus":"PrCun","paracentral_lobule_caudal_part":"PCLc","superior_temporal_gyrus":"STG","middle_temporal_gyrus":"MTG","inferior_temporal_gyrus":"ITG","occipitotemporal_fusiform_gyrus_temporal_part":"FuGt","transverse_temporal_gyrus_Heschls_gyrus":"TTG","planum_temporale":"PLT","temporal_pole":"TP","planum_polare":"PLP","occipital_pole":"OP","cuneus":"Cun","lingual_gyrus_medial_occipitotemporal_gyrus":"LiG","lateral_occipitotemporal_fusiform_gyrus_occipital_part":"FuGo","inferior_occipital_gyrus":"IOG","superior_occipital_gyrus":"SOG","cingulate_gyrus_rostral_anterior_part":"CgGr","cingulate_gyrus_caudal_posterior_part":"CgGc","ingulo_parahippocampal_isthmus":"IsCPH","subcallosal_gyrus_parolfactory_gyrus":"SCG","anterior_parahippocampal_gyrus":"APH","posterior_parahippocampal_gyrus":"PPH","gyrus_ambiens":"AG","head_of_hippocampus":"HiH","body_of_hippocampus":"HiB","tail_of_hippocampus":"HiT","long_insular_gyri":"LIG","short_insular_gyri":"SIG","limen_insula":"LI","pretectal_region":"PTR","substantia_nigra":"SN","superior_colliculus":"SC","cerebral_peduncle_crus_cerebri":"cpd","superior_cerebellar_peduncle_brachium_conjunctivum":"scp","cerebral_aqueduct":"Aq","paravermis_of_cerebellum":"CBPV","lateral_hemisphere_of_cerebellum":"CBL","basilar_part_of_pons":"PnBa","pontine_tegmentum":"PnTg","pyramidal_part_of_medulla_oblongata":"MoPy","tegmentum_of_medulla_oblongata":"MoTg","inferior_olive":"IO","middle_cerebellar_peduncle":"mcp","fourth_ventricle":"4V","central_canal_of_medulla_oblongata":"cec","midline_nuclear_complex":"MiN","lateral_olfactory_gyrus":"LOG","parietal_operculum":"PaO","optic_radiation":"PuPV","posteroventral_putamen":"PaCG","atrium_of_lateral_ventricle":"RoG","paracingulate_gyrus":"FMG","rostral_gyrus":"FP","frontomarginal_gyrus":"PRG","frontal_pole":"or","inferior_cerebellar_peduncle":"icp","perirhinal_gyrus_rostral_part_of_FuGt":"xLV","red_nucleus":"RN","inferior_colliculus":"IC","hypothalamus":"HTH","subthalamic_nucleus":"STH","mammillary_region_of_HTH":"HTHma","midbrain_tegmentum":"MTg"};
+const ATLAS_BASE={"OB":"olfactory_bulb","AON":"anterior_olfactory_nucleus","Pir":"piriform_region","FI":"frontal_agranular_insular_cortex_area_Fl","TI":"temporal_agranular_insular_cortex_area_Tl","CaH":"head_of_caudate","CaB":"body_of_caudate","CaT":"tail_of_caudate","Pu":"putamen","NAC":"nucleus_accumbens","GPe":"external_segment_of_globus_pallidus","GPi":"internal_segment_of_globus_pallidus","Cla":"claustrum","BF":"basal_forebrain","SEP":"septal_nuclei","AMY":"amygdaloid_complex","AAA":"anterior_amygdaloid_area","CEN":"central_nuclear_group","La":"lateral_nucleus","BL":"basolateral_nucleus_basal_nucleus","BM":"basomedial_nucleus_accessory_basal_nucleus","CoA":"anterior_cortical_nucleus","CoP":"posterior_cortical_nucleus","Me":"medial_nucleus","AHA":"amygdalohippocampal_area","BNST":"bed_nucleus_of_stria_terminalis","THM":"thalamus","ANC":"anterior_nuclear_complex_of_thalamus","LD":"lateral_dorsal_nucleus_of_thalamus","MD":"mediodorsal_nucleus_of_thalamus","Re":"reuniens_nucleus_medioventral_nucleus_of_thalamus","LP":"lateral_posterior_nucleus_of_thalamus","Pul":"pulvinar_of_thalamus","VA":"ventral_anterior_nucleus_of_thalamus","VL":"ventral_lateral_nucleus_of_thalamus","VPL":"ventral_posterior_lateral_nucleus","VPM":"ventral_posterior_medial_nucleus","DLG":"dorsal_lateral_geniculate_nucleus","MG":"medial_geniculate_nuclei","CM":"centromedian_nucleus_of_thalamus","Pf":"parafascicular_nucleus_of_thalamus","HN":"habenular_nuclei","Pin":"pineal_body","ZI":"zona_incerta","STH":"subthalamic_nucleus","HTH":"hypothalamus","HTHpo":"preoptic_region_of_HTH","HTHso":"supraoptic_region_of_HTH","HTHtub":"tuberal_region_of_HTH","HTHma":"mammillary_region_of_HTH","FWM":"white_matter_of_forebrain","ac":"anterior_commissure","cc":"corpus_callosum","fx":"fornix","mtt":"mammillothalamic_tract","ot":"optic_tract","aLV":"anterior_horn_of_lateral_ventricle","bLV":"body_of_lateral_ventricle","pLV":"posterior_horn_of_lateral_ventricle","iLV":"inferior_horn_of_lateral_ventricle","3V":"third_ventricle","CBV":"cerebellar_vermis","CbDN":"cerebellar_deep_nuclei","HWM":"white_matter_of_hindbrain","olt":"olfactory_tract","PrCG":"precentral_gyrus","SFG":"superior_frontal_gyrus","MFG":"middle_frontal_gyrus","IFGtr":"inferior_frontal_gyrus_triangular_part","IFGop":"inferior_frontal_gyrus_opercular_part","ReG":"gyrus_rectus_straight_gyrus","MOrG":"medial_orbital_gyrus","AOrG":"anterior_intermediate_orbital_gyrus","POrG":"posterior_intermediate_orbital_gyrus","LOrG":"lateral_orbital_gyrus","PCLr":"paracentral_lobule_rostral_part","FrO":"frontal_operculum","PoCG":"postcentral_gyrus","SPL":"supraparietal_lobule","SMG":"supramarginal_gyrus","AnG":"angular_gyrus","PrCun":"precuneus","PCLc":"paracentral_lobule_caudal_part","STG":"superior_temporal_gyrus","MTG":"middle_temporal_gyrus","ITG":"inferior_temporal_gyrus","FuGt":"occipitotemporal_fusiform_gyrus_temporal_part","TTG":"transverse_temporal_gyrus_Heschls_gyrus","PLT":"planum_temporale","TP":"temporal_pole","PLP":"planum_polare","OP":"occipital_pole","Cun":"cuneus","LiG":"lingual_gyrus_medial_occipitotemporal_gyrus","FuGo":"lateral_occipitotemporal_fusiform_gyrus_occipital_part","IOG":"inferior_occipital_gyrus","SOG":"superior_occipital_gyrus","CgGr":"cingulate_gyrus_rostral_anterior_part","CgGc":"cingulate_gyrus_caudal_posterior_part","IsCPH":"ingulo_parahippocampal_isthmus","SCG":"subcallosal_gyrus_parolfactory_gyrus","APH":"anterior_parahippocampal_gyrus","PPH":"posterior_parahippocampal_gyrus","AG":"gyrus_ambiens","HiH":"head_of_hippocampus","HiB":"body_of_hippocampus","HiT":"tail_of_hippocampus","LIG":"long_insular_gyri","SIG":"short_insular_gyri","LI":"limen_insula","PTR":"pretectal_region","MTg":"midbrain_tegmentum","RN":"red_nucleus","SN":"substantia_nigra","SC":"superior_colliculus","IC":"inferior_colliculus","cpd":"cerebral_peduncle_crus_cerebri","scp":"superior_cerebellar_peduncle_brachium_conjunctivum","Aq":"cerebral_aqueduct","CBPV":"paravermis_of_cerebellum","CBL":"lateral_hemisphere_of_cerebellum","PnBa":"basilar_part_of_pons","PnTg":"pontine_tegmentum","MoPy":"pyramidal_part_of_medulla_oblongata","MoTg":"tegmentum_of_medulla_oblongata","IO":"inferior_olive","icp":"inferior_cerebellar_peduncle","mcp":"middle_cerebellar_peduncle","4V":"fourth_ventricle","cec":"central_canal_of_medulla_oblongata","MiN":"midline_nuclear_complex","LOG":"lateral_olfactory_gyrus","PaO":"parietal_operculum","PuPV":"posteroventral_putamen","PaCG":"paracingulate_gyrus","RoG":"rostral_gyrus","FMG":"frontomarginal_gyrus","FP":"frontal_pole","PRG":"perirhinal_gyrus_rostral_part_of_FuGt","or":"optic_radiation","xLV":"atrium_of_lateral_ventricle"};   /* abréviation → nom HRA de la structure */
+const ATLAS_AFFINE={R:[-0.15152, 0.006806, 0.001549, 0.003756, 0.044858, 0.14274, 0.005702, 0.142472, -0.050107],t:[0.14034, 121.09674, -8.86399]};
+/* Le volume NiiVue fusionne PaCG, RoG, FMG et FP sous l’étiquette « FP »
+   (perte de précision float32 des identifiants Allen d’origine). On les
+   sépare par un arbre de décision appris hors ligne sur la géométrie des
+   meshes 3D (95 % d’accord) — ax = |x| en mm, y, z en mm MNI. */
+const ATLAS_FP_SPLIT=['PaCG','RoG','FMG','FP'];
+function atlasFpSplit(ax,y,z){ return (y<=55.75?(z<=-8.25?(z<=-11.75?(z<=-13.25?(y<=55.25?(z<=-13.75?1:(y<=46.25?1:1)):1):(ax<=6.75?(y<=49.75?(y<=37.25?1:1):(z<=-12.25?1:1)):(y<=45.75?1:(ax<=8.75?1:1)))):(ax<=7.25?(y<=49.25?(ax<=2.25?(z<=-10.25?0:0):(y<=40.75?0:1)):(y<=54.75?(ax<=3.25?1:1):1)):(z<=-10.25?(ax<=9.75?(z<=-10.75?1:1):(ax<=10.25?1:1)):(ax<=9.75?(y<=43.75?0:1):(y<=49.25?1:1))))):(ax<=18.25?(z<=-5.75?(y<=51.25?(z<=-7.25?(ax<=6.75?0:0):(z<=-6.75?0:0)):(ax<=3.25?1:(ax<=7.25?0:1))):(y<=53.75?(z<=-5.25?(y<=51.25?0:0):(y<=53.25?0:0)):(z<=2.25?(ax<=3.25?0:0):(z<=3.25?0:0)))):2)):(ax<=17.25?(z<=-15.75?(ax<=7.75?(ax<=6.75?(y<=56.25?3:(ax<=6.25?3:3)):(z<=-22.25?(y<=62.25?3:2):(y<=63.25?3:3))):(ax<=9.75?(z<=-18.75?(ax<=8.75?2:2):(y<=63.25?3:2)):(z<=-17.75?(z<=-18.25?2:2):(ax<=12.75?3:2)))):(y<=57.25?(z<=3.75?(z<=-5.25?(z<=-12.25?1:3):(ax<=3.25?0:3)):(z<=4.75?0:(z<=5.75?0:0))):(ax<=13.75?(y<=59.25?(z<=-4.25?3:3):(z<=-12.25?3:3)):(z<=-9.75?(z<=-12.75?2:2):(z<=-7.75?3:3))))):(z<=-2.25?(y<=67.25?(ax<=29.25?(z<=-8.25?(z<=-11.25?2:2):(y<=60.25?2:3)):(ax<=29.75?(z<=-6.75?2:2):(y<=65.75?2:2))):(z<=-9.75?(z<=-12.75?2:2):(z<=-8.75?3:(ax<=24.75?3:3)))):(y<=61.75?(y<=59.75?(y<=58.75?2:2):(y<=60.75?2:3)):(ax<=29.25?(y<=62.75?3:(y<=63.25?3:3)):2))))); }
+
+/* ══════════════════════════════════════════════════════
+   🧠 ATLAS CÉRÉBRAL — moteur commun (3D + coupes IRM)
+══════════════════════════════════════════════════════ */
+
+/* ── Crochets de rendu ──
+   Les surcharges « le temps d'une image » (couleurs de l'atlas, plans de
+   coupe…) passent par PRE_RENDER / POST_RENDER : rien n'est modifié
+   durablement sur les matériaux, les autres systèmes (surbrillance,
+   X-ray, transparence des modes) restent maîtres de leurs états. */
+const PRE_RENDER=[], POST_RENDER=[];
+(function(){
+  const orig=renderWithModeGhost;
+  renderWithModeGhost=function(){
+    for(let i=0;i<PRE_RENDER.length;i++){ try{ PRE_RENDER[i](); }catch(e){ console.warn('[pre-render]',e); } }
+    try{ orig(); }
+    finally{ for(let i=POST_RENDER.length-1;i>=0;i--){ try{ POST_RENDER[i](); }catch(e){ console.warn('[post-render]',e); } } }
+  };
+})();
+
+const ATLAS_IDX={}; ATLAS_LABELS.forEach((l,i)=>{ ATLAS_IDX[l[0]]=i; });
+const ATLAS_GIDX={}; ATLAS_GROUPS.forEach((g,i)=>{ ATLAS_GIDX[g[0]]=i; });
+const ATLAS_FP=ATLAS_IDX['FP'];
+let atlasPalette='lobes';            // 'lobes' | 'regions' | 'allen'
+let atlasVol=null, _atlasLoading=null;
+
+/* ── Volume d'étiquettes (1 Mo, chargé à la demande) ── */
+function atlasLoad(){
+  if(atlasVol) return Promise.resolve(atlasVol);
+  if(_atlasLoading) return _atlasLoading;
+  _atlasLoading=fetch(ATLAS_URL).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.arrayBuffer(); })
+    .then(buf=>{
+      const raw=pako.inflate(new Uint8Array(buf));
+      const dv=new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+      const nx=dv.getInt16(42,true), ny=dv.getInt16(44,true), nz=dv.getInt16(46,true);
+      const off=Math.round(dv.getFloat32(108,true));
+      const vs=dv.getFloat32(280,true);
+      const ox=dv.getFloat32(292,true), oy=dv.getFloat32(308,true), oz=dv.getFloat32(324,true);
+      atlasVol={ data:new Uint8Array(raw.buffer, raw.byteOffset+off, nx*ny*nz), nx, ny, nz, vs, ox, oy, oz };
+      document.dispatchEvent(new CustomEvent('atlas-ready'));
+      return atlasVol;
+    })
+    .catch(e=>{ _atlasLoading=null; console.warn('[atlas] chargement impossible', e); throw e; });
+  return _atlasLoading;
+}
+/* Étiquette (index ATLAS_LABELS) en un point MNI (mm) */
+function atlasLabelMNI(x,y,z){
+  const v=atlasVol; if(!v) return 0;
+  const i=Math.round((x-v.ox)/v.vs), j=Math.round((y-v.oy)/v.vs), k=Math.round((z-v.oz)/v.vs);
+  if(i<0||j<0||k<0||i>=v.nx||j>=v.ny||k>=v.nz) return 0;
+  return v.data[i+j*v.nx+k*v.nx*v.ny];
+}
+/* Abréviation, en séparant l'étiquette fusionnée « FP » */
+function atlasAbbrAt(l,x,y,z){
+  if(!l) return null;
+  if(l===ATLAS_FP) return ATLAS_FP_SPLIT[atlasFpSplit(Math.abs(x),y,z)];
+  return ATLAS_LABELS[l][0];
+}
+
+/* ── Repères : MNI (mm, RAS) ⇄ scène ── */
+const _ATL_RI=(function(){
+  const m=new THREE.Matrix3().set(...ATLAS_AFFINE.R); return new THREE.Matrix3().copy(m).invert();
+})();
+function mniToScene(x,y,z){
+  const R=ATLAS_AFFINE.R, t=ATLAS_AFFINE.t;
+  return lmP(R[0]*x+R[1]*y+R[2]*z+t[0], R[3]*x+R[4]*y+R[5]*z+t[1], R[6]*x+R[7]*y+R[8]*z+t[2]);
+}
+function sceneToMNI(p){
+  const f=_lmFrame(), t=ATLAS_AFFINE.t;
+  const v=new THREE.Vector3((p.x-f.o.x)/f.s-t[0], (p.y-f.o.y)/f.s-t[1], (p.z-f.o.z)/f.s-t[2]);
+  return v.applyMatrix3(_ATL_RI);
+}
+/* Normale d'un plan MNI exprimée dans la scène (transposée de l'inverse) */
+function mniNormalToScene(nx,ny,nz){
+  const e=_ATL_RI.elements;  // colonne-major : (R⁻¹)ᵀ·n
+  return new THREE.Vector3(e[0]*nx+e[1]*ny+e[2]*nz, e[3]*nx+e[4]*ny+e[5]*nz, e[6]*nx+e[7]*ny+e[8]*nz).normalize();
+}
+
+/* ── Meshes Allen ── */
+function atlasMeshAbbr(raw){
+  if(!raw) return null;
+  const b=raw.replace(/^Allen_/,'').replace(/_(L|R)$/,'');
+  return ATLAS_MESH[b]||null;
+}
+/* Nom HRA de la structure réellement représentée par un mesh Allen */
+function atlasTrueBase(base){ const a=ATLAS_MESH[base]; return (a&&ATLAS_BASE[a])||base; }
+function atlasTrueRaw(raw){
+  if(!/^Allen_/.test(raw||'')) return raw;
+  const m=raw.match(/^Allen_(.*?)(_[LR])?$/);
+  return 'Allen_'+atlasTrueBase(m[1])+(m[2]||'');
+}
+/* Les meshes Allen ont des suffixes inversés : _L est à DROITE du patient */
+function atlasMeshSide(raw){ return /_L$/.test(raw)?'droit':/_R$/.test(raw)?'gauche':''; }
+function atlasGroupOf(abbr){ const inf=ATLAS_INFO[abbr]; return inf?ATLAS_GROUPS[ATLAS_GIDX[inf[1]]]:null; }
+let _atlasMeshes=null;
+function atlasMeshes(){
+  if(_atlasMeshes && _atlasMeshes.length) return _atlasMeshes;
+  _atlasMeshes=[];
+  if(typeof allMeshes==='undefined') return _atlasMeshes;
+  allMeshes.forEach(m=>{ const raw=(m.userData&&m.userData.rawName)||m.name||''; const a=/^Allen_/.test(raw)&&atlasMeshAbbr(raw); if(a) _atlasMeshes.push({m,raw,abbr:a,group:ATLAS_INFO[a][1]}); });
+  return _atlasMeshes;
+}
+
+/* ── Palettes (couleurs sRGB 0-255) ── */
+function _hsl2rgb(h,s,l){
+  const k=n=>(n+h/30)%12, a=s*Math.min(l,1-l);
+  const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,9-k(n),1));
+  return [Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];
+}
+const _palCache={};
+function atlasRGB(abbr,pal){
+  pal=pal||atlasPalette;
+  const key=pal+'|'+abbr; if(_palCache[key]) return _palCache[key];
+  let c=[200,200,200];
+  const i=ATLAS_IDX[abbr], inf=ATLAS_INFO[abbr];
+  if(pal==='allen' && i!=null){ const L=ATLAS_LABELS[i]; c=[L[1],L[2],L[3]]; if(c[0]+c[1]+c[2]<90) c=[150,190,215]; }
+  else if(pal==='regions' && i!=null){ c=_hsl2rgb((i*137.508)%360, 0.78, 0.56); }
+  else if(inf){ const g=ATLAS_GROUPS[ATLAS_GIDX[inf[1]]][2]; c=[parseInt(g.slice(1,3),16),parseInt(g.slice(3,5),16),parseInt(g.slice(5,7),16)]; }
+  return (_palCache[key]=c);
+}
+function atlasCSS(abbr,pal){ const c=atlasRGB(abbr,pal); return `rgb(${c[0]},${c[1]},${c[2]})`; }
+
+/* ── Noms affichés : les meshes Allen prennent le nom de la structure
+   réellement représentée (et le bon côté) ── */
+(function(){
+  const orig=cleanMeshName;
+  cleanMeshName=function(raw){
+    const s=raw||'';
+    const a=(/^Allen_/.test(s) || ATLAS_MESH[s.replace(/_(L|R)$/,'')]) ? atlasMeshAbbr(s) : null;
+    if(a){
+      const side=/_L$/.test(s)?' — D':/_R$/.test(s)?' — G':'';
+      return ATLAS_INFO[a][0]+side;
+    }
+    return orig(raw);
+  };
+})();
+
+/* ══════════════════════════════════════════════════════
+   🧠 MODE « ATLAS CÉRÉBRAL » — cerveau coloré + coupe 3D
+   • 3 palettes : lobes (14 ensembles fonctionnels), régions (141 teintes
+     contrastées), Allen (couleurs officielles de l'atlas).
+   • Légende cliquable : isoler un ou plusieurs ensembles (les autres
+     structures deviennent fantômes).
+   • Coupe 3D axiale / coronale / sagittale : le cerveau est tranché par
+     un plan et la tranche affiche les étiquettes du volume Allen,
+     synchronisée avec le visualiseur de coupes IRM (Cerveau HR).
+══════════════════════════════════════════════════════ */
+let brainMode=false, brainPanel=null;
+const brainSel=new Set();                 // ensembles isolés (vide = tous)
+const brainCut={ axis:null, mm:{ax:8,co:-18,sa:-14}, flip:false, sync:true, plane:new THREE.Plane(), cap:null, tex:null, cvs:null, dirty:true };
+const _brainVisSaved=new Map();
+const BRAIN_CUT_RANGE={ ax:[-60,78], co:[-104,70], sa:[-72,72] };
+const BRAIN_CUT_LBL={ ax:'Axiale', co:'Coronale', sa:'Sagittale' };
+const IRM_MNI={ id:'mri_brain', o:[-76.5,-112.5,-72], vs:0.5 };
+
+(function injectBrainCSS(){
+  const st=document.createElement('style');
+  st.textContent=`
+  .ca-panel{position:absolute;z-index:14;background:rgba(10,11,15,.95);border:1px solid var(--border2);border-radius:9px;
+    color:var(--text2);font-size:13px;box-shadow:0 10px 34px rgba(0,0,0,.55);backdrop-filter:blur(6px);display:none;
+    flex-direction:column;max-height:calc(100% - 58px)}
+  .ca-panel .ca-hd > div{min-width:0;flex:1}
+  .ca-panel .ca-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ca-panel h4{font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-weight:600;font-size:16px;letter-spacing:.2px;margin:0;color:var(--text)}
+  .ca-panel .ca-sub{font-size:11.5px;color:var(--text4);font-family:ui-monospace,Menlo,Consolas,monospace}
+  .ca-panel .ca-hd{display:flex;align-items:center;gap:8px;padding:9px 11px 7px;border-bottom:1px solid var(--border)}
+  .ca-panel .ca-bd{padding:8px 11px 10px;overflow:auto;min-height:0;flex:1 1 auto}
+  .ca-panel .ca-min{margin-left:auto;background:none;border:.5px solid var(--border2);color:var(--text3);border-radius:5px;cursor:pointer;font-size:12px;padding:1px 7px}
+  .ca-panel.collapsed .ca-bd{display:none}
+  .ca-seg{display:flex;gap:3px;flex-wrap:wrap}
+  .ca-seg button{font-size:12.5px;padding:3px 8px;border-radius:5px;border:.5px solid var(--border2);background:none;color:var(--text3);cursor:pointer}
+  .ca-seg button.on{color:#fff;border-color:transparent;background:var(--ca-acc,#5b6cff)}
+  .ca-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--text4);margin:9px 0 4px;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .ca-legend{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+  .ca-chip{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:5px;border:.5px solid var(--border);cursor:pointer;font-size:12.5px;color:var(--text2);user-select:none}
+  .ca-chip i{width:11px;height:11px;border-radius:3px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+  .ca-chip:hover{background:var(--bg4)}
+  .ca-chip.on{border-color:var(--text3);background:rgba(255,255,255,.07);color:var(--text)}
+  .ca-chip.dim{opacity:.38}
+  .ca-info{margin-top:8px;padding:7px 8px;border-radius:6px;background:rgba(255,255,255,.035);border:1px solid var(--border);min-height:52px;line-height:1.45}
+  .ca-info b{color:var(--text);font-weight:600}
+  .ca-row{display:flex;align-items:center;gap:7px;margin-top:5px}
+  .ca-row input[type=range]{flex:1;accent-color:var(--ca-acc,#5b6cff)}
+  .ca-mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--text3)}
+  .ca-credit{margin-top:8px;font-size:11px;color:var(--text4);line-height:1.4}
+  .ca-btn{font-size:12.5px;padding:4px 9px;border-radius:5px;border:.5px solid var(--border2);background:rgba(255,255,255,.03);color:var(--text2);cursor:pointer}
+  .ca-btn:hover{background:var(--bg4)}
+  @media (max-width:1700px){ .tbtn .tbl{display:none} }
+  `;
+  document.head.appendChild(st);
+})();
+
+/* Cadrage tenant compte du panneau : l'organe est centré dans la partie
+   du visualiseur que le panneau ne couvre pas. */
+function caFrame(c, size, dir, side, panelW){
+  const el=renderer&&renderer.domElement, vw=(el&&el.clientWidth)||800, vh=(el&&el.clientHeight)||600;
+  const aspect=vw/vh, tanH=Math.tan(camera.fov*Math.PI/360);
+  const f=Math.max(0,Math.min(0.6,((panelW||0)+20)/vw));
+  const d=Math.max(size*1.1/(2*tanH), size*1.1/((1-f)*2*tanH*aspect));
+  const dn=dir.clone().normalize();
+  const right=new THREE.Vector3(0,1,0).cross(dn); if(right.lengthSq()<1e-6) right.set(1,0,0); right.normalize();
+  const shift=(f/2)*(2*d*tanH*aspect)*(side==='right'?1:-1);
+  return { c:c.clone().add(right.multiplyScalar(shift)), r:d/3.1, dir:dn };
+}
+function brainFrame(dir){ return caFrame(LM(LM_BRAIN), 29, dir||new THREE.Vector3(1,0.32,0.28), 'left', brainPanel&&brainPanel.offsetWidth?brainPanel.offsetWidth:312); }
+function brainGroupOfRaw(raw){ const a=atlasMeshAbbr(raw); return a?ATLAS_INFO[a][1]:null; }
+function brainIsShown(raw){ if(!/^Allen_/.test(raw)) return false; if(!brainSel.size) return true; return brainSel.has(brainGroupOfRaw(raw)); }
+
+/* ── Couleurs appliquées le temps du rendu ── */
+const _bcCol=new Map(); let _bcPal=null;
+function brainRefreshColors(){
+  _bcCol.clear(); _bcPal=atlasPalette;
+  atlasMeshes().forEach(it=>{ const c=atlasRGB(it.abbr); _bcCol.set(it.m, new THREE.Color(c[0]/255,c[1]/255,c[2]/255).convertSRGBToLinear()); });
+}
+const _bcBuf=[]; let _bcN=0;
+PRE_RENDER.push(function(){
+  _bcN=0;
+  if(!brainMode) return;
+  if(_bcPal!==atlasPalette || !_bcCol.size) brainRefreshColors();
+  const cut=brainCut.axis?[brainCut.plane]:null;
+  _bcCol.forEach((col,m)=>{
+    const mat=m.material; if(!mat||Array.isArray(mat)||!mat.color) return;
+    _bcBuf[_bcN++]=mat; _bcBuf[_bcN++]=mat.color.r; _bcBuf[_bcN++]=mat.color.g; _bcBuf[_bcN++]=mat.color.b; _bcBuf[_bcN++]=mat.clippingPlanes;
+    mat.color.copy(col);
+    mat.clippingPlanes=cut;
+  });
+});
+POST_RENDER.push(function(){
+  for(let i=0;i<_bcN;i+=5){ const mat=_bcBuf[i]; mat.color.setRGB(_bcBuf[i+1],_bcBuf[i+2],_bcBuf[i+3]); mat.clippingPlanes=_bcBuf[i+4]; _bcBuf[i]=null; _bcBuf[i+4]=null; }
+  _bcN=0;
+});
+
+/* ── Coupe 3D : plan de clipping + tranche texturée ── */
+function brainCutImage(axis, mm){
+  const v=atlasVol; if(!v) return null;
+  const {nx,ny,nz,vs,ox,oy,oz,data}=v;
+  let W,H,fix;
+  if(axis==='ax'){ W=nx; H=ny; fix=Math.round((mm-oz)/vs); if(fix<0||fix>=nz) return null; }
+  else if(axis==='co'){ W=nx; H=nz; fix=Math.round((mm-oy)/vs); if(fix<0||fix>=ny) return null; }
+  else { W=ny; H=nz; fix=Math.round((mm-ox)/vs); if(fix<0||fix>=nx) return null; }
+  const cvs=brainCut.cvs||(brainCut.cvs=document.createElement('canvas'));
+  if(cvs.width!==W||cvs.height!==H){ cvs.width=W; cvs.height=H; }
+  const ctx=cvs.getContext('2d'), img=ctx.createImageData(W,H), d=img.data;
+  const lab=new Uint8Array(W*H), abv=new Array(W*H);
+  for(let r=0;r<H;r++) for(let c=0;c<W;c++){
+    let idx,x,y,z;
+    if(axis==='ax'){ idx=c+r*nx+fix*nx*ny; x=ox+c*vs; y=oy+r*vs; z=mm; }
+    else if(axis==='co'){ idx=c+fix*nx+r*nx*ny; x=ox+c*vs; y=mm; z=oz+r*vs; }
+    else { idx=fix+c*nx+r*nx*ny; x=mm; y=oy+c*vs; z=oz+r*vs; }
+    const l=data[idx]; lab[c+r*W]=l;
+    if(l) abv[c+r*W]=atlasAbbrAt(l,x,y,z);
+  }
+  for(let p=0;p<W*H;p++){
+    const a=abv[p], o=p*4; if(!a){ d[o+3]=0; continue; }
+    let [R,G,B]=atlasRGB(a);
+    if(brainSel.size && !brainSel.has(ATLAS_INFO[a][1])){ const g=(R+G+B)/3; R=G=B=Math.round(40+g*0.25); }
+    const c=p%W, r=(p/W)|0;
+    const edge=(c+1<W && abv[p+1]!==a) || (r+1<H && abv[p+W]!==a) || (c>0 && !abv[p-1]) || (r>0 && !abv[p-W]);
+    if(edge){ R*=0.55; G*=0.55; B*=0.55; }
+    d[o]=R; d[o+1]=G; d[o+2]=B; d[o+3]=255;
+  }
+  ctx.putImageData(img,0,0);
+  // coins en MNI : (u,v)=(0,0),(1,0),(0,1),(1,1)
+  const L=[(W-1)*vs,(H-1)*vs];
+  let P;
+  if(axis==='ax') P=[[ox,oy,mm],[ox+L[0],oy,mm],[ox,oy+L[1],mm],[ox+L[0],oy+L[1],mm]];
+  else if(axis==='co') P=[[ox,mm,oz],[ox+L[0],mm,oz],[ox,mm,oz+L[1]],[ox+L[0],mm,oz+L[1]]];
+  else P=[[mm,oy,oz],[mm,oy+L[0],oz],[mm,oy,oz+L[1]],[mm,oy+L[0],oz+L[1]]];
+  return { cvs, corners:P };
+}
+function brainCutUpdate(){
+  if(!brainMode || !brainCut.axis){ if(brainCut.cap){ scene.remove(brainCut.cap); } return; }
+  const ax=brainCut.axis, mm=brainCut.mm[ax];
+  // normale MNI pointant vers la partie retirée
+  const nM= ax==='ax'?[0,0,1] : ax==='co'?[0,1,0] : [-1,0,0];
+  let n=mniNormalToScene(nM[0],nM[1],nM[2]); if(brainCut.flip) n.negate();
+  const pM= ax==='ax'?[0,0,mm] : ax==='co'?[0,mm,0] : [mm,0,0];
+  const p0=mniToScene(pM[0],pM[1],pM[2]);
+  brainCut.plane.setFromNormalAndCoplanarPoint(n.clone().negate(), p0);   // garde le côté opposé à n
+  brainCut.n=n;
+  const lbl=document.getElementById('bc-val'); if(lbl) lbl.textContent=(mm>0?'+':'')+mm.toFixed(1)+' mm';
+  if(!atlasVol){ atlasLoad().then(()=>brainCutUpdate()).catch(()=>{ const s=document.getElementById('bc-status'); if(s) s.textContent='Volume Allen indisponible (réseau) : coupe sans tranche colorée.'; }); return; }
+  const im=brainCutImage(ax,mm); if(!im) return;
+  const off=n.clone().multiplyScalar(0.012*lmK());
+  const C=im.corners.map(q=>mniToScene(q[0],q[1],q[2]).add(off));
+  let cap=brainCut.cap;
+  if(!cap){
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12),3));
+    g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0,0, 1,0, 0,1, 1,1]),2));
+    g.setIndex([0,1,2, 2,1,3]);
+    const tex=new THREE.CanvasTexture(im.cvs); tex.flipY=false; tex.encoding=THREE.sRGBEncoding; tex.minFilter=THREE.LinearFilter; tex.magFilter=THREE.LinearFilter; tex.generateMipmaps=false;
+    const mat=new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:0.5, side:THREE.DoubleSide, toneMapped:false});
+    cap=new THREE.Mesh(g,mat); cap.name='brain-cut-cap'; cap.renderOrder=5; cap.userData.noPick=true;
+    brainCut.cap=cap; brainCut.tex=tex;
+  } else if(brainCut.tex.image!==im.cvs || brainCut._w!==im.cvs.width || brainCut._h!==im.cvs.height){
+    brainCut.tex.dispose(); brainCut.tex=new THREE.CanvasTexture(im.cvs); brainCut.tex.flipY=false; brainCut.tex.encoding=THREE.sRGBEncoding;
+    brainCut.tex.minFilter=THREE.LinearFilter; brainCut.tex.generateMipmaps=false; cap.material.map=brainCut.tex; cap.material.needsUpdate=true;
+  }
+  brainCut._w=im.cvs.width; brainCut._h=im.cvs.height;
+  brainCut.tex.needsUpdate=true;
+  const pa=cap.geometry.attributes.position;
+  C.forEach((q,i)=>pa.setXYZ(i,q.x,q.y,q.z)); pa.needsUpdate=true;
+  cap.geometry.computeBoundingSphere();
+  if(!cap.parent) scene.add(cap);
+}
+function setBrainCut(axis){
+  brainCut.axis=(brainCut.axis===axis)?null:axis;
+  document.querySelectorAll('#bc-axes button').forEach(b=>b.classList.toggle('on', b.dataset.ax===(brainCut.axis||'none')));
+  const row=document.getElementById('bc-row'); if(row) row.style.display=brainCut.axis?'flex':'none';
+  if(brainCut.axis){
+    const sl=document.getElementById('bc-sl'), r=BRAIN_CUT_RANGE[brainCut.axis];
+    if(sl){ sl.min=r[0]; sl.max=r[1]; sl.value=brainCut.mm[brainCut.axis]; }
+    if(brainCut.sync) brainCutFromIRM();
+    brainCutUpdate();
+    const n=brainCut.n||new THREE.Vector3(0,1,0);
+    const tilt= brainCut.axis==='ax' ? new THREE.Vector3(0,0,-0.2) : brainCut.axis==='co' ? new THREE.Vector3(0,0.18,0) : new THREE.Vector3(0,0.15,0.12);
+    const dir=n.clone().add(tilt).normalize();
+    const fr=brainFrame(dir); flyToRegion(fr.c, fr.r, fr.dir);
+  } else brainCutUpdate();
+  brainUpdateInfo();
+}
+function setBrainCutMM(v){
+  if(!brainCut.axis) return;
+  brainCut.mm[brainCut.axis]=+v;
+  brainCutUpdate();
+  if(brainCut.sync) brainCutToIRM();
+}
+function flipBrainCut(){ brainCut.flip=!brainCut.flip; brainCutUpdate(); }
+
+/* ── Synchronisation avec le visualiseur IRM « Cerveau HR » (MNI 0,5 mm) ── */
+let _bcSyncLock=false;
+function brainCutToIRM(){
+  if(_bcSyncLock || typeof irmCurrentId==='undefined' || irmCurrentId!==IRM_MNI.id || !brainCut.axis) return;
+  const ax=brainCut.axis, mm=brainCut.mm[ax];
+  const vd=getVolDef(IRM_MNI.id), [nx,ny,nz]=vd.dims;
+  if(ax==='ax') irmPos[2]=Math.max(0,Math.min(nz-1,Math.round((mm-IRM_MNI.o[2])/IRM_MNI.vs)));
+  if(ax==='co') irmPos[1]=Math.max(0,Math.min(ny-1,Math.round((mm-IRM_MNI.o[1])/IRM_MNI.vs)));
+  if(ax==='sa') irmPos[0]=Math.max(0,Math.min(nx-1,Math.round((mm-IRM_MNI.o[0])/IRM_MNI.vs)));
+  _bcSyncLock=true; try{ if(irmLoaded[IRM_MNI.id]) renderAllPlanes(); } finally{ _bcSyncLock=false; }
+}
+function brainCutFromIRM(){
+  if(typeof irmCurrentId==='undefined' || irmCurrentId!==IRM_MNI.id || !brainCut.axis) return false;
+  const ax=brainCut.axis, i= ax==='ax'?2 : ax==='co'?1 : 0;
+  const mm=IRM_MNI.o[i]+irmPos[i]*IRM_MNI.vs, r=BRAIN_CUT_RANGE[ax];
+  const v=Math.max(r[0],Math.min(r[1],mm));
+  if(Math.abs(v-brainCut.mm[ax])<0.01) return false;
+  brainCut.mm[ax]=v;
+  const sl=document.getElementById('bc-sl'); if(sl) sl.value=v;
+  return true;
+}
+
+/* ── Panneau ── */
+function buildBrainPanel(){
+  if(brainPanel) return;
+  const el=document.createElement('div');
+  el.id='brain-panel'; el.className='ca-panel';
+  el.style.cssText='left:8px;bottom:44px;width:312px;--ca-acc:#5b6cff';
+  el.innerHTML=`
+  <div class="ca-hd"><span style="font-size:18px">🧠</span><div><h4>Atlas cérébral</h4><div class="ca-sub">Allen · 141 structures · MNI</div></div>
+    <button class="ca-min" onclick="this.closest('.ca-panel').classList.toggle('collapsed')" title="Réduire">–</button></div>
+  <div class="ca-bd">
+    <div class="ca-lbl">Palette</div>
+    <div class="ca-seg" id="bp-pal">
+      <button data-p="lobes" onclick="setAtlasPalette('lobes')">Lobes</button>
+      <button data-p="regions" onclick="setAtlasPalette('regions')">Régions</button>
+      <button data-p="allen" onclick="setAtlasPalette('allen')">Allen</button>
+    </div>
+    <div class="ca-lbl" style="display:flex;align-items:center">Ensembles <span style="margin-left:auto;text-transform:none;letter-spacing:0;cursor:pointer;color:var(--text3)" onclick="brainSelect(null)">tout afficher</span></div>
+    <div class="ca-legend" id="bp-legend"></div>
+    <div class="ca-lbl">Coupe 3D</div>
+    <div class="ca-seg" id="bc-axes">
+      <button data-ax="none" class="on" onclick="setBrainCut(null)">Aucune</button>
+      <button data-ax="ax" onclick="setBrainCut('ax')">Axiale</button>
+      <button data-ax="co" onclick="setBrainCut('co')">Coronale</button>
+      <button data-ax="sa" onclick="setBrainCut('sa')">Sagittale</button>
+    </div>
+    <div class="ca-row" id="bc-row" style="display:none">
+      <input type="range" id="bc-sl" step="0.5" oninput="setBrainCutMM(this.value)">
+      <span class="ca-mono" id="bc-val" style="min-width:62px;text-align:right">0 mm</span>
+      <button class="ca-btn" onclick="flipBrainCut()" title="Garder l'autre moitié">⇄</button>
+    </div>
+    <label class="ca-row" style="cursor:pointer"><input type="checkbox" id="bc-sync" checked onchange="brainCut.sync=this.checked;if(this.checked){brainCutFromIRM();brainCutUpdate();}"> <span>Synchroniser avec les coupes IRM</span></label>
+    <div class="ca-row"><button class="ca-btn" onclick="brainOpenIRM()">🧲 Coupes IRM colorées</button><span class="ca-mono" id="bc-status"></span></div>
+    <div class="ca-info" id="bp-info"></div>
+    <div class="ca-credit">Atlas : Allen Human Reference Atlas (Ding et al., 2016) — CC BY 4.0. Gabarit ICBM 2009 (MNI). Survolez une structure ou la tranche pour l'identifier.</div>
+  </div>`;
+  const v3d=document.getElementById('viewer3d'); if(v3d) v3d.appendChild(el);
+  brainPanel=el;
+  brainBuildLegend(); brainSyncPaletteButtons(); brainUpdateInfo();
+}
+function brainBuildLegend(){
+  const host=document.getElementById('bp-legend'); if(!host) return;
+  const counts={}; atlasMeshes().forEach(it=>{ counts[it.group]=(counts[it.group]||0)+1; });
+  host.innerHTML=ATLAS_GROUPS.map(g=>{
+    const sw= atlasPalette==='lobes' ? g[2] : brainGroupSwatch(g[0]);
+    const cls=brainSel.size?(brainSel.has(g[0])?' on':' dim'):'';
+    return `<div class="ca-chip${cls}" data-g="${g[0]}" onclick="brainSelect('${g[0]}',event)" onmouseenter="brainInfoGroup('${g[0]}')" title="${g[3].replace(/"/g,'&quot;')}"><i style="background:${sw}"></i><span>${g[1]}</span></div>`;
+  }).join('');
+}
+function brainGroupSwatch(gk){
+  const ab=Object.keys(ATLAS_INFO).filter(a=>ATLAS_INFO[a][1]===gk).slice(0,4);
+  const cols=ab.map(a=>atlasCSS(a));
+  return cols.length>1?`linear-gradient(135deg,${cols.join(',')})`:(cols[0]||'#888');
+}
+function brainSyncPaletteButtons(){ document.querySelectorAll('#bp-pal button, #iab-pal button').forEach(b=>b.classList.toggle('on', b.dataset.p===atlasPalette)); }
+function setAtlasPalette(p){
+  atlasPalette=p; brainRefreshColors(); brainSyncPaletteButtons(); brainBuildLegend();
+  if(brainCut.axis) brainCutUpdate();
+  if(typeof irmLoaded!=='undefined' && irmCurrentId===IRM_MNI.id && irmLoaded[irmCurrentId]) renderAllPlanes();
+}
+function brainSelect(gk,ev){
+  if(gk==null) brainSel.clear();
+  else if(ev && (ev.shiftKey||ev.ctrlKey||ev.metaKey)){ brainSel.has(gk)?brainSel.delete(gk):brainSel.add(gk); }
+  else { if(brainSel.size===1 && brainSel.has(gk)) brainSel.clear(); else { brainSel.clear(); brainSel.add(gk); } }
+  brainBuildLegend(); modeGhostRefresh();
+  if(brainCut.axis) brainCutUpdate();
+  if(gk) brainInfoGroup(gk); else brainUpdateInfo();
+}
+function brainInfoGroup(gk){
+  const g=ATLAS_GROUPS[ATLAS_GIDX[gk]], info=document.getElementById('bp-info'); if(!g||!info) return;
+  const n=Object.values(ATLAS_INFO).filter(v=>v[1]===gk).length;
+  info.innerHTML=`<div style="display:flex;align-items:center;gap:6px"><i style="width:10px;height:10px;border-radius:3px;background:${g[2]};display:inline-block"></i><b>${g[1]}</b><span class="ca-mono" style="margin-left:auto">${n} structures</span></div><div style="margin-top:3px">${g[3]}</div>`;
+}
+function brainInfoStruct(abbr, side){
+  const info=document.getElementById('bp-info'); if(!info||!abbr) return;
+  const inf=ATLAS_INFO[abbr], g=ATLAS_GROUPS[ATLAS_GIDX[inf[1]]];
+  info.innerHTML=`<div style="display:flex;align-items:center;gap:6px"><i style="width:10px;height:10px;border-radius:3px;background:${atlasCSS(abbr)};display:inline-block;flex:none"></i><b>${inf[0]}</b></div>
+    <div class="ca-mono" style="margin:2px 0 3px">${abbr}${side?' · hémisphère '+side:''} · ${g[1]}</div><div>${g[3]}</div>`;
+}
+function brainUpdateInfo(){
+  const info=document.getElementById('bp-info'); if(!info) return;
+  info.innerHTML=brainCut.axis
+    ? `<b>Coupe ${BRAIN_CUT_LBL[brainCut.axis].toLowerCase()}</b> — déplacez le curseur ou les coupes IRM : la tranche colorée suit en temps réel. Survolez-la pour lire les structures.`
+    : `<b>Survolez</b> une structure pour l'identifier, <b>cliquez</b> un ensemble de la légende pour l'isoler (Maj+clic : plusieurs).`;
+}
+function brainOpenIRM(){
+  const grid=document.getElementById('main-grid');
+  if(typeof _blockState!=='undefined' && _blockState['irm-section'] && typeof togglePanelBlock==='function') togglePanelBlock('irm-section');
+  if(grid) grid.classList.remove('irm-hidden');
+  atlasOverlay.on=true;
+  if(irmCurrentId!==IRM_MNI.id) switchIRMVolume(IRM_MNI.id);
+  else if(irmLoaded[IRM_MNI.id]) renderAllPlanes(); else { showIRMLoading(); loadVolume(IRM_MNI.id); }
+  atlasLoad().then(()=>{ if(irmLoaded[IRM_MNI.id]) renderAllPlanes(); }).catch(()=>{});
+  if(typeof atlasBarSync==='function') atlasBarSync();
+}
+
+/* ── Activation ── */
+function toggleBrainAtlas(){
+  brainMode=!brainMode;
+  const btn=document.getElementById('btbrain'); if(btn) btn.classList.toggle('on',brainMode);
+  if(brainMode){
+    if(renderer && !renderer.localClippingEnabled) renderer.localClippingEnabled=true;
+    buildBrainPanel(); brainPanel.style.display='flex';
+    _brainVisSaved.clear();
+    atlasMeshes().forEach(it=>{ _brainVisSaved.set(it.m,it.m.visible); it.m.visible=true; });
+    brainRefreshColors(); brainBuildLegend();
+    atlasLoad().catch(()=>{});
+    if(typeof atlasOverlay!=='undefined'){ atlasOverlay.on=true; if(irmCurrentId===IRM_MNI.id && irmLoaded[IRM_MNI.id]) renderAllPlanes(); }
+  } else {
+    if(brainPanel) brainPanel.style.display='none';
+    brainSel.clear(); brainCut.axis=null; brainCutUpdate();
+    document.querySelectorAll('#bc-axes button').forEach(b=>b.classList.toggle('on', b.dataset.ax==='none'));
+    const row=document.getElementById('bc-row'); if(row) row.style.display='none';
+    _brainVisSaved.forEach((v,m)=>{ m.visible=v; }); _brainVisSaved.clear();
+    const lbl=document.getElementById('hlabel'); if(lbl) lbl.style.display='none';
+  }
+}
+
+/* ── Survol / sélection limités au cerveau pendant le mode ── */
+(function(){
+  const origRay=getRaycasterMeshes;
+  getRaycasterMeshes=function(ev){
+    const hits=origRay(ev);
+    if(!brainMode) return hits;
+    return hits.filter(h=>{
+      const raw=(h.object.userData&&h.object.userData.rawName)||h.object.name||'';
+      if(!brainIsShown(raw)) return false;
+      if(brainCut.axis && brainCut.plane.distanceToPoint(h.point)<0) return false;
+      return true;
+    });
+  };
+  const origHover=onHover;
+  onHover=function(e){
+    origHover(e);
+    if(!brainMode) return;
+    const lbl=document.getElementById('hlabel'), hn=document.getElementById('hl-n'), hl=document.getElementById('hl-l');
+    let hit=null;
+    const meshHits=getRaycasterMeshes(e);
+    if(meshHits.length) hit={d:meshHits[0].distance, raw:(meshHits[0].object.userData.rawName||meshHits[0].object.name)};
+    if(brainCut.axis && brainCut.cap && brainCut.cap.parent){
+      const ch=raycaster.intersectObject(brainCut.cap);
+      if(ch.length && (!hit || ch[0].distance<hit.d+0.02)){
+        const q=sceneToMNI(ch[0].point), l=atlasLabelMNI(q.x,q.y,q.z), a=atlasAbbrAt(l,q.x,q.y,q.z);
+        if(a){ hit={cap:true, abbr:a, side:q.x>0.5?'droit':q.x<-0.5?'gauche':''}; }
+      }
+    }
+    if(!hit){ lbl.style.display='none'; return; }
+    let abbr, side;
+    if(hit.cap){ abbr=hit.abbr; side=hit.side; hn.textContent=ATLAS_INFO[abbr][0]+(side?(side==='droit'?' — D':' — G'):''); }
+    else { abbr=atlasMeshAbbr(hit.raw); side=atlasMeshSide(hit.raw); }
+    if(!abbr) return;
+    const g=atlasGroupOf(abbr);
+    hl.innerHTML=`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${atlasCSS(abbr)};margin-right:5px"></span>${g?g[1]:''} · ${abbr}`;
+    const wrap=document.getElementById('canvas-wrap').getBoundingClientRect();
+    lbl.style.left=(e.clientX-wrap.left+14)+'px'; lbl.style.top=(e.clientY-wrap.top-10)+'px'; lbl.style.display='block';
+    brainInfoStruct(abbr, side);
+  };
+  /* Clic sur une structure : les coupes IRM se placent sur elle */
+  const origSync=syncIRM;
+  syncIRM=function(raw){
+    const r=origSync.apply(this,arguments);
+    try{
+      if(raw && /^Allen_/.test(raw) && typeof irmAnimateTo==='function'){
+        const m=meshByName[raw]; if(!m) return r;
+        const b=new THREE.Box3().setFromObject(m), c=b.getCenter(new THREE.Vector3());
+        const q=sceneToMNI(c), vd=getVolDef(IRM_MNI.id), dm=vd.dims;
+        const pos=[0,1,2].map(i=>Math.max(0,Math.min(dm[i]-1,Math.round(([q.x,q.y,q.z][i]-IRM_MNI.o[i])/IRM_MNI.vs))));
+        if(irmCurrentId===IRM_MNI.id) irmAnimateTo(pos);
+      }
+    }catch(e){ console.warn('[atlas] sync IRM',e); }
+    return r;
+  };
+})();
+
+/* ══════════════════════════════════════════════════════
+   🧲 CALQUE ATLAS SUR LES COUPES IRM « Cerveau HR »
+   Le volume mni152hr (ICBM 2009, 0,5 mm) et l'atlas Allen partagent le
+   repère MNI : voxel atlas = voxel IRM + (5, 1, 0) — décalage tiré des
+   en-têtes NIfTI et vérifié sur l'intensité (ventricules / substance
+   blanche / cortex). Le calque est recalculé à chaque coupe : il suit
+   les curseurs et le glisser en temps réel.
+══════════════════════════════════════════════════════ */
+const atlasOverlay={ on:false, alpha:0.5, contour:false };
+const _lutCache={};
+function atlasLUT(pal){
+  pal=pal||atlasPalette;
+  if(_lutCache[pal]) return _lutCache[pal];
+  const n=ATLAS_LABELS.length, L=new Uint8Array(n*3), G=new Array(n);
+  for(let i=1;i<n;i++){ const a=ATLAS_LABELS[i][0], c=atlasRGB(a,pal); L[i*3]=c[0]; L[i*3+1]=c[1]; L[i*3+2]=c[2]; G[i]=ATLAS_INFO[a]?ATLAS_INFO[a][1]:null; }
+  return (_lutCache[pal]={L,G});
+}
+/* Index d'étiquette « résolu » : l'étiquette fusionnée FP est remplacée
+   par l'index de la structure réelle (PaCG, RoG, FMG ou FP). */
+function atlasResolve(l,x,y,z){ return l===ATLAS_FP ? ATLAS_IDX[ATLAS_FP_SPLIT[atlasFpSplit(Math.abs(x),y,z)]] : l; }
+function _irmToAtlasShift(){
+  const v=atlasVol;
+  return [Math.round((IRM_MNI.o[0]-v.ox)/v.vs), Math.round((IRM_MNI.o[1]-v.oy)/v.vs), Math.round((IRM_MNI.o[2]-v.oz)/v.vs)];
+}
+/* Étiquette résolue au voxel IRM (i,j,k) de Cerveau HR */
+function atlasAtIRM(i,j,k){
+  const v=atlasVol; if(!v) return 0;
+  const s=_irmToAtlasShift(), ia=i+s[0], ja=j+s[1], ka=k+s[2];
+  if(ia<0||ja<0||ka<0||ia>=v.nx||ja>=v.ny||ka>=v.nz) return 0;
+  const l=v.data[ia+ja*v.nx+ka*v.nx*v.ny];
+  return l ? atlasResolve(l, IRM_MNI.o[0]+i*IRM_MNI.vs, IRM_MNI.o[1]+j*IRM_MNI.vs, IRM_MNI.o[2]+k*IRM_MNI.vs) : 0;
+}
+
+/* Appelée par renderSlice() juste avant l'affichage de chaque coupe */
+function atlasOverlayApply(d, planeid, W, H){
+  if(!atlasOverlay.on || irmCurrentId!==IRM_MNI.id || !atlasVol) return;
+  const vd=getVolDef(IRM_MNI.id), nz=vd.dims[2], ix=irmPos[0], iy=irmPos[1], iz=irmPos[2];
+  const {L,G}=atlasLUT(), lab=new Uint8Array(W*H);
+  for(let py=0;py<H;py++) for(let px=0;px<W;px++){
+    let i,j,k;
+    if(planeid==='ax'){ i=px; j=py; k=iz; }
+    else if(planeid==='co'){ i=px; j=iy; k=nz-1-py; }
+    else { i=ix; j=px; k=nz-1-py; }
+    lab[px+py*W]=atlasAtIRM(i,j,k);
+  }
+  const A=atlasOverlay.alpha, CT=atlasOverlay.contour, sel=(typeof brainSel!=='undefined'&&brainMode&&brainSel.size)?brainSel:null;
+  const hi=(typeof brainHL!=='undefined')?brainHL.idx:0;
+  for(let p=0;p<W*H;p++){
+    const l=lab[p]; if(!l) continue;
+    if(sel && !sel.has(G[l])) continue;
+    const x=p%W, y=(p/W)|0;
+    const edge=(x+1<W&&lab[p+1]!==l)||(y+1<H&&lab[p+W]!==l)||(x>0&&lab[p-1]!==l)||(y>0&&lab[p-W]!==l);
+    let a= CT ? (edge?0.95:0.10) : (edge?Math.min(1,A+0.28):A);
+    if(hi && l===hi) a=Math.min(1,a+0.35);
+    const o=p*4;
+    d[o]  =d[o]  *(1-a)+L[l*3]  *a;
+    d[o+1]=d[o+1]*(1-a)+L[l*3+1]*a;
+    d[o+2]=d[o+2]*(1-a)+L[l*3+2]*a;
+  }
+}
+
+/* ── Barre d'outils du calque (sous les curseurs de fenêtrage) ── */
+function atlasBarBuild(){
+  if(document.getElementById('irm-atlas-bar')) return;
+  const ctrl=document.getElementById('irm-ctrl'); if(!ctrl) return;
+  const bar=document.createElement('div');
+  bar.id='irm-atlas-bar';
+  bar.style.cssText='display:none;align-items:center;gap:7px;padding:3px 8px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);flex-wrap:wrap';
+  bar.innerHTML=`
+    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#9aa6ff"><input type="checkbox" id="iab-on" style="accent-color:#5b6cff" onchange="atlasOverlay.on=this.checked;if(this.checked)atlasLoad().then(()=>renderAllPlanes()).catch(()=>{});renderAllPlanes()"> 🧠 Atlas</label>
+    <input type="range" id="iab-alpha" min="0.1" max="0.9" step="0.05" value="0.5" title="Opacité du calque" style="width:64px;accent-color:#5b6cff" oninput="atlasOverlay.alpha=+this.value;renderAllPlanes()">
+    <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="iab-ct" style="accent-color:#5b6cff" onchange="atlasOverlay.contour=this.checked;renderAllPlanes()"> Contours</label>
+    <span class="ca-seg" id="iab-pal" style="--ca-acc:#5b6cff">
+      <button data-p="lobes" onclick="setAtlasPalette('lobes')" style="font-size:11.5px;padding:1px 6px">Lobes</button>
+      <button data-p="regions" onclick="setAtlasPalette('regions')" style="font-size:11.5px;padding:1px 6px">Régions</button>
+      <button data-p="allen" onclick="setAtlasPalette('allen')" style="font-size:11.5px;padding:1px 6px">Allen</button>
+    </span>
+    <span id="iab-read" style="flex:1 1 100%;font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:17px"></span>`;
+  ctrl.insertAdjacentElement('afterend', bar);
+  atlasBarSync();
+}
+function atlasBarSync(){
+  const bar=document.getElementById('irm-atlas-bar'); if(!bar) return;
+  bar.style.display=(typeof irmCurrentId!=='undefined'&&irmCurrentId===IRM_MNI.id)?'flex':'none';
+  const on=document.getElementById('iab-on'); if(on) on.checked=atlasOverlay.on;
+  const al=document.getElementById('iab-alpha'); if(al) al.value=atlasOverlay.alpha;
+  const ct=document.getElementById('iab-ct'); if(ct) ct.checked=atlasOverlay.contour;
+  if(typeof brainSyncPaletteButtons==='function') brainSyncPaletteButtons();
+}
+function _atlasDescr(l){
+  if(!l) return null;
+  const a=ATLAS_LABELS[l][0], inf=ATLAS_INFO[a], g=ATLAS_GROUPS[ATLAS_GIDX[inf[1]]];
+  return { a, name:inf[0], group:g[1], css:atlasCSS(a) };
+}
+function atlasReadout(){
+  const el=document.getElementById('iab-read'); if(!el) return;
+  if(irmCurrentId!==IRM_MNI.id){ el.textContent=''; return; }
+  if(!atlasVol){ el.innerHTML=atlasOverlay.on?'<span style="color:var(--text4)">Chargement de l’atlas Allen…</span>':'<span style="color:var(--text4)">Cochez « Atlas » pour colorer et nommer les structures.</span>'; return; }
+  const l=atlasAtIRM(irmPos[0],irmPos[1],irmPos[2]), D=_atlasDescr(l);
+  const mm=[0,1,2].map(i=>(IRM_MNI.o[i]+irmPos[i]*IRM_MNI.vs).toFixed(1));
+  el.innerHTML = D
+    ? `⌖ <i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${D.css};margin:0 4px -1px 2px"></i><b>${D.name}</b> <span style="color:var(--text4)">· ${D.group} · MNI ${mm.join(', ')}</span>`
+    : `⌖ <span style="color:var(--text4)">hors cerveau · MNI ${mm.join(', ')}</span>`;
+}
+
+/* ── Survol des coupes : nom de la structure + surbrillance en 3D ── */
+function _irmVoxelFromEvent(p, e){
+  const cvs=document.getElementById('cvs-'+p); if(!cvs) return null;
+  const rect=cvs.getBoundingClientRect(), vd=getVolDef(irmCurrentId), [nx,ny,nz]=vd.dims;
+  const W=cvs.width, H=cvs.height;
+  const sx=rect.width?W/rect.width:1, sy=rect.height?H/rect.height:1;
+  const px=(e.clientX-rect.left)*sx, py=(e.clientY-rect.top)*sy;
+  let sw,sh; if(p==='ax'){sw=nx;sh=ny;} else if(p==='co'){sw=nx;sh=nz;} else {sw=ny;sh=nz;}
+  const sc=Math.min(W/sw,H/sh), ox=(W-sw*sc)/2, oy=(H-sh*sc)/2;
+  const u=Math.floor((px-ox)/sc), v=Math.floor((py-oy)/sc);
+  if(u<0||v<0||u>=sw||v>=sh) return null;
+  if(p==='ax') return [u,v,irmPos[2]];
+  if(p==='co') return [u,irmPos[1],nz-1-v];
+  return [irmPos[0],u,nz-1-v];
+}
+function atlasBindHover(){
+  ['ax','co','sa'].forEach(p=>{
+    const vp=document.getElementById('ivp-'+p); if(!vp||vp._atlasHover) return;
+    vp._atlasHover=true;
+    vp.addEventListener('mousemove',e=>{
+      if(irmCurrentId!==IRM_MNI.id || !atlasOverlay.on || !atlasVol){ return; }
+      const vx=_irmVoxelFromEvent(p,e), l=vx?atlasAtIRM(vx[0],vx[1],vx[2]):0, D=_atlasDescr(l);
+      if(typeof brainHL!=='undefined'){ brainHL.hover=l||0; }
+      if(!D){ if(TT) TT.style.display='none'; return; }
+      TT.innerHTML=`<div class="tt-name"><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${D.css};margin-right:5px"></i>${D.name}</div><div class="tt-sys">${D.group} · ${D.a}</div>`;
+      TT.style.display='block'; positionTooltip(e);
+    });
+    vp.addEventListener('mouseleave',()=>{ if(TT) TT.style.display='none'; if(typeof brainHL!=='undefined') brainHL.hover=0; });
+  });
+}
+
+/* ── Après chaque rendu des coupes : barre, lecture, coupe 3D ── */
+(function(){
+  const orig=renderAllPlanes;
+  renderAllPlanes=function(){
+    const r=orig.apply(this,arguments);
+    try{
+      atlasBarBuild(); atlasBarSync(); atlasBindHover(); atlasReadout();
+      if(irmCurrentId===IRM_MNI.id && atlasVol && typeof brainHL!=='undefined') brainHL.cross=atlasAtIRM(irmPos[0],irmPos[1],irmPos[2]);
+      if(typeof brainMode!=='undefined' && brainMode && brainCut.axis && brainCut.sync && !_bcSyncLock){
+        if(brainCutFromIRM()) brainCutUpdate();
+      }
+      if(atlasOverlay.on && irmCurrentId===IRM_MNI.id && !atlasVol) atlasLoad().then(()=>renderAllPlanes()).catch(()=>{});
+    }catch(e){ console.warn('[atlas] coupes',e); }
+    return r;
+  };
+})();
+
+/* ── Surbrillance 3D de la structure survolée / sous la croix ── */
+const brainHL={ hover:0, cross:0, get idx(){ return this.hover||this.cross||0; } };
+const _hlBuf=[]; let _hlN=0;
+const _hlEm=new THREE.Color(0.55,0.55,0.55);
+PRE_RENDER.push(function(){
+  _hlN=0;
+  if(!brainMode) return;
+  const idx=brainHL.idx; if(!idx) return;
+  const ab=ATLAS_LABELS[idx]&&ATLAS_LABELS[idx][0]; if(!ab) return;
+  atlasMeshes().forEach(it=>{
+    if(it.abbr!==ab) return;
+    const mat=it.m.material; if(!mat||Array.isArray(mat)||!mat.emissive) return;
+    _hlBuf[_hlN++]=mat; _hlBuf[_hlN++]=mat.emissive.r; _hlBuf[_hlN++]=mat.emissive.g; _hlBuf[_hlN++]=mat.emissive.b;
+    mat.emissive.copy(_hlEm);
+  });
+});
+POST_RENDER.push(function(){
+  for(let i=0;i<_hlN;i+=4){ const m=_hlBuf[i]; m.emissive.setRGB(_hlBuf[i+1],_hlBuf[i+2],_hlBuf[i+3]); _hlBuf[i]=null; }
+  _hlN=0;
+});
+
+/* ══════════════════════════════════════════════════════
+   💓 CŒUR BATTANT — modèle physiologique (diagramme de Wiggers)
+   Un battement est décrit à partir du début du QRS (t = 0) :
+   fermeture mitrale (B1) → contraction isovolumique → éjection →
+   fermeture aortique (B2) → relaxation isovolumique → remplissage
+   rapide → diastasis → contraction auriculaire (≈ 20 % du remplissage).
+   Volumes, pressions (VG, aorte, OG), ECG et état des valves sont
+   calculés à chaque image ; la déformation 3D et les tracés en dérivent.
+══════════════════════════════════════════════════════ */
+const HB_PRESETS={
+  repos:{ cat:'Physiologie', label:'Repos', hr:70, ef:0.60, edv:120, kick:0.22, rvs:17.5,
+    desc:'Cœur au repos : FC ≈ 70/min, FE ≈ 60 %. La systole occupe environ un tiers du cycle et la diastole deux tiers (remplissage rapide, diastasis, puis contraction auriculaire ≈ 20 % du remplissage).' },
+  effort:{ cat:'Physiologie', label:'Effort', hr:140, ef:0.74, edv:128, kick:0.30, rvs:8.5, sys:0.85,
+    desc:'Effort : stimulation sympathique β1 → FC ↑ et contractilité ↑. La diastole se raccourcit bien plus que la systole ; la vasodilatation musculaire fait chuter les résistances (RVS ↓) : débit × 2 à 3.' },
+  bb:{ cat:'Médicaments', label:'β-bloquant', hr:55, ef:0.54, edv:124, kick:0.22, rvs:20.5, pr:0.21,
+    desc:'Bêta-bloquant (bisoprolol, métoprolol…) : antagoniste β1 → chronotrope, inotrope et dromotrope négatifs (PR allongé). Réduit la consommation d’O₂ : angor, post-infarctus, IC à FE réduite (titration lente).' },
+  ivab:{ cat:'Médicaments', label:'Ivabradine', hr:55, ef:0.60, edv:126, kick:0.22, rvs:19.5,
+    desc:'Ivabradine : bloque le courant If du nœud sinusal → ralentit la FC SANS effet inotrope ni dromotrope (contractilité et PR inchangés, à la différence des β-bloquants). IC à FE réduite en rythme sinusal avec FC ≥ 70/min.' },
+  digo:{ cat:'Médicaments', label:'Digoxine', hr:60, ef:0.65, edv:120, kick:0.22, rvs:17.5, pr:0.21, ecg:'cupule',
+    desc:'Digoxine : inhibe la Na⁺/K⁺-ATPase → Ca²⁺ intracellulaire ↑ (inotrope +) ; effet vagal → FC ↓ et conduction AV ralentie. ECG : cupule digitalique (sous-décalage ST « en cuillère »). Marge thérapeutique étroite, toxicité majorée par l’hypokaliémie.' },
+  dobu:{ cat:'Médicaments', label:'Dobutamine', hr:96, ef:0.74, edv:118, kick:0.24, rvs:11,
+    desc:'Dobutamine (IV) : agoniste β1 → inotrope positif puissant, FC ↑ modérée. Choc cardiogénique, bas débit ; échocardiographie de stress.' },
+  atro:{ cat:'Médicaments', label:'Atropine', hr:112, ef:0.62, edv:112, kick:0.24, rvs:13,
+    desc:'Atropine : antagoniste muscarinique → lève le frein vagal du nœud sinusal et du nœud AV : FC ↑ (bradycardie sinusale symptomatique, BAV vagal).' },
+  icfer:{ cat:'Pathologies', label:'IC à FE réduite', hr:88, ef:0.28, edv:215, kick:0.25, rvs:16.5, dil:1, edp:24,
+    desc:'Insuffisance cardiaque à FE réduite (cardiomyopathie dilatée) : VG dilaté, parois amincies, FE ≈ 28 %, tachycardie compensatrice, pressions de remplissage élevées. Traitement de fond : IEC/ARNI + β-bloquant + ARM + iSGLT2.' },
+  hvg:{ cat:'Pathologies', label:'HVG (HTA)', hr:72, ef:0.66, edv:98, kick:0.38, rvs:25, hyp:1, edp:18, tau:0.16, comp:1.0,
+    desc:'Hypertrophie ventriculaire gauche (HTA chronique) : parois épaisses, cavité réduite, FE conservée mais remplissage lent (dysfonction diastolique) : la contraction auriculaire assure une part plus grande du remplissage.' },
+  fa:{ cat:'Pathologies', label:'FA rapide', hr:128, ef:0.50, edv:110, kick:0, rvs:13, af:true,
+    desc:'Fibrillation atriale rapide : activité auriculaire anarchique (pas d’onde P, ondes f), RR irrégulier, perte de la systole auriculaire. Risque embolique : anticoagulation selon le score CHA₂DS₂-VASc.' },
+  facont:{ cat:'Pathologies', label:'FA contrôlée', hr:78, ef:0.56, edv:118, kick:0, rvs:17.5, af:true,
+    desc:'FA avec contrôle de la fréquence (β-bloquant, digoxine ou inhibiteur calcique bradycardisant) : FC < 110/min au repos, le rythme reste irrégulier et la systole auriculaire absente.' },
+  idm:{ cat:'Pathologies', label:'IDM antérieur', hr:92, ef:0.40, edv:135, kick:0.24, rvs:19, idm:1, ecg:'st', edp:18,
+    desc:'Infarctus antérieur (occlusion de l’IVA) : paroi antérieure, septum antérieur et apex akinétiques (violet), FE ↓. ECG : sus-décalage du segment ST. Reperfusion en urgence, puis antiagrégants, statine, β-bloquant, IEC.' },
+};
+
+const HB={ on:false, t:0, beat0:0, rr:0.857, beat:0, paused:false, speed:1, preset:'repos', hr:70, p:HB_PRESETS.repos,
+  sound:false, walls:false, cut:false, o2:true, lastNow:0, hist:[], S:{}, rnd:null };
+
+function hbTimeline(rr,p){
+  const tej=Math.max(0.15,Math.min(0.34,0.27*Math.sqrt(rr/0.857)*(p.sys||1)));
+  const b1=0.035, ivc=0.05, ao=b1+ivc, b2=ao+tej, mo=b2+0.065;
+  const pr=p.pr||0.16;
+  const aE=rr-0.005, aS=Math.max(mo+0.03, rr-pr+0.06);
+  return { b1, ao, tej, b2, mo, aS, aE, pr };
+}
+function _sm(x){ x=Math.max(0,Math.min(1,x)); return x*x*(3-2*x); }
+function _gs(t,c,s){ const d=(t-c)/s; return Math.exp(-0.5*d*d); }
+
+/* État complet à l'instant tb du battement courant */
+function hbState(tb,rr,p,tAbs,carry){
+  const T=hbTimeline(rr,p);
+  const hr=60/rr;
+  const edv=p.edv*(1-0.12*_sm((hr-100)/60));
+  const sv=edv*p.ef, esv=edv-sv;
+  const kick=p.af?0:p.kick, tau=p.tau||0.085;
+  // ── volume VG
+  let V, ej=0;
+  if(tb<T.ao) V=edv;
+  else if(tb<T.b2){ const x=(tb-T.ao)/T.tej; V=edv-sv*(1-Math.pow(1-x,1.8)); ej=1.8*Math.pow(1-x,0.8)/T.tej; }
+  else if(tb<T.mo) V=esv;
+  else {
+    const end=kick>0?T.aS:rr;
+    const span=Math.max(0.02,end-T.mo);
+    const f=(1-Math.exp(-(Math.min(tb,end)-T.mo)/tau))/(1-Math.exp(-span/tau));
+    V=esv+sv*(1-kick)*f;
+    if(kick>0 && tb>=T.aS){ V+=sv*kick*_sm((tb-T.aS)/Math.max(0.02,T.aE-T.aS)); }
+  }
+  const v=Math.max(0,Math.min(1,(edv-V)/sv));
+  const a=(kick>0 && tb>=T.aS && tb<=T.aE)?Math.sin(Math.PI*(tb-T.aS)/(T.aE-T.aS)):0;
+  // ── valves (0 fermée → 1 ouverte)
+  let mit=0;
+  if(tb<T.b1) mit=1-_sm(tb/T.b1);
+  else if(tb>=T.mo){
+    mit=_sm((tb-T.mo)/0.04);
+    if(kick>0) mit*=1-0.32*_sm((tb-T.mo-0.12)/0.1)*(1-_sm((tb-T.aS)/0.03));   // fermeture partielle en diastasis
+  }
+  let aor=0;
+  if(tb>=T.ao && tb<T.b2) aor=_sm((tb-T.ao)/0.025)*(1-_sm((tb-(T.b2-0.03))/0.03));
+  // ── pressions (mmHg)
+  const hrm=(p.af&&HB.hr)?HB.hr:hr;                       // FA : pression moyenne sur la FC moyenne
+  const qc=hrm*sv/1000, pam=qc*p.rvs+3, pp=sv/(p.comp||1.45);
+  const pas=pam+pp*2/3, pad=pam-pp/3, edp=p.edp||10;
+  const pdic=pad+0.62*(pas-pad);
+  const diast=(dt,Tt)=>pad+(pdic-pad)*Math.max(0,1-Math.pow(Math.max(0,dt)/Tt,0.85));
+  let pao;
+  if(tb<T.ao) pao=(carry!=null)? carry+(pad-carry)*_sm(tb/T.ao) : diast(tb+rr-T.b2, rr+T.ao-T.b2);
+  else if(tb<T.b2){ const x=(tb-T.ao)/T.tej; pao=pad+(pas-pad)*(x<0.35?Math.sin(x/0.35*Math.PI/2):1-0.38*Math.pow((x-0.35)/0.65,1.5)); }
+  else { const dt=tb-T.b2; pao=diast(dt, rr+T.ao-T.b2) - 5*Math.exp(-Math.pow((dt-0.012)/0.008,2)) + 3*Math.exp(-Math.pow((dt-0.035)/0.012,2)); }
+  let plv;
+  if(tb<T.ao) plv=edp+(pad-edp)*Math.pow(tb/T.ao,2.2);
+  else if(tb<T.b2){ const x=(tb-T.ao)/T.tej; plv=pao+4*Math.sin(Math.PI*x); }
+  else if(tb<T.mo) plv=3+(pdic-3)*Math.exp(-(tb-T.b2)/0.022);
+  else plv=2+(edp-2)*Math.pow((V-esv)/sv,2)+3*a;
+  const la0=p.dil?16:(p.hyp?11:7);
+  // ondes a (systole auriculaire), c (bombement mitral), creux x, onde v puis creux y
+  let pla=la0+(kick>0?4.5*a:0)+2.2*_gs(tb,0.06,0.015)-2.5*_gs(tb,T.ao+0.35*T.tej,0.05);
+  const vS=T.ao+0.4*T.tej;
+  if(tb>=vS && tb<T.mo) pla+=6*_sm((tb-vS)/(T.mo-vS));
+  else if(tb>=T.mo) pla+=6*(1-_sm((tb-T.mo)/0.12));
+  if(p.af) pla+=0.8*Math.sin(tAbs*2*Math.PI*6.1);
+  // ── ECG (mV, dérivation type DII)
+  let ecg=0;
+  if(!p.af) ecg+=0.16*_gs(tb, rr-T.pr+0.045, 0.022);
+  ecg+=-0.10*_gs(tb,0.012,0.007)+1.15*_gs(tb,0.035,0.010)-0.28*_gs(tb,0.058,0.009);
+  const tT=T.b2-0.07;
+  let tw=0.32;
+  if(p.ecg==='st'){ ecg+=0.24*_sm((tb-0.06)/0.02)*(1-_sm((tb-tT-0.04)/0.05)); tw=0.42; }
+  if(p.ecg==='cupule'){ ecg+=-0.13*Math.sin(Math.PI*Math.max(0,Math.min(1,(tb-0.07)/(tT-0.04))))*(tb<tT+0.02?1:0); tw=0.12; }
+  ecg+=tw*_gs(tb,tT,0.042);
+  if(p.af) ecg+=0.045*Math.sin(tAbs*2*Math.PI*6.3)+0.03*Math.sin(tAbs*2*Math.PI*4.6+1.3);
+  // ── phase
+  let phase;
+  if(tb<T.b1) phase='Fin de diastole';
+  else if(tb<T.ao) phase='Contraction isovolumique';
+  else if(tb<T.b2) phase='Éjection';
+  else if(tb<T.mo) phase='Relaxation isovolumique';
+  else if(kick>0 && tb>=T.aS) phase='Systole auriculaire';
+  else if(tb<T.mo+0.14) phase='Remplissage rapide';
+  else phase='Diastasis';
+  const sys=tb>=T.b1 && tb<T.b2;
+  return { T, v, a, mit, aor, V, edv, esv, sv, ej, pao, plv, pla, ecg, pas, pad, qc, hr, phase, sys, af:!!p.af };
+}
+
+/* Avance l'horloge simulée et retourne l'état courant */
+function hbStep(dt){
+  const p=HB.p;
+  if(!HB.rnd) HB.rnd=lmRng(4242);
+  const t0=HB.t;
+  if(!HB.paused) HB.t+=dt*HB.speed;
+  else if(HB.stepReq){ HB.t+=HB.stepReq; HB.stepReq=0; }
+  let guard=0;
+  while(HB.t-HB.beat0>=HB.rr && guard++<8){
+    HB.beat0+=HB.rr; HB.beat++; HB.carry=HB.S&&HB.S.pao!=null?HB.S.pao:null;
+    const mean=60/HB.hr;
+    HB.rr = p.af ? Math.max(0.32,Math.min(1.5, mean*(0.62+0.76*HB.rnd()))) : mean;
+    HB._b1Done=false; HB._b2Done=false;
+  }
+  const tb=HB.t-HB.beat0;
+  const S=hbState(tb,HB.rr,p,HB.t,HB.carry);
+  if(!HB._b1Done && tb>=S.T.b1){ HB._b1Done=true; HB.tB1=HB.beat0+S.T.b1; hbSoundEvent(1); }
+  if(!HB._b2Done && tb>=S.T.b2){ HB._b2Done=true; HB.tB2=HB.beat0+S.T.b2; hbSoundEvent(2); }
+  HB.S=S;
+  if(HB.t===t0 && HB.hist.length) return S;
+  const h=HB.hist; h.push([HB.t,S.ecg,S.plv,S.pao,S.pla,S.V,S.sys?1:0]);
+  while(h.length && h[0][0]<HB.t-3.2) h.shift();
+  if(h.length>1200) h.splice(0,h.length-1200);
+  return S;
+}
+
+/* ── Bruits du cœur (WebAudio, à la demande) ── */
+let _hbAudio=null;
+function hbSoundEvent(k){
+  if(!HB.sound || HB.paused || HB.speed<0.45) return;
+  try{
+    if(!_hbAudio) _hbAudio=new (window.AudioContext||window.webkitAudioContext)();
+    const ctx=_hbAudio, t0=ctx.currentTime, dur=k===1?0.11:0.08;
+    const o=ctx.createOscillator(), g=ctx.createGain(), f=ctx.createBiquadFilter();
+    o.type='sine'; o.frequency.setValueAtTime(k===1?72:105,t0); o.frequency.exponentialRampToValueAtTime(k===1?48:70,t0+dur);
+    f.type='lowpass'; f.frequency.value=k===1?220:320;
+    g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(k===1?0.55:0.4,t0+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    o.connect(f); f.connect(g); g.connect(ctx.destination); o.start(t0); o.stop(t0+dur+0.02);
+  }catch(e){}
+}
+
+/* ══════════════════════════════════════════════════════
+   💓 CŒUR BATTANT — déformation des vrais meshes cardiaques
+   Repère cardiaque : apex A (point du VG le plus éloigné de la mitrale),
+   axe long u (apex → milieu des anneaux mitral et tricuspide), longueur L.
+   Pour chaque sommet : hauteur h (0 apex → 1 base), distance r à l'axe.
+   • Systole : la base descend vers l'apex (≈ 11 % de L, ~ MAPSE), les
+     parois se rapprochent de l'axe en conservant leur volume
+     (r' = √(r² − s) : l'endocarde se déplace plus que l'épicarde, la
+     paroi s'épaissit) et le ventricule se tord (apex +7°, base −4°).
+   • Systole auriculaire : les oreillettes se contractent vers leur centre.
+   • Valves : les feuillets s'ouvrent (mitrale/tricuspide vers l'apex,
+     sigmoïdes vers l'artère) selon l'état calculé par le modèle.
+   Un seul champ continu est appliqué à toutes les pièces : elles restent
+   jointives. Les positions d'origine sont restaurées à la sortie du mode.
+══════════════════════════════════════════════════════ */
+const HB_MESHES=['VH_F_left_ventricle','VH_F_right_ventricle','VH_F_left_cardiac_atrium','VH_F_right_cardiac_atrium','VH_F_interventricular_septum',
+  'VH_F_papillary_muscle_of_heart_ant','VH_F_papillary_muscle_of_heart_antlat','VH_F_papillary_muscle_of_heart_med','VH_F_papillary_muscle_of_heart_pos','VH_F_papillary_muscle_of_heart_posmed',
+  'VH_F_aortic_valve','VH_F_pulmonary_valve','VH_F_mitral_valve','VH_F_tricuspid_valve',
+  'VH_F_pulmonary_vein_L_sup','VH_F_pulmonary_vein_R_inf','VH_F_pulmonary_vein_R_sup','VH_F_pulmonary_vein_L_inf',
+  'VH_F_coronary_sinus','VH_F_great_cardiac_vein','VH_F_middle_cardiac_vein','VH_F_oblique_vein_of_left_atrium','VH_F_posterior_vein_of_left_ventricle','VH_F_anterior_cardiac_vein','VH_F_small_cardiac_vein',
+  'VH_F_superior_vena_cava','VH_F_inferior_vena_cava_a','VH_F_left_coronary_artery','VH_F_left_posterior_descending_branch_of_circumflex_branch_of_left_coronary_artery',
+  'VH_F_posterior_left_ventricular_branch','VH_F_right_coronary_artery','VH_F_pulmonary_trunk','VH_F_ascending_aorta'];
+const HB_VALVES={ VH_F_mitral_valve:'mit', VH_F_tricuspid_valve:'mit', VH_F_aortic_valve:'aor', VH_F_pulmonary_valve:'aor' };
+const HB_IDM_MESH={ VH_F_left_ventricle:1, VH_F_interventricular_septum:1, VH_F_papillary_muscle_of_heart_antlat:1, VH_F_papillary_muscle_of_heart_ant:0.6, VH_F_right_ventricle:0.45,
+  VH_F_great_cardiac_vein:1, VH_F_anterior_cardiac_vein:0.5, VH_F_small_cardiac_vein:0.4 };
+let _hbDef=null, hbGroup=null;
+
+function _hbMeanW(name){
+  const w=lmWorldVerts(name); if(!w) return null;
+  let x=0,y=0,z=0; for(let i=0;i<w.n;i++){ x+=w.P[i*3]; y+=w.P[i*3+1]; z+=w.P[i*3+2]; }
+  return new THREE.Vector3(x/w.n,y/w.n,z/w.n);
+}
+function hbFrame(){
+  const mit=_hbMeanW('VH_F_mitral_valve'), tri=_hbMeanW('VH_F_tricuspid_valve');
+  const lv=lmWorldVerts('VH_F_left_ventricle');
+  if(!mit||!tri||!lv) return null;
+  const B=mit.clone().add(tri).multiplyScalar(0.5);
+  let best=-1, A=new THREE.Vector3();
+  for(let i=0;i<lv.n;i++){ const dx=lv.P[i*3]-mit.x, dy=lv.P[i*3+1]-mit.y, dz=lv.P[i*3+2]-mit.z, d=dx*dx+dy*dy+dz*dz; if(d>best){ best=d; A.set(lv.P[i*3],lv.P[i*3+1],lv.P[i*3+2]); } }
+  const u=B.clone().sub(A), L=u.length(); u.normalize();
+  const perp=v=>v.clone().sub(u.clone().multiplyScalar(v.dot(u))).normalize();
+  const zA=perp(new THREE.Vector3(0,0,1));
+  const sep=_hbMeanW('VH_F_interventricular_septum')||B;
+  const sD=perp(sep.clone().sub(A));
+  const cLA=_hbMeanW('VH_F_left_cardiac_atrium')||B, cRA=_hbMeanW('VH_F_right_cardiac_atrium')||B;
+  const aoV=_hbMeanW('VH_F_aortic_valve')||B, puV=_hbMeanW('VH_F_pulmonary_valve')||B;
+  const aoA=_hbMeanW('VH_F_ascending_aorta')||aoV.clone().add(u), puT=_hbMeanW('VH_F_pulmonary_trunk')||puV.clone().add(u);
+  let n4=new THREE.Vector3().crossVectors(u, tri.clone().sub(mit)).normalize(); if(n4.dot(zA)<0) n4.negate();
+  return { A,u,L,B,mit,tri,zA,sD,cLA,cRA,aoV,puV,dAo:aoA.clone().sub(aoV).normalize(),dPu:puT.clone().sub(puV).normalize(), n4, k:L/14.38 };
+}
+/* Paramètres figés d'un ensemble de sommets (repère monde) */
+function _hbItem(F, geom, matW, opts){
+  let pos=geom.attributes.position;
+  if(pos.isInterleavedBufferAttribute){ const a=new Float32Array(pos.count*3); for(let i=0;i<pos.count;i++){ a[i*3]=pos.getX(i); a[i*3+1]=pos.getY(i); a[i*3+2]=pos.getZ(i); } pos=new THREE.BufferAttribute(a,3); geom.setAttribute('position',pos); }
+  const n=pos.count, P=pos.array, orig=new Float32Array(P);
+  const inv=matW.clone().invert().elements, M=matW.elements;
+  const W=new Float32Array(n*3), H=new Float32Array(n), R=new Float32Array(n), E=new Float32Array(n*3), X=new Float32Array(n*3),
+        GV=new Float32Array(n), WL=new Float32Array(n), WA=new Float32Array(n), CB=new Float32Array(n*3), TT=new Float32Array(n);
+  const u=F.u, A=F.A, L=F.L, tmp=new THREE.Vector3();
+  const valve=opts.valve, idmW=opts.idm||0;
+  let TIP=null, EV=null, vc=null, vn=null;
+  for(let i=0;i<n;i++){
+    const x=P[i*3], y=P[i*3+1], z=P[i*3+2];
+    const wx=M[0]*x+M[4]*y+M[8]*z+M[12], wy=M[1]*x+M[5]*y+M[9]*z+M[13], wz=M[2]*x+M[6]*y+M[10]*z+M[14];
+    W[i*3]=wx; W[i*3+1]=wy; W[i*3+2]=wz;
+    const dx=wx-A.x, dy=wy-A.y, dz=wz-A.z, hl=dx*u.x+dy*u.y+dz*u.z, h=hl/L;
+    let rx=dx-hl*u.x, ry=dy-hl*u.y, rz=dz-hl*u.z; const r=Math.hypot(rx,ry,rz);
+    if(r>1e-6){ rx/=r; ry/=r; rz/=r; } else { rx=F.zA.x; ry=F.zA.y; rz=F.zA.z; }
+    H[i]=h; R[i]=r; E[i*3]=rx; E[i*3+1]=ry; E[i*3+2]=rz;
+    X[i*3]=u.y*rz-u.z*ry; X[i*3+1]=u.z*rx-u.x*rz; X[i*3+2]=u.x*ry-u.y*rx;     // u × e
+    GV[i]=_sm((h+0.1)/0.25)*(1-_sm((h-0.9)/0.18));
+    WL[i]= h<0?0 : h<=1?h : Math.max(0,1-(h-1)/0.6);
+    WA[i]=_sm((h-0.85)/0.2)*(1-_sm((h-1.55)/0.3));
+    // centre auriculaire pondéré (OG / OD)
+    const dLA=Math.hypot(wx-F.cLA.x,wy-F.cLA.y,wz-F.cLA.z), dRA=Math.hypot(wx-F.cRA.x,wy-F.cRA.y,wz-F.cRA.z);
+    const wLA=1/(1+Math.exp((dLA-dRA)/(0.1*L)));
+    CB[i*3]=F.cLA.x*wLA+F.cRA.x*(1-wLA)-wx; CB[i*3+1]=F.cLA.y*wLA+F.cRA.y*(1-wLA)-wy; CB[i*3+2]=F.cLA.z*wLA+F.cRA.z*(1-wLA)-wz;
+    // territoire de l'IVA (paroi antérieure, septum antérieur, apex)
+    if(idmW){
+      const ca=rx*F.zA.x+ry*F.zA.y+rz*F.zA.z, cs=rx*F.sD.x+ry*F.sD.y+rz*F.sD.z;
+      const hf=1-_sm((h-0.6)/0.16);
+      const ant=_sm((ca-0.15)/0.35)*hf, sept=_sm((cs-0.45)/0.3)*_sm((ca+0.35)/0.3)*hf, apex=1-_sm((h-0.16)/0.14);
+      TT[i]=Math.min(1,Math.max(ant,sept,apex))*idmW;
+    }
+  }
+  if(valve){
+    TIP=new Float32Array(n); EV=new Float32Array(n*3);
+    vc=new THREE.Vector3(); for(let i=0;i<n;i++){ vc.x+=W[i*3]; vc.y+=W[i*3+1]; vc.z+=W[i*3+2]; } vc.multiplyScalar(1/n);
+    vn= valve==='mit' ? u.clone() : (opts.art||u).clone();
+    const rho=new Float32Array(n);
+    for(let i=0;i<n;i++){
+      tmp.set(W[i*3]-vc.x, W[i*3+1]-vc.y, W[i*3+2]-vc.z); tmp.sub(vn.clone().multiplyScalar(tmp.dot(vn)));
+      rho[i]=tmp.length(); tmp.normalize(); EV[i*3]=tmp.x; EV[i*3+1]=tmp.y; EV[i*3+2]=tmp.z;
+    }
+    const srt=Array.from(rho).sort((a,b)=>a-b), rmax=srt[Math.floor(srt.length*0.95)]||1;
+    for(let i=0;i<n;i++) TIP[i]=Math.pow(Math.max(0,1-rho[i]/rmax),0.8);
+  }
+  return { geom, pos, orig, inv, n, W, H, R, E, X, GV, WL, WA, CB, TT, valve, TIP, EV, vn, idm:idmW>0 };
+}
+
+function hbBuildDeform(){
+  if(_hbDef) return _hbDef;
+  const F=hbFrame(); if(!F) return null;
+  const items=[];
+  HB_MESHES.forEach(name=>{
+    const m=lmMesh(name); if(!m) return;
+    m.updateWorldMatrix(true,false);
+    const valve=HB_VALVES[name];
+    const art= name==='VH_F_aortic_valve'?F.dAo : name==='VH_F_pulmonary_valve'?F.dPu : null;
+    const it=_hbItem(F, m.geometry, m.matrixWorld, { valve, art, idm:HB_IDM_MESH[name]||0 });
+    it.name=name; it.mesh=m; items.push(it);
+  });
+  _hbDef={ F, items, extra:[] };
+  hbBuildExtras();
+  return _hbDef;
+}
+
+/* IVA (artère interventriculaire antérieure) : absente du modèle HRA,
+   tracée dans le sillon interventriculaire antérieur, à la surface
+   épicardique mesurée sur les meshes VG / VD / septum. */
+function hbLADPath(F){
+  const eg=F.sD.clone().add(F.zA.clone().multiplyScalar(1.15)).normalize();
+  const srcs=['VH_F_left_ventricle','VH_F_right_ventricle','VH_F_interventricular_septum'].map(lmWorldVerts).filter(Boolean);
+  const pts=[];
+  const lca=_hbMeanW('VH_F_left_coronary_artery');
+  if(lca) pts.push(lca);
+  for(let s=0;s<=11;s++){
+    const h=0.9-s*0.078; let best=0;
+    srcs.forEach(w=>{ for(let i=0;i<w.n;i++){
+      const dx=w.P[i*3]-F.A.x, dy=w.P[i*3+1]-F.A.y, dz=w.P[i*3+2]-F.A.z, hl=dx*F.u.x+dy*F.u.y+dz*F.u.z;
+      if(Math.abs(hl/F.L-h)>0.04) continue;
+      const rx=dx-hl*F.u.x, ry=dy-hl*F.u.y, rz=dz-hl*F.u.z, r=Math.hypot(rx,ry,rz); if(r<1e-6) continue;
+      if((rx*eg.x+ry*eg.y+rz*eg.z)/r<0.965) continue;
+      if(r>best) best=r;
+    }});
+    if(best<=0) continue;
+    pts.push(F.A.clone().add(F.u.clone().multiplyScalar(h*F.L)).add(eg.clone().multiplyScalar(best+0.11*F.k)));
+  }
+  return pts;
+}
+function hbBuildExtras(){
+  const D=_hbDef, F=D.F;
+  if(hbGroup){ scene.remove(hbGroup); }
+  hbGroup=new THREE.Group(); hbGroup.name='coeur-battant';
+  const I=new THREE.Matrix4();
+  // IVA : segment proximal + distal (gris si infarctus) + occlusion
+  const pts=hbLADPath(F);
+  if(pts.length>=4){
+    const curve=new THREE.CatmullRomCurve3(pts,false,'centripetal');
+    const cut=0.3;
+    const mkTube=(a,b,col,name)=>{
+      const g=new THREE.TubeGeometry(new LMSubCurve(curve,a,b), 48, 0.13*F.k, 7, false);
+      const mat=new THREE.MeshPhongMaterial({color:col, emissive:col, emissiveIntensity:0.25, shininess:30});
+      const m=new THREE.Mesh(g,mat); m.name=name; hbGroup.add(m);
+      const it=_hbItem(F,g,I,{}); it.mesh=m; it.name=name; D.extra.push(it); return m;
+    };
+    D.ladP=mkTube(0,cut,0xc8102e,'IVA proximale');
+    D.ladD=mkTube(cut,1,0xc8102e,'IVA distale');
+    const sg=new THREE.SphereGeometry(0.24*F.k,14,10); const sp=curve.getPointAt(cut);
+    sg.translate(sp.x,sp.y,sp.z);
+    const om=new THREE.MeshPhongMaterial({color:0xff2200, emissive:0xff2200, emissiveIntensity:0.8});
+    D.occl=new THREE.Mesh(sg,om); D.occl.name='occlusion IVA'; D.occl.visible=false; hbGroup.add(D.occl);
+    const it=_hbItem(F,sg,I,{}); it.mesh=D.occl; D.extra.push(it);
+  }
+  // Zone infarcie : sous-ensemble des triangles du VG et du septum, qui
+  // partage les positions du mesh d'origine (il bat donc avec lui)
+  D.infarct=[];
+  D.items.filter(it=>it.idm && /left_ventricle|septum/.test(it.name)).forEach(it=>{
+    const g0=it.geom, idx=g0.index?g0.index.array:null, nT=idx?idx.length/3:it.n/3, keep=[];
+    for(let t=0;t<nT;t++){
+      const a=idx?idx[t*3]:t*3, b=idx?idx[t*3+1]:t*3+1, c=idx?idx[t*3+2]:t*3+2;
+      if((it.TT[a]+it.TT[b]+it.TT[c])/3>0.5) keep.push(a,b,c);
+    }
+    if(!keep.length) return;
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position', g0.attributes.position);
+    if(g0.attributes.normal) g.setAttribute('normal', g0.attributes.normal);
+    g.setIndex(keep);
+    const mat=new THREE.MeshPhongMaterial({color:0x7b2cbf, emissive:0x4a1180, emissiveIntensity:0.45, transparent:true, opacity:0.72,
+      depthWrite:false, side:THREE.DoubleSide, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2});
+    const m=new THREE.Mesh(g,mat); m.matrixAutoUpdate=false; m.matrix.copy(it.mesh.matrixWorld); m.renderOrder=6; m.visible=false; m.name='zone infarcie';
+    m.frustumCulled=false;
+    hbGroup.add(m); D.infarct.push(m);
+  });
+  lmLinGroup(hbGroup);
+}
+
+/* Applique l'état S du modèle à tous les sommets */
+function hbApplyDeform(S){
+  const D=_hbDef; if(!D) return;
+  const F=D.F, p=HB.p, k=F.k, k2=k*k, A=F.A, u=F.u, L=F.L;
+  const kEF=Math.max(0.25,Math.min(1.35,p.ef/0.60));
+  const v=S.v*kEF;
+  const s=7.0*k2*v, Dl=0.13*L*v, twA=0.13*v, twB=0.075*v, kRV=0.07*v;
+  const a=S.a*(p.kick?Math.min(1.6,p.kick/0.22):0);
+  const S0=p.dil?9.5*k2:(p.hyp?-4.6*k2:0), dilL=p.dil?0.07*L:0;
+  const idm=!!p.idm, q=p.af?0.055*k:0, tq=HB.t*2*Math.PI;
+  const run=(it)=>{
+    const {n,H,R,E,X,GV,WL,WA,CB,TT,W,inv}=it, P=it.pos.array;
+    const vOpen= it.valve==='mit'?S.mit : it.valve==='aor'?S.aor : 0, vk=0.075*L*vOpen;
+    for(let i=0;i<n;i++){
+      const h=H[i], r=R[i], gv=GV[i], i3=i*3;
+      const kseg=idm?1-1.18*TT[i]:1;
+      let r0=r;
+      if(S0!==0 && gv>0){ const q0=r*r+S0*gv; r0=Math.sqrt(Math.max(q0,0.09*r*r)); }
+      let r1=r0;
+      if(gv>0){
+        const q1=r0*r0-s*gv*kseg; r1=Math.sqrt(Math.max(q1,0.09*r0*r0));
+        if(r0>5.5*k){ const w=_sm((r0-5.5*k)/(3*k)); r1-=kRV*r0*gv*w*Math.max(0,kseg); }   // paroi libre du VD : mouvement en soufflet
+      }
+      let hl=h*L-Dl*WL[i];
+      if(dilL && h<1) hl+=dilL*(h-1);
+      const phi=(twA*(1-h)-twB*h)*gv*(idm?Math.max(0,kseg):1);
+      const c=Math.cos(phi), sn=Math.sin(phi);
+      const ex=E[i3]*c+X[i3]*sn, ey=E[i3+1]*c+X[i3+1]*sn, ez=E[i3+2]*c+X[i3+2]*sn;
+      let x=A.x+u.x*hl+ex*r1, y=A.y+u.y*hl+ey*r1, z=A.z+u.z*hl+ez*r1;
+      const wa=WA[i];
+      if(wa>0){
+        const f=a*0.13*wa; x+=CB[i3]*f; y+=CB[i3+1]*f; z+=CB[i3+2]*f;
+        if(q){ const qq=q*wa*Math.sin(tq*7.3+i*0.37)*Math.cos(tq*5.1+i*0.11); x+=E[i3]*qq; y+=E[i3+1]*qq; z+=E[i3+2]*qq; }
+      }
+      if(vk && it.TIP){
+        const t=it.TIP[i]*vk, ev=it.EV, vn=it.vn;
+        if(it.valve==='mit'){ x+=(-vn.x*0.9+ev[i3]*0.35)*t; y+=(-vn.y*0.9+ev[i3+1]*0.35)*t; z+=(-vn.z*0.9+ev[i3+2]*0.35)*t; }
+        else { x+=(vn.x*0.7+ev[i3]*0.32)*t; y+=(vn.y*0.7+ev[i3+1]*0.32)*t; z+=(vn.z*0.7+ev[i3+2]*0.32)*t; }
+      }
+      P[i3]  =inv[0]*x+inv[4]*y+inv[8]*z+inv[12];
+      P[i3+1]=inv[1]*x+inv[5]*y+inv[9]*z+inv[13];
+      P[i3+2]=inv[2]*x+inv[6]*y+inv[10]*z+inv[14];
+    }
+    it.pos.needsUpdate=true;
+  };
+  D.items.forEach(run); D.extra.forEach(run);
+}
+function hbRestore(){
+  const D=_hbDef; if(!D) return;
+  D.items.concat(D.extra).forEach(it=>{ it.pos.array.set(it.orig); it.pos.needsUpdate=true; });
+}
+
+/* ══════════════════════════════════════════════════════
+   💓 MODE « CŒUR BATTANT » — panneau, tracés, boucle
+══════════════════════════════════════════════════════ */
+let heartMode=false, heartPanel=null, _hbUiT=0;
+const _hbClip=new THREE.Plane();
+const _hbFlash=new THREE.Color(1.0,0.82,0.5);
+
+function buildHeartPanel(){
+  if(heartPanel) return;
+  const el=document.createElement('div');
+  el.id='heart-panel'; el.className='ca-panel';
+  el.style.cssText='right:8px;bottom:44px;width:344px;--ca-acc:#e63946';
+  const cats={};
+  Object.entries(HB_PRESETS).forEach(([k,p])=>{ (cats[p.cat]=cats[p.cat]||[]).push(`<button data-k="${k}" onclick="setHeartPreset('${k}')">${p.label}</button>`); });
+  el.innerHTML=`
+  <div class="ca-hd"><span style="font-size:18px;display:inline-block;animation:bpulse 1s ease-in-out infinite" id="hb-ico">💓</span>
+    <div><h4>Cœur battant</h4><div class="ca-sub" id="hb-sub">Cycle cardiaque · Wiggers</div></div>
+    <button class="ca-min" onclick="this.closest('.ca-panel').classList.toggle('collapsed')" title="Réduire">–</button></div>
+  <div class="ca-bd">
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center" id="hb-read">
+      ${['FC|/min','VES|mL','FE|%','Débit|L/min','PA|mmHg'].map((s,i)=>{ const [a,b]=s.split('|'); return `<div style="background:rgba(255,255,255,.035);border:1px solid var(--border);border-radius:6px;padding:4px 2px">
+        <div class="ca-mono" style="font-size:10.5px;color:var(--text4)">${a}</div><div id="hb-r${i}" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;color:var(--text);font-weight:600">–</div><div style="font-size:9.5px;color:var(--text4)">${b}</div></div>`; }).join('')}
+    </div>
+    <canvas id="hb-chart" style="width:100%;height:176px;display:block;margin-top:7px;border-radius:6px;border:1px solid var(--border)"></canvas>
+    <div class="ca-row" style="font-size:12px;gap:8px;flex-wrap:wrap">
+      <span id="hb-phase" style="font-size:11.5px;padding:2px 8px;border-radius:10px;background:rgba(230,57,70,.15);color:#ff8a93;white-space:nowrap;font-family:ui-monospace,Menlo,Consolas,monospace">—</span>
+      <span id="hb-valves" style="display:flex;gap:9px;margin-left:auto;white-space:nowrap"></span></div>
+    <div class="ca-row">
+      <button class="ca-btn" id="hb-play" onclick="hbTogglePause()" title="Pause / lecture">⏸</button>
+      <button class="ca-btn" onclick="hbStepFrame()" title="Avancer de 20 ms (en pause)">⏭ 20 ms</button>
+      <span class="ca-seg" id="hb-speed"><button data-s="1" class="on" onclick="hbSetSpeed(1)">×1</button><button data-s="0.5" onclick="hbSetSpeed(0.5)">×½</button><button data-s="0.25" onclick="hbSetSpeed(0.25)">×¼</button></span>
+      <label style="margin-left:auto;cursor:pointer;display:flex;align-items:center;gap:3px" title="Bruits B1 / B2"><input type="checkbox" onchange="HB.sound=this.checked" style="accent-color:#e63946">🔊</label>
+    </div>
+    <div class="ca-row"><span class="ca-mono" style="min-width:24px">FC</span><input type="range" id="hb-hr" min="35" max="180" step="1" value="70" oninput="hbSetHR(this.value)"><span class="ca-mono" id="hb-hrv" style="min-width:52px;text-align:right">70/min</span></div>
+    <div class="ca-row" style="gap:6px 12px;flex-wrap:wrap">
+      <label style="cursor:pointer;display:flex;align-items:center;gap:4px"><input type="checkbox" id="hb-walls" onchange="HB.walls=this.checked;modeGhostRefresh()" style="accent-color:#e63946"> Parois translucides</label>
+      <label style="cursor:pointer;display:flex;align-items:center;gap:4px" title="Cœur gauche (sang oxygéné) en rouge, cœur droit (désoxygéné) en bleu"><input type="checkbox" checked onchange="HB.o2=this.checked" style="accent-color:#e63946"> Rouge / bleu</label>
+      <label style="cursor:pointer;display:flex;align-items:center;gap:4px" title="Plan contenant l'axe long et les deux anneaux auriculo-ventriculaires"><input type="checkbox" id="hb-cut" onchange="hbSetCut(this.checked)" style="accent-color:#e63946"> Coupe 4 cavités</label>
+    </div>
+    ${Object.entries(cats).map(([c,b])=>`<div class="ca-lbl">${c}</div><div class="ca-seg hb-presets">${b.join('')}</div>`).join('')}
+    <div class="ca-info" id="hb-desc"></div>
+    <div class="ca-credit">Modèle pédagogique : cinématique et pressions schématiques calées sur le diagramme de Wiggers, appliquées aux meshes réels du cœur (HRA). L’IVA, absente du modèle, est tracée dans le sillon interventriculaire antérieur.</div>
+  </div>`;
+  const v3d=document.getElementById('viewer3d'); if(v3d) v3d.appendChild(el);
+  heartPanel=el;
+}
+function setHeartPreset(k,silent){
+  const p=HB_PRESETS[k]; if(!p) return;
+  HB.preset=k; HB.p=p; HB.hr=p.hr; HB.rr=60/p.hr;
+  const sl=document.getElementById('hb-hr'); if(sl) sl.value=p.hr;
+  const hv=document.getElementById('hb-hrv'); if(hv) hv.textContent=p.hr+'/min';
+  document.querySelectorAll('.hb-presets button').forEach(b=>b.classList.toggle('on', b.dataset.k===k));
+  const d=document.getElementById('hb-desc'); if(d) d.innerHTML=`<b>${p.label}</b> — ${p.desc}`;
+  const D=_hbDef;
+  if(D){
+    D.infarct.forEach(m=>{ m.visible=!!p.idm; });
+    if(D.occl) D.occl.visible=!!p.idm;
+    if(D.ladD){ const c=new THREE.Color(p.idm?0x5b4b4f:0xc8102e).convertSRGBToLinear(); D.ladD.material.color.copy(c); D.ladD.material.emissive.copy(c); }
+  }
+  HB.hist=[];
+}
+function hbSetHR(v){ HB.hr=+v; if(!HB.p.af) HB.rr=60/HB.hr; const hv=document.getElementById('hb-hrv'); if(hv) hv.textContent=v+'/min'; }
+function hbSetSpeed(s){ HB.speed=s; document.querySelectorAll('#hb-speed button').forEach(b=>b.classList.toggle('on', +b.dataset.s===s)); }
+function hbTogglePause(){ HB.paused=!HB.paused; const b=document.getElementById('hb-play'); if(b) b.textContent=HB.paused?'▶':'⏸'; const ic=document.getElementById('hb-ico'); if(ic) ic.style.animationPlayState=HB.paused?'paused':'running'; }
+function hbStepFrame(){ if(!HB.paused) hbTogglePause(); HB.stepReq=0.02; }
+function hbSetCut(on){
+  HB.cut=on;
+  /* En coupe, les parois restent opaques (on voit l'épaisseur du myocarde
+     et les cavités) et le reste du corps s'efface davantage. */
+  if(on){ HB.walls=false; const w=document.getElementById('hb-walls'); if(w) w.checked=false; }
+  const c=document.getElementById('hb-cut'); if(c) c.checked=on;
+  HB_GHOST.base=on?0.025:0.08; HB_GHOST.skin=on?0.012:0.03;
+  modeGhostRefresh();
+  if(on && _hbDef){ const fr=hbFrameCam(_hbDef.F.n4.clone().add(new THREE.Vector3(0,0.15,0))); flyToRegion(fr.c, fr.r, fr.dir); }
+}
+
+/* ── Tracés défilants (balayage façon scope) ── */
+function hbDrawChart(){
+  const c=document.getElementById('hb-chart'); if(!c || !heartPanel || heartPanel.classList.contains('collapsed')) return;
+  const dpr=Math.min(2,window.devicePixelRatio||1), Wc=c.clientWidth||320, Hc=c.clientHeight||176;
+  if(c.width!==Math.round(Wc*dpr) || c.height!==Math.round(Hc*dpr)){ c.width=Math.round(Wc*dpr); c.height=Math.round(Hc*dpr); }
+  const ctx=c.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle='#06080b'; ctx.fillRect(0,0,Wc,Hc);
+  const yE0=6, yE1=48, yP0=54, yP1=124, yV0=130, yV1=Hc-6;
+  const win=3, t=HB.t, h=HB.hist, X=ts=>((ts%win)/win)*Wc;
+  // grilles
+  ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
+  for(let gx=0;gx<Wc;gx+=Wc/15){ ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,Hc); ctx.stroke(); }
+  const pY=v=>yP1-(v/140)*(yP1-yP0);
+  [0,40,80,120].forEach(v=>{ ctx.beginPath(); ctx.moveTo(0,pY(v)); ctx.lineTo(Wc,pY(v)); ctx.stroke(); });
+  ctx.strokeStyle='rgba(255,255,255,.12)'; [yE1+3,yP1+3].forEach(y=>{ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(Wc,y); ctx.stroke(); });
+  const live=s=>(t-s[0])<win-0.1;
+  // systole : bandeau
+  ctx.fillStyle='rgba(230,57,70,.09)';
+  for(let i=1;i<h.length;i++){ const s=h[i]; if(!s[6]||!live(s)) continue; const x0=X(h[i-1][0]), x1=X(s[0]); if(x1>x0) ctx.fillRect(x0,yP0,x1-x0+0.6,yP1-yP0); }
+  const S=HB.S||{}, edv=S.edv||120, esv=S.esv||50;
+  const vlo=Math.max(0,esv-12), vhi=edv+12, vY=v=>yV1-(v-vlo)/(vhi-vlo)*(yV1-yV0);
+  const trace=(k,map,col,w)=>{
+    ctx.strokeStyle=col; ctx.lineWidth=w||1.5; ctx.beginPath(); let px=null;
+    for(let i=0;i<h.length;i++){ const s=h[i]; if(!live(s)){ px=null; continue; } const x=X(s[0]), y=map(s[k]);
+      if(px===null || x<px) ctx.moveTo(x,y); else ctx.lineTo(x,y); px=x; }
+    ctx.stroke();
+  };
+  trace(1,v=>yE1-12-(v*(yE1-yE0-14)/1.2),'#3ddc84',1.6);
+  trace(4,pY,'#5aa9ff',1.4);
+  trace(3,pY,'#ffb703',1.6);
+  trace(2,pY,'#ff4d5e',1.8);
+  trace(5,vY,'#f1e05a',1.6);
+  // balayage
+  const sx=X(t); ctx.fillStyle='rgba(255,255,255,.75)'; ctx.fillRect(sx-1,0,2,Hc);
+  // libellés
+  ctx.font='10px ui-monospace,Menlo,Consolas,monospace'; ctx.textBaseline='top';
+  ctx.fillStyle='#3ddc84'; ctx.fillText('ECG',4,4);
+  ctx.fillStyle='rgba(255,255,255,.5)'; ctx.fillText('mmHg',4,yP0+1);
+  [40,80,120].forEach(v=>{ ctx.fillText(String(v),Wc-20,pY(v)-11); });
+  ctx.fillStyle='#ff4d5e'; ctx.fillText('VG',40,yP0+1); ctx.fillStyle='#ffb703'; ctx.fillText('Aorte',60,yP0+1); ctx.fillStyle='#5aa9ff'; ctx.fillText('OG',96,yP0+1);
+  ctx.fillStyle='#f1e05a'; ctx.fillText('Volume VG (mL)',4,yV0+1);
+  ctx.fillStyle='rgba(241,224,90,.6)'; ctx.fillText('VTD '+Math.round(edv),Wc-62,vY(edv)-1); ctx.fillText('VTS '+Math.round(esv),Wc-62,vY(esv)-10);
+}
+function hbUIFrame(S){
+  hbDrawChart();
+  const now=performance.now(); if(now-_hbUiT<120) return; _hbUiT=now;
+  const p=HB.p, set=(i,v)=>{ const e=document.getElementById('hb-r'+i); if(e) e.textContent=v; };
+  set(0, p.af ? '~'+Math.round(HB.hr) : Math.round(S.hr));
+  set(1, Math.round(S.sv)); set(2, Math.round(p.ef*100)); set(3, (HB.hr*S.sv/1000).toFixed(1)); set(4, Math.round(S.pas)+'/'+Math.round(S.pad));
+  const ph=document.getElementById('hb-phase');
+  if(ph){ ph.textContent=S.phase; ph.style.background=S.sys?'rgba(230,57,70,.18)':'rgba(90,169,255,.16)'; ph.style.color=S.sys?'#ff8a93':'#9ccaff'; }
+  const sub=document.getElementById('hb-sub'); if(sub) sub.textContent=p.label+' · '+(p.af?'FA, pas d’onde P':'sinusal, PR '+Math.round((p.pr||0.16)*1000)+' ms');
+  const vv=document.getElementById('hb-valves');
+  if(vv){ const st=(n,o)=>`<span>${n} <b style="color:${o>0.5?'#7ee0a6':'#ffd27a'}">${o>0.5?'◯ ouverte':'● fermée'}</b></span>`;
+    vv.innerHTML=st('Mitrale',S.mit)+st('Aortique',S.aor); }
+}
+
+/* ── Boucle : avance le modèle, déforme, clipping + éclat des valves ── */
+/* Code couleur pédagogique : cœur gauche / sang oxygéné en rouge,
+   cœur droit / sang désoxygéné en bleu, septum violet, valves ivoire. */
+const HB_COLORS=[
+  [/_valve$/, '#f3ead8'],
+  [/interventricular_septum/, '#9b5fc0'],
+  [/papillary/, '#e58a8a'],
+  [/left_ventricle$/, '#c8323c'],
+  [/left_cardiac_atrium|pulmonary_vein|ascending_aorta|aortic_arch|left_coronary|right_coronary|posterior_left_ventricular_branch|left_posterior_descending/, '#e0535b'],
+  [/right_ventricle$/, '#3f63c9'],
+  [/right_cardiac_atrium|vena_cava|pulmonary_trunk|pulmonary_artery|coronary_sinus|cardiac_vein|vein_of_left|oblique_vein/, '#5b7fe0'],
+];
+const _hbColCache=new Map();
+function hbColorFor(nm){
+  if(_hbColCache.has(nm)) return _hbColCache.get(nm);
+  let c=null; for(const [re,hex] of HB_COLORS){ if(re.test(nm)){ c=new THREE.Color(hex).convertSRGBToLinear(); break; } }
+  _hbColCache.set(nm,c); return c;
+}
+const _hbBuf=[]; let _hbN=0;
+PRE_RENDER.push(function(){
+  _hbN=0;
+  if(!heartMode || !_hbDef) return;
+  const now=performance.now(); let dt=HB.lastNow?(now-HB.lastNow)/1000:0; HB.lastNow=now; dt=Math.min(dt,0.1);
+  const S=hbStep(dt);
+  hbApplyDeform(S);
+  try{ hbUIFrame(S); }catch(e){}
+  const D=_hbDef, cut=HB.cut?[_hbClip]:null;
+  if(cut) _hbClip.setFromNormalAndCoplanarPoint(D.F.n4.clone().negate(), D.F.A);
+  const fl1=HB.tB1!=null?Math.exp(-Math.max(0,HB.t-HB.tB1)/0.09):0, fl2=HB.tB2!=null?Math.exp(-Math.max(0,HB.t-HB.tB2)/0.09):0;
+  const meshes=D.items.map(it=>it.mesh).concat(D.extra.map(it=>it.mesh), D.infarct);
+  meshes.forEach(m=>{
+    const mat=m.material; if(!mat||Array.isArray(mat)) return;
+    _hbBuf[_hbN++]=mat; _hbBuf[_hbN++]=mat.clippingPlanes;
+    _hbBuf[_hbN++]=mat.emissive?mat.emissive.r:0; _hbBuf[_hbN++]=mat.emissive?mat.emissive.g:0; _hbBuf[_hbN++]=mat.emissive?mat.emissive.b:0;
+    _hbBuf[_hbN++]=mat.color?mat.color.r:0; _hbBuf[_hbN++]=mat.color?mat.color.g:0; _hbBuf[_hbN++]=mat.color?mat.color.b:0;
+    mat.clippingPlanes=cut;
+    const nm=(m.userData&&m.userData.rawName)||'';
+    if(HB.o2 && mat.color && nm){ const c=hbColorFor(nm); if(c) mat.color.copy(c); }
+    const v=HB_VALVES[nm];
+    if(v && mat.emissive){ const f=(v==='mit'?fl1:fl2)*0.9; if(f>0.01) mat.emissive.copy(_hbFlash).multiplyScalar(f); }
+  });
+});
+POST_RENDER.push(function(){
+  for(let i=0;i<_hbN;i+=8){ const m=_hbBuf[i]; m.clippingPlanes=_hbBuf[i+1]; if(m.emissive) m.emissive.setRGB(_hbBuf[i+2],_hbBuf[i+3],_hbBuf[i+4]); if(m.color) m.color.setRGB(_hbBuf[i+5],_hbBuf[i+6],_hbBuf[i+7]); _hbBuf[i]=null; _hbBuf[i+1]=null; }
+  _hbN=0;
+});
+
+function toggleHeartbeat(){
+  heartMode=!heartMode;
+  const btn=document.getElementById('btheart'); if(btn) btn.classList.toggle('on',heartMode);
+  if(heartMode){
+    if(!hbBuildDeform()){ heartMode=false; if(btn) btn.classList.remove('on'); console.warn('[cœur] meshes cardiaques introuvables'); return; }
+    if(renderer && !renderer.localClippingEnabled) renderer.localClippingEnabled=true;
+    if(hbGroup && !hbGroup.parent) scene.add(hbGroup);
+    buildHeartPanel(); heartPanel.style.display='flex';
+    HB.lastNow=0; HB.on=true;
+    setHeartPreset(HB.preset);
+  } else {
+    HB.on=false; hbRestore();
+    if(hbGroup) scene.remove(hbGroup);
+    if(heartPanel) heartPanel.style.display='none';
+  }
+}
+function hbFrameCam(dir){ return caFrame(LM(LM_HEART), 27, dir||new THREE.Vector3(0.15,0.18,1), 'right', heartPanel&&heartPanel.offsetWidth?heartPanel.offsetWidth:344); }
+/* Raccourcis depuis les fiches de sémiologie : ouvre le mode sur un préréglage */
+function heartModePreset(k){ if(!heartMode) toggleHeartbeat(); setHeartPreset(k); }
+function heartModeIDM(){ heartModePreset('idm'); }
+function heartModeFA(){ heartModePreset('fa'); }
+function heartModeHVG(){ heartModePreset('hvg'); }
+function heartModeICFER(){ heartModePreset('icfer'); }
+/* Flux sanguin : débit pulsé calé sur le cœur battant */
+function hbFlowFactor(){ const S=HB.S; if(!S||S.aor==null) return 1; return 0.35+1.45*S.aor+0.35*S.mit; }
+
+/* ── Enregistrement des deux modes (cadrage, transparence, boutons) ── */
+const HB_GHOST={ base:0.08, skin:0.03, keep:[] };
+(function(){
+  const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+  registerModeCtx('toggleBrainAtlas',{ on:()=>brainMode,
+    focus:()=>brainFrame(V(1,0.32,0.28)),
+    ghost:{ base:0.05, skin:0.02, keep:[[{test:r=>/^Allen_/.test(r)},0.07],[{test:r=>brainIsShown(r)},1.0]] } });
+  const WALL=/^VH_F_(left_ventricle|right_ventricle|left_cardiac_atrium|right_cardiac_atrium|interventricular_septum)$/;
+  const HEART=/^VH_F_(papillary|aortic_valve|pulmonary_valve|mitral_valve|tricuspid_valve|pulmonary_vein|coronary_sinus|great_cardiac|middle_cardiac|oblique_vein|posterior_vein_of_left|anterior_cardiac|small_cardiac|superior_vena|inferior_vena_cava_a|left_coronary|left_posterior_desc|posterior_left_vent|right_coronary|pulmonary_trunk|ascending_aorta|aortic_arch|pulmonary_artery)/;
+  HB_GHOST.keep=[[{test:r=>WALL.test(r)&&!HB.walls},1.0],[{test:r=>WALL.test(r)&&HB.walls},0.3],[{test:r=>HEART.test(r)},1.0]];
+  registerModeCtx('toggleHeartbeat',{ on:()=>heartMode, focus:()=>hbFrameCam(V(0.15,0.18,1)), ghost:HB_GHOST });
+  if(typeof MODE_BTNS!=='undefined') MODE_BTNS.push('btbrain','btheart');
+})();
+
 
 /* ─── Pulse animation sur activation bouton ─── */
 function pulseTbtn(id){
@@ -12510,7 +13861,7 @@ const CONDITION_ORGAN_MAP = {
   aomi_arteriopathie_obliterante_des_membres_infer:
     { organs:{art_mi:1, os_mi:.3, muscles_mi:.6, peau:.4}, },
   douleur_thoracique_syndromes_coronariens_aigus:
-    { organs:{coronaires:1, ventricule_g:.9, coeur:.7}, },
+    { organs:{coronaires:1, ventricule_g:.9, coeur:.7}, mode:'heartModeIDM' },
   pericardite_aigue_dissection_aortique:
     { organs:{pericarde:1, aorte:1, coeur:.6}, mode:'toggleDissec' },
   maladie_thrombo_embolique_veineuse_tvp_embolie_p:
@@ -12518,11 +13869,11 @@ const CONDITION_ORGAN_MAP = {
   insuffisance_cardiaque_signes_cliniques_ivg_ivd_:
     { organs:{ventricule_g:1, ventricule_d:.9, oreillettes:.6, poumons:.8, foie:.5, veines_mi:.5}, mode:'toggleOedeme' },
   arythmies_acfa_bav_palpitations:
-    { organs:{oreillettes:1, coeur:.8, ventricule_g:.5}, },
+    { organs:{oreillettes:1, coeur:.8, ventricule_g:.5}, mode:'heartModeFA' },
   valvulopathies_ra_im_endocardites:
     { organs:{valves:1, ventricule_g:.7, oreillettes:.6, aorte:.5}, mode:'toggleEndo' },
   hypertension_arterielle_hta:
-    { organs:{aorte:.9, ventricule_g:.8, reins:.8, carotides:.6, oeil:.5}, },
+    { organs:{aorte:.9, ventricule_g:.8, reins:.8, carotides:.6, oeil:.5}, mode:'heartModeHVG' },
   dyspnee_approche_diagnostique_et_bpco:
     { organs:{poumons:1, bronches:1, diaphragme:.5, ventricule_d:.4}, mode:'toggleBPCO' },
 

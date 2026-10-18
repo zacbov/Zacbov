@@ -254,6 +254,22 @@
     background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);
     padding:9px 15px;opacity:0;transition:.25s;pointer-events:none;z-index:60;max-width:70vw}
   .toast.on{opacity:1;transform:translateX(-50%)}
+  /* voix ElevenLabs */
+  .elvoices .elv{display:grid;grid-template-columns:16px 1fr 26px 26px;gap:4px 5px;
+    align-items:center;margin-bottom:8px}
+  .elvoices .elv .elid{grid-column:2 / -1;padding-top:3px;padding-bottom:3px;color:var(--ink-dim)}
+  .elvoices .elv input[type=radio]{accent-color:var(--accent);margin:0}
+  .elvoices .elv.def .in{border-color:var(--accent-dim)}
+  .elvoices .elid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px}
+  .elcat{max-height:260px;overflow:auto;margin-top:7px;border:1px solid var(--line);
+    border-radius:var(--r);padding:4px}
+  .elcat .elc{display:grid;grid-template-columns:26px 1fr auto 26px;gap:6px;align-items:center;
+    padding:3px 2px;border-bottom:1px solid var(--line)}
+  .elcat .elc:last-child{border-bottom:none}
+  .elcat .elcn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .elcat .elck{font-size:10px;padding:1px 6px;border-radius:9px;white-space:nowrap}
+  .elcat .elck.free{background:#a8b87f22;color:var(--accent)}
+  .elcat .elck.paid{background:#d3a05a22;color:var(--warn)}
   /* diagnostic d'une vidéo défilée */
   .vdiag{margin-top:8px;padding:8px 10px;border-radius:var(--r);border:1px solid var(--line);
     border-left-width:3px;font-size:11px;line-height:1.55;color:var(--ink-dim)}
@@ -287,6 +303,7 @@
   <div class="grp">
     <button class="btn ghost" id="btnOpen" title="Ouvrir un projet .recit.json">Ouvrir</button>
     <button class="btn ghost" id="btnSave" title="Enregistrer le projet et ses médias">Enregistrer</button>
+    <button class="btn ghost" id="btnScript" title="Créer les chapitres depuis un script Excel (.xlsx) ou CSV">Importer un script</button>
   </div>
   <button class="btn" id="btnFull" title="Ouvrir la page entière dans un onglet">Prévisualiser</button>
   <button class="btn primary" id="btnExport">Exporter</button>
@@ -480,9 +497,18 @@ function blankStory(){
     music:{ asset:null, volume:0.35, duck:0.35, fade:1.5 },
     shapes:{},
     sfxRoute:'',
-    voice:{ endpoint:'', secret:'', voiceId:'5b612d83-696a-4089-88a7-da3e8e8126e7',
+    voice:{ engine:'eleven',
+            /* Hume : gardé tant que le service existe */
+            endpoint:'', secret:'', voiceId:'5b612d83-696a-4089-88a7-da3e8e8126e7',
             provider:'HUME_AI', idMode:'id', description:'',
-            speed:1, trailingSilence:0.35 },
+            speed:1, trailingSilence:0.35,
+            /* ElevenLabs : voix du projet, modèle et réglages */
+            elVoices:[ { id:'5jCmrHdxbpU36l1wb3Ke', name:'Sébas — conteur' },
+                       { id:'ucMmKRQbfDEYyb2IIGax', name:'Voix 2' },
+                       { id:'iKX6IXB415Hh5bn2eNhP', name:'David Tyserre — documentaire' } ],
+            elVoice:'5jCmrHdxbpU36l1wb3Ke', elModel:'eleven_multilingual_v2',
+            elStability:0.5, elSimilarity:0.75, elStyle:0, elSpeed:1, elBoost:true,
+            elLang:'fr', elRoute:'' },
     chapters:[]
   };
 }
@@ -552,7 +578,7 @@ function newBeat(o){
     glow:0, glowC:'#A8B87F',
     opacity:1, rotate:0, skew:0, blend:'normal',
     boxOn:false, boxC:'#000000', boxAlpha:0.35, boxPad:0.6, boxRadius:0, boxBlur:0,
-    parallax:0, voice:null, voiceText:'',
+    parallax:0, voice:null, voiceText:'', voiceId:'',
     arc:0, arcFlip:false, look:'none', lookSpeed:1,
     anim:'slideUp', unit:'block', stagger:60, dur:800,
     ease:'cubic-bezier(.33,1,.68,1)', delay:0, distance:28,
@@ -2827,7 +2853,9 @@ function buildPayload(mode){
     (o.beats||[]).forEach((b,bi)=>{
       b.voiceSrc = srcOf(ch.beats[bi] && ch.beats[bi].voice);
       delete b.voice;
+      delete b.voiceId;   /* le choix de voix ne sert qu'à l'éditeur */
     });
+    delete o.brief;
     return o;
   });
   const music = Object.assign({},story.theme && {}, story.music||{});
@@ -3545,6 +3573,11 @@ function guard(name,fn){
 
 function buildMediaTab(ch){
   field(inspBody,'Nom du chapitre',txt(ch,'name'));
+  if(ch.brief){
+    const br=document.createElement('textarea'); br.className='in'; br.rows=4; br.value=ch.brief;
+    br.addEventListener('input',()=>{ ch.brief=br.value; });
+    field(inspBody,'Note du script',br,'Reprise du script importé. Elle reste dans l\u2019éditeur et ne paraît pas sur la page.');
+  }
   if(ch.type!=='text') buildAsset(inspBody,ch);
   const ry=document.createElement('div');
   ry.appendChild(labelled('Longueur de défilement',range(ch,'len',80,600,10,v=>v+' vh')));
@@ -4599,6 +4632,11 @@ function buildBeatPanel(parent,ch){
     vt.value=b.voiceText||'';
     vt.addEventListener('input',()=>{ b.voiceText=vt.value; });
     g.appendChild(labelled('Texte à dire',vt));
+    if(story.voice.engine!=='hume'){
+      const opts=[['','Voix par défaut — '+elVoiceName(elDefaultVoice())]]
+        .concat((story.voice.elVoices||[]).filter(x=>(x.id||'').trim()).map(x=>[x.id,x.name||x.id]));
+      g.appendChild(labelled('Voix',select(b,'voiceId',opts)));
+    }
     const va=b.voice&&ASSETS.get(b.voice);
     const vrow=document.createElement('div'); vrow.className='two';
     const gen=document.createElement('button'); gen.className='btn';
@@ -4611,6 +4649,26 @@ function buildBeatPanel(parent,ch){
     });
     vrow.appendChild(gen); vrow.appendChild(play);
     g.appendChild(vrow);
+    /* une phrase générée ailleurs (sur elevenlabs.io par exemple) entre telle quelle */
+    const imp=document.createElement('button'); imp.className='btn';
+    imp.style.width='100%'; imp.style.marginTop='6px';
+    imp.textContent='Importer un fichier audio';
+    const fi=document.createElement('input'); fi.type='file'; fi.hidden=true;
+    fi.accept='audio/*,.mp3,.m4a,.ogg,.wav';
+    imp.addEventListener('click',()=>fi.click());
+    fi.addEventListener('change',async()=>{
+      const f=fi.files[0]; if(!f) return;
+      try{
+        const bytes=await readFile(f);
+        const key=uid();
+        ASSETS.set(key,{name:safeName(f.name),mime:mimeOf(f.name,f.type),kind:'audio',bytes:bytes,b64:null});
+        if(b.voice) dropAsset(b.voice);
+        b.voice=key;
+        renderAll(true);
+        toast('Voix importée — '+fmtBytes(bytes.length));
+      }catch(e){ console.error(e); toast(e.message,'bad'); }
+    });
+    g.appendChild(imp); g.appendChild(fi);
     if(va){
       const info=document.createElement('div'); info.className='hint';
       info.textContent=va.name+' — '+fmtBytes(va.bytes.length)+
@@ -4650,7 +4708,136 @@ function buildBeatPanel(parent,ch){
 }
 
 /* ---- ambiance ---- */
+/* Réglages ElevenLabs : voix du projet, voix des comptes, modèle, jeu */
+function buildElevenVoice(parent,V){
+  if(!Array.isArray(V.elVoices)) V.elVoices=[];
+  const def=elDefaultVoice();
+  const list=document.createElement('div'); list.className='elvoices';
+  V.elVoices.forEach((x,i)=>{
+    const row=document.createElement('div'); row.className='elv'+(x.id&&x.id===def?' def':'');
+    const pick=document.createElement('input'); pick.type='radio'; pick.name='elvdef';
+    pick.checked=!!x.id&&x.id===def; pick.title='Voix par défaut';
+    pick.addEventListener('change',()=>{ V.elVoice=x.id; renderAll(); });
+    const nm=document.createElement('input'); nm.className='in'; nm.value=x.name||'';
+    nm.placeholder='Nom'; nm.title='Nom affiché dans l\u2019éditeur';
+    nm.addEventListener('input',()=>{ x.name=nm.value; });
+    nm.addEventListener('change',()=>renderAll());
+    const id=document.createElement('input'); id.className='in elid'; id.value=x.id||'';
+    id.placeholder='Identifiant ElevenLabs'; id.spellcheck=false;
+    id.addEventListener('change',()=>{
+      const was=x.id; x.id=id.value.trim();
+      if(V.elVoice===was) V.elVoice=x.id;
+      renderAll();
+    });
+    const tryB=icon('\u25B6','Essayer cette voix',async()=>{
+      if(!(x.id||'').trim()){ toast('Indiquez d\u2019abord l\u2019identifiant','bad'); return; }
+      try{
+        toast('Essai de « '+(x.name||x.id)+' »\u2026');
+        const b=await elevenSynth('Bonjour, je suis la voix de ce récit.',x.id);
+        new Audio(URL.createObjectURL(new Blob([b],{type:'audio/mpeg'}))).play().catch(()=>{});
+        toast('« '+(x.name||x.id)+' » répond'+
+          (relaySlot.eleven?' · '+keyName('eleven',relaySlot.eleven):''));
+      }catch(e){ toast(e.message,'bad'); }
+    });
+    const del=icon('\u00D7','Retirer cette voix du projet',()=>{
+      V.elVoices.splice(i,1);
+      if(V.elVoice===x.id) V.elVoice='';
+      renderAll();
+    });
+    row.appendChild(pick); row.appendChild(nm);
+    row.appendChild(tryB); row.appendChild(del); row.appendChild(id);
+    list.appendChild(row);
+  });
+  const add=document.createElement('button'); add.className='btn'; add.style.marginTop='6px';
+  add.textContent='Ajouter une voix';
+  add.addEventListener('click',()=>{ V.elVoices.push({id:'',name:'Nouvelle voix'}); renderAll(); });
+  list.appendChild(add);
+  field(parent,'Voix du projet',list,
+    'Le rond désigne la voix par défaut ; chaque texte peut en prendre une autre (onglet Contenu, groupe Voix). Un essai coûte une quarantaine de crédits.');
+
+  /* voix des comptes : extrait gratuit, ajout en un clic */
+  const acc=document.createElement('div');
+  const lb=document.createElement('button'); lb.className='btn'; lb.style.width='100%';
+  lb.textContent=elCatalog?'Relire la liste':'Voix de mes comptes';
+  lb.addEventListener('click',async()=>{
+    try{ toast('Lecture des voix du compte\u2026'); await loadElevenVoices(); renderAll(); }
+    catch(e){ toast(e.message,'bad'); }
+  });
+  acc.appendChild(lb);
+  if(elCatalog){
+    const cat=document.createElement('div'); cat.className='elcat';
+    if(!elCatalog.voices.length){
+      const e=document.createElement('div'); e.className='hint'; e.textContent='Aucune voix sur ce compte.';
+      cat.appendChild(e);
+    }
+    elCatalog.voices.forEach(x=>{
+      const row=document.createElement('div'); row.className='elc';
+      const pl=icon('\u25B6','Écouter l\u2019extrait (gratuit)',()=>{
+        if(x.preview) new Audio(x.preview).play().catch(()=>toast('Extrait illisible','bad'));
+        else toast('Pas d\u2019extrait pour cette voix','bad');
+      });
+      const nm=document.createElement('span'); nm.className='elcn'; nm.textContent=x.name||x.id;
+      const lab=x.labels||{};
+      nm.title=[lab.gender,lab.age,lab.accent,lab.description||lab.descriptive,lab.use_case||lab.use_cases]
+        .filter(Boolean).join(' · ')||x.id;
+      const kind=document.createElement('span');
+      const k=elKind(x);
+      kind.className='elck '+(k==='bibliothèque'?'paid':'free');
+      kind.textContent=k+((x.languages||[]).indexOf('fr')>=0?' · fr':'');
+      kind.title=k==='bibliothèque'
+        ? 'Voix de la bibliothèque : l\u2019API la refuse aux comptes gratuits.'
+        : 'Utilisable avec un compte gratuit.';
+      const has=V.elVoices.some(y=>y.id===x.id);
+      const ad=icon(has?'\u2713':'+',has?'Déjà dans le projet':'Ajouter au projet',()=>{
+        if(has) return;
+        V.elVoices.push({id:x.id,name:x.name||x.id});
+        if(!elDefaultVoice()) V.elVoice=x.id;
+        renderAll();
+      });
+      if(has) ad.disabled=true;
+      row.appendChild(pl); row.appendChild(nm); row.appendChild(kind); row.appendChild(ad);
+      cat.appendChild(row);
+    });
+    acc.appendChild(cat);
+    const h=document.createElement('div'); h.className='hint';
+    h.textContent='Compte lu : '+(elCatalog.slot?keyName('eleven',elCatalog.slot):'ELEVEN_KEY')+
+      (elCatalog.more?' · les 100 premières voix seulement':'')+'.';
+    acc.appendChild(h);
+  }
+  field(parent,'Voix disponibles',acc,
+    'Les voix « par défaut » marchent avec un compte gratuit. Celles de la bibliothèque exigent une formule payante pour passer par l\u2019API.');
+
+  field(parent,'Modèle',select(V,'elModel',EL_MODELS),
+    'Flash coûte deux fois moins de crédits. v4 et v3 comprennent des balises de jeu placées dans le « Texte à dire » : [whispers], [sighs], [laughs].');
+  const r1=document.createElement('div'); r1.className='two';
+  r1.appendChild(labelled('Stabilité',range(V,'elStability',0,1,0.05,v=>Math.round(v*100)+' %')));
+  r1.appendChild(labelled('Fidélité à la voix',range(V,'elSimilarity',0,1,0.05,v=>Math.round(v*100)+' %')));
+  field(parent,'Jeu',r1,
+    V.elModel==='eleven_v3'
+      ? 'Avec v3, la stabilité se range sur trois crans : créatif, naturel, solide.'
+      : 'Basse, la stabilité laisse plus d\u2019émotion ; haute, la diction est plus égale.');
+  const r2=document.createElement('div'); r2.className='two';
+  r2.appendChild(labelled('Exagération',range(V,'elStyle',0,1,0.05,v=>v?Math.round(v*100)+' %':'aucune')));
+  r2.appendChild(labelled('Débit',range(V,'elSpeed',0.7,1.2,0.01,v=>v.toFixed(2)+' ×')));
+  field(parent,'',r2);
+  field(parent,'',check(V,'elBoost','Renforcer la ressemblance'));
+  field(parent,'Langue',select(V,'elLang',EL_LANGS),
+    'Imposée aux modèles Flash, v3 et v4. Multilingue v2 la reconnaît seul.');
+  const route=document.createElement('input');
+  route.className='in'; route.value=V.elRoute||'';
+  route.placeholder='proxy/eleven-tts';
+  route.addEventListener('input',()=>{ V.elRoute=route.value.trim(); });
+  field(parent,'Route du relais',route,'Vide, l\u2019outil emploie « proxy/eleven-tts ».');
+}
+
 function buildTheme(parent){
+  if(!themeSnap) snapTheme();
+  /* les champs du thème rappellent themeSync après leur propre mise à jour */
+  if(!parent._themeHook){
+    parent._themeHook=true;
+    parent.addEventListener('input',themeSync);
+    parent.addEventListener('change',themeSync);
+  }
   const t=story.theme;
   const nav=document.createElement('div'); nav.className='tabs';
   [['couleurs','Couleurs'],['typo','Typographie'],
@@ -4874,43 +5061,53 @@ function buildTheme(parent){
   pw.addEventListener('input',()=>{ V.secret=pw.value; });
   field(parent,'Mot de passe du relais',pw,
     'Envoyé au worker Cloudflare, jamais à la page exportée. Il n\u2019est pas enregistré dans le projet : à ressaisir à chaque ouverture.');
-  const route=document.createElement('input');
-  route.className='in'; route.value=V.endpoint||'';
-  route.placeholder='proxy/hume-tts';
-  route.addEventListener('input',()=>{ V.endpoint=route.value.trim(); });
-  field(parent,'Route du relais',route,
-    'Vide, l\u2019outil essaie « proxy/hume-tts » puis « hume-tts », et retient celle qui aboutit.');
-  const pv=document.createElement('div'); pv.className='two';
-  pv.appendChild(labelled('Provenance',select(V,'provider',
-    [['HUME_AI','Bibliothèque Hume'],['CUSTOM_VOICE','Mes voix enregistrées']])));
-  pv.appendChild(labelled('Désignée par',select(V,'idMode',
-    [['id','Son identifiant'],['name','Son nom']])));
-  field(parent,'Voix',pv,
-    'Une voix trouvée sur le site de Hume appartient à la bibliothèque. « Mes voix » ne contient que celles enregistrées sur votre compte.');
-  field(parent,V.idMode==='name'?'Nom de la voix':'Identifiant de voix',txt(V,'voiceId'),
-    'La synthèse se fait ici, dans l\u2019éditeur. Le MP3 obtenu devient un média du projet : la page exportée ne contient aucune clé.');
-  const desc=document.createElement('textarea');
-  desc.className='in'; desc.rows=2; desc.value=V.description||'';
-  desc.placeholder='posée, chaleureuse, un peu confidentielle';
-  desc.addEventListener('input',()=>{ V.description=desc.value; });
-  field(parent,'Consigne de jeu',desc,
-    'Facultatif. Octave module l\u2019interprétation d\u2019après cette description.');
-  const vr=document.createElement('div'); vr.className='two';
-  vr.appendChild(labelled('Débit',range(V,'speed',0.5,2,0.05,v=>v.toFixed(2)+' ×')));
-  vr.appendChild(labelled('Silence final',range(V,'trailingSilence',0,2,0.05,v=>v.toFixed(2)+' s')));
-  field(parent,'',vr);
+  field(parent,'Moteur de voix',select(V,'engine',
+    [['eleven','ElevenLabs — trois comptes'],['hume','Hume — fermeture annoncée']]),
+    V.engine==='hume'
+      ? 'Hume ferme bientôt. Les voix déjà générées restent dans le projet : ce sont des MP3.'
+      : 'Le relais passe seul d\u2019un compte à l\u2019autre : ELEVEN_KEY, puis ELEVEN2_KEY, puis ELEVEN3_KEY.');
+  if(V.engine!=='hume') buildElevenVoice(parent,V);
+  else{
+    const route=document.createElement('input');
+    route.className='in'; route.value=V.endpoint||'';
+    route.placeholder='proxy/hume-tts';
+    route.addEventListener('input',()=>{ V.endpoint=route.value.trim(); });
+    field(parent,'Route du relais',route,
+      'Vide, l\u2019outil essaie « proxy/hume-tts » puis « hume-tts », et retient celle qui aboutit.');
+    const pv=document.createElement('div'); pv.className='two';
+    pv.appendChild(labelled('Provenance',select(V,'provider',
+      [['HUME_AI','Bibliothèque Hume'],['CUSTOM_VOICE','Mes voix enregistrées']])));
+    pv.appendChild(labelled('Désignée par',select(V,'idMode',
+      [['id','Son identifiant'],['name','Son nom']])));
+    field(parent,'Voix',pv,
+      'Une voix trouvée sur le site de Hume appartient à la bibliothèque. « Mes voix » ne contient que celles enregistrées sur votre compte.');
+    field(parent,V.idMode==='name'?'Nom de la voix':'Identifiant de voix',txt(V,'voiceId'),
+      'La synthèse se fait ici, dans l\u2019éditeur. Le MP3 obtenu devient un média du projet : la page exportée ne contient aucune clé.');
+    const desc=document.createElement('textarea');
+    desc.className='in'; desc.rows=2; desc.value=V.description||'';
+    desc.placeholder='posée, chaleureuse, un peu confidentielle';
+    desc.addEventListener('input',()=>{ V.description=desc.value; });
+    field(parent,'Consigne de jeu',desc,
+      'Facultatif. Octave module l\u2019interprétation d\u2019après cette description.');
+    const vr=document.createElement('div'); vr.className='two';
+    vr.appendChild(labelled('Débit',range(V,'speed',0.5,2,0.05,v=>v.toFixed(2)+' ×')));
+    vr.appendChild(labelled('Silence final',range(V,'trailingSilence',0,2,0.05,v=>v.toFixed(2)+' s')));
+    field(parent,'',vr);
+  }
   const test=document.createElement('button'); test.className='btn'; test.style.width='100%';
-  test.textContent='Tester le relais';
+  test.textContent=V.engine==='hume' ? 'Tester le relais' : 'Tester la voix par défaut';
   test.addEventListener('click',async()=>{
     try{
       toast('Essai en cours\u2026');
-      const b=await humeSynth('Ceci est un essai de la voix.');
+      const b=await voiceSynth('Ceci est un essai de la voix.');
       new Audio(URL.createObjectURL(new Blob([b],{type:'audio/mpeg'}))).play().catch(()=>{});
-      toast('Relais joignable, voix reçue');
+      const slot=V.engine==='hume' ? relaySlot.hume : relaySlot.eleven;
+      toast('Relais joignable, voix reçue'+voiceDoneNote('')+
+        (slot===1?' · '+keyName(V.engine==='hume'?'hume':'eleven',1):''));
     }catch(e){ toast(e.message,'bad'); }
   });
   field(parent,'',test);
-  if(V.endpoint){
+  if(V.engine==='hume' && V.endpoint){
     const hh=document.createElement('div'); hh.className='hint';
     hh.textContent='Route retenue : '+V.endpoint;
     parent.appendChild(hh);
@@ -4922,6 +5119,41 @@ let themeTab='couleurs';
 /* Une ambiance ne vaut que si les chapitres déjà créés la reprennent.
    On remplace les couleurs restées identiques à l'ancien thème ; celles que
    vous avez personnalisées ne bougent pas. */
+/* Ambiance réglée champ par champ : chaque retouche du thème est reportée
+   sur tous les chapitres, pas seulement sur ceux créés ensuite. Les couleurs
+   personnalisées (différentes de l'ancienne valeur du thème) sont gardées ;
+   les polices suivent partout, comme pour un accord typographique. */
+let themeSnap=null;
+function snapTheme(){ themeSnap=JSON.parse(JSON.stringify(story.theme)); }
+function themeSync(){
+  const t=story.theme, o=themeSnap;
+  if(!o){ snapTheme(); return; }
+  const swap=(v,from,to)=>(v&&from&&v.toLowerCase()===String(from).toLowerCase())?to:v;
+  let changed=false;
+  ['bg','ink','accent'].forEach(k=>{ if(o[k]!==t[k]) changed=true; });
+  const fontsChanged=['display','dispWeight','dispTrack','body','bodyWeight','bodyTrack'].some(k=>o[k]!==t[k]);
+  if(!changed&&!fontsChanged) return;
+  story.chapters.forEach(c=>{
+    if(o.bg!==t.bg) c.bg=swap(c.bg,o.bg,t.bg);
+    (c.spots||[]).forEach(sp=>{ sp.color=swap(sp.color,o.accent,t.accent); if(fontsChanged) sp.font=t.body; });
+    (c.buttons||[]).forEach(b=>{
+      b.color=swap(b.color,o.ink,t.ink); b.borderC=swap(b.borderC,o.accent,t.accent);
+      b.hoverBg=swap(b.hoverBg,o.accent,t.accent); b.hoverColor=swap(b.hoverColor,o.bg,t.bg);
+      if(fontsChanged) b.font=t.body;
+    });
+    (c.beats||[]).forEach(b=>{
+      b.color=swap(b.color,o.ink,t.ink); b.glowC=swap(b.glowC,o.accent,t.accent);
+      b.grad1=swap(b.grad1,o.ink,t.ink); b.grad2=swap(b.grad2,o.accent,t.accent);
+      if(fontsChanged){
+        if(b.kind==='title'){ b.font=t.display; b.weight=t.dispWeight; b.tracking=t.dispTrack; }
+        else { b.font=t.body; b.weight=t.bodyWeight; b.tracking=t.bodyTrack; }
+      }
+    });
+  });
+  snapTheme();
+  syncPreview();
+}
+
 function applyPalette(P){
   const t=story.theme, old={bg:t.bg,ink:t.ink,accent:t.accent};
   t.bg=P.bg; t.ink=P.ink; t.accent=P.accent;
@@ -4942,6 +5174,7 @@ function applyPalette(P){
       b.grad2=swap(b.grad2,old.accent,P.accent);
     });
   });
+  snapTheme();
   renderAll(true);
   toast('Palette « '+P.name+' » appliquée à tout le récit');
 }
@@ -4960,6 +5193,7 @@ function applyPair(p){
     (c.buttons||[]).forEach(b=>{ b.font=t.body; });
     (c.spots||[]).forEach(sp=>{ sp.font=t.body; });
   });
+  snapTheme();
   renderAll(true);
   toast('Accord « '+p.name+' » appliqué à tout le récit');
 }
@@ -5190,6 +5424,10 @@ const TIPS={
  'Début':'Première image de la séquence exploitée.',
  'Arrivée':'Dernière image exploitée. Plus petite que le début, la séquence joue à l\u2019envers.',
  'Largeur maximale':'Les images plus larges seront réduites à cette taille.',
+ 'Moteur de voix':'Service qui fabrique les MP3 des textes lus. Les voix déjà générées restent dans le projet quoi qu\u2019il arrive.',
+ 'Stabilité':'Basse : plus d\u2019émotion et de variations. Haute : diction plus égale, parfois monotone.',
+ 'Fidélité à la voix':'À quel point la synthèse colle au timbre d\u2019origine de la voix.',
+ 'Exagération':'Accentue le style propre à la voix. Au-delà de zéro, la synthèse est un peu plus lente.',
  'Usage':'Défilement : une image-clé toutes les 6 images, pour que la vidéo suive le geste. Lecture normale : le fichier le plus léger possible.',
  'Débit vidéo':'Quantité de données par seconde de vidéo. Plus elle est haute, plus l’image est fine et le fichier lourd.',
  'Couleur du contour':'Teinte du filet tracé autour des lettres.',
@@ -5835,6 +6073,60 @@ function videoDiag(key,driven){
 }
 
 /* ---------------------------------------------------------------
+   COMPTES DE SECOURS
+   Le worker (v3.1) passe seul d'une clé à l'autre quand un compte Hume ou
+   ElevenLabs est à court : HUMEAPI_KEY puis HUMEAPI2_KEY, ELEVEN_KEY puis
+   ELEVEN2_KEY puis ELEVEN3_KEY. Il dit quelle clé a répondu (X-Key-Slot)
+   et, si toutes échouent, pourquoi chacune a échoué (attempts). Avec un
+   ancien worker ces informations manquent simplement.
+   --------------------------------------------------------------- */
+const KEY_NAMES={ hume:['HUMEAPI_KEY','HUMEAPI2_KEY','HUMEAPI3_KEY'],
+                  eleven:['ELEVEN_KEY','ELEVEN2_KEY','ELEVEN3_KEY'] };
+const relaySlot={ hume:0, eleven:0 };
+function keyName(svc,slot){ return KEY_NAMES[svc][slot-1]||('clé '+slot); }
+function slotOf(res){ return +(res.headers.get('X-Key-Slot')||0)||0; }
+/* le relais refuse le mot de passe avec « Non autorisé » ; un 401 venu de
+   Hume ou d'ElevenLabs (clé refusée, quota) n'a rien à voir avec lui */
+function relayRefused(res,text){ return res.status===401 && /Non autoris/i.test(text||''); }
+function routeMissing(res,text){
+  return res.status===404 && /Fournisseur inconnu|Route ou méthode inconnue/i.test(text||'');
+}
+function failReason(status,text){
+  const t=String(text||'');
+  if(/manquante côté serveur/.test(t)) return 'clé absente du worker';
+  /* ElevenLabs refuse les voix de la bibliothèque aux comptes gratuits (402) */
+  if(/paid_plan|library voices|Free users cannot/i.test(t)) return 'voix de bibliothèque réservée aux comptes payants';
+  if(/unusual[_ ]activity/i.test(t)) return 'compte gratuit bloqué par ElevenLabs (activité inhabituelle)';
+  if(status===402||/quota|credit|billing|payment|insufficient|run out|limit (has been |was )?reached|E030[01]/i.test(t))
+    return 'crédits épuisés';
+  if(/voice[_ ]not[_ ]found|voice.{0,60}(does not exist|not found)/i.test(t)) return 'voix absente de ce compte';
+  if(status===429||/too[_ ]many|rate[_ ]?limit|busy/i.test(t)) return 'trop de demandes';
+  if(status===401||status===403||/invalid[_ ]?api[_ ]?key|unauthori/i.test(t)) return 'clé refusée';
+  return null;
+}
+/* message lisible : clé par clé quand le worker les a toutes essayées ;
+   « crédits épuisés sur … » quand c'est la seule cause */
+function listFr(a){ return a.length<2 ? a.join('') : a.slice(0,-1).join(', ')+' et '+a[a.length-1]; }
+function accountsReport(svc,res,text){
+  let attempts=null;
+  try{ const j=JSON.parse(text); if(j&&Array.isArray(j.attempts)) attempts=j.attempts; }catch(e){}
+  let parts;
+  if(attempts&&attempts.length>1)
+    parts=attempts.slice().sort((a,b)=>a.slot-b.slot)
+      .map(a=>({key:keyName(svc,a.slot), why:failReason(a.status,a.detail)||('erreur '+a.status)}));
+  else{
+    const why=failReason(res.status,text); if(!why) return null;
+    const slot=slotOf(res);
+    parts=[{key:slot?keyName(svc,slot):'', why:why}];
+  }
+  const keys=parts.map(x=>x.key).filter(Boolean);
+  /* même motif partout : on le dit une fois, suivi des clés concernées */
+  if(parts.every(x=>x.why===parts[0].why))
+    return parts[0].why+(keys.length?' sur '+listFr(keys):'')+'.';
+  return parts.map(x=>(x.key?x.key+' : ':'')+x.why).join(' ; ')+'.';
+}
+
+/* ---------------------------------------------------------------
    BRUITAGES — ElevenLabs, via le même relais
    Le worker doit exposer une route « eleven-sfx » qui relaie
    https://api.elevenlabs.io/v1/sound-generation avec l'en-tête xi-api-key.
@@ -5866,16 +6158,21 @@ async function elevenSfx(prompt, seconds, influence){
       const buf=await res.arrayBuffer();
       if(buf.byteLength<512){ errs.push(r+' → audio vide'); continue; }
       story.sfxRoute=r;
+      relaySlot.eleven=slotOf(res);
       return new Uint8Array(buf);
     }
     let detail;
-    try{ detail=(await res.text()).slice(0,200); }catch(e){ detail='(corps illisible)'; }
-    errs.push(r+' → '+res.status+' '+detail);
-    if(res.status===401) throw new Error('Mot de passe refusé par le relais.');
+    try{ detail=(await res.text()).slice(0,4000); }catch(e){ detail='(corps illisible)'; }
+    if(relayRefused(res,detail)) throw new Error('Mot de passe refusé par le relais.');
+    if(routeMissing(res,detail)){ errs.push(r+' → route absente du worker'); continue; }
+    errs.push(accountsReport('eleven',res,detail)||(r+' → '+res.status+' '+detail.slice(0,200)));
+    break;      /* la route existe : l'autre forme n'apporterait rien */
   }
   const all=errs.join('  |  ');
-  if(all.indexOf('404')>=0)
+  if(errs.length && errs.every(e=>/route absente|réseau/.test(e)) && /route absente/.test(all))
     throw new Error('Route absente du worker. Ajoutez-y une branche « eleven-sfx » qui relaie ElevenLabs. '+all);
+  if(/^crédits épuisés/.test(all))
+    throw new Error('Crédits ElevenLabs '+all.replace(/^crédits /,''));
   throw new Error('Bruitage non généré. '+all);
 }
 
@@ -5891,7 +6188,8 @@ async function generateSfx(ch,f){
     f.asset=key;
     if(!f.label) f.label=prompt.slice(0,28);
     renderAll(true);
-    toast('Bruitage obtenu — '+fmtBytes(bytes.length));
+    toast('Bruitage obtenu — '+fmtBytes(bytes.length)+
+      (relaySlot.eleven>1?' · via '+keyName('eleven',relaySlot.eleven):''));
   }catch(e){ console.error(e); toast(e.message,'bad'); }
 }
 
@@ -5934,9 +6232,11 @@ async function humeSynth(text){
   const provs = [v.provider||'HUME_AI'];
   provs.push(provs[0]==='HUME_AI' ? 'CUSTOM_VOICE' : 'HUME_AI');
   const errs = [];
+  let notFound = false;
 
   for(const r of routes){
     const url = /^https?:/.test(r) ? r : WORKER+'/'+r.replace(/^\//,'');
+    let missing = false;
     for(const prov of provs){
       let res;
       try{
@@ -5945,7 +6245,7 @@ async function humeSynth(text){
           headers:{ 'Content-Type':'application/json', 'X-App-Secret':v.secret.trim() },
           body:JSON.stringify(humeBody(text, prov))
         });
-      }catch(e){ errs.push(r+' → réseau : '+e.message); break; }
+      }catch(e){ errs.push(r+' → réseau : '+e.message); missing=true; break; }
 
       const type = res.headers.get('content-type')||'';
       if(res.ok && type.indexOf('json')<0){
@@ -5953,34 +6253,160 @@ async function humeSynth(text){
         if(buf.byteLength<512){ errs.push(r+'/'+prov+' → audio vide'); continue; }
         story.voice.endpoint = r;
         story.voice.provider = prov;      /* on retient ce qui a fonctionné */
+        relaySlot.hume = slotOf(res);
         return new Uint8Array(buf);
       }
       let detail;
-      try{ detail=(await res.text()).slice(0,200); }catch(e){ detail='(corps illisible)'; }
-      errs.push(prov+' → '+res.status+' '+detail);
-      if(res.status===401) return Promise.reject(new Error('Mot de passe refusé par le relais.'));
-      if(res.status!==404) break;         /* seul un 404 justifie de changer de fournisseur */
+      try{ detail=(await res.text()).slice(0,4000); }catch(e){ detail='(corps illisible)'; }
+      if(relayRefused(res,detail)) throw new Error('Mot de passe refusé par le relais.');
+      if(routeMissing(res,detail)){ errs.push(r+' → route absente du worker'); missing=true; break; }
+      errs.push(accountsReport('hume',res,detail)||(prov+' → '+res.status+' '+detail.slice(0,200)));
+      /* seule une voix introuvable justifie d'essayer l'autre fournisseur */
+      const absent = res.status===404 || /does not exist|not found/i.test(detail);
+      if(absent) notFound = true; else break;
     }
+    if(!missing) break;      /* la route existe : l'autre forme n'apporterait rien */
   }
 
-  const all=errs.join('  |  ');
-  if(all.indexOf('does not exist')>=0 || all.indexOf('not found')>=0)
+  const all=[...new Set(errs)].join('  |  ');
+  if(/crédits épuisés/.test(all) && /voix absente/.test(all))
+    throw new Error('Voix non générée — '+all+' Enregistrez aussi cette voix sur le compte de secours, ou attendez que les crédits se renouvellent.');
+  if(/^crédits épuisés/.test(all))
+    throw new Error('Crédits Hume '+all.replace(/^crédits /,''));
+  if(notFound)
     throw new Error('Voix introuvable. Vérifiez l\u2019identifiant, ou passez en « désignée par son nom ». '+all);
   throw new Error('Hume n\u2019a pas répondu. '+all);
 }
+
+/* ---------------------------------------------------------------
+   VOIX — ElevenLabs, via le relais (route eleven-tts)
+   Le worker v3.2 essaie ELEVEN_KEY, puis ELEVEN2_KEY, puis ELEVEN3_KEY, et
+   relaie modèle et réglages. Un worker plus ancien lit déjà la voix et le
+   modèle, mais garde ses propres réglages et une seule clé.
+   --------------------------------------------------------------- */
+const ELEVEN_TTS_ROUTES=['proxy/eleven-tts','eleven-tts'];
+const EL_MODELS=[
+  ['eleven_multilingual_v2','Multilingue v2 — stable, textes longs'],
+  ['eleven_v4','v4 — la plus expressive'],
+  ['eleven_v3','v3 — expressive'],
+  ['eleven_flash_v2_5','Flash v2.5 — rapide, moitié prix']];
+const EL_LANGS=[['fr','Français'],['auto','Automatique'],['en','Anglais'],
+  ['es','Espagnol'],['de','Allemand'],['it','Italien']];
+function elDefaultVoice(){
+  const v=story.voice, list=v.elVoices||[];
+  const d=(v.elVoice||'').trim();
+  if(d && list.some(x=>x.id===d)) return d;
+  const first=list.find(x=>(x.id||'').trim());
+  return first ? first.id.trim() : d;
+}
+function elVoiceName(id){
+  const f=(story.voice.elVoices||[]).find(x=>x.id===id);
+  return f&&f.name ? f.name : (id||'?');
+}
+function elevenBody(text,voiceId){
+  const v=story.voice, m=v.elModel||'eleven_multilingual_v2';
+  const num=(x,d,lo,hi)=>{ x=parseFloat(x); return isFinite(x)?Math.max(lo,Math.min(hi,x)):d; };
+  let st=num(v.elStability,0.5,0,1);
+  /* v3 n'accepte que trois crans de stabilité : créatif, naturel, solide */
+  if(m==='eleven_v3') st = st<0.25 ? 0 : st<0.75 ? 0.5 : 1;
+  const b={ text:text, voice_id:voiceId, model_id:m, output_format:'mp3_44100_128',
+    /* le débit n'agit que si stabilité et fidélité l'accompagnent */
+    voice_settings:{ stability:st, similarity_boost:num(v.elSimilarity,0.75,0,1),
+      style:num(v.elStyle,0,0,1), use_speaker_boost:v.elBoost!==false,
+      speed:num(v.elSpeed,1,0.7,1.2) } };
+  /* Multilingue v2 reconnaît la langue seul et refuse qu'on la lui impose */
+  if(m!=='eleven_multilingual_v2' && v.elLang && v.elLang!=='auto') b.language_code=v.elLang;
+  return b;
+}
+async function elevenSynth(text,voiceId){
+  const v=story.voice;
+  if(!(v.secret||'').trim())
+    throw new Error('Mot de passe du relais manquant : renseignez-le dans Ambiance, onglet Son et voix.');
+  const id=((voiceId||'').trim()||elDefaultVoice()).trim();
+  if(!id) throw new Error('Aucune voix ElevenLabs : ajoutez-en une dans Ambiance, onglet Son et voix.');
+  const routes = v.elRoute ? [v.elRoute] : ELEVEN_TTS_ROUTES;
+  const errs=[];
+  for(const r of routes){
+    const url = /^https?:/.test(r) ? r : WORKER+'/'+r.replace(/^\//,'');
+    let res;
+    try{
+      res = await fetch(url,{ method:'POST',
+        headers:{ 'Content-Type':'application/json', 'X-App-Secret':v.secret.trim() },
+        body:JSON.stringify(elevenBody(text,id)) });
+    }catch(e){ errs.push(r+' → réseau : '+e.message); continue; }
+    const type=res.headers.get('content-type')||'';
+    if(res.ok && type.indexOf('json')<0){
+      const buf=await res.arrayBuffer();
+      if(buf.byteLength<512){ errs.push(r+' → audio vide'); continue; }
+      relaySlot.eleven=slotOf(res);
+      return new Uint8Array(buf);
+    }
+    let detail;
+    try{ detail=(await res.text()).slice(0,6000); }catch(e){ detail='(corps illisible)'; }
+    if(relayRefused(res,detail)) throw new Error('Mot de passe refusé par le relais.');
+    if(routeMissing(res,detail)){ errs.push(r+' → route absente du worker'); continue; }
+    errs.push(accountsReport('eleven',res,detail)||(res.status+' '+detail.slice(0,240)));
+    break;      /* la route existe : l'autre forme n'apporterait rien */
+  }
+  const all=[...new Set(errs)].join('  |  ');
+  const who='Voix « '+elVoiceName(id)+' »';
+  if(errs.length && errs.every(e=>/route absente|réseau/.test(e)) && /route absente/.test(all))
+    throw new Error('Route « eleven-tts » absente du worker. '+all);
+  if(/voix de bibliothèque/.test(all))
+    throw new Error(who+' refusée : '+all+' Prenez une voix « par défaut » (bouton Voix de mes comptes), passez un compte en formule payante, ou générez la phrase sur elevenlabs.io et importez le MP3.');
+  if(/^crédits épuisés/.test(all))
+    throw new Error('Crédits ElevenLabs '+all.replace(/^crédits /,''));
+  if(/voix absente/.test(all))
+    throw new Error(who+' introuvable : '+all+' Ajoutez-la aux voix de ce compte (« My Voices »), ou vérifiez l\u2019identifiant.');
+  throw new Error('ElevenLabs n\u2019a pas répondu. '+all);
+}
+/* moteur choisi dans Ambiance ; Hume reste disponible jusqu'à sa fermeture */
+function voiceSynth(text,voiceId){
+  return story.voice.engine==='hume' ? humeSynth(text) : elevenSynth(text,voiceId);
+}
+function voiceDoneNote(voiceId){
+  if(story.voice.engine==='hume')
+    return relaySlot.hume>1 ? ' · via '+keyName('hume',relaySlot.hume) : '';
+  return ' · '+elVoiceName((voiceId||'').trim()||elDefaultVoice())+
+    (relaySlot.eleven>1 ? ' · via '+keyName('eleven',relaySlot.eleven) : '');
+}
+
+/* Voix des comptes ElevenLabs (worker v3.2) : de quoi choisir sans quitter
+   l'éditeur. Les voix « par défaut » marchent avec un compte gratuit ; celles
+   de la bibliothèque exigent une formule payante pour passer par l'API. */
+let elCatalog=null;
+async function loadElevenVoices(){
+  const v=story.voice;
+  if(!(v.secret||'').trim()) throw new Error('Mot de passe du relais manquant.');
+  let res;
+  try{ res=await fetch(WORKER+'/proxy/eleven-voices',{ headers:{ 'X-App-Secret':v.secret.trim() } }); }
+  catch(e){ throw new Error('Relais injoignable : '+e.message); }
+  const text=await res.text();
+  if(relayRefused(res,text)) throw new Error('Mot de passe refusé par le relais.');
+  if(res.status===404) throw new Error('Le worker ne connaît pas encore cette liste : déployez la version 3.2.');
+  if(!res.ok) throw new Error('Liste des voix indisponible : '+
+    (accountsReport('eleven',res,text)||res.status+' '+text.slice(0,200)));
+  let j; try{ j=JSON.parse(text); }catch(e){ throw new Error('Réponse illisible du relais.'); }
+  const voices=(j.voices||[]).filter(x=>x&&x.id);
+  /* d'abord celles qui parlent français, puis les voix « par défaut » */
+  const fr=x=>(x.languages||[]).indexOf('fr')>=0 ? 0 : 1, pm=x=>x.category==='premade' ? 0 : 1;
+  voices.sort((a,b)=>fr(a)-fr(b)||pm(a)-pm(b)||String(a.name).localeCompare(String(b.name)));
+  elCatalog={ slot:slotOf(res), voices:voices, more:!!j.has_more };
+}
+function elKind(x){ return x.category==='premade' ? 'par défaut' : x.owner ? 'à vous' : 'bibliothèque'; }
 
 async function generateVoice(beat){
   const text=(beat.voiceText||beat.text||'').trim();
   if(!text){ toast('Ce texte est vide','bad'); return; }
   try{
     toast('Synthèse de la voix\u2026');
-    const bytes=await humeSynth(text);
+    const bytes=await voiceSynth(text,beat.voiceId);
     const key=uid();
     ASSETS.set(key,{name:'voix_'+key+'.mp3',mime:'audio/mpeg',kind:'audio',bytes:bytes,b64:null});
     if(beat.voice) dropAsset(beat.voice);
     beat.voice=key;
     renderAll(true);
-    toast('Voix enregistrée — '+fmtBytes(bytes.length));
+    toast('Voix enregistrée — '+fmtBytes(bytes.length)+voiceDoneNote(beat.voiceId));
   }catch(e){
     console.error(e);
     toast(e.message,'bad');
@@ -6083,6 +6509,11 @@ function upgradeStory(raw){
   const stats={chapters:0,fields:0,anims:0};
   const base=blankStory(); base.chapters=[];
   fillDefaults(raw,base);
+  /* la route Hume pointée sur eleven-tts envoyait une requête au format Hume
+     (utterances…) que la route ElevenLabs refusait en 400 : on la rend à Hume */
+  if(isObj(raw.voice) && /eleven/i.test(raw.voice.endpoint||'')){
+    raw.voice.endpoint=''; raw.voice.engine='eleven';
+  }
   if(!Array.isArray(raw.chapters)) raw.chapters=[];
   /* les valeurs par défaut doivent prendre le thème du projet ouvert */
   const prev=story;
@@ -6111,8 +6542,154 @@ function loadProject(j){
   document.getElementById('storyTitle').value=story.title;
   selId=story.chapters.length?story.chapters[0].id:null;
   selBeatId=null; spotSel=-1; openBeat=null; openGroup=null; insTab='media';
+  snapTheme();
   return up.stats;
 }
+
+
+/* ---------------------------------------------------------------
+   IMPORT D'UN SCRIPT (Excel ou CSV)
+   Une ligne par élément. Colonnes reconnues par leur titre : « Type »,
+   « Contenu / Script », « Partie / Section », « N° », « Note ».
+   VISUEL → chapitre vidéo · VOIX OFF, FACE CAMÉRA → chapitre texte ·
+   AUDIO → ignoré.
+   --------------------------------------------------------------- */
+async function unzipEntries(bytes){
+  const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  let e=bytes.length-22;
+  while(e>=0 && dv.getUint32(e,true)!==0x06054b50) e--;
+  if(e<0) throw new Error('Fichier Excel illisible (archive introuvable).');
+  const n=dv.getUint16(e+10,true); let o=dv.getUint32(e+16,true);
+  const out={}, td=new TextDecoder();
+  for(let i=0;i<n;i++){
+    const method=dv.getUint16(o+10,true), csize=dv.getUint32(o+20,true);
+    const nl=dv.getUint16(o+28,true), xl=dv.getUint16(o+30,true), cl=dv.getUint16(o+32,true);
+    const lo=dv.getUint32(o+42,true);
+    const name=td.decode(bytes.subarray(o+46,o+46+nl));
+    out[name]={method,csize,lo};
+    o+=46+nl+xl+cl;
+  }
+  const read=async name=>{
+    const f=out[name]; if(!f) return null;
+    const lnl=dv.getUint16(f.lo+26,true), lxl=dv.getUint16(f.lo+28,true);
+    const data=bytes.subarray(f.lo+30+lnl+lxl, f.lo+30+lnl+lxl+f.csize);
+    if(f.method===0) return td.decode(data);
+    if(typeof DecompressionStream==='undefined') throw new Error('Ce navigateur ne sait pas lire les fichiers Excel : enregistrez le script en CSV.');
+    const ds=new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return await new Response(ds).text();
+  };
+  return {names:Object.keys(out),read};
+}
+async function readXlsx(bytes){
+  const z=await unzipEntries(bytes);
+  const P=new DOMParser(), x=t=>P.parseFromString(t,'application/xml');
+  const shared=[];
+  const ss=await z.read('xl/sharedStrings.xml');
+  if(ss) x(ss).querySelectorAll('si').forEach(si=>{
+    shared.push([...si.getElementsByTagName('t')].map(t=>t.textContent).join(''));
+  });
+  /* première feuille du classeur */
+  const sheetName=z.names.filter(n=>/^xl\/worksheets\/sheet\d+\.xml$/.test(n))
+    .sort((a,b)=>parseInt(a.match(/\d+/)[0])-parseInt(b.match(/\d+/)[0]))[0];
+  if(!sheetName) throw new Error('Aucune feuille dans ce classeur.');
+  let title='';
+  const wb=await z.read('xl/workbook.xml');
+  if(wb){ const sh=x(wb).getElementsByTagName('sheet')[0]; if(sh) title=sh.getAttribute('name')||''; }
+  const doc=x(await z.read(sheetName));
+  const col=ref=>{ let n=0; for(const ch of ref.replace(/\d+/g,'')) n=n*26+ch.charCodeAt(0)-64; return n-1; };
+  const rows=[];
+  [...doc.getElementsByTagName('row')].forEach(r=>{
+    const row=[];
+    [...r.getElementsByTagName('c')].forEach(c=>{
+      const t=c.getAttribute('t'), v=c.getElementsByTagName('v')[0];
+      let val='';
+      if(t==='s') val=shared[+(v&&v.textContent)]||'';
+      else if(t==='inlineStr') val=[...c.getElementsByTagName('t')].map(q=>q.textContent).join('');
+      else val=v?v.textContent:'';
+      row[col(c.getAttribute('r')||'A')]=val;
+    });
+    rows.push(row.map(v=>v==null?'':String(v)));
+  });
+  return {rows,title};
+}
+function readCsv(text){
+  const sep=(text.split('\n')[0].match(/;/g)||[]).length>(text.split('\n')[0].match(/,/g)||[]).length?';':',';
+  const rows=[]; let row=[], cur='', q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){ if(ch==='"'&&text[i+1]==='"'){cur+='"';i++;} else if(ch==='"') q=false; else cur+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===sep){ row.push(cur); cur=''; }
+    else if(ch==='\n'){ row.push(cur.replace(/\r$/,'')); rows.push(row); row=[]; cur=''; }
+    else cur+=ch;
+  }
+  if(cur||row.length){ row.push(cur); rows.push(row); }
+  return {rows,title:''};
+}
+function scriptChapters(rows){
+  const norm=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().trim();
+  const hi=rows.findIndex(r=>r.some(c=>/^TYPE$/.test(norm(c))));
+  if(hi<0) throw new Error('Colonne « Type » introuvable dans le script.');
+  const H=rows[hi].map(norm);
+  const find=re=>H.findIndex(h=>re.test(h));
+  const cT=find(/^TYPE$/), cC=find(/CONTENU|SCRIPT/), cS=find(/PARTIE|SECTION|SEQUENCE/), cN=find(/NOTE|INTENTION/);
+  if(cC<0) throw new Error('Colonne « Contenu » introuvable dans le script.');
+  const out=[], stats={video:0,text:0,skip:0};
+  let section='', lastSection=null;
+  rows.slice(hi+1).forEach(r=>{
+    const type=norm(r[cT]), content=String(r[cC]||'').trim();
+    if(cS>=0 && String(r[cS]||'').trim()) section=String(r[cS]).trim();
+    if(!type||!content){ return; }
+    if(/^AUDIO/.test(type)){ stats.skip++; return; }
+    const isVideo=/^VISUEL/.test(type), isText=/VOIX OFF|FACE CAMERA/.test(type);
+    if(!isVideo&&!isText){ stats.skip++; return; }
+    const sec=section.replace(/^[^:–-]*[:–-]\s*/,'')||section;   /* « INTRO : La fleur… » → « La fleur… » */
+    const ch=newChapter(isVideo?'video':'text');
+    const note=cN>=0?String(r[cN]||'').trim():'';
+    if(isVideo){
+      ch.name=(section.split(/[:–-]/)[0].trim()||'Visuel')+' · visuel';
+      ch.beats=[];                         /* la description du plan n'a pas à s'afficher */
+      ch.brief=content+(note?'\n\n'+note:'');
+      stats.video++;
+    }else{
+      const face=/FACE CAMERA/.test(type);
+      ch.name=(section.split(/[:–-]/)[0].trim()||'Texte')+' · '+(face?'face caméra':'voix off');
+      const beats=[];
+      if(section!==lastSection && sec) beats.push(newBeat({kind:'title',text:sec,at:0.08,posY:30,span:0.5}));
+      beats.push(newBeat({text:content,at:beats.length?0.25:0.12,posY:beats.length?58:50,span:0.7}));
+      ch.beats=beats;
+      lastSection=section;
+      const jeu=(String(r[cT]).match(/\(([^)]+)\)/)||[])[1];
+      if(jeu||note) ch.brief=[jeu?'Jeu : '+jeu:'',note].filter(Boolean).join('\n');
+      stats.text++;
+    }
+    out.push(ch);
+  });
+  return {chapters:out,stats};
+}
+document.getElementById('btnScript').addEventListener('click',()=>{
+  const i=document.createElement('input'); i.type='file'; i.accept='.xlsx,.csv,text/csv';
+  i.addEventListener('change',async()=>{
+    const f=i.files[0]; if(!f) return;
+    try{
+      toast('Lecture du script…');
+      const bytes=await readFile(f);
+      const sheet=/\.csv$/i.test(f.name) ? readCsv(new TextDecoder().decode(bytes)) : await readXlsx(bytes);
+      const {chapters,stats}=scriptChapters(sheet.rows);
+      if(!chapters.length) throw new Error('Aucune ligne VISUEL, VOIX OFF ou FACE CAMÉRA dans ce script.');
+      const replace=!story.chapters.length ||
+        confirm('Remplacer les '+story.chapters.length+' chapitres actuels par ceux du script ?\nAnnuler : les ajouter à la suite.');
+      if(replace){ story.chapters.forEach(c=>{ if(c.asset) dropAsset(c.asset); }); story.chapters=[]; }
+      if(sheet.title && (replace||!story.title)){ story.title=sheet.title; document.getElementById('storyTitle').value=sheet.title; }
+      story.chapters.push(...chapters);
+      selId=chapters[0].id;
+      renderAll(true);
+      toast(chapters.length+' chapitres créés : '+stats.video+' vidéo, '+stats.text+' texte'+
+        (stats.skip?' · '+stats.skip+' lignes audio ignorées':''));
+    }catch(e){ console.error('[Récit] script',e); toast(e.message,'bad'); }
+  });
+  i.click();
+});
 
 document.getElementById('btnOpen').addEventListener('click',()=>{
   const i=document.createElement('input'); i.type='file'; i.accept='.json';
@@ -6300,7 +6877,9 @@ function toast(msg,kind){
   toastEl.style.borderColor=kind==='bad'?'var(--bad)':'var(--line)';
   toastEl.classList.add('on');
   clearTimeout(toastT);
-  toastT=setTimeout(()=>toastEl.classList.remove('on'),3000);
+  /* une erreur reste le temps d'être lue : environ 60 ms par caractère */
+  const ms = kind==='bad' ? Math.max(4000,Math.min(14000,String(msg).length*60)) : 3000;
+  toastT=setTimeout(()=>toastEl.classList.remove('on'),ms);
 }
 function renderAll(force){ renderTemplates(); renderRail(); renderInspector(); syncPreview(force); }
 

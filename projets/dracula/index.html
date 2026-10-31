@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dracula — Le Château · I. Le hall d'entrée</title>
+<style>
+:root{--bg:#050403;--panel:rgba(245,238,222,.94);--ink:#1c1712;--accent:#7a1a1a;--hud:#d8cfb8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--panel:rgba(24,19,15,.94);--ink:#e8dfc9;--accent:#d05a5a}}
+:root[data-theme="dark"]{--panel:rgba(24,19,15,.94);--ink:#e8dfc9;--accent:#d05a5a}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;height:100%;background:var(--bg);color:var(--hud);font-family:Georgia,'Times New Roman',serif;overflow:hidden}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+#vig{position:fixed;inset:0;pointer-events:none;z-index:2;
+ background:radial-gradient(ellipse at center,rgba(0,0,0,0) 45%,rgba(0,0,0,.55) 100%);
+ box-shadow:inset 0 0 140px 40px rgba(0,0,0,.6)}
+#ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.65)}
+#pn{max-width:460px;background:var(--panel);color:var(--ink);padding:24px 26px;border-radius:6px;border-top:3px solid var(--accent)}
+#pn h1{margin:0 0 4px;font-size:22px}#pn small{color:var(--accent);letter-spacing:.12em;text-transform:uppercase}
+#pn p{line-height:1.5;margin:10px 0}#pn q{font-style:italic}
+#pn button{font:inherit;background:var(--accent);color:#fff;border:0;padding:10px 22px;border-radius:4px;cursor:pointer;margin-top:6px}
+#hud{position:fixed;left:14px;bottom:calc(12px + env(safe-area-inset-bottom,0px));font-size:13px;opacity:.75;text-shadow:0 0 6px #000;pointer-events:none}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="vig"></div>
+<div id="hud"><b id="rm">I · Le hall d'entrée</b> — ZQSD / WASD ou flèches · glisser pour regarder · Échap : menu</div>
+<div id="ov"><div id="pn">
+<small>Château de Dracula · Chapitre II</small><h1>De la porte à la bibliothèque</h1>
+<p>La grande porte s'est refermée derrière vous, la clef a tourné. Une seule lampe d'argent, sans verre ni cheminée, éclaire la voûte de pierre : sa flamme vacille et jette de longues ombres tremblantes.</p>
+<p><q>Welcome to my house! Enter freely and of your own will!</q> — Bram Stoker, <i>Dracula</i>, ch. II</p>
+<button id="go">Entrer</button></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+/* ===== Mode téléphone (#phone) : le téléphone sert de lampe torche et envoie son orientation par la capacité « room » ===== */
+function phoneUI(){document.body.innerHTML='';document.body.style.cssText='margin:0;background:#07090d;color:#d8cfb8;font:16px Georgia,serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:14px;padding:16px;box-sizing:border-box;text-align:center;touch-action:none;user-select:none';
+ const mkE=(t,css,txt)=>{const e=document.createElement(t);e.style.cssText=css;if(txt)e.textContent=txt;document.body.appendChild(e);return e};
+ mkE('div','font-size:22px;letter-spacing:.05em','Manette · Dracula');
+ const inp=mkE('input','font-size:30px;text-align:center;width:6em;text-transform:uppercase;padding:8px;background:#11151c;color:#fff;border:1px solid #556;border-radius:8px');inp.placeholder='CODE';inp.maxLength=4;
+ if(location.hash.length>7)inp.value=location.hash.slice(7,11).toUpperCase();
+ const btn=mkE('button','font-size:20px;padding:12px 26px;border-radius:10px;border:1px solid #886;background:#2a2418;color:#f0e6c8','Connecter');
+ const st=mkE('div','min-height:3em;max-width:22em;opacity:.85','Saisis le code affiché dans le coin du jeu (écran de l\'ordinateur).');
+ const pad=mkE('div','display:none;position:relative;width:150px;height:150px;border-radius:50%;border:1px solid #776;background:rgba(255,255,255,.04)');const knob=document.createElement('i');knob.style.cssText='position:absolute;left:55px;top:55px;width:40px;height:40px;border-radius:50%;background:rgba(216,207,184,.5)';pad.appendChild(knob);
+ const row=mkE('div','display:none;gap:12px');const tog=document.createElement('button'),act=document.createElement('button');
+ for(const [b,t] of[[tog,'Éteindre'],[act,'Action']]){b.textContent=t;b.style.cssText='font-size:20px;padding:16px 26px;border-radius:12px;border:1px solid #886;background:#3a3020;color:#f0e6c8';row.appendChild(b)}
+ const S2={on:true,mx:0,my:0,act:0,ans:0};let last=0;
+ tog.onclick=()=>{S2.on=!S2.on;tog.textContent=S2.on?'Éteindre':'Allumer'};act.onclick=()=>{S2.act++;navigator.vibrate&&navigator.vibrate(30)};
+ let pid=null;const pv=e=>{const r=pad.getBoundingClientRect(),dx=Math.max(-1,Math.min(1,(e.clientX-r.left-75)/60)),dy=Math.max(-1,Math.min(1,(e.clientY-r.top-75)/60));S2.mx=+dx.toFixed(2);S2.my=+(-dy).toFixed(2);knob.style.transform=`translate(${dx*40}px,${dy*40}px)`};
+ pad.addEventListener('pointerdown',e=>{pid=e.pointerId;pad.setPointerCapture(pid);pv(e)});pad.addEventListener('pointermove',e=>{if(e.pointerId===pid)pv(e)});
+ const pe=e=>{if(e.pointerId!==pid)return;pid=null;S2.mx=S2.my=0;knob.style.transform=''};pad.addEventListener('pointerup',pe);pad.addEventListener('pointercancel',pe);
+ btn.onclick=async()=>{try{
+  if(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission){const r=await DeviceOrientationEvent.requestPermission();if(r!=='granted'){st.textContent='Capteurs de mouvement refusés.';return}}
+  const AC=window.AudioContext||window.webkitAudioContext,ac=AC?new AC():null;
+  const room=window.claude&&claude.use?await claude.use('room'):null;if(!room){st.textContent='Connexion impossible dans cette vue.';return}
+  const rm=await room.join('torche-'+inp.value.trim().toUpperCase());
+  st.textContent='Connecté. Tiens le téléphone comme une lampe (écran vers le haut, haut de l\'appareil vers l\'avant). Pouce : déplacement.';row.style.display='flex';pad.style.display='block';btn.style.display='none';inp.style.display='none';
+  addEventListener('deviceorientation',e=>{const t=performance.now();if(t-last<50||e.alpha==null)return;last=t;rm.presence({a:+e.alpha.toFixed(1),b:+e.beta.toFixed(1),g:+e.gamma.toFixed(1),on:S2.on,mx:S2.mx,my:S2.my,act:S2.act,ans:S2.ans}).catch(()=>{})});
+  const dat=m=>(m&&m.data!==undefined?m.data:m)||{};
+  rm.on('text',m=>{const d=dat(m);const b=mkE('div','position:fixed;left:10px;right:10px;top:10px;z-index:8;background:#1c2230;border:1px solid #445;border-radius:14px;padding:12px 14px;text-align:left;box-shadow:0 4px 20px #000');
+   const h=document.createElement('b');h.textContent=d.from||'Inconnu';const t=document.createElement('div');t.textContent=d.text||'';t.style.marginTop='4px';b.append(h,t);navigator.vibrate&&navigator.vibrate([120,60,120]);setTimeout(()=>b.remove(),7000)});
+  rm.on('haptic',m=>{const d=dat(m);navigator.vibrate&&navigator.vibrate(d.p||[80])});
+  /* appel entrant : sonne, vibre ; « Décrocher » lit le message à voix haute sur le téléphone */
+  rm.on('call',m=>{const d=dat(m);if(document.getElementById('callbox'))return;
+   const box=mkE('div','position:fixed;inset:0;background:#05070b;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px');box.id='callbox';
+   const ln=(t,css)=>{const e=document.createElement('div');e.style.cssText=css;e.textContent=t;box.appendChild(e);return e};
+   ln('Appel entrant','opacity:.7');ln(d.from||'Inconnu','font-size:30px');const body=ln('','max-width:22em;min-height:4em;opacity:.9');
+   const bs=document.createElement('div');bs.style.cssText='display:flex;gap:18px';box.appendChild(bs);
+   const bt=(t,bg)=>{const b=document.createElement('button');b.textContent=t;b.style.cssText='font-size:20px;padding:16px 24px;border-radius:40px;border:0;color:#fff;background:'+bg;bs.appendChild(b);return b};
+   const no=bt('Refuser','#8a2020'),ok=bt('Décrocher','#206a30');
+   let ring=null,vib=null;const beep=()=>{if(!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=440;g.gain.value=.15;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.8)};
+   const stop=()=>{clearInterval(ring);clearInterval(vib);navigator.vibrate&&navigator.vibrate(0)};
+   const buzz=()=>{navigator.vibrate&&navigator.vibrate([400,200,400])};beep();buzz();ring=setInterval(beep,1600);vib=setInterval(buzz,1600);
+   const to=setTimeout(()=>{stop();box.remove()},20000);
+   no.onclick=()=>{stop();clearTimeout(to);box.remove()};
+   ok.onclick=()=>{S2.ans++;stop();clearTimeout(to);ok.style.display='none';no.textContent='Raccrocher';body.textContent=d.text||'';
+    if(window.speechSynthesis&&d.text){const u=new SpeechSynthesisUtterance(d.text);u.lang='fr-FR';u.onend=()=>setTimeout(()=>box.remove(),1500);speechSynthesis.speak(u)}else setTimeout(()=>box.remove(),4000);
+    no.onclick=()=>{speechSynthesis&&speechSynthesis.cancel();box.remove()}}});
+ }catch(err){st.textContent='Erreur : '+(err&&err.message||err)}};
+}
+if(location.hash.indexOf('#phone')===0){phoneUI()}else{
+const T=THREE,cv=document.getElementById('c');
+const R=new T.WebGLRenderer({canvas:cv,antialias:true});
+R.setPixelRatio(Math.min(devicePixelRatio,2));R.outputEncoding=T.sRGBEncoding;R.toneMapping=T.ACESFilmicToneMapping;R.toneMappingExposure=1.15;
+R.shadowMap.enabled=true;R.shadowMap.type=T.PCFSoftShadowMap;
+const S=new T.Scene();let PAR=S;S.background=new T.Color(0);S.fog=new T.FogExp2(0x000000,.055);
+const cam=new T.PerspectiveCamera(72,1,.05,60);cam.rotation.order='YXZ';cam.position.set(0,1.7,6.2);
+S.add(new T.AmbientLight(0x2a2018,.9));
+
+function mk(draw,w,h,rx,ry){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
+ const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(rx,ry);t.encoding=T.sRGBEncoding;t.anisotropy=4;return t}
+/* mémoire : une seule texture par réglage de répétition (149 appels → 52 textures), pour alléger le chargement et la mémoire, surtout sur mobile */
+const __sm={};
+function stoneMat(rx,ry){const k=rx+','+ry;return __sm[k]||(__sm[k]=stoneMat0(rx,ry))}
+function stoneMat0(rx,ry){
+ const seed=[];for(let r=0;r<4;r++){seed.push([]);const o=r%2?32:0;for(let x=-o;x<256;x+=64)seed[r].push(50+Math.random()*34)}
+ const map=mk((g,w,h)=>{const B=w/4;g.fillStyle='#0e0b08';g.fillRect(0,0,w,h);
+  for(let r=0;r<4;r++){const o=r%2?B/2:0;let k=0;for(let x=-o;x<w;x+=B,k++){const v=seed[r][k]||50,y=r*B;
+    const gr=g.createLinearGradient(x,y,x+B,y+B);gr.addColorStop(0,`rgb(${v+24|0},${v+17|0},${v+4|0})`);gr.addColorStop(1,`rgb(${v-6|0},${v-10|0},${v-18|0})`);
+    g.fillStyle=gr;g.fillRect(x+2,y+2,B-4,B-4);
+    for(let i=0;i<14;i++){g.fillStyle=`rgba(${Math.random()<.5?'0,0,0':'120,105,80'},${Math.random()*.1})`;g.beginPath();g.arc(x+4+Math.random()*(B-8),y+4+Math.random()*(B-8),1+Math.random()*5,0,6.3);g.fill()}
+    if(Math.random()<.35){g.strokeStyle='rgba(0,0,0,.5)';g.lineWidth=1;g.beginPath();let cx=x+5+Math.random()*(B-10),cy=y+3;g.moveTo(cx,cy);for(let q=0;q<5;q++){cx+=(Math.random()-.5)*7;cy+=(B-6)/5;g.lineTo(cx,cy)}g.stroke()}
+    g.fillStyle='rgba(255,235,200,.07)';g.fillRect(x+2,y+2,B-4,2);g.fillStyle='rgba(0,0,0,.25)';g.fillRect(x+2,y+B-4,B-4,2)}}
+  for(let i=0;i<1800;i++){g.fillStyle=`rgba(0,0,0,${Math.random()*.25})`;g.fillRect(Math.random()*w,Math.random()*h,1+Math.random()*2,1+Math.random()*2)}},256,256,rx,ry);
+ const bump=mk((g,w,h)=>{const B=w/4;g.fillStyle='#050505';g.fillRect(0,0,w,h);
+  for(let r=0;r<4;r++){const o=r%2?B/2:0;let k=0;for(let x=-o;x<w;x+=B,k++){const v=(seed[r][k]||50)*2.6;g.fillStyle=`rgb(${v|0},${v|0},${v|0})`;g.fillRect(x+3,r*B+3,B-6,B-6)}}
+  for(let i=0;i<1500;i++){const c=Math.random()*255|0;g.fillStyle=`rgba(${c},${c},${c},.25)`;g.fillRect(Math.random()*w,Math.random()*h,2,2)}},256,256,rx,ry);
+ const sm=new T.MeshStandardMaterial({side:T.DoubleSide,roughness:1,map:map,bumpMap:bump,bumpScale:.035});
+ /* humidité : les murs s'assombrissent sur le premier mètre au-dessus de chaque sol (0, 5.4, -4, -7) */
+ sm.onBeforeCompile=sh=>{
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying float vH;varying float vWN;').replace('#include <begin_vertex>','#include <begin_vertex>\nvH=(modelMatrix*vec4(transformed,1.)).y;vWN=abs((modelMatrix*vec4(objectNormal,0.)).y);');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying float vH;varying float vWN;').replace('#include <map_fragment>','#include <map_fragment>\n{float fl=-7.;if(vH>=-4.02)fl=-4.;if(vH>=-.02)fl=0.;if(vH>=5.38)fl=5.4;float dp=mix(.5,1.,smoothstep(0.,1.3,vH-fl));dp=mix(dp,1.,step(.5,vWN));diffuseColor.rgb*=dp;}')};
+ return sm}
+/* obstacles : boîtes au sol (niveau, xmin, xmax, zmin, zmax) ; m = marge pour le rayon du joueur */
+const OBS=[];const ob=(L,x,z,w,d,m)=>{m=m===undefined?.28:m;OBS.push([L,x-w/2-m,x+w/2+m,z-d/2-m,z+d/2+m])};
+const hit=(L,x,z)=>{for(const o of OBS)if(o[0]===L&&x>o[1]&&x<o[2]&&z>o[3]&&z<o[4])return true;return false};
+function add(geo,mat,x,y,z,ry,cast){const m=new T.Mesh(geo,mat);m.position.set(x,y,z);m.rotation.y=ry||0;m.receiveShadow=true;m.castShadow=!!cast;PAR.add(m);return m}
+/* dalles de sol : grandes dalles irrégulières, usées, aux joints sales (ch. II : « stone floor » du grand passage, « our steps rang heavily ») */
+function flagMat0(rx,ry){const map=mk((g,w,h)=>{g.fillStyle='#0b0907';g.fillRect(0,0,w,h);const rows=3;
+ for(let r=0;r<rows;r++){const y0=r*h/rows,hh=h/rows;let x=-Math.random()*40;while(x<w){const ww=60+Math.random()*60,v=40+Math.random()*26;const gr=g.createLinearGradient(x,y0,x+ww,y0+hh);gr.addColorStop(0,`rgb(${v+18|0},${v+14|0},${v+6|0})`);gr.addColorStop(1,`rgb(${v-4|0},${v-6|0},${v-12|0})`);g.fillStyle=gr;g.fillRect(x+2,y0+2,ww-4,hh-4);
+  for(let i=0;i<10;i++){g.fillStyle=`rgba(${Math.random()<.5?'0,0,0':'110,95,70'},${Math.random()*.12})`;g.beginPath();g.arc(x+4+Math.random()*(ww-8),y0+4+Math.random()*(hh-8),1+Math.random()*6,0,6.3);g.fill()}x+=ww}}
+ for(let i=0;i<200;i++){g.strokeStyle=`rgba(0,0,0,${Math.random()*.25})`;g.lineWidth=.6;g.beginPath();const sx=Math.random()*w,sy=Math.random()*h;g.moveTo(sx,sy);g.lineTo(sx+(Math.random()-.5)*14,sy+(Math.random()-.5)*14);g.stroke()}},256,256,rx,ry);
+ return new T.MeshStandardMaterial({side:T.DoubleSide,roughness:.95,map:map})}
+const __fm={};function flagMat(rx,ry){const k=rx+','+ry;return __fm[k]||(__fm[k]=flagMat0(rx,ry))}
+const archShape=(hw,h0)=>{const q=new T.Shape();q.moveTo(-hw,0);q.lineTo(hw,0);q.lineTo(hw,h0);q.absarc(0,h0,hw,0,Math.PI,false);q.lineTo(-hw,0);return q};
+const dsM=stoneMat(.5,.5);
+
+/* Hall : 10 x 16 m, murs 4 m, voûte en berceau surbaissée */
+add(new T.PlaneGeometry(10,16),flagMat(2.5,4),0,0,0).rotation.x=-Math.PI/2;
+{const sh=new T.Shape();sh.moveTo(-8,0);sh.lineTo(8,0);sh.lineTo(8,4);sh.lineTo(-8,4);sh.lineTo(-8,0);
+ const hp=new T.Path();hp.moveTo(2.3,0);hp.lineTo(2.3,2.4);hp.lineTo(3.9,2.4);hp.lineTo(3.9,0);hp.lineTo(2.3,0);sh.holes.push(hp);
+ add(new T.ShapeGeometry(sh,16),stoneMat(.5,.5),-5,0,0,-Math.PI/2)}
+{const es=new T.Shape();es.moveTo(-8,0);es.lineTo(8,0);es.lineTo(8,4);es.lineTo(-8,4);es.lineTo(-8,0);
+ for(const zz of[-3.2,3.2]){const h=new T.Path();h.moveTo(zz-.7,0);h.lineTo(zz-.7,2.2);h.lineTo(zz+.7,2.2);h.lineTo(zz+.7,0);h.lineTo(zz-.7,0);es.holes.push(h)}
+ add(new T.ShapeGeometry(es,8),stoneMat(.5,.5),5,0,0,-Math.PI/2)}
+function vault(r,len,y,z,sy,vx,vr){const g=new T.CylinderGeometry(r,r,len,32,1,true,Math.PI/2,Math.PI);g.rotateX(Math.PI/2);
+ const m=add(g,stoneMat(r*1.6/2,len/2),vx||0,y,z,vr||0);m.scale.y=sy;return m}
+vault(5,16,4,0,.55);
+function endWall(z,hole){const s=new T.Shape();s.moveTo(-5,0);s.lineTo(5,0);s.lineTo(5,4);s.absellipse(0,4,5,2.75,0,Math.PI,false);s.lineTo(-5,0);
+ if(hole){const p=new T.Path();p.moveTo(-1.5,0);p.lineTo(-1.5,2.4);p.absarc(0,2.4,1.5,Math.PI,0,true);p.lineTo(1.5,0);s.holes.push(p)}
+ add(new T.ShapeGeometry(s,24),stoneMat(.5,.5),0,0,z)}
+endWall(8,false);endWall(-8,true);
+/* Pilastres et nervures (interprétation : le roman ne décrit pas la structure) */
+for(const z of[-4,0,4]){for(const sx of[-1,1]){if(z===4&&sx===-1)continue;add(new T.BoxGeometry(.6,4,.9),stoneMat(.4,2),sx*4.7,2,z,0,true);}
+ const rib=add(new T.TorusGeometry(4.85,.16,8,32,Math.PI),stoneMat(2,1),0,4,z,0,true);rib.scale.y=.55}
+
+/* Grande porte de chêne, ferrée, verrous et chaîne (ch. I-II : chaînes, verrous massifs, grosse clef) */
+const ds=new T.Shape();ds.moveTo(-1.7,0);ds.lineTo(1.7,0);ds.lineTo(1.7,3);ds.absarc(0,3,1.7,0,Math.PI,false);ds.lineTo(-1.7,0);
+const dt=mk((g,w,h)=>{g.fillStyle='#2a1b10';g.fillRect(0,0,w,h);
+ for(let i=0;i<6;i++){g.fillStyle=`hsl(26,38%,${14+Math.random()*7}%)`;g.fillRect(i*w/6+2,0,w/6-4,h);
+  for(let k=0;k<40;k++){g.fillStyle='rgba(0,0,0,.25)';g.fillRect(i*w/6+Math.random()*w/6,Math.random()*h,1,20+Math.random()*60)}}
+ g.fillStyle='#15161a';for(const y of[.22,.5,.78])g.fillRect(0,h*y,w,26);
+ for(const y of[.22,.5,.78])for(let x=14;x<w;x+=34){g.beginPath();g.arc(x,h*y+13,6,0,7);g.fill()}},512,700,1/3.4,1/4.7);
+dt.offset.set(.5,0);
+const door=add(new T.ShapeGeometry(ds,24),new T.MeshStandardMaterial({map:dt,roughness:.85,side:T.DoubleSide}),0,0,7.94,Math.PI);
+const iron=new T.MeshStandardMaterial({color:0x1b1c20,metalness:.6,roughness:.5});
+for(const y of[1,2.1])add(new T.BoxGeometry(3.5,.12,.1),iron,0,y,7.86,0,true);
+add(new T.BoxGeometry(.5,.16,.14),iron,.9,1.5,7.86,0,true);
+/* gonds à fourreau, grand anneau, plaque de serrure et verrous massifs (ch. II : « ponderous bolts », « heavy chains ») */
+for(const y of[1,2.1])add(new T.CylinderGeometry(.07,.07,.32,10),iron,-1.74,y,7.86,0,true);
+add(new T.TorusGeometry(.13,.02,8,20),iron,-.3,1.35,7.82,0,true);add(new T.BoxGeometry(.32,.46,.05),iron,.9,1.5,7.82,0,true);
+for(const y of[.55,2.55]){const b=add(new T.CylinderGeometry(.035,.035,1.2,8),iron,.15,y,7.84,0,true);b.rotation.z=Math.PI/2;for(const bx of[-.35,.65])add(new T.BoxGeometry(.1,.14,.1),iron,bx,y,7.84,0,true)}
+for(let i=0;i<9;i++)add(new T.TorusGeometry(.06,.016,6,10),iron,-1.35,2.9-i*.13,7.85,i%2?Math.PI/2:0,true);
+for(const sx of[-1,1])add(new T.BoxGeometry(.35,3,.4),stoneMat(.2,1.5),sx*1.87,1.5,7.85,0,true);
+add(new T.TorusGeometry(1.87,.17,8,32,Math.PI),stoneMat(2,.3),0,3,7.85,0,true);
+
+/* Couloir vers l'escalier tournant (ch. II : couloir, puis « great winding stair ») */
+add(new T.PlaneGeometry(3,9.5),stoneMat(.75,2.25),0,0,-12.75).rotation.x=-Math.PI/2;
+for(const sx of[-1,1])add(new T.PlaneGeometry(9.5,2.4),stoneMat(4.5,1.2),sx*1.5,1.2,-12.75,sx*Math.PI/2);
+vault(1.5,9.5,2.4,-12.75,1);
+{const cp=new T.Shape();cp.moveTo(-1.6,2.3);cp.lineTo(1.6,2.3);cp.lineTo(1.6,5.4);cp.lineTo(-1.6,5.4);cp.lineTo(-1.6,2.3);
+ const ch=new T.Path();ch.moveTo(-1.5,2.4);ch.absarc(0,2.4,1.5,Math.PI,0,true);ch.lineTo(-1.5,2.4);cp.holes.push(ch);
+ add(new T.ShapeGeometry(cp,16),stoneMat(.5,.5),0,0,-17.5,0);
+ add(new T.PlaneGeometry(3.2,9.7),stoneMat(1,3),0,5.4,-12.75).rotation.x=-Math.PI/2}
+const zc=-19.4,well=new T.CylinderGeometry(2.4,2.4,5.4,24,1,true,.55,Math.PI*2-1.1);
+add(well,stoneMat(4,3),0,2.7,zc);
+add(new T.CircleGeometry(2.4,24),stoneMat(1,1),0,0,zc).rotation.x=-Math.PI/2;
+add(new T.CylinderGeometry(.4,.4,10,12),stoneMat(1,4),0,5,zc,0,true);
+for(let i=0;i<16;i++){const a=i*.5;add(new T.BoxGeometry(1.7,.4,.7),stoneMat(.4,.1),Math.sin(a)*1.25,.2+i*.34,zc+Math.cos(a)*1.25,a-Math.PI/2,true)}
+
+/* Lampe d'argent antique : flamme nue, sans cheminée ni globe */
+const lx=4.45,ly=1.79,lz=6.3;
+/* ch. II : le Comte pose la lampe sur une applique (bracket) au mur */
+add(new T.BoxGeometry(.7,.06,.12),iron,4.65,1.4,lz,0,true);add(new T.BoxGeometry(.05,.5,.16),iron,4.97,1.5,lz,0,true);
+const silver=new T.MeshStandardMaterial({color:0xcfd3d8,metalness:.55,roughness:.35});
+add(new T.CylinderGeometry(.09,.13,.1,16),silver,lx,ly-.37,lz,0,true);
+const bowl=add(new T.SphereGeometry(.13,16,12),silver,lx,ly-.25,lz,0,true);bowl.scale.y=.7;
+/* lampe d'argent ouvragée : pied, tige, bandeau, bec et porte-mèche */
+add(new T.CylinderGeometry(.15,.17,.03,20),silver,lx,ly-.4,lz,0,true);add(new T.CylinderGeometry(.025,.04,.1,10),silver,lx,ly-.33,lz,0,true);
+{const r=add(new T.TorusGeometry(.13,.01,6,24),silver,lx,ly-.25,lz,0,true);r.rotation.x=Math.PI/2}
+add(new T.CylinderGeometry(.012,.02,.15,8),silver,lx,ly-.125,lz,0,true);add(new T.CylinderGeometry(.028,.02,.03,10),silver,lx,ly-.045,lz,0,true);
+const flame=new T.Mesh(new T.SphereGeometry(.05,10,10),new T.MeshBasicMaterial({color:0xffd58a}));flame.scale.y=2.2;flame.position.set(lx,ly,lz);S.add(flame);
+const lamp=new T.PointLight(0xffa550,1.7,32,1.15);lamp.position.set(lx,ly+.05,lz);lamp.castShadow=true;
+const moteN=38,moteG=new T.BufferGeometry(),motePos=new Float32Array(moteN*3),moteSeed=new Float32Array(moteN);
+for(let i=0;i<moteN;i++){motePos[i*3]=lx+(Math.random()-.5)*2.6;motePos[i*3+1]=ly+(Math.random()-.5)*1.6;motePos[i*3+2]=lz+(Math.random()-.5)*2.6;moteSeed[i]=Math.random()*10}
+moteG.setAttribute('position',new T.BufferAttribute(motePos,3));
+const motes=new T.Points(moteG,new T.PointsMaterial({color:0xffdca0,size:.016,transparent:true,opacity:.55,depthWrite:false}));
+S.add(motes);
+lamp.shadow.mapSize.set(1024,1024);lamp.shadow.bias=-.002;lamp.shadow.camera.far=32;S.add(lamp);
+
+/* Etage : ch. II, up a great winding stair, and along another great passage, on whose stone floor our steps rang heavily */
+let asc=0,lvl=1,dir=1,yaw0=0,lastS=0,lastStep=0,curR='',wa2=0,wdir2=1;const RM=document.getElementById('rm'),ang=(a,b)=>((b-a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+const Y=5.4;
+const woodM=(()=>{const map=mk((g,w,h)=>{
+ const base=g.createLinearGradient(0,0,0,h);base.addColorStop(0,'#4a3420');base.addColorStop(.5,'#3a2716');base.addColorStop(1,'#2e1e10');
+ g.fillStyle=base;g.fillRect(0,0,w,h);
+ const P=4,ph=h/P;
+ for(let p=0;p<P;p++){const y0=p*ph,t=Math.random()*14-7;g.fillStyle=`rgba(${t>0?'255,220,170':'0,0,0'},${Math.abs(t)/160})`;g.fillRect(0,y0,w,ph);
+  for(let i=0;i<26;i++){const y=y0+Math.random()*ph;g.strokeStyle=`rgba(${Math.random()<.5?'18,10,4':'90,62,34'},${.12+Math.random()*.25})`;g.lineWidth=.5+Math.random();g.beginPath();g.moveTo(0,y);for(let x=0;x<w;x+=8)g.lineTo(x,y+Math.sin(x*.04+i+p)*2.2+(Math.random()-.5)*.8);g.stroke()}
+  if(Math.random()<.6){const kx=10+Math.random()*(w-20),ky=y0+ph*.3+Math.random()*ph*.4;for(let r=7;r>1;r-=2){g.strokeStyle=`rgba(14,8,3,${.5-r*.04})`;g.lineWidth=1;g.beginPath();g.ellipse(kx,ky,r*1.6,r*.8,0,0,6.3);g.stroke()}}
+  g.fillStyle='rgba(0,0,0,.65)';g.fillRect(0,y0,w,1.6);
+  for(const nx of[6,w-6]){g.fillStyle='rgba(8,6,6,.9)';g.beginPath();g.arc(nx,y0+ph/2,1.8,0,6.3);g.fill()}}
+ },128,128,2,2);
+ const bump=mk((g,w,h)=>{g.fillStyle='#808080';g.fillRect(0,0,w,h);
+  for(let i=0;i<9;i++){const y=i*h/9;g.strokeStyle='#202020';g.lineWidth=2;g.beginPath();g.moveTo(0,y);
+   for(let x=0;x<w;x+=12)g.lineTo(x,y+Math.sin(x*.05+i)*3);g.stroke()}},128,128,2,2);
+ return new T.MeshStandardMaterial({map,bumpMap:bump,bumpScale:.02,roughness:.85})})();
+add(new T.PlaneGeometry(21.4,3.6),stoneMat(5,1),11.7,Y,zc).rotation.x=-Math.PI/2;
+add(new T.PlaneGeometry(1.85,2.6),stoneMat(1,1.3),1.925,Y+1.3,zc-1.8);
+add(new T.PlaneGeometry(17.25,2.6),stoneMat(8,1.3),13.775,Y+1.3,zc-1.8);
+add(new T.PlaneGeometry(2.3,.5),stoneMat(1.5,.3),4,Y+2.35,zc-1.8);
+/* la porte lourde, aux gonds affaisses, qui repose au sol et ceda sous l'effort (ch. III) */
+{const dw=2.1,dh=2.4,dg=new T.PlaneGeometry(dw,dh);const dm=new T.MeshStandardMaterial({map:dt,roughness:.9});
+ dm.side=T.DoubleSide;const leaf=new T.Mesh(dg,dm);leaf.rotation.x=.9828;leaf.position.set(4,Y-.67*1.15+.13,zc-1.8-1.15);leaf.castShadow=true;S.add(leaf)}
+add(new T.PlaneGeometry(4.05,2.6),stoneMat(2,1.3),3.025,Y+1.3,zc+1.8);
+add(new T.PlaneGeometry(15.05,2.6),stoneMat(7,1.3),14.875,Y+1.3,zc+1.8);
+add(new T.PlaneGeometry(2.3,.5),stoneMat(1,.3),6.2,Y+2.35,zc+1.8);
+for(const jx of[5.05,7.35])add(new T.PlaneGeometry(.5,2.6),stoneMat(.3,1.3),jx,Y+1.3,zc+2.05,Math.PI/2);
+add(new T.PlaneGeometry(2.3,.5),stoneMat(1,.3),6.2,Y+2.6,zc+2.05,0).rotation.x=Math.PI/2;
+vault(1.8,21.4,Y+2.6,zc,.9,11.7,Math.PI/2);
+add(new T.CylinderGeometry(2.4,2.4,5.4,24,1,true,Math.PI/2+.55,Math.PI*2-1.1),stoneMat(4,3),0,Y+2.7,zc);
+add(new T.CircleGeometry(2.4,24),stoneMat(1,1),0,Y+5.4,zc).rotation.x=Math.PI/2;
+/* Salle du souper : porte lourde ouverte, table dressee, immense foyer (le Comte adosse a la pierre) */
+const rx=28.4,rh=4.2;
+add(new T.PlaneGeometry(12,9),stoneMat(3,2.2),rx,Y,zc).rotation.x=-Math.PI/2;
+add(new T.PlaneGeometry(12,9),stoneMat(3,2.2),rx,Y+rh,zc).rotation.x=Math.PI/2;
+doorWall(12,rh,1.3,2.5,-2,rx,Y,zc-4.5,0);
+add(new T.PlaneGeometry(9,rh),stoneMat(4.5,2),34.4,Y+rh/2,zc,Math.PI/2);
+const ws=new T.Shape();ws.moveTo(-4.5,0);ws.lineTo(4.5,0);ws.lineTo(4.5,rh);ws.lineTo(-4.5,rh);ws.lineTo(-4.5,0);
+const wp=new T.Path();wp.moveTo(-1.1,0);wp.lineTo(-1.1,2.3);wp.absarc(0,2.3,1.1,Math.PI,0,true);wp.lineTo(1.1,0);ws.holes.push(wp);
+add(new T.ShapeGeometry(ws,24),stoneMat(.5,.5),22.4,Y,zc,Math.PI/2);
+add(new T.BoxGeometry(1.2,2.9,.12),woodM,23.05,Y+1.45,zc+1.25,.2,true);
+add(new T.BoxGeometry(1,2.5,.1),woodM,32.05,Y+1.25,zc+4,Math.PI/2,true);
+for(const bx of[24.5,27.5,30.5,33.4])add(new T.BoxGeometry(.35,.4,9),woodM,bx,Y+rh-.2,zc,0,true);
+const st=stoneMat(1,1);
+for(const sz of[-1,1])add(new T.BoxGeometry(.9,2.6,1.3),st,33.9,Y+1.3,zc+sz*1.55,0,true);
+add(new T.BoxGeometry(1,.6,4.4),st,33.9,Y+2.9,zc,0,true);add(new T.BoxGeometry(.9,1,3.6),st,33.95,Y+3.7,zc,0,true);
+add(new T.PlaneGeometry(2.2,2.6),new T.MeshBasicMaterial({color:0x0a0604}),34.35,Y+1.3,zc,-Math.PI/2);
+const logM=new T.MeshStandardMaterial({color:0x2b1a0e,roughness:1});
+for(let i=0;i<5;i++){const l=add(new T.CylinderGeometry(.11,.13,1.4,8),logM,33.8,Y+.14+(i>2?.28:0),zc-.7+i*.32-(i>2?.5:0),0,true);l.rotation.z=Math.PI/2}
+/* chenets de fer et lit de braises dans l'âtre */
+for(const dz of[-.75,.75]){add(new T.BoxGeometry(.06,.5,.06),iron,33.4,Y+.25,zc+dz,0,true);add(new T.BoxGeometry(.4,.05,.05),iron,33.65,Y+.12,zc+dz,0,true)}
+add(new T.BoxGeometry(.8,.05,1.5),new T.MeshBasicMaterial({color:0x6a2208}),33.8,Y+.04,zc);
+const fm=new T.MeshBasicMaterial({color:0xff9a3c}),fl=[0,1,2].map(i=>{const m=new T.Mesh(new T.ConeGeometry(.16,.7,8),fm);m.position.set(33.8,Y+.65,zc-.5+i*.5);S.add(m);return m});
+const fire=new T.PointLight(0xff8a30,2.4,28,1.1);fire.position.set(33.4,Y+.9,zc);fire.castShadow=true;fire.shadow.mapSize.set(1024,1024);fire.shadow.camera.far=30;fire.shadow.bias=-.002;S.add(fire);
+const glow=new T.PointLight(0xffc890,.55,14,1.5);glow.position.set(rx,Y+3.3,zc);S.add(glow);
+const tb=(w,h,d,m,x,y,z)=>add(new T.BoxGeometry(w,h,d),m,x,y,z,0,true),mat=c=>new T.MeshStandardMaterial({color:c,roughness:.7});
+/* chaise à quatre pieds, dossier à traverses (x,y,z = centre de l'assise au sol ; le dossier est du côté local +z) */
+const chair=(x,y,z,ry,m)=>{const g=new T.Group();g.position.set(x,y,z);g.rotation.y=ry;
+ const b=(w,h,d,px,py,pz)=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(px,py,pz);o.castShadow=o.receiveShadow=true;g.add(o)};
+ b(.46,.05,.46,0,.45,0);for(const a of[-1,1])for(const c of[-1,1])b(.045,.43,.045,a*.2,.215,c*.2);
+ for(const a of[-1,1])b(.045,.5,.045,a*.2,.72,.2);b(.46,.06,.04,0,.95,.2);b(.4,.05,.03,0,.8,.2);b(.4,.05,.03,0,.65,.2);PAR.add(g);return g};
+/* lampe à huile d'argent avec son verre (ch. II : « the lamps were also lit in the study ») */
+const oilLamp=(x,y,z)=>{const g=new T.Group();g.position.set(x,y,z);const gm=new T.MeshStandardMaterial({color:0xffffff,transparent:true,opacity:.3,roughness:.1,side:T.DoubleSide});
+ const p=(geo,mm,py)=>{const o=new T.Mesh(geo,mm);o.position.y=py;g.add(o)};
+ p(new T.CylinderGeometry(.07,.08,.02,14),silver,.01);p(new T.CylinderGeometry(.02,.03,.1,8),silver,.07);p(new T.SphereGeometry(.07,12,8),silver,.17);
+ p(new T.CylinderGeometry(.04,.05,.2,12,1,true),gm,.32);p(new T.SphereGeometry(.022,8,6),new T.MeshBasicMaterial({color:0xffd080}),.3);PAR.add(g)};
+/* verre à pied (avec ou sans vin de Tokay) */
+const goblet=(x,y,z,wine)=>{const gm=new T.MeshStandardMaterial({color:0xffffff,transparent:true,opacity:.4,roughness:.1,side:T.DoubleSide}),g=new T.Group();g.position.set(x,y,z);
+ const p=(geo,mm,py)=>{const o=new T.Mesh(geo,mm);o.position.y=py;g.add(o)};
+ p(new T.CylinderGeometry(.03,.03,.005,12),gm,.0025);p(new T.CylinderGeometry(.006,.006,.06,6),gm,.035);p(new T.CylinderGeometry(.04,.015,.07,12,1,true),gm,.1);
+ if(wine)p(new T.CylinderGeometry(.034,.017,.035,12),new T.MeshStandardMaterial({color:0xc8862a,roughness:.2,emissive:0x3a2208}),.087);PAR.add(g)};
+tb(3.2,.08,1.1,woodM,rx,Y+.78,zc);for(const a of[-1,1])for(const b of[-1,1])tb(.1,.76,.1,woodM,rx+a*1.5,Y+.38,zc+b*.48);
+add(new T.CylinderGeometry(.22,.22,.03,20),silver,27.6,Y+.83,zc);add(new T.SphereGeometry(.2,16,8,0,7,0,Math.PI/2),silver,27.6,Y+.84,zc,0,true);
+add(new T.CylinderGeometry(.13,.13,.07,16),mat(0xd9b45a),28.4,Y+.86,zc-.3,0,true);add(new T.CylinderGeometry(.17,.12,.08,16),mat(0x3f6b2a),28.5,Y+.86,zc+.25,0,true);
+add(new T.CylinderGeometry(.045,.05,.3,12),mat(0x1c2a14),29.2,Y+.97,zc,0,true);
+/* ch. II : « a roast chicken [sous cloche], some cheese and a salad and a bottle of old Tokay » : le fromage */
+add(new T.CylinderGeometry(.11,.11,.07,3),mat(0xe0b84a),28.95,Y+.85,zc-.28,.6,true);
+/* ch. II : la lettre scellée de M. Hawkins, que Harker remet au Comte ; la boîte de cigares qu'il lui offre près du feu */
+tb(.28,.012,.2,mat(0xe8e0c8),29.6,Y+.826,zc+.3);add(new T.CylinderGeometry(.025,.025,.014,10),mat(0x9a1f1a),29.6,Y+.835,zc+.3,0,true);
+tb(.22,.06,.11,woodM,29.75,Y+.85,zc-.3);for(const cz of[-.025,.025])add(new T.CylinderGeometry(.01,.01,.15,6),mat(0x5a3a1c),29.75,Y+.885,zc-.3+cz,0,true).rotation.z=Math.PI/2;
+goblet(28.1,Y+.82,zc+.38,true);goblet(29.0,Y+.82,zc+.4,false);tb(.012,.004,.16,silver,28.22,Y+.824,zc-.3);tb(.012,.004,.17,silver,28.58,Y+.824,zc-.3);
+chair(27.6,Y,zc+.95,0,woodM);chair(32.4,Y,zc+.4,-Math.PI/2,woodM);
+const cn=new T.Group(),blk=mat(0x050505),ctop=(g,m,y)=>{const o=new T.Mesh(g,m);o.position.y=y;o.castShadow=true;cn.add(o)};
+ctop(new T.CylinderGeometry(.11,.11,.85,10),blk,.425);ctop(new T.CylinderGeometry(.2,.27,1,12),blk,1.35);ctop(new T.SphereGeometry(.13,14,10),mat(0xc9c2b0),2.02);
+const mo=new T.Mesh(new T.BoxGeometry(.2,.025,.03),mat(0xeeeeee));mo.position.set(0,1.98,.12);cn.add(mo);
+/* ch. II : visage aquilin au nez fin, sourcils broussailleux joints, oreilles pâles et pointues, longue moustache blanche, lèvres très rouges, mains pâles ; vêtu de noir des pieds à la tête */
+{const sk=mat(0xc9c2b0),wh=mat(0xeeeeee),cmk=(g,m,x,y,z,rx,rz)=>{const o=new T.Mesh(g,m);o.position.set(x,y,z);o.rotation.set(rx||0,0,rz||0);o.castShadow=true;cn.add(o);return o};
+ cmk(new T.ConeGeometry(.022,.09,8),sk,0,2.0,.125,Math.PI/2,0);cmk(new T.BoxGeometry(.17,.022,.03),blk,0,2.07,.115);cmk(new T.BoxGeometry(.06,.012,.02),mat(0xa01818),0,1.945,.128);
+ for(const sx of[-1,1]){cmk(new T.ConeGeometry(.02,.07,6),sk,sx*.13,2.04,0,0,-sx*.25);cmk(new T.SphereGeometry(.035,8,6),wh,sx*.1,2.08,-.02);cmk(new T.SphereGeometry(.012,6,6),blk,sx*.045,2.04,.125);
+  cmk(new T.BoxGeometry(.1,.022,.03),wh,sx*.1,1.955,.115,0,sx*.5);cmk(new T.CylinderGeometry(.05,.05,.75,8),blk,sx*.29,1.42,0,0,sx*.08);cmk(new T.SphereGeometry(.055,8,6),sk,sx*.33,1.02,0)}}
+cn.position.set(33.6,Y,zc+2.6);cn.rotation.y=-Math.PI/2;S.add(cn);
+/* IV : petite piece octogonale, une seule lampe, sans fenetre ; V : la grande chambre (ch. II) */
+const RI=2.1,ox=31.5,oz=zc+4.5+RI,zb=zc+4.5+2*RI,ze=zb+8;
+function doorWall(w,h,dw,dh,hx,x,y,z,ry,xw){const sh=new T.Shape();sh.moveTo(-w/2,0);sh.lineTo(w/2,0);sh.lineTo(w/2,h);sh.lineTo(-w/2,h);sh.lineTo(-w/2,0);
+ const p=new T.Path();p.moveTo(hx-dw/2,0);p.lineTo(hx-dw/2,dh);p.absarc(hx,dh,dw/2,Math.PI,0,true);p.lineTo(hx+dw/2,0);sh.holes.push(p);if(xw){const q=new T.Path();q.moveTo(xw.x-xw.w/2,xw.y0);q.lineTo(xw.x-xw.w/2,xw.y1);q.lineTo(xw.x+xw.w/2,xw.y1);q.lineTo(xw.x+xw.w/2,xw.y0);q.lineTo(xw.x-xw.w/2,xw.y0);sh.holes.push(q)}add(new T.ShapeGeometry(sh,16),stoneMat(.5,.5),x,y,z,ry)}
+doorWall(12,rh,1.1,1.9,3.1,rx,Y,zc+4.5,0,{x:-4,w:1.3,y0:.9,y1:2.9});
+/* ch. II : « as I looked towards the window I saw the first dim streak of the coming dawn » */
+add(new T.PlaneGeometry(1.6,2.3),new T.MeshBasicMaterial({color:0x14213a,side:T.DoubleSide}),rx-4,Y+1.9,zc+4.62);
+tb(1.5,.08,.3,st,rx-4,Y+.9,zc+4.35);for(const dx of[-.3,.3])tb(.04,2,.05,iron,rx-4+dx,Y+1.9,zc+4.52);tb(1.3,.05,.05,iron,rx-4,Y+1.9,zc+4.52);
+for(const i of[1,2,3,5,6,7]){const a=i*Math.PI/4;add(new T.PlaneGeometry(1.78,3),stoneMat(.9,1.5),ox+RI*Math.sin(a),Y+1.5,oz+RI*Math.cos(a),a)}
+for(const k of[-1,1]){const og=new T.CircleGeometry(2.28,8);og.rotateX(k*Math.PI/2);og.rotateY(Math.PI/8);add(og,stoneMat(1,1),ox,Y+(k>0?3:0),oz)}
+add(new T.BoxGeometry(.02,.7,.02),iron,ox,Y+2.65,oz);add(new T.SphereGeometry(.11,12,8),silver,ox,Y+2.25,oz,0,true);
+const l3=new T.Mesh(new T.SphereGeometry(.04,8,8),fm);l3.position.set(ox,Y+2.3,oz);l3.scale.y=1.8;S.add(l3);
+const lamp3=new T.PointLight(0xffb060,1.1,10,1.4);lamp3.position.set(ox,Y+2.3,oz);S.add(lamp3);
+add(new T.PlaneGeometry(9,8),stoneMat(2.5,2),ox,Y,zb+4).rotation.x=-Math.PI/2;add(new T.PlaneGeometry(9,8),stoneMat(2.5,2),ox,Y+4,zb+4).rotation.x=Math.PI/2;
+doorWall(9,4,1,1.9,0,ox,Y,zb,0);
+for(const bx of[27,36])add(new T.PlaneGeometry(8,4),stoneMat(4,2),bx,Y+2,zb+4,Math.PI/2);
+const sw=new T.Shape();sw.moveTo(-4.5,0);sw.lineTo(4.5,0);sw.lineTo(4.5,4);sw.lineTo(-4.5,4);sw.lineTo(-4.5,0);
+const wh=new T.Path();wh.moveTo(-.6,1.1);wh.lineTo(.6,1.1);wh.lineTo(.6,2.8);wh.lineTo(-.6,2.8);wh.lineTo(-.6,1.1);sw.holes.push(wh);
+add(new T.ShapeGeometry(sw,8),stoneMat(.5,.5),ox,Y,ze,0);
+add(new T.PlaneGeometry(3,2.8),new T.MeshBasicMaterial({color:0x0b1526,side:T.DoubleSide}),ox,Y+1.95,ze+.1);
+tb(.06,1.7,.08,iron,ox,Y+1.95,ze-.02);tb(1.25,.06,.08,iron,ox,Y+1.95,ze-.02);for(const bx2 of[-.3,.3])tb(.05,1.7,.07,iron,ox+bx2,Y+1.95,ze-.02);tb(1.5,.08,.3,st,ox,Y+1.1,ze-.12);
+/* ch. III : le crucifix suspendu au-dessus de la tête du lit */
+tb(.05,.5,.04,silver,27.14,Y+2.15,zb+4);tb(.04,.05,.28,silver,27.14,Y+2.28,zb+4);
+for(const bz of[zb+1.5,zb+4,zb+6.5])add(new T.BoxGeometry(9,.4,.35),woodM,ox,Y+3.8,bz,0,true);
+/* cheminee large, feu de bois dont les buches du dessus sont fraiches, rugissement creux */
+const zf=zb+4;
+for(const sz of[-1,1])add(new T.BoxGeometry(.9,2.4,1.1),st,35.55,Y+1.2,zf+sz*1.35,0,true);
+add(new T.BoxGeometry(1,.55,3.8),st,35.5,Y+2.65,zf,0,true);add(new T.BoxGeometry(.9,1.05,3.2),st,35.55,Y+3.5,zf,0,true);
+add(new T.PlaneGeometry(2,2.4),new T.MeshBasicMaterial({color:0x0a0604}),35.98,Y+1.2,zf,-Math.PI/2);
+for(let i=0;i<6;i++){const l=add(new T.CylinderGeometry(.1,.12,1.3,8),logM,35.6,Y+.14+(i>2?.26:0),zf-.65+i*.26-(i>2?.4:0),0,true);l.rotation.z=Math.PI/2}
+/* chenets de fer et braises (ch. II : « another log fire … which sent a hollow roar up the wide chimney ») */
+for(const dz of[-.75,.75]){add(new T.BoxGeometry(.06,.5,.06),iron,35.25,Y+.25,zf+dz,0,true);add(new T.BoxGeometry(.4,.05,.05),iron,35.5,Y+.12,zf+dz,0,true)}
+add(new T.BoxGeometry(.8,.05,1.5),new T.MeshBasicMaterial({color:0x6a2208}),35.65,Y+.04,zf);
+const fl2=[0,1,2].map(i=>{const m=new T.Mesh(new T.ConeGeometry(.15,.65,8),fm);m.position.set(35.6,Y+.7,zf-.5+i*.5);S.add(m);return m});
+const fire2=new T.PointLight(0xff8a30,1.8,22,1.1);fire2.position.set(35.1,Y+.9,zf);S.add(fire2);
+const glow2=new T.PointLight(0xffc890,.5,14,1.5);glow2.position.set(ox,Y+3.2,zf);S.add(glow2);
+/* lit a tentures, table, siege, bagages (le Comte les a poses dans la chambre) ; aucun miroir (ch. II) */
+/* ch. II : tentures et sièges d'étoffes « of the costliest and most beautiful fabrics … centuries old, though in excellent order » : damas rouge fané, motifs dorés */
+const crim=new T.MeshStandardMaterial({color:0xffffff,roughness:.95,map:mk((g,w,h)=>{g.fillStyle='#6a1c22';g.fillRect(0,0,w,h);for(let y=0;y<h;y+=2){g.fillStyle=`rgba(0,0,0,${y%4?.07:0})`;g.fillRect(0,y,w,1)}for(let x=0;x<w;x+=2){g.fillStyle=`rgba(255,200,200,${x%4?.03:0})`;g.fillRect(x,0,1,h)}
+ g.strokeStyle='rgba(200,150,60,.35)';g.lineWidth=1.4;for(let r=0;r<2;r++)for(let c=0;c<2;c++){const cx=w/4+c*w/2,cy=h/4+r*h/2;g.beginPath();g.moveTo(cx,cy-14);g.quadraticCurveTo(cx+12,cy,cx,cy+14);g.quadraticCurveTo(cx-12,cy,cx,cy-14);g.stroke();g.beginPath();g.arc(cx,cy,3,0,6.3);g.stroke()}},128,128,2,2)}),gold=mat(0x7a5a1e);
+tb(2.2,.4,1.7,woodM,28.15,Y+.3,zf);tb(2.1,.2,1.6,mat(0xd8cdb8),28.15,Y+.6,zf);tb(1.3,.22,1.62,crim,28.6,Y+.62,zf);tb(.45,.14,.9,mat(0xd8cdb8),27.5,Y+.75,zf);tb(.1,1.3,1.8,woodM,27.05,Y+.9,zf);
+for(const bz of[-1,1]){for(let k=0;k<5;k++)tb(.05,2.35,.1,crim,29.25+(k%2?.04:0),Y+1.45,zf+bz*(.7+k*.1));tb(.08,.05,.5,gold,29.25,Y+1,zf+bz*.9)}
+for(const px of[27.1,29.2])for(const pz of[-.9,.9])tb(.09,2.4,.09,woodM,px,Y+1.2,zf+pz);
+tb(2.2,.08,1.9,woodM,28.15,Y+2.4,zf);tb(2.2,.3,1.9,crim,28.15,Y+2.22,zf);tb(.1,.7,1.7,woodM,29.2,Y+.55,zf);
+/* ch. II : « curtains and upholstery of the chairs and sofas » : rideaux de damas aux deux fenêtres, canapé tendu de la même étoffe dans la salle du souper */
+for(const [wx,wz] of[[rx-4,zc+4.38],[ox,ze-.15]]){tb(2.4,.04,.04,gold,wx,Y+3.15,wz);for(const sx of[-1,1])for(let k=0;k<5;k++)tb(.07,2.8,.06,crim,wx+sx*(.85+k*.07),Y+1.7,wz+(k%2?.03:0))}
+{const x=31.2,z=zc-3.85,w=2.2;for(const a of[-1,1])for(const c of[-1,1])tb(.08,.18,.08,woodM,x+a*(w/2-.15),Y+.09,z+c*.4);
+ tb(w,.3,1.1,crim,x,Y+.33,z);for(let i=0;i<2;i++){const cx=x+(i-.5)*(w-.2)/2;tb((w-.2)/2-.05,.16,.85,mat(0x8a2830),cx,Y+.56,z+.08);tb((w-.2)/2-.07,.42,.2,mat(0x7a2430),cx,Y+.8,z-.37)}
+ for(const a of[-1,1])tb(.2,.55,1.1,crim,x+a*(w/2-.1),Y+.5,z);tb(w,.6,.12,crim,x,Y+.65,z-.5)}
+tb(1.3,.05,.7,woodM,33.6,Y+.75,ze-.6);for(const a of[-1,1])for(const b of[-1,1])tb(.06,.72,.06,woodM,33.6+a*.6,Y+.36,ze-.6+b*.3);
+chair(33.6,Y,ze-1.4,Math.PI,gold);
+tb(.8,.35,.45,mat(0x3b2a1a),30.3,Y+.18,zb+1);tb(.55,.3,.4,mat(0x3b2a1a),30.9,Y+.15,zb+1.5);
+for(const dx of[-.25,.25])tb(.05,.37,.47,iron,30.3+dx,Y+.18,zb+1);tb(.06,.06,.02,gold,30.3,Y+.25,zb+1.24);
+/* ch. II : les papiers que Harker range sur la table, et son carnet de sténographie */
+for(let i=0;i<3;i++)tb(.3,.012,.22,mat(0xe8e0c8),33.2+i*.22,Y+.782+i*.004,ze-.6+(i-1)*.06);tb(.22,.03,.16,mat(0x2a3a4a),34.05,Y+.795,ze-.5);goblet(34.15,Y+.775,ze-.8,false);tb(.012,.012,.15,mat(0x111111),33.85,Y+.79,ze-.8);
+const ok=(x,z)=>{const d=z-zc;
+ if(x>=1.2&&x<=22.1&&Math.abs(d)<1.45)return true;
+ if(Math.abs(x-6.2)<1.1&&z>=zc+1.35&&z<=zc+6.9)return true;
+ if(x>=22&&x<=22.8&&Math.abs(d)<.95)return true;
+ if(x>=22.7&&x<=33.1&&Math.abs(d)<4.1)return !(x>26.6&&x<30.2&&Math.abs(d)<.85);
+ if(Math.abs(x-ox)<.5&&z>=zc+3.9&&z<=zc+5.1)return true;
+ if(Math.hypot(x-ox,z-oz)<1.7)return true;
+ if(Math.abs(x-ox)<.5&&z>=oz+1.6&&z<=zb+.4)return true;
+ if(x>=27.4&&x<=34.9&&z>=zb+.4&&z<=ze-.4&&!(x<29.6&&Math.abs(z-zf)<1.1)&&!(x>32.9&&x<34.3&&z>ze-1))return true;
+ if(Math.abs(x-(rx-2))<.75&&z<=zc-4.1&&z>=zc-6.5)return true;
+ if(x>=rx-5.5&&x<=rx+5.5&&z<=zc-4.5&&z>=lz1+.5)return !(Math.abs(x-(rx-5.85))<.55&&(Math.abs(z-(lz0-1.2))<.65||Math.abs(z-(lz0-4))<.65||Math.abs(z-(lz0-6.5))<.65))&&!(Math.abs(x-(rx+5.85))<.55&&(Math.abs(z-(lz0-1.2))<.65||Math.abs(z-(lz0-4))<.65||Math.abs(z-(lz0-6.5))<.65))&&!(Math.abs(z-(lz1+.15))<.55);
+ return false};
+/* VI : la bibliotheque, ouverte sur la salle du souper (ch. II : "I opened another door in the room and found a sort of library") */
+const lz0=zc-4.5,lz1=lz0-8,lw=12;
+add(new T.PlaneGeometry(lw,8),stoneMat(3,2),rx,Y,(lz0+lz1)/2).rotation.x=-Math.PI/2;add(new T.PlaneGeometry(lw,8),stoneMat(3,2),rx,Y+rh,(lz0+lz1)/2).rotation.x=Math.PI/2;
+for(const bx of[rx-lw/2,rx+lw/2])add(new T.PlaneGeometry(8,rh),stoneMat(4,2),bx,Y+rh/2,(lz0+lz1)/2,Math.PI/2);
+add(new T.PlaneGeometry(lw,rh),stoneMat(6,2),rx,Y+rh/2,lz1);
+const shelfM=woodM,bookM=[0x5a1c1c,0x1c3a52,0x2c4a1e,0x4a3418,0x6a5228,0x1a2438].map(mat);
+/* bibliothèque parallèle au mur : montants, corniche, socle, livres de hauteurs et de largeurs variées, quelques-uns penchés ou manquants */
+function bookcase(x,z,ry){const g=new T.Group();g.position.set(x,Y,z);g.rotation.y=ry;
+ const b=(w,h,d,m,px,py,pz,rz)=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(px,py,pz);if(rz)o.rotation.z=rz;o.castShadow=o.receiveShadow=true;g.add(o);return o};
+ b(2.6,3.3,.04,shelfM,0,1.75,-.15);for(const a of[-1,1])b(.05,3.3,.36,shelfM,a*1.3,1.75,0);b(2.8,.12,.44,shelfM,0,3.45,0);b(2.6,.2,.4,shelfM,0,.1,0);
+ for(let s=0;s<5;s++){b(2.6,.05,.34,shelfM,0,.35+s*.62,0);let px=-1.2;while(px<1.15){const w=.12+Math.random()*.08,h=.38+Math.random()*.17;if(Math.random()<.05){px+=.15;continue}
+  b(w,h,.26,bookM[(Math.random()*bookM.length)|0],px+w/2,.375+s*.62+h/2,0,Math.random()<.06?.18:0);px+=w+.005}}
+ PAR.add(g)}
+bookcase(rx-5.85,lz0-1.2,Math.PI/2);bookcase(rx-5.85,lz0-4,Math.PI/2);bookcase(rx-5.85,lz0-6.5,Math.PI/2);
+bookcase(rx+5.85,lz0-1.2,-Math.PI/2);bookcase(rx+5.85,lz0-4,-Math.PI/2);bookcase(rx+5.85,lz0-6.5,-Math.PI/2);
+bookcase(rx,lz1+.2,0);
+tb(2.6,.08,1.3,woodM,rx,Y+.75,lz0-4);for(const a of[-1,1])for(const b of[-1,1])tb(.09,.72,.09,woodM,rx+a*1.15,Y+.36,lz0-4+b*.55);
+for(let i=0;i<7;i++)tb(.35+Math.random()*.15,.03,.24,mat(0xcfc6a8),rx-1+Math.random()*2,Y+.8+i*.01,lz0-4+(Math.random()-.5)*.9);
+{const sz=lz0-6.6;for(const a of[-1,1])for(const c of[-1,1])tb(.08,.18,.08,woodM,rx+a*1.35,Y+.09,sz+c*.4);
+ tb(3,.3,1.1,crim,rx,Y+.33,sz);for(let i=-1;i<=1;i++){tb(.9,.16,.85,mat(0x8a2830),rx+i*.95,Y+.56,sz+.08);tb(.88,.42,.2,mat(0x7a2430),rx+i*.95,Y+.8,sz-.37)}
+ for(const a of[-1,1])tb(.2,.55,1.1,crim,rx+a*1.4,Y+.5,sz);tb(3,.6,.12,crim,rx,Y+.65,sz-.5)}
+tb(.28,.04,.2,mat(0xc03028),rx+.6,Y+.63,lz0-6.5);
+{const pl=new T.PointLight(0xffb060,.9,13,1.4);pl.position.set(rx,Y+3.4,lz0-4);S.add(pl)}
+/* ch. II : la porte en face de la mienne, verrouillée ; l'atlas ouvert sur l'Angleterre, annoté de petits cercles ; la table où le Comte écrit */
+lockedDoor(rx+3.3,Y,lz1,0);
+tb(.5,.04,.34,mat(0x3a4a5a),rx-.9,Y+.84,lz0-4);for(let i=0;i<3;i++)tb(.04,.006,.04,mat(0xc03028),rx-.78+i*.12,Y+.865,lz0-4.05+i*.05);
+oilLamp(rx+.7,Y+.82,lz0-4.1);
+{const dx=rx+3.4,dz=lz0-1.8;tb(1.5,.08,.75,woodM,dx,Y+.78,dz);for(const a of[-1,1])for(const b of[-1,1])tb(.07,.74,.07,woodM,dx+a*.68,Y+.37,dz+b*.3);chair(dx,Y,dz+.9,0,woodM);tb(.18,.1,.14,mat(0x2a2a2e),dx+.4,Y+.87,dz);add(new T.CylinderGeometry(.03,.035,.06,10),mat(0x0c0c0c),dx+.1,Y+.85,dz-.2,0,true);tb(.01,.006,.22,mat(0xeeeeee),dx+.2,Y+.83,dz-.15);tb(.2,.01,.14,mat(0xe8e0c8),dx-.1,Y+.825,dz+.2);oilLamp(dx+.55,Y+.82,dz+.25);
+ /* ch. II : les ouvrages que le Comte consulte en écrivant (almanach, annuaire de Londres, listes de l'armée et de la marine, annuaire du droit) */
+ [0x5a2a1c,0x1c3a5a,0x3a4a2a,0x6a5a2a].forEach((c,i)=>tb(.3-i*.02,.05,.22,mat(c),dx-.45,Y+.845+i*.05,dz+(i%2?.04:-.03)))}
+
+/* VII : une piece donnant au Sud, trouvee depuis un palier de l\'escalier tournant (ch. II, 8 mai) */
+const sx=6.2,sy=Y,sz=zc+4.6;
+add(new T.PlaneGeometry(2.4,.7),stoneMat(1,1),sx,sy,zc+2.05).rotation.x=-Math.PI/2;
+buildBoxRoom({cx:sx,cz:sz,fy:sy,width:4.4,depth:4.4,height:3.4,
+ floorMat:flagMat(1.5,1.5),ceilMat:stoneMat(1.5,1.5),wallMat:stoneMat(2,1.5),
+ skip:['east'],doors:[{wall:'north',offset:0,width:2.3,height:2.4}]});
+{const sh=new T.Shape();sh.moveTo(-2.2,0);sh.lineTo(2.2,0);sh.lineTo(2.2,3.4);sh.lineTo(-2.2,3.4);sh.lineTo(-2.2,0);
+ const hh=new T.Path();hh.moveTo(-1.5,.9);hh.lineTo(1.5,.9);hh.lineTo(1.5,2.6);hh.lineTo(-1.5,2.6);hh.lineTo(-1.5,.9);sh.holes.push(hh);
+ add(new T.ShapeGeometry(sh,8),stoneMat(.5,.5),sx+2.2,sy,sz,-Math.PI/2)}
+{const sky=mk((g,w,h)=>{const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,'#0a1626');gr.addColorStop(.45,'#1b2f3d');gr.addColorStop(1,'#26140f');
+ g.fillStyle=gr;g.fillRect(0,0,w,h);g.fillStyle='#0d2a18';for(let i=0;i<26;i++){const x=Math.random()*w,ww=40+Math.random()*70,hh2=h*.55+Math.random()*h*.2;g.fillRect(x,h-hh2,ww,hh2)}
+ g.fillStyle='rgba(160,190,200,.5)';for(let i=0;i<6;i++){const x=Math.random()*w;g.fillRect(x,h*.6,3,h*.3)}},512,384,1,1);
+ add(new T.PlaneGeometry(3.6,2.2),new T.MeshBasicMaterial({map:sky,side:T.DoubleSide}),sx+2.3,sy+1.75,sz,-Math.PI/2);
+ /* ch. II : la vue au sud, des crêtes sombres à perte de vue au-dessus du précipice */
+ for(let L=0;L<3;L++){const sh=new T.Shape();sh.moveTo(-1.8,0);const h0=.3+L*.1;for(let k=0;k<=12;k++)sh.lineTo(-1.8+k*.3,h0+Math.random()*.35);sh.lineTo(1.8,0);sh.lineTo(-1.8,0);
+  add(new T.ShapeGeometry(sh),new T.MeshBasicMaterial({color:[0x142038,0x0f1a2e,0x0a1222][L],side:T.DoubleSide}),sx+2.29-L*.01,sy+.9,sz,-Math.PI/2)}}
+tb(.3,.08,3.2,st,sx+2.05,sy+.9,sz);for(const dz of[-.5,.5])tb(.3,1.7,.16,st,sx+2.2,sy+1.75,sz+dz);tb(.3,.14,3,st,sx+2.2,sy+1.55,sz);
+{const pl=new T.PointLight(0x8fa8bb,.35,7,1.6);pl.position.set(sx+1.6,sy+1.8,sz);S.add(pl)}
+tb(1.5,.9,.15,new T.MeshStandardMaterial({color:0x5a4a35,roughness:.9}),sx+1.9,sy+.45,sz);
+
+/* Miroir a raser, suspendu pres de la fenetre (ch. III) : "I had hung my shaving glass by the window" */
+{const mw=.34,mh=.46,fx=ox+1.05,fy=Y+1.9,fz=ze-.04;
+ const roomTex=mk((g,w,h)=>{g.fillStyle='#100c08';g.fillRect(0,0,w,h);
+  g.fillStyle='#2a2016';for(let i=0;i<40;i++){g.fillRect(Math.random()*w,Math.random()*h,3,3)}
+  const gr=g.createRadialGradient(w/2,h*.4,4,w/2,h*.4,w*.6);gr.addColorStop(0,'rgba(255,200,140,.35)');gr.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=gr;g.fillRect(0,0,w,h)},128,160,1,1);
+ tb(mw+.06,mh+.06,.03,iron,fx,fy,fz);
+ add(new T.PlaneGeometry(mw,mh),new T.MeshStandardMaterial({map:roomTex,metalness:.3,roughness:.15}),fx,fy,fz+.02);
+ tb(.02,.4,.02,iron,fx,fy+.5,fz);
+ tb(.28,.02,.02,mat(0xb0b0b0),fx-.05,Y+.78,fz+.05);}
+
+/* Passage a travers le poterne vers la cour et la chapelle en ruine (ch. II, IV) */
+add(new T.PlaneGeometry(4.2,3.2),stoneMat(2,1.6),-7.1,0,3.2).rotation.x=-Math.PI/2;
+for(const sz of[2.3,3.9])add(new T.PlaneGeometry(4.2,2.4),stoneMat(2,1.2),-7.1,1.2,sz,0);
+vault(1.2,4.2,2.4,3.2,.9,-7.1,Math.PI/2);
+/* Cour interieure, a ciel ouvert, envahie d\'herbe, avec les tombes brisees */
+const cx=-16,cz0=1.2,cz1=9,cw=13;
+buildBoxRoom({cx:cx,cz:(cz0+cz1)/2,fy:0,width:cw,depth:cz1-cz0,height:6,noCeil:true,
+ floorMat:flagMat(cw/2,(cz1-cz0)/2),wallMat:stoneMat(cw/4,2),
+ doors:[{wall:'east',offset:-1.9,width:3.2,height:2.4}]});
+/* dalle de raccord postern -> cour, au niveau du seuil */
+add(new T.PlaneGeometry(1,3.2),stoneMat(.5,1.6),(-9.2+cx+cw/2)/2,0,3.2).rotation.x=-Math.PI/2;
+const gravM=mat(0x5a5850);
+for(const gx of[-3,-1,1.5,3.5])for(const gz of[3.5,5.2])add(new T.BoxGeometry(.7,.5,.15),gravM,cx+gx+(Math.random()-.5),.25,gz+(Math.random()-.5),(Math.random()-.5)*.5,true);
+const mossM=new T.MeshStandardMaterial({color:0x2a3018,roughness:1});
+for(let i=0;i<18;i++)add(new T.CircleGeometry(.18+Math.random()*.22,7),mossM,cx+(Math.random()-.5)*11,.012,cz0+.3+Math.random()*7.2,0).rotation.x=-Math.PI/2;
+S.add(new T.AmbientLight(0x1a2436,.25));
+/* ch. III : « One or two small rooms near the hall were open, but there was nothing to see in them except old furniture, dusty with age and moth-eaten » */
+for(const zz of[-3.2,3.2]){
+ buildBoxRoom({cx:7.6,cz:zz,fy:0,width:5.2,depth:3.6,height:3,floorMat:flagMat(2,1.5),ceilMat:stoneMat(2,1.5),wallMat:stoneMat(2,1.2),skip:['west']});
+ tb(.9,.5,.5,woodM,9.5,.25,zz-1.3);tb(1.1,.06,.7,woodM,8.6,.75,zz+.4);for(const a of[-1,1])for(const b of[-1,1])tb(.06,.72,.06,woodM,8.6+a*.5,.36,zz+.4+b*.3);
+ chair(7.6,0,zz-.2,Math.PI,woodM);ob(1,7.6,zz-.2,.46,.46,.2);ob(1,8.6,zz+.4,1.1,.7,.2);ob(1,9.5,zz-1.3,.9,.5,.2);tb(.05,.52,.52,iron,9.2,.25,zz-1.3);tb(.05,.52,.52,iron,9.8,.25,zz-1.3);tb(.92,.06,.52,woodM,9.5,.52,zz-1.3);goblet(8.5,.78,zz+.45,false);
+ const pl=new T.PointLight(0x8a7a60,.3,6,1.6);pl.position.set(7.6,2.4,zz);S.add(pl)}
+/* === Le Comte : sa chambre, sous la tour de Harker, et l'escalier tournant qui descend a la chapelle (ch. IV) === */
+const CX0=ox,CZ0=-6.7,SX=25.45,SZ=CZ0+1.6,vw=8,vd=7,vh=3.6,VX=SX,VZ=SZ+5.6;
+/* chapelle en ruine et caveau, un etage plus bas (groupe abaisse de 4 m) */
+const crateM=new T.MeshStandardMaterial({color:0xffffff,roughness:1,map:mk((g,w,h)=>{g.fillStyle='#2a1d12';g.fillRect(0,0,w,h);for(let p=0;p<3;p++){const y0=p*h/3;g.fillStyle=`rgba(${p%2?'255,230,190':'0,0,0'},.06)`;g.fillRect(0,y0,w,h/3);for(let i=0;i<18;i++){g.strokeStyle=`rgba(10,6,2,${.15+Math.random()*.25})`;g.beginPath();const y=y0+Math.random()*h/3;g.moveTo(0,y);for(let x=0;x<w;x+=8)g.lineTo(x,y+Math.sin(x*.05+i)*1.5);g.stroke()}g.fillStyle='rgba(0,0,0,.7)';g.fillRect(0,y0,w,1.5);for(const nx of[6,w-6]){g.fillStyle='#0a0805';g.beginPath();g.arc(nx,y0+h/6,1.8,0,6.3);g.fill()}}},128,128,1,1)}),
+dirtM=new T.MeshStandardMaterial({color:0xffffff,roughness:1,map:mk((g,w,h)=>{g.fillStyle='#2e2013';g.fillRect(0,0,w,h);for(let i=0;i<900;i++){const v=Math.random()*40|0;g.fillStyle=`rgba(${60+v},${42+v*.6|0},${24+v*.4|0},${.25+Math.random()*.4})`;g.beginPath();g.arc(Math.random()*w,Math.random()*h,.8+Math.random()*3,0,6.3);g.fill()}},128,128,2,2)});
+const VG=new T.Group();VG.position.set(0,-4,0);S.add(VG);PAR=VG;
+/* Chapelle en ruine et caveau : cinquante caisses de terre (ch. IV) */
+buildBoxRoom({cx:VX,cz:VZ+vd/2,fy:0,width:vw,depth:vd,height:vh,noCeil:true,
+ floorMat:(()=>{const m=dirtM.clone();m.map=dirtM.map.clone();m.map.needsUpdate=true;m.map.repeat.set(7,6);return m})(),wallMat:stoneMat(vd/4,vh/2),
+ doors:[{wall:'north',offset:0,width:2.6,height:2.5},{wall:'south',offset:-3,width:1.6,height:2.5},{wall:'south',offset:3,width:1.6,height:2.5}]});
+/* Le toit est brise par endroits (ch. IV : "The roof was broken") */
+add(new T.PlaneGeometry(vw,3.2),stoneMat(vw/2.5,1.6),VX,vh,VZ+1.6).rotation.x=Math.PI/2;
+add(new T.PlaneGeometry(3,3),stoneMat(1.5,1.5),VX-2.5,vh,VZ+5).rotation.x=Math.PI/2;
+add(new T.PlaneGeometry(vw,1.2),stoneMat(vw/2.5,.6),VX,vh,VZ+vd-.6).rotation.x=Math.PI/2;
+
+const ropeM=new T.MeshStandardMaterial({color:0x8a7550,roughness:1});
+let bi=0,openBx=VX+3,openBz=VZ+14.4;/* 49 caisses dans la nef, en deux blocs séparés par une allée (la cinquantième est dans le caveau) ; neuf sont posées en seconde rangée */
+for(let row=0;row<5;row++)for(let col=0;col<8;col++){bi++;
+ const bx=VX+(col<4?-3.1+col*.68:1.06+(col-4)*.68),bz=VZ+.9+row*1.1;
+ ob(4,bx,bz,.62,1.02,.2);add(new T.BoxGeometry(.62,.5,1.02),crateM,bx,.25,bz,0,true);
+ for(const e of[-.53,.53])add(new T.TorusGeometry(.09,.012,5,8),ropeM,bx,.38,bz+e,0,true);
+ if(col===0||(col===7&&row<4)){add(new T.BoxGeometry(.62,.5,1.02),crateM,bx,.75,bz,0,true);for(const e of[-.53,.53])add(new T.TorusGeometry(.09,.012,5,8),ropeM,bx,.88,bz+e,0,true)}}
+/* ch. IV : les grandes caisses de bois, à poignées de grosse corde ; la terre fraîchement remuée en tas contre les murs */
+for(const [mx,mz] of[[VX+3.6,VZ+1.5],[VX-3.6,VZ+3],[VX+3.55,VZ+4.2],[VX-3.55,VZ+5.6]])add(new T.SphereGeometry(.4,8,6),dirtM,mx,.05,mz,0,true).scale.set(1,.45,1.3);
+const vlt=new T.Group();vlt.position.y=-3;VG.add(vlt);PAR=vlt;
+/* La grande caisse ouverte, sur un tas de terre fraichement remuee ; le couvercle, perce de trous, gisant a cote (ch. IV) */
+for(const dz of[-.42,.42])add(new T.BoxGeometry(.62,.42,.06),crateM,openBx,.21,openBz+dz,0,true);
+for(const dx of[-.31,.31])add(new T.BoxGeometry(.06,.42,.9),crateM,openBx+dx,.21,openBz,0,true);
+add(new T.SphereGeometry(.28,10,7),dirtM,openBx,.32,openBz,0,true).scale.set(1,.55,1.55);
+{const lid=add(new T.BoxGeometry(.6,.05,1),crateM,openBx-.9,.3,openBz+.3,.25,true);lid.rotation.x=.35;
+ for(let i=0;i<4;i++)add(new T.CylinderGeometry(.025,.025,.07,8),new T.MeshBasicMaterial({color:0x050403}),openBx-1.05+i*.16,.42,openBz+.05+i*.05,0,true)}
+PAR=VG;
+
+/* ch. IV : « a heavy door which stood ajar » */
+{const th=1.05;add(new T.BoxGeometry(1.3,2.4,.12),woodM,VX-1.3+.65*Math.cos(th),1.2,VZ+.65*Math.sin(th),-th,true)}
+{const pl=new T.PointLight(0x8899aa,.5,10,1.6);pl.position.set(VX,vh-.3,VZ+vd/2);PAR.add(pl)}
+/* ch. IV : « in two places were steps leading to vaults » ; deux caveaux de débris et de poussière, et dans le troisième la caisse du Comte */
+{const fy=-3,vm=stoneMat(2,1);
+ for(const sx of[VX-3,VX+3]){
+  for(let k=0;k<10;k++)add(new T.BoxGeometry(1.6,.3,.3),vm,sx,-(k+1)*.3-.15,VZ+7+k*.3+.15,0,true);
+  for(const sd of[-.9,.9])add(new T.BoxGeometry(.2,5.4,3),vm,sx+sd,-.3,VZ+8.5);
+  add(new T.BoxGeometry(1.8,.2,4.24),vm,sx,.9,VZ+8.5).rotation.x=Math.PI/4}
+ buildBoxRoom({cx:VX,cz:VZ+11,fy,width:8,depth:2,height:2.6,floorMat:flagMat(3,1),wallMat:vm,
+  doors:[{wall:'north',offset:-3,width:1.6,height:2.4},{wall:'north',offset:3,width:1.6,height:2.4},{wall:'south',offset:-2.7,width:1.4,height:2.2},{wall:'south',offset:0,width:1.4,height:2.2},{wall:'south',offset:2.7,width:1.4,height:2.2}]});
+ for(const off of[-2.7,0,2.7]){buildBoxRoom({cx:VX+off,cz:VZ+14,fy,width:2.4,depth:4,height:2.4,skip:['north'],floorMat:flagMat(1,2),wallMat:vm});
+  const pl=new T.PointLight(0x7a8a9a,.35,5,1.6);pl.position.set(VX+off,fy+1.9,VZ+13.5);PAR.add(pl)}
+ /* débris de vieux cercueils : fond, flancs brisés, morceau de couvercle, éclats */
+ const rem=(cx,cz,ry)=>{const g=new T.Group();g.position.set(cx,fy,cz);g.rotation.y=ry;
+  const b=(w,h,d,px,py,pz,rx,rz)=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d),woodM);o.position.set(px,py,pz);o.rotation.set(rx||0,0,rz||0);o.castShadow=o.receiveShadow=true;g.add(o)};
+  b(.5,.04,1.4,0,.03,0);b(.04,.22,1.2,-.24,.13,0,0,.1);b(.04,.16,.6,.26,.1,-.2,0,-.15);b(.34,.03,.9,.1,.2,.1,.1,.25);b(.2,.03,.5,-.3,.06,.45,0,.4);PAR.add(g)};
+ rem(VX-2.7,VZ+13.5,.3);rem(VX-2.5,VZ+15.2,-.6);rem(VX+.1,VZ+14,.1);
+ for(const dx of[-2.7,0])for(let i=0;i<3;i++)add(new T.SphereGeometry(.3,8,6),dirtM,VX+dx+(i-1)*.6,fy+.03,VZ+13.6+i*.4).scale.set(1,.15,1)}
+/* ch. IV : « a dark, tunnel-like passage » entre le bas de l'escalier et la porte de la chapelle */
+{const tl=VZ-(SZ+2.4),tc=(SZ+2.4+VZ)/2,tm=stoneMat(2,1);
+ add(new T.PlaneGeometry(2.8,tl),stoneMat(1,2),SX,0,tc).rotation.x=-Math.PI/2;
+ add(new T.PlaneGeometry(2.8,tl),tm,SX,2.5,tc).rotation.x=Math.PI/2;
+ for(const sd of[-1.3,1.3])add(new T.PlaneGeometry(tl,2.5),tm,SX+sd,1.25,tc,Math.PI/2);
+ const tp=new T.PointLight(0x6a7a8a,.35,7,1.6);tp.position.set(SX,2,tc);PAR.add(tp)}
+/* ch. IV : l'escalier « lit only by loopholes in the heavy masonry » (partie basse) */
+for(let i=0;i<7;i++){const a=1.5+i*.7;add(new T.PlaneGeometry(.1,.6),new T.MeshBasicMaterial({color:0x34486a,side:T.DoubleSide}),SX+Math.sin(a)*2.37,.6+i*.5,SZ+Math.cos(a)*2.37,a+Math.PI)}
+/* puits de l'escalier tournant (partie basse) */
+add(new T.CylinderGeometry(2.4,2.4,4,24,1,true,.55,Math.PI*2-1.1),stoneMat(4,3),SX,2,SZ);
+add(new T.CircleGeometry(2.4,24),stoneMat(1,1),SX,.005,SZ).rotation.x=-Math.PI/2;
+add(new T.CylinderGeometry(.4,.4,4,12),stoneMat(1,3),SX,2,SZ,0,true);
+for(let i=0;i<12;i++){const a=i*.65;add(new T.BoxGeometry(1.7,.6,.7),stoneMat(.4,.1),SX+Math.sin(a)*1.25,.2+i*.33,SZ+Math.cos(a)*1.25,a-Math.PI/2,true)}
+PAR=S;
+/* puits (partie haute) et palier, cote chambre du Comte */
+add(new T.CylinderGeometry(2.4,2.4,3.4,24,1,true,Math.PI/2+.55,Math.PI*2-1.1),stoneMat(4,2),SX,1.7,SZ);
+add(new T.CircleGeometry(2.4,24),stoneMat(1,1),SX,3.4,SZ).rotation.x=Math.PI/2;
+add(new T.PlaneGeometry(2.2,2.6),stoneMat(1,1),27.5,0,SZ).rotation.x=-Math.PI/2;
+for(const dz of[-1.25,1.25])add(new T.PlaneGeometry(1.2,3.4),stoneMat(.6,1.7),27.9,1.7,SZ+dz,0);
+add(new T.PlaneGeometry(1.2,2.6),stoneMat(.6,1.2),27.9,3.4,SZ).rotation.x=Math.PI/2;
+for(let i=0;i<4;i++){const a=2+i*.9;add(new T.PlaneGeometry(.1,.6),new T.MeshBasicMaterial({color:0x34486a,side:T.DoubleSide}),SX+Math.sin(a)*2.37,.8+i*.7,SZ+Math.cos(a)*2.37,a+Math.PI)}
+/* la chambre elle-meme : sol, plafond, quatre murs (fenetre au sud, lourde porte a l'ouest) */
+buildBoxRoom({cx:CX0,cz:CZ0,fy:0,width:6,depth:6,height:3.4,
+ floorMat:flagMat(2.4,2.4),ceilMat:stoneMat(2.4,2.4),wallMat:stoneMat(3,1.7),
+ skip:['south'],doors:[{wall:'west',offset:SZ-CZ0,width:2.5,height:2.3}]});
+{const wsh=new T.Shape();wsh.moveTo(-3,0);wsh.lineTo(3,0);wsh.lineTo(3,3.4);wsh.lineTo(-3,3.4);wsh.lineTo(-3,0);
+ const whp=new T.Path();whp.moveTo(-.6,.9);whp.lineTo(-.6,2.5);whp.lineTo(.6,2.5);whp.lineTo(.6,.9);whp.lineTo(-.6,.9);wsh.holes.push(whp);
+ add(new T.ShapeGeometry(wsh,8),stoneMat(.5,.5),CX0,0,CZ0+3,0)}
+add(new T.PlaneGeometry(1.8,2.2),new T.MeshStandardMaterial({color:0x0b1526,emissive:0x16233a,emissiveIntensity:.5,side:T.DoubleSide}),CX0,1.7,CZ0+3.08);
+{const stM=new T.MeshBasicMaterial({color:0xcfd8e8});for(let i=0;i<10;i++)add(new T.SphereGeometry(.006,4,4),stM,CX0+(Math.random()-.5)*1,1.1+Math.random()*1.3,CZ0+3.06,0)}
+const goldM=new T.MeshStandardMaterial({color:0xd8b23a,metalness:.6,roughness:.35,emissive:0x3a2606,emissiveIntensity:.6}),gemM=[0x8a1030,0x1a4a6a,0x2a6a2a].map(c=>new T.MeshStandardMaterial({color:c,metalness:.4,roughness:.2}));
+/* ch. IV : « a great heap of gold in one corner », chaînes et ornements anciens ; pièce à peine meublée, meubles dépareillés couverts de poussière */
+for(let i=0;i<150;i++){const a=Math.random()*6.283,r=Math.random()*.75,gx=CX0+1.95+Math.cos(a)*r,gz=CZ0-1.95+Math.sin(a)*r;
+ add(i%7?new T.CylinderGeometry(.06,.07,.015,10):new T.OctahedronGeometry(.05),i%7?(i%4?goldM:silver):gemM[i%3],gx,.03+(.75-r)*.45+Math.random()*.04,gz,Math.random()*3,true)}
+for(let i=0;i<6;i++){const c=add(new T.TorusGeometry(.05,.012,5,8),goldM,CX0+1.1-i*.13,.02,CZ0-2.4+i*.12,Math.random()*3,true);c.rotation.x=Math.PI/2}
+tb(1.2,.06,.7,woodM,CX0-1.7,.75,CZ0-1.9);for(const a of[-1,1])for(const b of[-1,1])tb(.06,.72,.06,woodM,CX0-1.7+a*.55,.36,CZ0-1.9+b*.3);
+chair(CX0-1.7,0,CZ0-1,0,woodM);tb(1,1.8,.5,woodM,CX0-.3,.9,CZ0-2.7);tb(1.08,.1,.56,woodM,CX0-.3,1.85,CZ0-2.7);tb(.015,1.6,.02,mat(0x120c06),CX0-.3,.9,CZ0-2.44);for(const a of[-1,1])tb(.03,.12,.03,gold,CX0-.3+a*.08,.9,CZ0-2.43);
+{const dust=new T.MeshStandardMaterial({color:0x6a665e,roughness:1,transparent:true,opacity:.7});tb(1.15,.01,.65,dust,CX0-1.7,.783,CZ0-1.9);tb(.95,.01,.45,dust,CX0-.3,1.805,CZ0-2.7);tb(.46,.01,.46,dust,CX0-1.7,.478,CZ0-1)}
+{const pl=new T.PointLight(0xffc060,.5,8,1.7);pl.position.set(CX0,2.8,CZ0);S.add(pl)}
+/* niveaux : 1 rez-de-chaussee, 2 etage, 3 chambre du Comte, 4 chapelle. Deux escaliers tournants et une descente par la fenetre. */
+const STAIRS=[{cx:0,cz:zc,y0:1.7,h:5.4,lo:1,hi:2,loPos:[0,1.7,-16.3],loYaw:0,hiPos:[1.6,7.1,zc],hiYaw:-Math.PI/2},
+ {cx:SX,cz:SZ,y0:-2.3,h:4,lo:4,hi:3,loPos:[SX,-2.3,SZ+2.7],loYaw:Math.PI,hiPos:[SX+2.3,1.7,SZ],hiYaw:-Math.PI/2}];
+let sti=0,wa=0,wdir=1;
+const ok6=(x,z)=>(Math.abs(x-ux)<2.5&&z<=usz+2.3&&z>=usz-2.3)||(x>=.9&&x<=1.6&&Math.abs(z-usz)<1.1)||(x>=-3.3&&x<=1&&z<=usz+2&&z>=usz-2);
+const ok3=(x,z)=>(x>=CX0-2.7&&x<=CX0+2.7&&z>=CZ0-2.7&&z<=CZ0+2.7)||(x>=26.4&&x<=CX0-2.5&&Math.abs(z-SZ)<1.3);
+const vOk=(x,z)=>((Math.abs(x-VX+3)<.8||Math.abs(x-VX-3)<.8)&&z>=VZ+6.5&&z<=VZ+10.1)||(Math.abs(x-VX)<3.85&&z>=VZ+10&&z<=VZ+12.1)||([-2.7,0,2.7].some(o=>Math.abs(x-VX-o)<1.05)&&z>=VZ+12&&z<=VZ+15.8),vDrop=(x,z)=>z<VZ+7?0:z>VZ+10?-3:-3*(z-VZ-7)/3;
+const ok4=(x,z)=>vOk(x,z)||(x>=VX-vw/2+.3&&x<=VX+vw/2-.3&&z>=VZ+.2&&z<=VZ+vd-.3)||(Math.abs(x-SX)<1.3&&z>=SZ-1.0&&z<=VZ+.3);
+/* Suite de chambres, autrefois feminines, entrapercues a l\'etage (ch. III) */
+const ux=4,usy=Y-5.4,usz=zc-1.8-8.1-2.3;
+/* puits court, au-dela de la lourde porte, qui descend "a storey lower down" (ch. III) */
+{const sM=stoneMat(1,.3),wM=stoneMat(4,4);
+ for(let i=0;i<27;i++){const top=Y-.2*(i+1),h=Math.max(.05,top-usy);add(new T.BoxGeometry(2.3,h,.3),sM,ux,usy+h/2,zc-1.8-.15-.3*i)}
+ for(const wx of[ux-1.3,ux+1.3])add(new T.BoxGeometry(.3,8,8.1),wM,wx,4,zc-1.8-4.05);
+ const cl=add(new T.PlaneGeometry(2.6,9.74),stoneMat(1.3,4.9),ux,5.1,zc-1.8-4.05);cl.rotation.x=.9828;
+ const sl=new T.PointLight(0xffd9a0,.35,9,1.6);sl.position.set(ux,Y+1.4,zc-4);S.add(sl)}
+buildBoxRoom({cx:ux,cz:usz,fy:usy,width:5.6,depth:4.6,height:3.4,
+ floorMat:flagMat(2,1.8),ceilMat:stoneMat(2,1.8),wallMat:stoneMat(2,1.5),
+ skip:['north'],doors:[{wall:'south',offset:0,width:2.3,height:2.3},{wall:'west',offset:0,width:2.2,height:2.3}]});
+/* Fenetre sans rideaux, a petits carreaux en losange, par ou entre le clair de lune jaune (ch. III) */
+{const fsh=new T.Shape();fsh.moveTo(-2.8,0);fsh.lineTo(2.8,0);fsh.lineTo(2.8,3.4);fsh.lineTo(-2.8,3.4);fsh.lineTo(-2.8,0);
+ const fhp=new T.Path();fhp.moveTo(-1.3,.7);fhp.lineTo(-1.3,2.7);fhp.lineTo(1.3,2.7);fhp.lineTo(1.3,.7);fhp.lineTo(-1.3,.7);fsh.holes.push(fhp);
+ add(new T.ShapeGeometry(fsh,8),stoneMat(.5,.5),ux,usy,usz-2.3,0)}
+add(new T.PlaneGeometry(3,2.4),new T.MeshStandardMaterial({color:0xcfa84a,transparent:true,opacity:.28,emissive:0xcfa84a,emissiveIntensity:.5,side:T.DoubleSide}),ux,usy+1.7,usz-2.55);
+for(let i=1;i<4;i++)tb(.03,2,.03,iron,ux-1.3+i*.65,usy+1.7,usz-2.4);
+for(let i=1;i<3;i++)tb(2.6,.03,.03,iron,ux,usy+.7+i*.65,usz-2.4);
+{const ml=new T.PointLight(0xfff0c0,.55,7,1.6);ml.position.set(ux,usy+1.7,usz-2.1);S.add(ml)}
+/* le vieux canape use, et la petite table de chene ou Harker vient ecrire son journal (ch. III) */
+tb(1.9,.4,1.4,new T.MeshStandardMaterial({color:0x4a2436,roughness:.95}),ux+1.8,usy+.2,usz-.6);
+tb(.55,.04,.4,woodM,ux-1.9,usy+.62,usz-1.4);
+for(const dx of[-.24,.24])for(const dz of[-.17,.17])tb(.03,.6,.03,woodM,ux-1.9+dx,usy+.31,usz-1.4+dz);
+tb(.32,.005,.24,mat(0xe8e0c8),ux-1.9,usy+.65,usz-1.4);add(new T.CylinderGeometry(.02,.022,.04,8),mat(0x0c0c0c),ux-1.75,usy+.64,usz-1.5,0,true);
+{const pl=new T.PointLight(0xd8b878,.4,7,1.6);pl.position.set(ux,usy+3,usz+.5);S.add(pl)}
+/* ch. III : « a suite of rooms » ; la pièce d'angle, aux fenêtres sur deux côtés (ouest et sud), meublée plus confortablement que le reste du château */
+{const ex=ux-5.2,gl=new T.MeshStandardMaterial({color:0xcfa84a,transparent:true,opacity:.28,emissive:0xcfa84a,emissiveIntensity:.5,side:T.DoubleSide}),
+ mk=(w,rot,x,z)=>{const sh=new T.Shape(),h=new T.Path(),a=w/2;sh.moveTo(-a,0);sh.lineTo(a,0);sh.lineTo(a,3.4);sh.lineTo(-a,3.4);sh.lineTo(-a,0);
+  h.moveTo(-1.3,.7);h.lineTo(-1.3,2.7);h.lineTo(1.3,2.7);h.lineTo(1.3,.7);h.lineTo(-1.3,.7);sh.holes.push(h);add(new T.ShapeGeometry(sh,8),stoneMat(.5,.5),x,usy,z,rot)};
+ buildBoxRoom({cx:ex,cz:usz,fy:usy,width:4.8,depth:4.6,height:3.4,floorMat:flagMat(2,1.8),ceilMat:stoneMat(2,1.8),wallMat:stoneMat(2,1.5),skip:['north','west','east']});
+ mk(4.8,0,ex,usz-2.3);mk(4.6,Math.PI/2,ex-2.4,usz);tb(2.8,.08,.3,st,ex,usy+.7,usz-2.15);tb(.3,.08,2.8,st,ex-2.25,usy+.7,usz);
+ add(new T.PlaneGeometry(3,2.4),gl,ex,usy+1.7,usz-2.55);add(new T.PlaneGeometry(3,2.4),gl,ex-2.55,usy+1.7,usz).rotation.y=Math.PI/2;
+ for(let i=1;i<4;i++){tb(.03,2,.03,iron,ex-1.3+i*.65,usy+1.7,usz-2.4);tb(.03,2,.03,iron,ex-2.4,usy+1.7,usz-1.3+i*.65)}
+ for(let i=1;i<3;i++){tb(2.6,.03,.03,iron,ex,usy+.7+i*.65,usz-2.4);tb(.03,.03,2.6,iron,ex-2.4,usy+.7+i*.65,usz)}
+ for(const q of[[ex,usy+1.7,usz-2.1],[ex-2.1,usy+1.7,usz]]){const l=new T.PointLight(0xfff0c0,.5,7,1.6);l.position.set(...q);S.add(l)}
+ tb(2.4,.5,.9,new T.MeshStandardMaterial({color:0x4a2436,roughness:.95}),ex-.6,usy+.25,usz-1.4);tb(2.4,.6,.15,new T.MeshStandardMaterial({color:0x4a2436,roughness:.95}),ex-.6,usy+.7,usz-1.9);
+ chair(ex+1.2,usy,usz+1.3,Math.PI/2,woodM);tb(.9,1.9,.5,woodM,ex-1.2,usy+.95,usz+2)}
+
+/* collisions des meubles */
+{const sz=lz0-6.6,ex2=ux-5.2;
+ ob(2,rx,zc,3.2,1.1);ob(2,31.2,zc-3.85,2.2,1.1,.2);ob(2,27.6,zc+.95,.46,.46,.2);ob(2,32.4,zc+.4,.46,.46,.2);OBS.push([2,33.3,35,zc-1.7,zc+1.7]);
+ ob(2,28.15,zb+4,2.2,1.9,.1);ob(2,33.6,ze-.6,1.3,.7);ob(2,33.6,ze-1.4,.46,.46,.2);ob(2,30.3,zb+1,.8,.45,.2);ob(2,30.9,zb+1.5,.55,.4,.2);
+ ob(2,rx,lz0-4,2.4,1.1,.2);ob(2,rx,lz1+.2,2.6,.4,.2);
+ for(const z of[lz0-1.2,lz0-4,lz0-6.5]){ob(2,rx-5.85,z,.36,2.6,.2);ob(2,rx+5.85,z,.36,2.6,.2)}
+ ob(2,rx,sz,3,1.1,.2);ob(2,rx+3.4,lz0-1.8,1.5,.75,.2);ob(2,rx+3.4,lz0-.9,.46,.46,.2);
+ ob(3,CX0+1.95,CZ0-1.95,1.5,1.5,.2);ob(3,CX0-1.7,CZ0-1.9,1.2,.7,.2);ob(3,CX0-1.7,CZ0-1,.46,.46,.2);ob(3,CX0-.3,CZ0-2.7,1,.5,.2);
+ ob(4,VX+3,VZ+14.4,.62,1.02,.2);
+ ob(6,ux+1.8,usz-.6,1.9,1.4,.2);ob(6,ux-1.9,usz-1.4,1.1,.6,.2);ob(6,ex2-.6,usz-1.4,2.4,.9,.2);ob(6,ex2+1.2,usz+1.3,.46,.46,.2);ob(6,ex2-1.2,usz+2,.9,.5,.2)}
+const ok1=(x,z)=>{
+ if(x>=-4.2&&x<=4.2&&z<=7.3&&z>=-7.4)return true;
+ if(Math.abs(x)<=1.15&&z<-7.4&&z>=-17)return true;
+ if(x>=-9.9&&x<=-3.9&&z>=1.6&&z<=4.8)return true;
+ if(x>=cx-cw/2+.3&&x<=cx+cw/2-.3&&z>=cz0+.2&&z<=cz1-.2)return true;
+ if(x>=4.2&&x<=5.2&&(Math.abs(z+3.2)<.65||Math.abs(z-3.2)<.65))return true;
+ if(x>=5.1&&x<=10&&(Math.abs(z+3.2)<1.6||Math.abs(z-3.2)<1.6))return true;
+ return false};
+
+
+/* Petits elements de decor reutilisables, pour donner un peu de vie aux pieces */
+function cobweb(x,y,z,ry,scale){const g=new T.Group();
+ const webM=new T.MeshBasicMaterial({color:0xcfcfc0,transparent:true,opacity:.22,side:T.DoubleSide});
+ for(let i=0;i<5;i++){const a=i*Math.PI/8;const line=new T.Mesh(new T.PlaneGeometry(.015,.5),webM);
+  line.position.set(Math.sin(a)*.22,-Math.cos(a)*.22,.001);line.rotation.z=-a;g.add(line)}
+ for(let r=1;r<=3;r++){const ring=new T.Mesh(new T.RingGeometry(r*.14-.01,r*.14,16,1,0,Math.PI/2+.6),webM);
+  ring.rotation.z=-.3;g.add(ring)}
+ g.scale.setScalar(scale||1);g.position.set(x,y,z);g.rotation.y=ry||0;PAR.add(g);return g}
+function rug(x,y,z,w,d,ry,col){const m=new T.Mesh(new T.PlaneGeometry(w,d),
+  new T.MeshStandardMaterial({color:col||0x5a1c22,roughness:1,side:T.DoubleSide}));
+ m.rotation.x=-Math.PI/2;m.rotation.z=ry||0;m.position.set(x,y+.01,z);m.receiveShadow=true;PAR.add(m);
+ const bm=new T.Mesh(new T.RingGeometry(0,Math.max(w,d)*.72,4,1),new T.MeshBasicMaterial({color:0xd8b23a,transparent:true,opacity:.35,side:T.DoubleSide}));
+ bm.rotation.x=-Math.PI/2;bm.rotation.z=(ry||0)+Math.PI/4;bm.position.set(x,y+.012,z);bm.scale.set(w/(Math.max(w,d)*1.42),d/(Math.max(w,d)*1.42),1);PAR.add(bm);
+ return m}
+/* Moteur de pieces/portes robuste : calcule automatiquement les segments de mur
+   autour de chaque ouverture (gauche, linteau, droite), pour ne plus jamais avoir
+   un trou qui ne correspond pas d'un cote a l'autre. */
+function wallSeg(isX,mainCoord,fixedCoord,yCenter,segLen,segH,thick,mat){
+ const g=isX?new T.BoxGeometry(segLen,segH,thick):new T.BoxGeometry(thick,segH,segLen);
+ const m=new T.Mesh(g,mat);if(isX)m.position.set(mainCoord,yCenter,fixedCoord);else m.position.set(fixedCoord,yCenter,mainCoord);
+ m.castShadow=true;m.receiveShadow=true;PAR.add(m);return m}
+function wallWithDoors(wd,doors,mat,roomH,floorY){
+ const isX=wd.axis==='x',totalLen=isX?wd.size[0]:wd.size[2],wallH=wd.size[1],thick=isX?wd.size[2]:wd.size[0];
+ const wallCenter=isX?wd.pos[0]:wd.pos[2],fixedCoord=isX?wd.pos[2]:wd.pos[0],halfLen=totalLen/2;
+ const sorted=doors.slice().sort((a,b)=>a.offset-b.offset);let cursor=-halfLen;
+ for(const door of sorted){const dl=door.offset-door.width/2,dr=door.offset+door.width/2;
+  if(dl>cursor){const segW=dl-cursor;wallSeg(isX,wallCenter+cursor+segW/2,fixedCoord,floorY+wallH/2,segW,wallH,thick,mat)}
+  if(door.height<roomH){const aboveH=roomH-door.height;wallSeg(isX,wallCenter+door.offset,fixedCoord,floorY+door.height+aboveH/2,door.width,aboveH,thick,mat)}
+  cursor=dr}
+ if(cursor<halfLen){const segW=halfLen-cursor;wallSeg(isX,wallCenter+cursor+segW/2,fixedCoord,floorY+wallH/2,segW,wallH,thick,mat)}}
+function buildBoxRoom(o){const cx=o.cx,cz=o.cz,fy=o.fy,w=o.width,d=o.depth,h=o.height,hw=w/2,hd=d/2,thick=o.thick||.3;
+ const fmat=o.floorMat||stoneMat(w/2.5,d/2.5),cmat=o.ceilMat||fmat,wmat=o.wallMat||stoneMat(w/4,h/2.5),doors=o.doors||[];
+ add(new T.PlaneGeometry(w,d),fmat,cx,fy,cz).rotation.x=-Math.PI/2;
+ if(!o.noCeil){add(new T.PlaneGeometry(w,d),cmat,cx,fy+h,cz).rotation.x=Math.PI/2}
+ const defs=[{name:'north',pos:[cx,0,cz-hd],size:[w,h,thick],axis:'x'},{name:'south',pos:[cx,0,cz+hd],size:[w,h,thick],axis:'x'},
+  {name:'west',pos:[cx-hw,0,cz],size:[thick,h,d],axis:'z'},{name:'east',pos:[cx+hw,0,cz],size:[thick,h,d],axis:'z'}];
+ const skip=o.skip||[];
+ for(const wd of defs){if(skip.includes(wd.name))continue;const wd2=doors.filter(x=>x.wall===wd.name);
+  if(!wd2.length){add(new T.BoxGeometry(...wd.size),wmat,wd.pos[0],fy+wd.size[1]/2,wd.pos[2],0,true)}
+  else wallWithDoors(wd,wd2,wmat,h,fy)}
+ return{floorY:fy,ceilY:fy+h}}
+
+/* Un peu de vie dans les pieces : toiles d'araignee dans les coins, tapis uses */
+cobweb(4.55,3.75,-7.3,Math.PI*.25,1.1);
+cobweb(-4.55,3.75,7.3,-Math.PI*.75,1.0);
+cobweb(rx-5.4,Y+3.1,lz0-1.3,Math.PI/2,1.3);
+cobweb(ux-2.5,usy+3.1,usz-2,Math.PI*.3,1.0);
+cobweb(ox+5.5,Y+3.2,ze-1,-Math.PI/2,1.2);
+rug(rx,Y,lz0-4,3.2,2,0,0x4a1016);
+rug(ox,Y,zf-3.5,3.4,2.6,Math.PI/2,0x3a1c28);
+rug(28.4,Y,zc,3,6.5,0,0x5a2422);
+cobweb(sx-1.8,sy+3.1,sz+1.8,Math.PI*.4,.9);
+cobweb(CX0-2.5,2.9,CZ0-2.5,Math.PI*.6,1.0);
+cobweb(VX+vw/2-.5,vh-.3-4,VZ+1,Math.PI*.2,1.4);
+/* Quelques chauves-souris endormies, accrochees au plafond brise de la chapelle */
+{const batM=new T.MeshStandardMaterial({color:0x0d0a08,roughness:1});
+ for(let i=0;i<5;i++){const bx=VX-2+Math.random()*4,bz=VZ+2+Math.random()*(vd-4);
+  const body=new T.Mesh(new T.ConeGeometry(.05,.14,5),batM);body.rotation.x=Math.PI;body.position.set(bx,vh-.08-4,bz);S.add(body);
+  for(const wx of[-1,1]){const wing=new T.Mesh(new T.ConeGeometry(.08,.03,3),batM);wing.rotation.z=wx*1.3;wing.rotation.x=Math.PI/2;
+   wing.position.set(bx+wx*.06,vh-.1-4,bz);S.add(wing)}}}
+/* Lierre qui grimpe le long des murs exterieurs de la cour, envahie et a l'abandon */
+{const ivyM=new T.MeshStandardMaterial({color:0x1e3214,roughness:1,side:T.DoubleSide});
+ for(const[ix,iz,irot]of[[cx-cw/2+.05,3.5,Math.PI/2],[cx-cw/2+.05,6.5,Math.PI/2],[cx+cw/2-.05,2.5,-Math.PI/2]]){
+  for(let s2=0;s2<4;s2++){const leaf=new T.Mesh(new T.CircleGeometry(.16,5),ivyM);
+   leaf.position.set(ix,.3+s2*.8+Math.random()*.3,iz+(Math.random()-.5)*.6);leaf.rotation.y=irot;leaf.rotation.z=Math.random()*Math.PI;S.add(leaf)}
+  const vine=new T.Mesh(new T.CylinderGeometry(.015,.02,3.2,5),ivyM);vine.position.set(ix,1.6,iz);vine.rotation.x=(Math.random()-.5)*.15;S.add(vine)}}
+
+/* Une tapisserie fanee dans le hall, pour un peu de couleur sur la pierre nue */
+{const tapM=new T.MeshStandardMaterial({color:0x5a2030,roughness:1,side:T.DoubleSide});
+ const tap=new T.Mesh(new T.PlaneGeometry(1.8,2.6),tapM);tap.position.set(-4.92,2.6,-3);tap.rotation.y=Math.PI/2;S.add(tap);
+ for(let i=0;i<3;i++){const band=new T.Mesh(new T.PlaneGeometry(1.6,.14),new T.MeshStandardMaterial({color:0x8a6a2a,roughness:.8,side:T.DoubleSide}));
+  band.position.set(-4.91,1.6+i*.6,-3);band.rotation.y=Math.PI/2;S.add(band)}}
+
+/* Pas qui resonnent sur la pierre */
+let AC,NB,ech,RG;function initAudio(){if(AC)return;try{AC=new AudioContext();NB=AC.createBuffer(1,4410,44100);const d=NB.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);
+ ech=AC.createDelay(1);ech.delayTime.value=.14;const fb=AC.createGain();fb.gain.value=.42;ech.connect(fb);fb.connect(ech);ech.connect(AC.destination);
+ const rb=AC.createBuffer(1,88200,44100),rd=rb.getChannelData(0);for(let i=0;i<rd.length;i++)rd[i]=Math.random()*2-1;const rs=AC.createBufferSource();rs.buffer=rb;rs.loop=true;const rl=AC.createBiquadFilter();rl.frequency.value=240;RG=AC.createGain();RG.gain.value=0;rs.connect(rl);rl.connect(RG);RG.connect(AC.destination);rs.start()}catch(_){AC=0}}
+function step(v){if(!AC)return;const b=AC.createBufferSource();b.buffer=NB;const lp=AC.createBiquadFilter();lp.frequency.value=380;const g=AC.createGain();g.gain.value=.5*v;b.connect(lp);lp.connect(g);g.connect(AC.destination);g.connect(ech);b.start()}
+
+
+/* "There were doors, doors, doors everywhere, and all locked and bolted" (ch. II) */
+
+
+function lockedDoor(x,y,z,ry){const g=new T.Group();
+ const tex=dt.clone();tex.needsUpdate=true;tex.repeat.set(1,1/2.2);tex.offset.set(.5,0);
+ const leaf=new T.Mesh(new T.ShapeGeometry(archShape(.5,1.7),20),new T.MeshStandardMaterial({map:tex,roughness:.85,side:T.DoubleSide}));leaf.position.z=.03;g.add(leaf);
+ const ring=archShape(.76,1.7),hole=new T.Path();hole.moveTo(-.5,0);hole.lineTo(-.5,1.7);hole.absarc(0,1.7,.5,Math.PI,0,true);hole.lineTo(.5,0);hole.lineTo(-.5,0);ring.holes.push(hole);
+ const sur=new T.Mesh(new T.ExtrudeGeometry(ring,{depth:.15,bevelEnabled:false,curveSegments:20}),dsM);g.add(sur);
+ for(const hy of[.45,1.55]){const h=new T.Mesh(new T.BoxGeometry(.4,.07,.03),iron);h.position.set(-.28,hy,.055);g.add(h)}
+ const lp=new T.Mesh(new T.BoxGeometry(.11,.16,.03),iron);lp.position.set(.3,1.1,.055);g.add(lp);
+ for(const hy of[.45,1.55])for(let k=0;k<5;k++){const sd=new T.Mesh(new T.SphereGeometry(.018,6,6),iron);sd.position.set(-.45+k*.07,hy,.075);g.add(sd)}
+ const kh=new T.Mesh(new T.BoxGeometry(.015,.04,.01),new T.MeshBasicMaterial({color:0}));kh.position.set(.3,1.1,.073);g.add(kh);
+ const rg=new T.Mesh(new T.TorusGeometry(.055,.013,6,12),iron);rg.position.set(.3,.95,.07);g.add(rg);
+ const th=new T.Mesh(new T.BoxGeometry(1.7,.05,.3),dsM);th.position.set(0,.025,.12);g.add(th);
+ g.position.set(x,y,z);g.rotation.y=ry;g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});S.add(g)}
+
+lockedDoor(-1.5,0,-10,Math.PI/2);lockedDoor(1.5,0,-15,-Math.PI/2);
+lockedDoor(1.9,Y,zc-1.8,0);lockedDoor(18.6,Y,zc+1.8,Math.PI);lockedDoor(11.7,Y,zc-1.8,0);
+/* encadrement de pierre de la poterne (passage reel vers la cour) */
+add(new T.BoxGeometry(.3,2.7,.3),dsM,-4.85,1.35,2.15,0,true);add(new T.BoxGeometry(.3,2.7,.3),dsM,-4.85,1.35,4.05,0,true);add(new T.BoxGeometry(.3,.3,2.5),dsM,-4.85,2.55,3.1,0,true);
+/* Contrôles */
+let yaw=.35,pitch=0,drag=false,run=false;const keys={};
+addEventListener('keydown',e=>{keys[e.code]=1;if(e.code==='Escape'){run=false;document.getElementById('ov').style.display='flex'}});
+addEventListener('keyup',e=>keys[e.code]=0);
+/* ===== Lampe torche (touche L) : coupe les lumières fixes ; le faisceau suit la vue, ou le téléphone appairé ===== */
+const torch=new T.SpotLight(0xfff2d8,3.2,22,.38,.55,1.4);torch.castShadow=true;torch.shadow.mapSize.set(1024,1024);torch.visible=false;S.add(torch,torch.target);
+let ANSW=null,lastAns=0,LINK=null,torchOn=false,phoneActive=false,phoneT=0,hdg=0,phPitch=0,heading0=null,phF=0,phS=0,lastAct=null;
+const CODE=Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.random()*24|0]).join('');
+const fwdV=()=>new T.Vector3(-Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch));
+const msgE=document.createElement('div');msgE.style.cssText='position:fixed;left:50%;bottom:18%;transform:translateX(-50%);color:#f0e6c8;font:18px Georgia,serif;text-shadow:0 0 8px #000;z-index:6;pointer-events:none;transition:opacity .6s;opacity:0;text-align:center';document.body.appendChild(msgE);
+let msgT=0;function say(t){msgE.textContent=t;msgE.style.opacity=1;clearTimeout(msgT);msgT=setTimeout(()=>msgE.style.opacity=0,1800)}
+const invE=document.createElement('div');invE.style.cssText='position:fixed;right:12px;top:calc(12px + env(safe-area-inset-top,0px));color:#d8cfb8;font:13px Georgia,serif;opacity:.85;z-index:5;text-shadow:0 0 6px #000;pointer-events:none;text-align:right';document.body.appendChild(invE);
+/* objets à ramasser (objets d'essai : le crucifix de Bistritz, ch. I ; une clef de fer) */
+const ITEMS=[],INV=[];
+function mkItem(name,lv,x,y,z,build){const g=new T.Group();g.position.set(x,y,z);build(g);S.add(g);ITEMS.push({name,lv,g,pos:new T.Vector3(x,y+.03,z),taken:false})}
+const emM=c=>new T.MeshStandardMaterial({color:c,metalness:.5,roughness:.35,emissive:c,emissiveIntensity:.25});
+mkItem('Crucifix de Bistritz',2,33.2,Y+.79,ze-.32,g=>{const m=emM(0xcfd3d8);const a=new T.Mesh(new T.BoxGeometry(.018,.012,.13),m),b=new T.Mesh(new T.BoxGeometry(.07,.012,.018),m);b.position.z=-.03;g.add(a,b)});
+mkItem('Clef de fer',2,rx+3.65,Y+.83,lz0-1.8+.33,g=>{const m=emM(0x6a6a70);const r=new T.Mesh(new T.TorusGeometry(.025,.007,6,12),m);r.rotation.x=Math.PI/2;r.position.z=-.06;const sh=new T.Mesh(new T.BoxGeometry(.01,.01,.1),m),tt=new T.Mesh(new T.BoxGeometry(.03,.01,.012),m);tt.position.set(.012,0,.04);g.add(r,sh,tt)});
+function toPhone(topic,data){try{LINK&&LINK.emit(topic,data)}catch(e){}}
+function doAction(){handKick=.035;const cp=cam.position,fw=fwdV();let best=null,bd=9;
+ for(const it of ITEMS){if(it.taken||it.lv!==lvl)continue;const v=it.pos.clone().sub(cp),d=v.length();if(d>3.3||d<.05)continue;if(v.normalize().angleTo(fw)>.2)continue;if(d<bd){best=it;bd=d}}
+ if(best){const rc=new T.Raycaster(cp.clone(),best.pos.clone().sub(cp).normalize(),0,bd-.08);if(rc.intersectObjects(S.children,true).some(h=>h.object.isMesh&&h.object.visible&&!ITEMS.some(i=>i.g===h.object.parent)))best=null}
+ if(best){best.taken=true;S.remove(best.g);INV.push(best.name);toPhone('haptic',{p:[40]});invE.innerHTML='Objets : '+INV.join(' · ');say('Vous prenez : '+best.name)}else say('◉');dispatchEvent(new Event('phoneaction'))}
+/* ennemi d'essai (forme sombre aux yeux rouges) : approche quand la lampe torche est active ; le faisceau le dissipe ; au contact il attaque puis disparaît */
+const ENEMY={m:null,alive:false,next:1e9,dying:0,born:0,lvl:0,ray:0};
+const OKL={1:ok1,2:ok,3:ok3,4:ok4,6:ok6},okAt=(L,x,z)=>OKL[L]&&OKL[L](x,z)&&!hit(L,x,z);
+
+/* ===== Histoire scénarisée (à la Unhinged) : le personnage avance seul ; le joueur dirige la lampe, répond au téléphone et choisit en éclairant ===== */
+const STORY={on:true,free:false};let AW=null,HOT=null,stepT=0;
+const V3=(x,y,z)=>[x,y,z],W=sec=>new Promise(r=>setTimeout(r,sec*1000));
+const subE=document.createElement('div');subE.style.cssText='position:fixed;left:50%;bottom:7%;transform:translateX(-50%);width:min(680px,90vw);text-align:center;font:19px/1.4 Georgia,serif;color:#f0e6c8;text-shadow:0 0 8px #000,0 0 18px #000;z-index:6;pointer-events:none;transition:opacity .5s;opacity:0';document.body.appendChild(subE);
+function sub(who,txt){if(!txt){subE.style.opacity=0;return}subE.innerHTML=(who?'<small style="letter-spacing:.15em;opacity:.7">'+who.toUpperCase()+'</small><br>':'')+txt;subE.style.opacity=1}
+const cardE=document.createElement('div');cardE.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000;color:#d8cfb8;font:26px/1.6 Georgia,serif;text-align:center;letter-spacing:.08em;z-index:8;transition:opacity 1.6s;opacity:0;pointer-events:none;padding:30px';document.body.appendChild(cardE);
+async function card(txt,sec){cardE.innerHTML=txt;cardE.style.opacity=1;await W(sec);cardE.style.opacity=0;await W(1.6)}
+const retE=document.createElement('div');retE.style.cssText='position:fixed;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;z-index:6;pointer-events:none;opacity:0;-webkit-mask:radial-gradient(circle,transparent 17px,#000 18px);mask:radial-gradient(circle,transparent 17px,#000 18px)';document.body.appendChild(retE);
+let shake=0;function slam(){shake=.05;if(AC){const b=AC.createBufferSource();b.buffer=NB;const lp=AC.createBiquadFilter();lp.frequency.value=220;const g=AC.createGain();g.gain.setValueAtTime(1.4,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+1.4);b.connect(lp);lp.connect(g);g.connect(AC.destination);b.start();const o=AC.createOscillator();o.frequency.value=48;const g2=AC.createGain();g2.gain.setValueAtTime(.9,AC.currentTime);g2.gain.exponentialRampToValueAtTime(.001,AC.currentTime+1);o.connect(g2);g2.connect(AC.destination);o.start();o.stop(AC.currentTime+1)}}
+function sms(from,text){toPhone('text',{from,text});sub(from+' · SMS',text);setTimeout(()=>sub(''),6000)}
+function call(from,lines){return new Promise(async res=>{const text=lines.join(' ');
+ if(LINK&&phoneActive){toPhone('call',{from,text});sub('','Le téléphone sonne… décroche');await new Promise(r=>{ANSW=r;setTimeout(r,25000)});ANSW=null}
+ else if(window.speechSynthesis){const u=new SpeechSynthesisUtterance(text);u.lang='fr-FR';speechSynthesis.speak(u)}
+ for(const l of lines){sub(from,l);await W(1.6+l.length*.06)}sub('');res()})}
+function quick(who,line){sub(who,line);setTimeout(()=>sub(''),3500+line.length*30)}
+function walk(pts,stop){return new Promise(r=>{AW={pts,i:0,res:r,stop}})}
+function choose(list){return new Promise(r=>{HOT={list,res:r,cur:null,p:0}})}
+async function until(fn){while(!fn())await W(.2)}
+function storyTick(dt,t){
+ if(AW&&AW.stop&&(asc||wa||wa2)){const r=AW.res;AW=null;r()}
+ if(AW&&!asc&&!wa&&!wa2){const pp=cam.position,tg=AW.pts[AW.i],dx=tg[0]-pp.x,dz=tg[2]-pp.z,d=Math.hypot(dx,dz),st=1.5*dt;stepT-=dt;if(stepT<=0){stepT=.58;step(lvl==2&&pp.x>22.6?.45:1)}
+  if(d<=st){pp.x=tg[0];pp.z=tg[2];AW.i++;if(AW.i>=AW.pts.length){const r=AW.res;AW=null;r()}}else{pp.x+=dx/d*st;pp.z+=dz/d*st}}
+ if(shake>0){shake=Math.max(0,shake-dt*.05)}
+ handTick(dt,t,!!AW||(STORY.free&&(keys.KeyW||keys.KeyS||keys.KeyA||keys.KeyD||keys.ArrowUp)));
+ if(STORY.count)cn.rotation.y=Math.atan2(cam.position.x-cn.position.x,cam.position.z-cn.position.z);
+ if(!HOT){retE.style.opacity=0;return}
+ const fw=fwdV(),cp=cam.position;let hov=null;
+ if(torchOn)for(const h of HOT.list){if(h.cool&&t<h.cool)continue;const v=new T.Vector3(h.pos[0]-cp.x,h.pos[1]-cp.y,h.pos[2]-cp.z),d=v.length();if(d<(h.maxD||16)&&v.normalize().angleTo(fw)<(h.ang||.13)){hov=h;break}}
+ if(hov){if(HOT.cur!==hov){HOT.cur=hov;HOT.p=0}HOT.p+=dt;retE.style.opacity=1;retE.style.background='conic-gradient(#f0e6c8 '+Math.min(360,HOT.p/1.2*360)+'deg,rgba(255,255,255,.18) 0)';
+  if(HOT.p>=1.2){HOT.p=0;HOT.cur=null;if(hov.line)quick('Harker',hov.line);if(hov.run)hov.run();hov.cool=t+8;if(hov.final){const r=HOT.res;HOT=null;retE.style.opacity=0;r(hov.id)}}}
+ else{HOT.cur=null;HOT.p=0;retE.style.opacity=0}}
+async function startStory(){try{await chapter1()}catch(e){console.error(e)}}
+
+/* ===== Introduction : un téléphone, l'appel du comte D. au sujet du reportage ; à droite les consignes. Le château n'est pas visible ===== */
+document.getElementById('ov').style.display='none';
+const introE=document.createElement('div');introE.style.cssText='position:fixed;inset:0;background:#05070b;z-index:20;display:flex;align-items:center;justify-content:center;gap:6vw;padding:24px;color:#d8cfb8;font-family:Georgia,serif;transition:opacity 1.5s;flex-wrap:wrap';
+introE.innerHTML='<div style="width:250px;height:500px;border-radius:38px;border:3px solid #2a2f3a;background:linear-gradient(#10141d,#06080c);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:46px 20px 36px;box-shadow:0 0 50px #000;box-sizing:border-box"><div style="text-align:center"><div id="i_st" style="opacity:.6;letter-spacing:.2em;font-size:13px">APPEL ENTRANT</div><div style="font-size:30px;margin-top:14px">Comte D.</div><div id="i_sub" style="opacity:.6;margin-top:8px;font-size:14px">Reportage · manoir</div></div><div id="i_btns" style="display:flex;gap:40px"><button id="i_no" style="width:64px;height:64px;border-radius:50%;border:0;background:#7a1f1f;color:#fff;font-size:22px">✕</button><button id="i_ok" style="width:64px;height:64px;border-radius:50%;border:0;background:#1f7a3a;color:#fff;font-size:24px">✆</button></div></div><div style="max-width:340px;line-height:1.55;font-size:16px"><div style="font-size:22px;letter-spacing:.05em;margin-bottom:12px">Dracula · Le Château</div><div>1. Scannez le code pour relier votre téléphone : c\'est votre lampe et votre manette.</div><div id="i_qr" style="background:#fff;padding:6px;border-radius:6px;display:inline-block;margin:8px 0"></div><div id="i_pair" style="opacity:.7;font-size:13px">Code <b style="letter-spacing:.2em">'+CODE+'</b> · ou jouez à la souris</div><div style="margin-top:8px">2. Tenez le téléphone comme une lampe, pointé vers l\'écran.</div><div>3. Éclairez une porte ou un objet pour le choisir.</div><div>4. Répondez quand le téléphone sonne.</div><div style="margin-top:10px;opacity:.7">Appuyez sur ✆ pour décrocher.</div></div>';
+document.body.appendChild(introE);
+if(window.QRCode)new QRCode(document.getElementById('i_qr'),{text:'https://claude.ai/artifact/6C9jp35VqjZucwpy2pYK66#phone-'+CODE,width:120,height:120,colorDark:'#000',colorLight:'#fff'});
+window.__pair=()=>{const q=document.getElementById('i_qr'),pe=document.getElementById('i_pair');if(q)q.remove();if(pe)pe.textContent='✓ Téléphone relié'};
+{const ok=document.getElementById('i_ok');if(ok)ok.onclick=()=>document.getElementById('go').onclick()}
+async function introCall(){const st=document.getElementById('i_st'),sb=document.getElementById('i_sub'),bt=document.getElementById('i_btns');
+ if(st){st.textContent='EN COMMUNICATION';sb.textContent='';bt.style.display='none'}
+ await W(1);
+ await countSay(['Allô ? Monsieur Morel ? C\'est le comte D. Vous m\'avez écrit au sujet de votre reportage sur ma demeure.','J\'ai lu vos articles avec le plus grand intérêt. Je serai heureux de vous recevoir. La nuit tombe vite, ici : venez dès ce soir.','Entrez librement, la porte sera ouverte. Je vous offrirai le dîner. À tout à l\'heure.']);
+ if(st)st.textContent='APPEL TERMINÉ';await W(1.5);
+ await card('21 h 47<br><small style="opacity:.6;letter-spacing:.2em">Arrivée au château</small>',3);
+ introE.style.opacity=0;await W(1.6);introE.remove()}
+async function chapter1(){
+ await introCall();
+ yaw=0;pitch=0;cam.position.set(0,1.7,5.4);
+ await W(4);slam();setTorch(true);await W(2.5);
+ sub('','La grande porte vient de se refermer. Plus de lumière.');await W(3);sub('');
+ await W(2);
+ await call('Numéro inconnu',['Allô ? Vous m\'entendez ? Surtout, n\'éteignez pas votre lampe.','Je m\'appelle Jonathan Harker. Oui, celui du journal. Je sais, ça paraît fou.','Vous êtes dans le hall. La porte ne s\'ouvrira plus avant l\'aube. Je l\'ai assez essayée.','Il vous attend à table. Ne mangez rien, ne buvez rien. Éclairez le couloir, au fond : c\'est le seul chemin.']);
+ const choix=await choose([
+  {id:'couloir',pos:V3(0,1.4,-8.2),final:true,maxD:20},
+  {id:'porte',pos:V3(0,1.6,7.9),maxD:20,line:'Je l\'ai essayée mille fois. Elle est fermée à clef.'},
+  {id:'poterne',pos:V3(-5,1.2,3.1),maxD:14,line:'Cette porte donne sur la cour. Tout y est clos. Pas par là.'},
+  {id:'salle1',pos:V3(5,1.1,-3.2),maxD:14,line:'Des meubles mangés par les mites. Rien pour vous.'},
+  {id:'salle2',pos:V3(5,1.1,3.2),maxD:14,line:'Des meubles mangés par les mites. Rien pour vous.'}]);
+ quick('Harker','Bien. Suivez le couloir, puis l\'escalier. Ne vous retournez pas.');
+ await walk([V3(0,0,3),V3(0,0,-8),V3(0,0,-17)],true);
+ await until(()=>lvl===2&&!asc);
+ await W(1);
+ await walk([V3(5,0,zc),V3(21.4,0,zc)]);
+ await call('Harker',['La porte lourde, à gauche, au bout. Entrez : il a mis le couvert pour vous.']);
+ await choose([{id:'souper',pos:V3(22.4,Y+1.3,zc),final:true,maxD:14}]);
+ await walk([V3(24.4,0,zc)]);
+ await call('Harker',['Il est près du feu. Ne regardez pas ses yeux. Ne mangez pas. Ne buvez pas son vin.']);
+ await W(1);
+ await chapter2()}
+function dizzy(sec){cv.style.transition='filter 1s';cv.style.filter='blur(3px) saturate(.6)';setTimeout(()=>cv.style.filter='',sec*1000)}
+function countSay(lines){return new Promise(async res=>{for(const l of lines){if(window.speechSynthesis){const u=new SpeechSynthesisUtterance(l);u.lang='fr-FR';u.pitch=.45;u.rate=.82;speechSynthesis.speak(u)}sub('Le Comte',l);await W(1.8+l.length*.07)}sub('');res()})}
+/* ch. II : « Welcome to my house! Enter freely and of your own free will! » ; « I have dined already, and I do not sup. » */
+async function chapter2(){STORY.count=true;STORY.tension=0;
+ await W(1.2);
+ await countSay(['Soyez le bienvenu dans ma maison. Entrez librement, et de votre plein gré.']);
+ await W(.6);
+ await countSay(['Vous voilà donc, monsieur Morel. Je lis vos articles. Vous cherchez des histoires.','Asseyez-vous, je vous prie. Servez-vous. Je ne dîne jamais en compagnie : j\'ai déjà dîné.']);
+ quick('Harker','Il vous observe. Ne mangez rien. Ne buvez rien.');
+ const cp=cn.position,choix=await choose([
+  {id:'manger',pos:V3(27.6,Y+.9,zc),final:true,maxD:12,ang:.16},
+  {id:'boire',pos:V3(29.2,Y+.97,zc),final:true,maxD:12,ang:.16},
+  {id:'partir',pos:V3(rx-2,Y+1.2,zc-4.5),final:true,maxD:14},
+  {id:'comte',pos:V3(cp.x,cp.y+1.5,cp.z),maxD:14,ang:.16,run:()=>{STORY.tension++;shake=.03;countSay(['Quelque chose vous intrigue, monsieur Morel ?']);setTimeout(()=>quick('Harker','Ne le regardez pas dans les yeux !'),3200)}}]);
+ if(choix==='manger'){STORY.ate=true;STORY.tension+=2;dizzy(4);await countSay(['Vous faites honneur à ma table.']);quick('Harker','Imbécile… c\'est fait. Ne recommencez pas.');await W(3)}
+ else if(choix==='boire'){STORY.drank=true;STORY.tension+=1;dizzy(3);await countSay(['Un tokay de la cave de mes ancêtres. Il vous réchauffera.']);quick('Harker','Je vous avais prévenu.');await W(3)}
+ else{STORY.tension+=1;await countSay(['Vous refusez mon hospitalité ? Soit.']);await W(.6)}
+ await countSay(['La bibliothèque est à votre disposition. Vous y trouverez de quoi occuper la nuit. Je vous laisse.']);
+ await choose([{id:'biblio',pos:V3(rx-2,Y+1.2,zc-4.5),final:true,maxD:14}]);
+ STORY.count=false;
+ await walk([V3(rx-2,0,zc-3),V3(rx-2,0,lz0-.6),V3(rx-2,0,lz0-2.6)]);
+ await W(1);
+ await chapter3()}
+/* objets : ramasse un objet de la scène par son nom, ou l'ajoute à l'inventaire */
+function give(name){const it=ITEMS.find(i=>i.name===name&&!i.taken);if(it){it.taken=true;S.remove(it.g)}INV.push(name);invE.innerHTML='Objets : '+INV.join(' · ');toPhone('haptic',{p:[40]});say('Vous prenez : '+name)}
+const pageE=document.createElement('div');pageE.style.cssText='position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-1deg);width:min(520px,86vw);background:#d9cfae;color:#2a2216;font:italic 18px/1.55 Georgia,serif;padding:26px 30px;box-shadow:0 0 40px #000;z-index:7;opacity:0;transition:opacity .8s;pointer-events:none';document.body.appendChild(pageE);
+async function readPage(title,txt){pageE.innerHTML='<small style="letter-spacing:.2em;opacity:.6">'+title.toUpperCase()+'</small><br><br>'+txt;pageE.style.opacity=1;await W(4+txt.length*.05);pageE.style.opacity=0;await W(.8)}
+/* ch. II-III : l'atlas annoté, les lettres antidatées, le miroir sans reflet (récit de Harker, ici en pastiche) */
+async function chapter3(){STORY.count=false;cn.visible=false;
+ if(STORY.ate){dizzy(3)}
+ await W(2);
+ await call('Harker',['Vous êtes dans la bibliothèque. C\'est ici que j\'ai passé mes premières nuits.','Il ne reviendra pas tout de suite. Cherchez mon journal : j\'ai laissé des pages un peu partout. Vous comprendrez où il vous mène.']);
+ const todo=[
+  {id:'atlas',pos:V3(27.5,Y+.86,lz0-4),final:true,maxD:12,ang:.18},
+  {id:'bureau',pos:V3(rx+3.3,Y+.83,lz0-1.6),final:true,maxD:12,ang:.18},
+  {id:'rayon',pos:V3(rx-5.85,Y+1.5,lz0-4),final:true,maxD:14,ang:.2}];
+ let n=0;
+ while(todo.length){const id=await choose(todo.slice());const i=todo.findIndex(h=>h.id===id);todo.splice(i,1);n++;
+  if(id==='atlas'){give('Page du journal (5 mai)');await readPage('Journal de Jonathan Harker · 5 mai','Toutes les portes sont fermées à clef. Je suis prisonnier d\'un château dont le maître ne dîne jamais. Dans la bibliothèque, un atlas ouvert sur l\'Angleterre : des lieux sont cerclés de rouge.')}
+  if(id==='bureau'){give('Clef de fer');give('Page du journal (12 mai)');await readPage('Journal de Jonathan Harker · 12 mai','Il m\'a fait écrire trois lettres, datées d\'avance. Il m\'a longuement questionné sur Carfax, à Purfleet : une maison sans voisins. Pourquoi une maison sans voisins ?')}
+  if(id==='rayon'){give('Page du journal (15 mai)');await readPage('Journal de Jonathan Harker · 15 mai','Je ne l\'ai jamais vu manger. Dans mon miroir à raser, pas de reflet quand il se tient derrière moi : je me suis coupé. Il a jeté le miroir par la fenêtre. Je n\'ose plus fermer l\'œil.')}
+  if(n===2){await call('Harker',['Les lumières… Éclairez la porte, vite ! Il est là !']);setTorch(true);ENEMY.next=0;await until(()=>ENEMY.spawned>0&&!ENEMY.alive);ENEMY.next=1e9;quick('Harker','Respirez. Il joue avec vous. Il reviendra.');await W(3)}}
+ await call('Harker',['C\'est tout ce que j\'avais laissé. Retournez dans le couloir, jusqu\'au puits de l\'escalier, tout au fond. Les anciens appartements : elles y sont.']);
+ await walk([V3(26.4,0,lz0-.4),V3(26.4,0,zc-3.4),V3(24.4,0,zc-.5),V3(21.4,0,zc),V3(4,0,zc),V3(4,0,zc-1.6)],true);
+ await until(()=>lvl===6&&!wa2);
+ await W(1);
+ await chapter4()}
+/* ===== Chapitre 4 : les trois femmes de la suite oubliée (ch. III : « three young women, ladies by their dress and manner ») ===== */
+const BRIDES=[0,1,2].map(()=>({m:null,alive:false,next:0,dying:0}));let brideOn=false;
+function whisper(t){if(window.speechSynthesis){const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';u.pitch=1.6;u.rate=.75;u.volume=.55;speechSynthesis.speak(u)}sub('Voix',t);setTimeout(()=>sub(''),3200)}
+function mkBride(){const g=new T.Group(),gm=new T.MeshStandardMaterial({color:0xd8d4cc,roughness:.9,emissive:0x2a2a30}),sk=new T.MeshStandardMaterial({color:0xe6ddd0,roughness:.8,emissive:0x302a28}),hm=new T.MeshStandardMaterial({color:0x08080a,roughness:1});
+ const gown=new T.Mesh(new T.ConeGeometry(.42,1.45,12),gm);gown.position.y=.72;const head=new T.Mesh(new T.SphereGeometry(.15,10,8),sk);head.position.y=1.62;
+ const hair=new T.Mesh(new T.ConeGeometry(.2,.9,8),hm);hair.position.set(0,1.3,-.1);hair.scale.z=.6;
+ const lips=new T.Mesh(new T.BoxGeometry(.05,.012,.012),new T.MeshBasicMaterial({color:0x9a1010}));lips.position.set(0,1.58,.14);
+ for(const x of[-.05,.05]){const e=new T.Mesh(new T.SphereGeometry(.014,6,6),new T.MeshBasicMaterial({color:0xff3a2a}));e.position.set(x,1.65,.135);g.add(e)}
+ g.add(gown,head,hair,lips);return g}
+function brideTick(dt,t){if(!brideOn||lvl!==6){BRIDES.forEach(b=>{if(b.m)b.m.visible=false;b.alive=false});return}
+ const cp=cam.position;
+ BRIDES.forEach(b=>{
+  if(!b.alive){if(t<b.next)return;
+   for(let i=0;i<40;i++){const a=Math.random()*6.283,r=3.8+Math.random()*3,x=cp.x+Math.cos(a)*r,z=cp.z+Math.sin(a)*r;if(!okAt(6,x,z))continue;
+    if(!b.m){b.m=mkBride();S.add(b.m)}b.m.position.set(x,cp.y-1.7,z);b.m.scale.setScalar(1);b.m.visible=true;b.alive=true;b.dying=0;return}
+   b.next=t+1;return}
+  const m=b.m,dx=cp.x-m.position.x,dz=cp.z-m.position.z,d=Math.hypot(dx,dz);m.rotation.y=Math.atan2(dx,dz);
+  if(b.dying){b.dying+=dt;m.scale.setScalar(Math.max(.01,1-b.dying/.6));if(b.dying>.6){b.alive=false;m.visible=false;b.next=t+4+Math.random()*3}return}
+  const v=new T.Vector3(m.position.x-cp.x,m.position.y+1.2-cp.y,m.position.z-cp.z),dist=v.length();
+  if(torchOn&&dist<9&&v.clone().normalize().angleTo(fwdV())<.28&&t-(b.ray||0)>.1){b.ray=t;const rc=new T.Raycaster(cp.clone(),v.clone().normalize(),0,dist-.3);if(!rc.intersectObjects(S.children,true).some(h=>h.object.isMesh&&h.object.visible&&!m.children.includes(h.object))){b.dying=.001;return}}
+  if(d<1){redE.style.opacity=1;setTimeout(()=>redE.style.opacity=0,450);STORY.hits=(STORY.hits||0)+1;toPhone('haptic',{p:[250,80,250]});shake=.04;b.alive=false;m.visible=false;b.next=t+5;return}
+  const sp=.55*dt,nx=m.position.x+dx/d*sp,nz=m.position.z+dz/d*sp;if(okAt(6,nx,m.position.z))m.position.x=nx;if(okAt(6,m.position.x,nz))m.position.z=nz})}
+async function chapter4(){STORY.hits=0;
+ await W(2);
+ await call('Harker',['Vous y êtes. Les anciennes chambres des dames. La lune entre par la fenêtre.','Ne vous asseyez pas sur le canapé. Ne fermez pas les yeux, pas une seconde. Éclairez tout ce qui bouge.']);
+ const c=await choose([
+  {id:'canape',pos:V3(ux+1.8,usy+.5,usz-.6),final:true,maxD:10,ang:.2},
+  {id:'angle',pos:V3(1.2,usy+1.3,usz),final:true,maxD:10,ang:.2},
+  {id:'fenetre',pos:V3(ux,usy+1.7,usz-2.3),maxD:10,line:'La lune. Elle n\'éclaire que la pièce d\'angle, plus loin.'}]);
+ if(c==='canape'){await walk([V3(ux+.9,0,usz+.4)]);dizzy(5);whisper('Venez… venez à nous…');quick('Harker','Non ! Debout !')}
+ else{await walk([V3(1.2,0,usz),V3(-.4,0,usz)])}
+ await W(1);brideOn=true;setTorch(true);whisper('Il est à nous… il est à nous…');
+ await W(35);brideOn=false;await W(1.5);
+ quick('Harker',STORY.hits===0?'Pas une égratignure. Il y a de l\'espoir.':'Vous saignez de peur, pas de sang. Ça ira.');await W(2);
+ cn.position.set(ux,usy,usz+2.0);cn.visible=true;STORY.count=true;shake=.03;
+ await countSay(['Cet homme m\'appartient. Reculez.']);await W(.6);
+ await countSay(['Monsieur Morel, vous êtes épuisé. Dormez, cette nuit. Demain, nous parlerons de votre reportage.']);
+ dizzy(6);await W(2.5);STORY.count=false;cn.visible=false;
+ await card('Plus tard…<br><small style="opacity:.6;letter-spacing:.2em">Vous vous réveillez seul dans la suite</small>',3.5);
+ await call('Harker',['Il ne vous a pas sauvé. Il vous garde. Il a besoin de vous pour la suite.','Descendez : la chambre du Comte, puis la chapelle. C\'est là qu\'il dort.']);
+ await card('Fin du chapitre 4<br><small style="opacity:.6;letter-spacing:.2em">La chambre du Comte</small>',4);
+ STORY.free=true;say('Exploration libre (G pour revenir au mode scénarisé)')}
+const redE=document.createElement('div');redE.style.cssText='position:fixed;inset:0;background:radial-gradient(transparent 30%,rgba(160,0,0,.75));z-index:6;pointer-events:none;opacity:0;transition:opacity .5s';document.body.appendChild(redE);
+function mkEnemy(){const g=new T.Group(),bm=new T.MeshStandardMaterial({color:0x050507,roughness:1}),eM=new T.MeshBasicMaterial({color:0xff2a1a});
+ const b=new T.Mesh(new T.ConeGeometry(.38,1.6,10),bm);b.position.y=.8;const h=new T.Mesh(new T.SphereGeometry(.17,10,8),bm);h.position.y=1.72;g.add(b,h);
+ for(const x of[-.06,.06]){const e=new T.Mesh(new T.SphereGeometry(.018,6,6),eM);e.position.set(x,1.74,.15);g.add(e)}return g}
+function killEnemy(t,wait){ENEMY.alive=false;if(ENEMY.m)ENEMY.m.visible=false;ENEMY.next=t+wait}
+function enemyTick(dt,t){const E=ENEMY,cp=cam.position;
+ if(!torchOn||asc||wa||wa2||!run){if(E.alive)killEnemy(t,10);return}
+ if(!E.alive){if(t<E.next)return;
+  for(let i=0;i<40;i++){const a=Math.random()*6.283,r=6+Math.random()*4,x=cp.x+Math.cos(a)*r,z=cp.z+Math.sin(a)*r;if(!okAt(lvl,x,z))continue;
+   if(!E.m){E.m=mkEnemy();S.add(E.m)}E.m.position.set(x,cp.y-1.7,z);E.m.scale.setScalar(1);E.m.visible=true;E.alive=true;E.dying=0;E.born=t;E.lvl=lvl;E.spawned=(E.spawned||0)+1;return}
+  E.next=t+3;return}
+ const m=E.m;if(E.lvl!==lvl||t-E.born>35){killEnemy(t,12);return}
+ const dx=cp.x-m.position.x,dz=cp.z-m.position.z,d=Math.hypot(dx,dz);m.rotation.y=Math.atan2(dx,dz);m.position.y=cp.y-1.7;
+ if(E.dying){E.dying+=dt;m.scale.setScalar(Math.max(.01,1-E.dying/.7));if(E.dying>.7)killEnemy(t,25+Math.random()*25);return}
+ const v=new T.Vector3(m.position.x-cp.x,m.position.y+1.2-cp.y,m.position.z-cp.z);const dist=v.length();
+ if(torchOn&&dist<10&&v.clone().normalize().angleTo(fwdV())<.25&&t-E.ray>.1){E.ray=t;
+  const rc=new T.Raycaster(cp.clone(),v.clone().normalize(),0,dist-.3);if(!rc.intersectObjects(S.children,true).some(h=>h.object.isMesh&&h.object.visible&&!E.m.children.includes(h.object))){E.dying=.001;return}}
+ if(d<1){redE.style.opacity=1;setTimeout(()=>redE.style.opacity=0,450);say('Une forme sombre vous attaque !');toPhone('haptic',{p:[250,80,250]});killEnemy(t,20);return}
+ const sp=.9*dt,nx=m.position.x+dx/d*sp,nz=m.position.z+dz/d*sp;if(okAt(lvl,nx,m.position.z))m.position.x=nx;if(okAt(lvl,m.position.x,nz))m.position.z=nz}
+const fixedL=[];S.traverse(o=>{if(o.isPointLight)fixedL.push([o,o.intensity,0]);else if(o.isAmbientLight||o.isHemisphereLight)fixedL.push([o,o.intensity,1])});
+function setTorch(on){torchOn=on;torch.visible=on;led.visible=on;fixedL.forEach(([l,i,a])=>{if(a)l.intensity=on?i*.12:i;else l.visible=!on})}
+
+/* ===== Bras et main en vue subjective : ils tiennent le téléphone, dont le flash sert de lampe torche ===== */
+S.add(cam);const hand=new T.Group(),sk2=new T.MeshStandardMaterial({color:0xc7a58a,roughness:.8,emissive:0x2a1c12}),sl2=new T.MeshStandardMaterial({color:0x1b1f27,roughness:.95,emissive:0x07080b}),ph2=new T.MeshStandardMaterial({color:0x0c0e12,roughness:.4,metalness:.3,emissive:0x05060a}),scr=new T.MeshBasicMaterial({color:0x2a3a52});
+const hb=(g,m,x,y,z,rx,ry,rz)=>{const o=new T.Mesh(g,m);o.position.set(x,y,z);o.rotation.set(rx||0,ry||0,rz||0);o.castShadow=false;hand.add(o);return o};
+hb(new T.BoxGeometry(.075,.016,.155),ph2,0,0,0);hb(new T.PlaneGeometry(.066,.138),scr,0,.0085,.002,-Math.PI/2);
+const led=hb(new T.SphereGeometry(.009,8,6),new T.MeshBasicMaterial({color:0xfff6d8}),0,.004,-.083);led.visible=false;
+hb(new T.BoxGeometry(.088,.034,.1),sk2,0,-.03,.035);
+for(let i=0;i<4;i++)hb(new T.BoxGeometry(.012,.014,.055),sk2,.052,-.012+i*.0,-.02+i*.026,0,0,.25);
+hb(new T.BoxGeometry(.014,.014,.07),sk2,-.05,.002,-.01,0,.2,0);
+hb(new T.CylinderGeometry(.036,.042,.5,12),sl2,0,-.055,.3,Math.PI/2,0,0);hb(new T.CylinderGeometry(.04,.04,.03,12),sk2,0,-.04,.075,Math.PI/2,0,0);
+hand.position.set(.16,-.19,-.33);hand.rotation.set(.2,-.12,0);cam.add(hand);let handKick=0;
+function handTick(dt,t,moving){handKick=Math.max(0,handKick-dt*.25);hand.position.set(.16,-.19+Math.sin(t*(moving?8:1.4))*(moving?.006:.0025),-.33+handKick)}
+
+{const tc=document.createElement('div');tc.style.cssText='position:fixed;left:12px;top:calc(12px + env(safe-area-inset-top,0px));color:#d8cfb8;font:13px Georgia,serif;opacity:.8;z-index:5;text-shadow:0 0 6px #000;pointer-events:none;line-height:1.5';
+ tc.innerHTML='L : lampe torche seule · E : action · C : recaler · T : appel d\'essai<br>Téléphone (manette) : scanne le QR code (code <b style="letter-spacing:.2em">'+CODE+'</b>)';document.body.appendChild(tc);
+}
+addEventListener('keydown',e=>{if(e.code==='KeyL')setTorch(!torchOn);if(e.code==='KeyE')doAction();if(e.code==='KeyG'){STORY.free=!STORY.free;say(STORY.free?'Exploration libre':'Mode scénarisé')}if(e.code==='KeyT')toPhone('call',{from:'Appel d\'essai',text:'Ceci est un appel d\'essai. Si vous m\'entendez, le téléphone est bien relié au jeu.'});if(e.code==='KeyC')heading0=yaw+hdg});
+(async()=>{try{const room=window.claude&&claude.use?await claude.use('room'):null;if(!room)return;const r=await room.join('torche-'+CODE);LINK=r;
+ r.onPeers(ch=>{for(const pr of[...(ch.joined||[]),...(ch.updated||[])]){if(pr.isMe)continue;const o=pr.presence;if(!o||o.a===undefined)continue;
+  const A=o.a*Math.PI/180,B=o.b*Math.PI/180;hdg=Math.atan2(-Math.sin(A)*Math.cos(B),Math.cos(A)*Math.cos(B));phPitch=Math.asin(Math.max(-1,Math.min(1,Math.sin(B))));
+  if(window.__pair){window.__pair();window.__pair=null}phF=o.my||0;phS=o.mx||0;if(o.ans!==undefined&&o.ans!==lastAns){lastAns=o.ans;if(ANSW){const f=ANSW;ANSW=null;f()}}
+  if(o.act!==undefined){if(lastAct!==null&&o.act!==lastAct)doAction();lastAct=o.act}
+  if(heading0===null)heading0=yaw+hdg;if(!phoneActive){phoneActive=true;if(!torchOn)setTorch(true)}
+  if(o.on!==undefined&&o.on!==torchOn)setTorch(o.on);phoneT=performance.now()}})}catch(e){}})();
+
+cv.addEventListener('pointerdown',e=>{drag=true;cv.setPointerCapture(e.pointerId)});
+addEventListener('pointerup',()=>drag=false);
+addEventListener('pointermove',e=>{if(!run||!(drag||document.pointerLockElement))return;
+ yaw-=e.movementX*.004;pitch=Math.max(-1.2,Math.min(1.2,pitch-e.movementY*.004))});
+document.getElementById('go').onclick=()=>{document.getElementById('ov').style.display='none';run=true;initAudio();try{cv.requestPointerLock()}catch(_){}if(STORY.on)startStory()};
+function resize(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}
+addEventListener('resize',resize);resize();
+const cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+let last=performance.now();
+(function loop(now){requestAnimationFrame(loop);const dt=Math.min((now-last)/1000,.1);last=now;const t=now/1000;
+ if(run){const mvOK=STORY.free||!STORY.on;const f=mvOK?(keys.KeyW||keys.ArrowUp||phF>.3?1:0)-(keys.KeyS||keys.ArrowDown||phF<-.3?1:0):0,s=mvOK?(keys.KeyD||keys.ArrowRight||phS>.3?1:0)-(keys.KeyA||keys.ArrowLeft||phS<-.3?1:0):0;
+  const sp=(asc||wa||wa2)?0:2.4*dt,p=cam.position,ox0=p.x,oz0=p.z;
+  p.x+=(-Math.sin(yaw)*f+Math.cos(yaw)*s)*sp;p.z+=(-Math.cos(yaw)*f-Math.sin(yaw)*s)*sp;
+  if(asc){const T2=STAIRS[sti],u=Math.min(1,(t-asc)/6.5),hp=dir>0?u:1-u,a=hp*7.85,sm=Math.min(1,u*10),e=Math.max(0,(u-.85)/.15),
+   yT=Math.atan2(-Math.cos(a)*dir,Math.sin(a)*dir),y1=yaw0+ang(yaw0,yT)*sm,finalYaw=dir>0?T2.hiYaw:T2.loYaw;
+   p.set(T2.cx+Math.sin(a)*1.55,T2.y0+T2.h*hp,T2.cz+Math.cos(a)*1.55);yaw=y1+ang(y1,finalYaw)*e;pitch=.1*sm*(dir>0?1:-1);
+   if(t-lastStep>.42){step(1);lastStep=t}
+   if(u>=1){asc=0;const E=dir>0?T2.hiPos:T2.loPos;lvl=dir>0?T2.hi:T2.lo;p.set(E[0],E[1],E[2]);yaw=finalYaw;pitch=0}}
+  else if(wa2){const u=Math.min(1,(t-wa2)/4.4),sq=k=>k*k*(3-2*k);
+   const sy=z=>1.7+Math.max(0,Math.min(5.4,5.4-.6667*(zc-1.8-z)));
+   if(wdir2>0){const k=sq(u),z=(zc-1.6)+k*(usz+1.0-(zc-1.6));p.set(4,sy(z),z);yaw=yaw0+ang(yaw0,0)*Math.min(1,u*2);pitch=-.3*Math.sin(Math.PI*u)}
+   else{const k=sq(u),z=(usz+1.0)+k*((zc-1.6)-(usz+1.0));p.set(4,sy(z),z);yaw=yaw0+ang(yaw0,Math.PI)*Math.min(1,u*2);pitch=.25*Math.sin(Math.PI*u)}
+   if(t-lastStep>.42){step(.7);lastStep=t}
+   if(u>=1){wa2=0;pitch=0;if(wdir2>0){lvl=6;p.set(ux,usy+1.7,usz+1.0);yaw=0}else{lvl=2;p.set(4,7.1,zc-0.8);yaw=Math.PI}}}
+  else if(wa){const u=Math.min(1,(t-wa)/3.4),sq=k=>k*k*(3-2*k);
+   if(wdir>0){ // par la fenetre de Harker, le long du mur, jusque chez le Comte
+    if(u<.3){const k=sq(u/.3);p.set(ox,7.1,ze-.6+k*1.2);yaw=yaw0+ang(yaw0,Math.PI)*k}
+    else if(u<.75){const k=sq((u-.3)/.45);p.set(ox,7.1-5.4*k,ze+.6);yaw=Math.PI;pitch=-.25*Math.sin(k*Math.PI)}
+    else{const k=sq((u-.75)/.25);p.set(ox,1.7,ze+.6+k*(CZ0+1.0-ze-.6));yaw=Math.PI-Math.PI*k;pitch=0}
+    if(u>=1){wa=0;lvl=3;p.set(CX0,1.7,CZ0+1.0);yaw=0;pitch=0}
+   }else{
+    if(u<.3){const k=sq(u/.3);p.set(CX0,1.7,CZ0+1.0+k*(ze+.6-CZ0-1.0));yaw=yaw0+ang(yaw0,Math.PI)*k}
+    else if(u<.75){const k=sq((u-.3)/.45);p.set(ox,1.7+5.4*k,ze+.6);yaw=Math.PI;pitch=.25*Math.sin(k*Math.PI)}
+    else{const k=sq((u-.75)/.25);p.set(ox,7.1,ze+.6-k*1.05);yaw=Math.PI-Math.PI*k;pitch=0}
+    if(u>=1){wa=0;lvl=2;p.set(ox,7.1,ze-1.2);yaw=0;pitch=0}
+   }}
+  else if(lvl==1){if(!(ok1(p.x,oz0)&&!hit(1,p.x,oz0)))p.x=ox0;if(!(ok1(p.x,p.z)&&!hit(1,p.x,p.z)))p.z=oz0;if(p.z<-16.6&&Math.abs(p.x)<1.15){asc=t;dir=1;sti=0;yaw0=yaw}p.y=1.7+(f||s?Math.sin(t*8)*.02:0)}
+  else if(lvl==2){if(!(ok(p.x,oz0)&&!hit(2,p.x,oz0)))p.x=ox0;if(!(ok(p.x,p.z)&&!hit(2,p.x,p.z)))p.z=oz0;
+   if(p.x<1.6&&Math.abs(p.z-zc)<1.3){asc=t;dir=-1;sti=0;yaw0=yaw}
+   else if(p.z>ze-.55&&Math.abs(p.x-ox)<.9){wa=t;wdir=1;yaw0=yaw}
+   else if(p.z<=zc-1.2&&Math.abs(p.x-4)<1.1){wa2=t;wdir2=1;yaw0=yaw}
+   p.y=7.1+(f||s?Math.sin(t*8)*.02:0)}
+  else if(lvl==6){if(!(ok6(p.x,oz0)&&!hit(6,p.x,oz0)))p.x=ox0;if(!(ok6(p.x,p.z)&&!hit(6,p.x,p.z)))p.z=oz0;
+   if(p.z>usz+1.9&&Math.abs(p.x-ux)<1.1){wa2=t;wdir2=-1;yaw0=yaw}
+   p.y=usy+1.7+(f||s?Math.sin(t*8)*.02:0)}
+  else if(lvl==3){if(!(ok3(p.x,oz0)&&!hit(3,p.x,oz0)))p.x=ox0;if(!(ok3(p.x,p.z)&&!hit(3,p.x,p.z)))p.z=oz0;
+   if(p.x<27.4&&Math.abs(p.z-SZ)<1.4){asc=t;dir=-1;sti=1;yaw0=yaw}
+   else if(p.z>CZ0+2.45&&Math.abs(p.x-CX0)<.9){wa=t;wdir=-1;yaw0=yaw}
+   p.y=1.7+(f||s?Math.sin(t*8)*.02:0)}
+  else{if(!(ok4(p.x,oz0)&&!hit(4,p.x,oz0)))p.x=ox0;if(!(ok4(p.x,p.z)&&!hit(4,p.x,p.z)))p.z=oz0;
+   if(p.z<SZ+2.1&&Math.abs(p.x-SX)<1.3){asc=t;dir=1;sti=1;yaw0=yaw}
+   p.y=-2.3+vDrop(p.x,p.z)+(f||s?Math.sin(t*8)*.02:0)}
+  const sn=Math.sin(t*8);if(!asc&&!wa&&!wa2&&(f||s)&&lastS>0&&sn<=0)step(lvl==2&&p.x>22.6?.45:1);lastS=sn;
+  const rn=lvl==6?"VIII · La suite oubliée":lvl==4?(p.z>VZ+10?"X bis · Les caveaux":"X · La chapelle en ruine"):lvl==3?"XI · La chambre du Comte":lvl==2?(Math.abs(p.x-6.2)<1.1&&p.z>zc+1.3?"VII · La chambre au Sud":p.x<22.4?"II · Le grand couloir":p.z>zc+8.9?"V · La chambre de Harker":p.z>zc+4.6?"IV · La petite pièce octogonale":p.z<zc-4.5?"VI · La bibliothèque":"III · La salle du souper"):(p.z>=-1.6&&p.x<-4.9?"IX · La cour":p.x>5&&p.z>-8?"I ter · Les petites pièces près du hall":p.z>-8?"I · Le hall d'entrée":"I bis · Le couloir et l'escalier tournant");if(rn!==curR){curR=rn;RM.textContent=rn}
+  if(RG)RG.gain.value=lvl==2?cl(1-Math.min(Math.hypot(p.x-33.4,p.z-zc),Math.hypot(p.x-35.2,p.z-(zb+4)))/16,0,1)*.28:0}
+ if(phoneActive&&performance.now()-phoneT>3000){phoneActive=false;phF=phS=0}
+ if(phoneActive){if(asc||wa||wa2||!run)heading0=yaw+hdg;else{yaw=heading0-hdg;pitch=phPitch}}
+ enemyTick(dt,t);storyTick(dt,t);brideTick(dt,t);
+ cam.rotation.set(pitch,yaw,0);if(shake>0){cam.rotation.x+=(Math.random()-.5)*shake;cam.rotation.z+=(Math.random()-.5)*shake}
+ if(torchOn){const ty=yaw,tp=pitch,cp=Math.cos(tp);
+  torch.position.set(cam.position.x+Math.cos(ty)*.14-Math.sin(ty)*.2,cam.position.y-.14,cam.position.z-Math.sin(ty)*.14-Math.cos(ty)*.2);torch.target.position.set(cam.position.x-Math.sin(ty)*cp*5,cam.position.y-.15+Math.sin(tp)*5,cam.position.z-Math.cos(ty)*cp*5);torch.target.updateMatrixWorld()}
+ const q=.86+.09*Math.sin(t*13)+.05*Math.sin(t*31.7+1)+(Math.random()-.5)*.08;
+ lamp.intensity=1.7*q;lamp.position.set(lx+Math.sin(t*9)*.03,ly+.05,lz+Math.cos(t*7)*.03);flame.scale.set(1,2.2*q,1);
+ fire.intensity=2.4*(.8+.25*Math.random()+.1*Math.sin(t*17));fl.forEach((m,k)=>m.scale.y=1+.35*Math.sin(t*(11+k*3)+k)+.15*Math.random());fire2.intensity=1.8*(.8+.25*Math.random()+.1*Math.sin(t*15));fl2.forEach((m,k)=>m.scale.y=1+.35*Math.sin(t*(12+k*3)+k)+.15*Math.random());lamp3.intensity=1.1*q;
+ const mp=moteG.attributes.position.array;for(let i=0;i<moteN;i++){const sd=moteSeed[i];mp[i*3]+=Math.sin(t*.3+sd)*.0025;mp[i*3+1]+=Math.cos(t*.22+sd*1.3)*.002+.0006;mp[i*3+2]+=Math.cos(t*.26+sd)*.0025;if(mp[i*3+1]>ly+.9)mp[i*3+1]=ly-.8}
+ moteG.attributes.position.needsUpdate=true;
+ R.render(S,cam)})(last);
+}
+</script></body></html>

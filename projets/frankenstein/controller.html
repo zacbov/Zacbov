@@ -91,6 +91,54 @@
   }
   #porte.vide{background:#182028;color:#57626c}
 
+  /* --- Apparence (accessoire + coloris), au lobby seulement --- */
+  #btApparence{
+    flex:0 0 auto;background:#12181f;border:1px solid var(--moi);color:var(--moi);
+    font-family:inherit;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    padding:7px 10px;border-radius:6px;touch-action:manipulation;
+  }
+  #btApparence[hidden]{display:none}
+  #perso{
+    position:absolute;inset:0;z-index:18;display:none;flex-direction:column;align-items:center;
+    gap:14px;padding:calc(env(safe-area-inset-top) + 18px) 22px calc(env(safe-area-inset-bottom) + 18px);
+    background:radial-gradient(ellipse at 50% 0%, rgba(139,63,191,.18), transparent 60%), var(--labo);
+    touch-action:manipulation;overflow:auto;
+  }
+  #perso:not([hidden]){display:flex}
+  #finPartie{
+    position:absolute;inset:0;z-index:19;display:none;flex-direction:column;align-items:center;
+    justify-content:center;gap:14px;padding:28px;text-align:center;touch-action:manipulation;
+    background:radial-gradient(ellipse at 50% 0%, rgba(139,63,191,.22), transparent 60%), var(--labo);
+  }
+  #finPartie:not([hidden]){display:flex}
+  #finPartie h2{font-size:12px;letter-spacing:.3em;text-transform:uppercase;font-weight:500;color:var(--moi)}
+  #finScore{font-size:54px;font-weight:700;color:var(--creme);line-height:1}
+  #finRecord{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8a97a0}
+  #finRecord.neuf{color:var(--moi)}
+  #finPs{font-family:Georgia,serif;font-style:italic;font-size:13px;line-height:1.5;color:#d8c9a4;max-width:300px}
+  #finMonde{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--violet)}
+  #finPartie button{width:100%;max-width:320px;touch-action:manipulation}
+  #perso h2{font-size:12px;letter-spacing:.28em;text-transform:uppercase;font-weight:500;color:var(--moi)}
+  #persoImg{width:130px;height:165px;object-fit:contain;border-radius:10px;background:rgba(255,255,255,.04)}
+  #persoPret{width:100%;max-width:320px}
+  #persoPret.actif{background:var(--moi);color:#0b1014}
+  #persoPrets{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8a97a0}
+  #perso .titre{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#8a97a0;align-self:flex-start}
+  #persoRoles{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+  #persoAcc{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+  .choix{
+    background:#12181f;border:1px solid #232d37;color:var(--creme);font-family:inherit;
+    font-size:12px;letter-spacing:.08em;padding:13px 8px;border-radius:9px;touch-action:manipulation;
+  }
+  .choix.sel{border-color:var(--moi);color:var(--moi)}
+  #persoCol{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;width:100%}
+  #perso .pastille{
+    width:38px;height:38px;border-radius:50%;border:3px solid transparent;padding:0;
+    box-shadow:0 0 0 1px rgba(255,255,255,.28);touch-action:manipulation;clip-path:none;
+  }
+  #perso .pastille.sel{border-color:#fff;transform:scale(1.12)}
+  #perso .pastille.pris{opacity:.2}
+
   /* --- Alerte overlay (torches, monstre réveillé...) --- */
   #alerte{
     position:absolute;left:0;right:0;top:0;z-index:15;
@@ -179,6 +227,7 @@
   <div id="alerte"></div>
   <div id="pastille"></div>
   <div id="monNom">—</div>
+  <button id="btApparence" hidden>Apparence</button>
   <div id="porte" class="vide">Mains vides</div>
 </div>
 
@@ -187,6 +236,31 @@
   <div class="bouton" id="btA"><span class="lettre">A</span><span class="role">Ramasser</span></div>
   <div class="bouton" id="btB"><span class="lettre">B</span><span class="role">Utiliser</span></div>
   <div id="deco">Maintiens A pour ranimer</div>
+</div>
+
+<div id="finPartie" hidden>
+  <h2>Nuit terminée</h2>
+  <div id="finScore">0</div>
+  <div id="finRecord"></div>
+  <div id="finPs"></div>
+  <div id="finMonde"></div>
+  <button class="principal" id="finRejouer">Rejouer ce monde</button>
+  <button class="secondaire" id="finSuivant">Monde suivant ▸</button>
+  <button class="secondaire" id="finMenu">Retour à la sélection</button>
+</div>
+
+<div id="perso" hidden>
+  <h2>Mon apparence</h2>
+  <img id="persoImg" alt="">
+  <div class="titre">Costume du roman</div>
+  <div id="persoRoles"></div>
+  <div class="titre">Accessoire</div>
+  <div id="persoAcc"></div>
+  <div class="titre">Coloris · <span id="persoNomCol"></span></div>
+  <div id="persoCol"></div>
+  <button class="secondaire" id="persoPret">Je suis prêt</button>
+  <div id="persoPrets"></div>
+  <button class="secondaire" id="persoOk">Fermer</button>
 </div>
 
 <script>
@@ -318,6 +392,33 @@ function connecter() {
       // Ambiance manette selon l'état du monstre (calme / réveillé / apaisé)
       $zone.classList.toggle('monstre-eveille', m.phase === 'eveille');
       if (m.phase === 'eveille' && navigator.vibrate) navigator.vibrate([15, 30, 15]);
+    } else if (m.t === 'fin_partie') {
+      // Tableau des scores : on peut relancer depuis la manette
+      el('finScore').textContent = m.score;
+      const $r = el('finRecord');
+      $r.textContent = m.neuf ? 'Nouveau record !' : (m.record ? 'Record : ' + m.record : '');
+      $r.classList.toggle('neuf', !!m.neuf);
+      el('finMonde').textContent = m.monde || '';
+      el('finPs').textContent = m.ps || '';
+      $perso.hidden = true;
+      $fin.hidden = false;
+      if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+    } else if (m.t === 'perso_etat') {
+      $fin.hidden = true;
+      // Au lobby : l'écran envoie l'apparence actuelle et ce qui est choisissable
+      persoEtat = m;
+      if (m.apercu) el('persoImg').src = m.apercu;
+      $btApp.hidden = false;
+      dessinerPerso();
+      // Première arrivée au lobby : on ouvre le panneau pour que l'on voie « Prêt »
+      if (!persoOuvertAuto) { persoOuvertAuto = true; $perso.hidden = false; }
+    } else if (m.t === 'perso_fin') {
+      // La partie commence : plus de changement possible
+      persoEtat = null;
+      $btApp.hidden = true;
+      $perso.hidden = true;
+      $fin.hidden = true;
+      persoOuvertAuto = false;
     }
   };
 
@@ -394,6 +495,60 @@ function brancherBouton($b, appui) {
 }
 brancherBouton($btA, (v) => { boutonA = v; });
 brancherBouton($btB, (v) => { boutonB = v; });
+
+/* ---------------- Apparence (accessoire + coloris) ---------------- */
+const $btApp = el('btApparence'), $perso = el('perso');
+let persoEtat = null, persoOuvertAuto = false;
+function envoyerPerso(champs) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(Object.assign({ t: 'perso' }, champs)));
+}
+function dessinerPerso() {
+  const e = persoEtat;
+  if (!e) return;
+  const zoneRoles = el('persoRoles');
+  zoneRoles.innerHTML = '';
+  (e.roles || []).forEach((r) => {
+    const b = document.createElement('button');
+    b.className = 'choix' + (r.id === e.role ? ' sel' : '');
+    b.textContent = r.nom;
+    b.addEventListener('click', () => envoyerPerso({ role: r.id }));
+    zoneRoles.appendChild(b);
+  });
+  const zoneAcc = el('persoAcc');
+  zoneAcc.innerHTML = '';
+  e.accessoires.forEach((a) => {
+    const b = document.createElement('button');
+    b.className = 'choix' + (a.id === e.acc ? ' sel' : '');
+    b.textContent = a.nom;
+    b.addEventListener('click', () => envoyerPerso({ acc: a.id }));
+    zoneAcc.appendChild(b);
+  });
+  const zoneCol = el('persoCol');
+  zoneCol.innerHTML = '';
+  e.coloris.forEach((c) => {
+    const pris = e.pris.indexOf(c.id) >= 0;
+    const b = document.createElement('button');
+    b.className = 'pastille' + (c.id === e.col ? ' sel' : '') + (pris ? ' pris' : '');
+    b.style.background = c.hex;
+    b.setAttribute('aria-label', c.nom + (pris ? ' (déjà pris)' : ''));
+    if (!pris) b.addEventListener('click', () => envoyerPerso({ col: c.id }));
+    zoneCol.appendChild(b);
+  });
+  const actuel = e.coloris.find((c) => c.id === e.col);
+  el('persoNomCol').textContent = actuel ? actuel.nom : '';
+  const bp = el('persoPret');
+  bp.textContent = e.pret ? 'Prêt ✓ (annuler)' : 'Je suis prêt';
+  bp.className = 'secondaire' + (e.pret ? ' actif' : '');
+  el('persoPrets').textContent = e.total ? (e.prets + ' / ' + e.total + ' prêts') : '';
+}
+const $fin = el('finPartie');
+function commande(c) { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'cmd', c: c })); }
+el('finRejouer').addEventListener('click', () => commande('rejouer'));
+el('finSuivant').addEventListener('click', () => commande('suivant'));
+el('finMenu').addEventListener('click', () => commande('menu'));
+el('persoPret').addEventListener('click', () => commande('pret'));
+$btApp.addEventListener('click', () => { $perso.hidden = false; });
+el('persoOk').addEventListener('click', () => { $perso.hidden = true; });
 
 /* Empêche le zoom / défilement parasite pendant le jeu. */
 document.addEventListener('gesturestart', (e) => e.preventDefault());

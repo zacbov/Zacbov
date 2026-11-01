@@ -49,7 +49,11 @@ textarea{flex:1;resize:none;background:var(--nuit);border:1px solid var(--trait)
 <form id="f"><button type="button" id="hint" disabled aria-label="Demander un indice" title="Indice : le patient lâche une information utile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg><span id="hc"></span></button><textarea id="in" rows="1" placeholder="Votre réponse au patient" aria-label="Message" disabled></textarea><button id="send" class="main" disabled>Envoyer</button></form>
 <script>
 const WORKER = 'https://cas-cliniques.alterpaces1.workers.dev/';
+<<<<<<< HEAD
 const SECRET = 'rxtalkcase';             // = secret APP_SECRET du worker
+=======
+const SECRET = 'rxtalkcase';            // mot de passe = secret APP_SECRET du worker
+>>>>>>> 50746f937991def6b427ce99d60e06bdf619debf
 const DATA = 'cas_cliniques.json';        // à placer à côté de cette page
 const $ = (id) => document.getElementById(id);
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cas cliniques : le patient arrive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--nuit:#0d1613;--panneau:#15221d;--trait:#2a3d35;--encre:#16201b;--papier:#e9eee4;--tampon:#3a5bc7;--vert:#37c48f;--texte:#dfe9e3;--doux:#8fa89b;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;background:var(--nuit);color:var(--texte);font:17px/1.5 "Atkinson Hyperlegible",system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;padding:.7rem 1rem;border-bottom:1px solid var(--trait);background:var(--panneau)}
+h1{font-size:1.05rem;margin:0 auto 0 0;font-weight:700}
+select,button,textarea{font:inherit;color:inherit}
+select{background:var(--nuit);border:1px solid var(--trait);border-radius:6px;padding:.4rem .5rem;max-width:100%}
+button{border:1px solid var(--trait);background:transparent;border-radius:6px;padding:.45rem .8rem;cursor:pointer}
+button.main{background:var(--vert);border-color:var(--vert);color:#04150e;font-weight:700}
+button:disabled{opacity:.4;cursor:default}
+:focus-visible{outline:2px solid var(--vert);outline-offset:2px}
+#chat{flex:1;overflow-y:auto;padding:1.2rem 1rem;display:flex;flex-direction:column;gap:.8rem;max-width:760px;width:100%;margin:0 auto}
+.vide{margin:auto;text-align:center;color:var(--doux);max-width:30ch}
+.ticket{align-self:center;text-align:center;border:2px dashed var(--doux);border-radius:10px;padding:.6rem 1.6rem;color:var(--doux)}
+.ticket b{display:block;font-size:2rem;letter-spacing:.06em;color:var(--texte);line-height:1.1}
+.m{max-width:85%;padding:.6rem .85rem;border-radius:4px 14px 14px 14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.patient{align-self:flex-start;background:var(--papier);color:var(--encre);box-shadow:2px 3px 0 #0006}
+.eleve{align-self:flex-end;background:var(--tampon);color:#fff;border-radius:14px 4px 14px 14px}
+.err{align-self:center;color:#ffb4a8;border:1px solid #7a3a30;border-radius:8px;padding:.5rem .8rem}
+.debrief{border:1px solid var(--vert);border-radius:10px;padding:1rem;background:var(--panneau);white-space:pre-wrap}
+details{border:1px solid var(--trait);border-radius:10px;padding:.6rem .9rem;background:var(--panneau)}
+details p{margin:.5rem 0;white-space:pre-wrap}
+form{display:flex;gap:.6rem;padding:.7rem 1rem;border-top:1px solid var(--trait);background:var(--panneau);padding-bottom:max(.7rem,env(safe-area-inset-bottom))}
+textarea{flex:1;resize:none;background:var(--nuit);border:1px solid var(--trait);border-radius:8px;padding:.5rem .7rem;max-height:30vh}
+</style>
+</head>
+<body>
+<header>
+  <h1>Cas cliniques</h1>
+  <select id="theme" aria-label="Thème"></select>
+  <button id="new" class="main" disabled>Patient suivant</button>
+  <button id="end" disabled>Terminer et débriefer</button>
+</header>
+<main id="chat" aria-live="polite"><p class="vide">Choisissez un thème, puis appelez le premier patient.</p></main>
+<form id="f"><textarea id="in" rows="1" placeholder="Votre réponse au patient" aria-label="Message" disabled></textarea><button id="send" class="main" disabled>Envoyer</button></form>
+<script>
+const WORKER = 'https://cas-cliniques.alterpaces1.workers.dev/';
+const SECRET = 'À_REMPLACER';            // mot de passe = secret APP_SECRET du worker
+const DATA = 'cas_cliniques.json';        // à placer à côté de cette page
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+let db, cas, hist = [], busy = false, over = false;
+
+function add(cls, html) { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; $('chat').append(d); d.scrollIntoView({ block: 'end' }); return d; }
+function lock(on) { busy = on; $('send').disabled = $('in').disabled = on || over || !cas; $('new').disabled = on || !db; $('end').disabled = on || over || hist.length < 3; }
+
+async function ask(mode, el) {
+  const body = { mode, cas: mode === 'eval' ? { enonce: cas.enonce, questions: cas.questions } : { enonce: cas.enonce }, messages: hist };
+  const r = await fetch(WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-App-Secret': SECRET }, body: JSON.stringify(body) });
+  if (!r.ok) { let m = 'Erreur ' + r.status; try { const j = await r.json(); m = j.error + (j.details ? ' (' + j.details.join(', ') + ')' : ''); } catch {} throw new Error(m); }
+  let out = '';
+  if (!(r.headers.get('content-type') || '').includes('event-stream')) {
+    const j = await r.json(); out = (j.choices && j.choices[0].message.content) || ''; el.innerHTML = fmt(out); return out;
+  }
+  const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '';
+  for (;;) {
+    const { done, value } = await rd.read(); if (done) break;
+    buf += dec.decode(value, { stream: true }); const lines = buf.split('\n'); buf = lines.pop();
+    for (const l of lines) {
+      if (!l.startsWith('data:')) continue; const d = l.slice(5).trim(); if (d === '[DONE]') continue;
+      try { const t = JSON.parse(d).choices[0].delta.content; if (t) { out += t; el.innerHTML = fmt(out); el.scrollIntoView({ block: 'end' }); } } catch {}
+    }
+  }
+  if (!out.trim()) throw new Error('Réponse vide : réessayez.');
+  return out;
+}
+
+async function turn(mode, cls) {
+  lock(true); const el = add(cls, '…');
+  try { const out = await ask(mode, el); if (mode === 'chat') hist.push({ role: 'assistant', content: out }); return out; }
+  catch (e) { el.remove(); add('err', esc(e.message)); if (mode === 'chat') hist.pop(); }
+  finally { lock(false); }
+}
+
+function newPatient() {
+  const t = $('theme').value;
+  const pool = db.cas.filter((c) => t === '*' || (t === '~' ? c.theme !== 'cardiologie_pediatrique' : c.theme === t));
+  cas = pool[Math.floor(Math.random() * pool.length)]; over = false;
+  const lib = (db.meta.themes.find((x) => x.id === cas.theme) || {}).libelle || '';
+  $('chat').innerHTML = ''; add('ticket', 'Un patient entre à l\'officine<b>' + cas.id + '</b>' + esc(lib));
+  hist = [{ role: 'user', content: '(Le patient entre à l\'officine et prend la parole : dis ta première phrase.)' }];
+  turn('chat', 'm patient');
+}
+
+$('f').onsubmit = async (e) => {
+  e.preventDefault(); const t = $('in').value.trim(); if (!t || busy || over || !cas) return;
+  $('in').value = ''; hist.push({ role: 'user', content: t }); add('m eleve', fmt(t));
+  await turn('chat', 'm patient');
+};
+$('in').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('f').requestSubmit(); } };
+$('new').onclick = newPatient;
+$('end').onclick = async () => {
+  over = true; lock(true);
+  const out = await turn('eval', 'debrief');
+  if (out) {
+    const det = document.createElement('details');
+    det.innerHTML = '<summary>Réponses attendues du cas</summary>' + (cas.questions || []).map((q) => '<p><b>' + esc(q.question) + '</b>\n' + esc(q.reponse_modele) + '</p>').join('');
+    $('chat').append(det); det.scrollIntoView({ block: 'end' });
+  }
+  lock(false);
+};
+
+fetch(DATA).then((r) => r.json()).then((d) => {
+  db = d;
+  $('theme').innerHTML = '<option value="~">Au hasard, hors cardio pédiatrique</option><option value="*">Au hasard, tous les thèmes</option>' +
+    d.meta.themes.filter((t) => t.nb_cas).map((t) => `<option value="${t.id}">${esc(t.libelle)} (${t.nb_cas})</option>`).join('');
+  lock(false);
+}).catch(() => { $('chat').innerHTML = '<p class="err">Impossible de charger ' + DATA + '. Placez-le à côté de la page et ouvrez la page via un serveur web (pas en file://).</p>'; });
+</script>
+</body>
+</html>

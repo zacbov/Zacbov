@@ -14,8 +14,9 @@ const CORS = {
 };
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } });
 const cut = (s, n) => String(s || '').slice(0, n);
+const HINT = '(indice demandé)';
 
-const PATIENT = (enonce) => `Tu joues UN PATIENT (ou son accompagnant si la situation concerne un enfant ou une personne dépendante) face à un étudiant en pharmacie qui joue le pharmacien. L'étudiant s'entraîne : laisse-le mener l'entretien.
+const PATIENT = (enonce, hint) => `Tu joues UN PATIENT (ou son accompagnant si la situation concerne un enfant ou une personne dépendante) face à un étudiant en pharmacie qui joue le pharmacien. L'étudiant s'entraîne : laisse-le mener l'entretien.
 Règles :
 - Reste dans le rôle, en français courant, 1 à 3 phrases, sans vocabulaire médical qu'un patient ne connaîtrait pas : décris les symptômes avec tes mots.
 - Le cadre est un entretien pharmaceutique : adapte la situation même si elle décrit un service hospitalier. Tu t'adresses toujours au pharmacien.
@@ -25,7 +26,7 @@ Règles :
 - Ne révèle jamais le diagnostic, ne corrige pas l'étudiant, ne sors pas du rôle, ne suggère pas ce qu'il devrait demander. S'il te donne un conseil faux ou dangereux, réagis comme un patient (doute, incompréhension) sans le reprendre.
 
 SITUATION (connue de toi seul) :
-${enonce}`;
+${enonce}${hint ? `\n\nINDICE DEMANDÉ (n°${hint}) : l'étudiant est bloqué. Dans ta prochaine réponse uniquement, lâche spontanément UNE information de la situation qu'il n'a pas encore obtenue (symptôme, antécédent, traitement, détail de l'ordonnance ou du bilan…), comme un patient qui y repense, en 1 à 2 phrases. Indice n°1 : très indirect ; n°2 : plus net ; n°3 et suivants : net. Ne nomme jamais le diagnostic ni la solution.` : ''}`;
 
 const EVAL = (cas, transcript) => `Tu es l'évaluateur d'un entraînement de pharmacie. Ci-dessous : la situation, les questions d'examen associées avec leurs réponses attendues (elles font foi), puis la conversation entre l'étudiant (pharmacien) et le patient simulé.
 Fais un débrief en français, précis et honnête, uniquement à partir des réponses attendues et de ce qui a été dit :
@@ -33,7 +34,7 @@ Fais un débrief en français, précis et honnête, uniquement à partir des ré
 **Bien fait** : ce qui est juste.
 **À rechercher ou à corriger** : informations clés non demandées, erreurs, avec la réponse attendue correspondante.
 **Conduite attendue** : la décision finale en quelques lignes.
-Si la conversation est trop courte pour juger, dis-le. Signale toute information médicale que tu ajoutes hors des réponses attendues.
+Les lignes « (indice demandé) » sont des demandes d'aide au patient : indique leur nombre et tiens-en compte dans la note. Si la conversation est trop courte pour juger, dis-le. Signale toute information médicale que tu ajoutes hors des réponses attendues.
 
 SITUATION :
 ${cas.enonce}
@@ -68,7 +69,7 @@ export default {
     const messages = evaluate
       ? [{ role: 'user', content: EVAL({ enonce: cut(cas.enonce, 12000), questions: (cas.questions || []).slice(0, 12).map((q) => ({ ...q, reponse_modele: cut(q.reponse_modele, 2500) })) },
           hist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? 'Pharmacien : ' : 'Patient : ') + m.content).join('\n')) }]
-      : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000)) }, ...hist];
+      : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0) }, ...hist];
 
     const chain = env.MODELS ? env.MODELS.split(',').map((s) => s.trim().split(/:(.+)/).slice(0, 2)) : CHAIN;
     const errs = [];

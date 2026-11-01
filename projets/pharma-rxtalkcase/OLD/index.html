@@ -32,6 +32,10 @@ details{border:1px solid var(--trait);border-radius:10px;padding:.6rem .9rem;bac
 details p{margin:.5rem 0;white-space:pre-wrap}
 form{display:flex;gap:.6rem;padding:.7rem 1rem;border-top:1px solid var(--trait);background:var(--panneau);padding-bottom:max(.7rem,env(safe-area-inset-bottom))}
 textarea{flex:1;resize:none;background:var(--nuit);border:1px solid var(--trait);border-radius:8px;padding:.5rem .7rem;max-height:30vh}
+#hint{display:flex;align-items:center;gap:.3rem;color:#f2c14e;border-color:#5b4a1d}
+#hc{font-weight:700;min-width:.6em}
+.indice{border-left:4px solid #f2c14e}
+.indice::before{content:"Indice";display:block;font-size:.8rem;font-weight:700;color:#8a6a0e;margin-bottom:.1rem}
 </style>
 </head>
 <body>
@@ -42,10 +46,14 @@ textarea{flex:1;resize:none;background:var(--nuit);border:1px solid var(--trait)
   <button id="end" disabled>Terminer et débriefer</button>
 </header>
 <main id="chat" aria-live="polite"><p class="vide">Choisissez un thème, puis appelez le premier patient.</p></main>
-<form id="f"><textarea id="in" rows="1" placeholder="Votre réponse au patient" aria-label="Message" disabled></textarea><button id="send" class="main" disabled>Envoyer</button></form>
+<form id="f"><button type="button" id="hint" disabled aria-label="Demander un indice" title="Indice : le patient lâche une information utile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg><span id="hc"></span></button><textarea id="in" rows="1" placeholder="Votre réponse au patient" aria-label="Message" disabled></textarea><button id="send" class="main" disabled>Envoyer</button></form>
 <script>
 const WORKER = 'https://cas-cliniques.alterpaces1.workers.dev/';
-const SECRET = 'À_REMPLACER';            // mot de passe = secret APP_SECRET du worker
+<<<<<<< HEAD
+const SECRET = 'rxtalkcase';             // = secret APP_SECRET du worker
+=======
+const SECRET = 'rxtalkcase';            // mot de passe = secret APP_SECRET du worker
+>>>>>>> 50746f937991def6b427ce99d60e06bdf619debf
 const DATA = 'cas_cliniques.json';        // à placer à côté de cette page
 const $ = (id) => document.getElementById(id);
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
@@ -53,7 +61,8 @@ const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 let db, cas, hist = [], busy = false, over = false;
 
 function add(cls, html) { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; $('chat').append(d); d.scrollIntoView({ block: 'end' }); return d; }
-function lock(on) { busy = on; $('send').disabled = $('in').disabled = on || over || !cas; $('new').disabled = on || !db; $('end').disabled = on || over || hist.length < 3; }
+function lock(on) { busy = on; $('send').disabled = $('in').disabled = on || over || !cas; $('new').disabled = on || !db; $('end').disabled = on || over || hist.length < 3;
+  $('hint').disabled = on || over || hist.length < 2; const n = hist.filter((m) => m.content === '(indice demandé)').length; $('hc').textContent = n || ''; }
 
 async function ask(mode, el) {
   const body = { mode, cas: mode === 'eval' ? { enonce: cas.enonce, questions: cas.questions } : { enonce: cas.enonce }, messages: hist };
@@ -99,6 +108,10 @@ $('f').onsubmit = async (e) => {
   await turn('chat', 'm patient');
 };
 $('in').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('f').requestSubmit(); } };
+$('hint').onclick = async () => {
+  if (busy || over || hist.length < 2) return;
+  hist.push({ role: 'user', content: '(indice demandé)' }); await turn('chat', 'm patient indice');
+};
 $('new').onclick = newPatient;
 $('end').onclick = async () => {
   over = true; lock(true);

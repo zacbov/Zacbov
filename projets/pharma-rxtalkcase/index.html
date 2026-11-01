@@ -45,7 +45,7 @@ textarea{flex:1;resize:none;background:var(--nuit);border:1px solid var(--trait)
 <form id="f"><textarea id="in" rows="1" placeholder="Votre réponse au patient" aria-label="Message" disabled></textarea><button id="send" class="main" disabled>Envoyer</button></form>
 <script>
 const WORKER = 'https://cas-cliniques.alterpaces1.workers.dev/';
-const SECRET = 'À_REMPLACER';            // mot de passe = secret APP_SECRET du worker
+const SECRET = 'rxtalkcase';            // mot de passe = secret APP_SECRET du worker
 const DATA = 'cas_cliniques.json';        // à placer à côté de cette page
 const $ = (id) => document.getElementById(id);
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));

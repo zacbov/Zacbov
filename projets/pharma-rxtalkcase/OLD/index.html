@@ -36,6 +36,17 @@ textarea{flex:1;resize:none;background:var(--nuit);border:1px solid var(--trait)
 #hc{font-weight:700;min-width:.6em}
 .indice{border-left:4px solid #f2c14e}
 .indice::before{content:"Indice";display:block;font-size:.8rem;font-weight:700;color:#8a6a0e;margin-bottom:.1rem}
+dialog{border:1px solid var(--trait);border-radius:12px;background:var(--panneau);color:var(--texte);padding:0;width:min(720px,94vw);max-height:90dvh}
+dialog::backdrop{background:#000a}
+.dh{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.6rem .8rem;border-bottom:1px solid var(--trait)}
+.dh button.on{border-color:var(--vert);color:var(--vert)}.dh .x{margin-left:auto}
+.feuille{margin:.8rem;background:#f3f5f2;color:#1b2420;border-radius:3px;padding:1rem 1.2rem;box-shadow:0 2px 0 #0007;overflow-x:auto}
+.fh{display:flex;justify-content:space-between;gap:1rem;border-bottom:3px solid var(--tampon);padding-bottom:.5rem;margin-bottom:.7rem}
+.fh small,.pied{color:#5b6a63}.pied{margin-top:.8rem;font-size:.8rem}
+.feuille table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.feuille th{text-align:left;font-size:.85rem;color:#5b6a63;border-bottom:1px solid #c9d2cc}
+.feuille td{padding:.25rem .5rem .25rem 0;border-bottom:1px dotted #c9d2cc}.feuille td.r{font-weight:700}
+.rx li{margin:.5rem 0}
 </style>
 </head>
 <body>
@@ -43,17 +54,15 @@ textarea{flex:1;resize:none;background:var(--nuit);border:1px solid var(--trait)
   <h1>Cas cliniques</h1>
   <select id="theme" aria-label="Thème"></select>
   <button id="new" class="main" disabled>Patient suivant</button>
+  <button id="docbtn" disabled>Documents <span id="dc"></span></button>
   <button id="end" disabled>Terminer et débriefer</button>
 </header>
 <main id="chat" aria-live="polite"><p class="vide">Choisissez un thème, puis appelez le premier patient.</p></main>
+<dialog id="dlg" aria-label="Documents du patient"><div class="dh" id="tabs"></div><div id="doc"></div></dialog>
 <form id="f"><button type="button" id="hint" disabled aria-label="Demander un indice" title="Indice : le patient lâche une information utile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg><span id="hc"></span></button><textarea id="in" rows="1" placeholder="Votre réponse au patient" aria-label="Message" disabled></textarea><button id="send" class="main" disabled>Envoyer</button></form>
 <script>
 const WORKER = 'https://cas-cliniques.alterpaces1.workers.dev/';
-<<<<<<< HEAD
 const SECRET = 'rxtalkcase';             // = secret APP_SECRET du worker
-=======
-const SECRET = 'rxtalkcase';            // mot de passe = secret APP_SECRET du worker
->>>>>>> 50746f937991def6b427ce99d60e06bdf619debf
 const DATA = 'cas_cliniques.json';        // à placer à côté de cette page
 const $ = (id) => document.getElementById(id);
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
@@ -62,10 +71,11 @@ let db, cas, hist = [], busy = false, over = false;
 
 function add(cls, html) { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; $('chat').append(d); d.scrollIntoView({ block: 'end' }); return d; }
 function lock(on) { busy = on; $('send').disabled = $('in').disabled = on || over || !cas; $('new').disabled = on || !db; $('end').disabled = on || over || hist.length < 3;
-  $('hint').disabled = on || over || hist.length < 2; const n = hist.filter((m) => m.content === '(indice demandé)').length; $('hc').textContent = n || ''; }
+  $('hint').disabled = on || over || hist.length < 2; const n = hist.filter((m) => m.content === '(indice demandé)').length; $('hc').textContent = n || '';
+  const nd = cas ? (cas.documents || []).length : 0; $('docbtn').disabled = !nd; $('dc').textContent = nd || ''; }
 
 async function ask(mode, el) {
-  const body = { mode, cas: mode === 'eval' ? { enonce: cas.enonce, questions: cas.questions } : { enonce: cas.enonce }, messages: hist };
+  const body = { mode, cas: mode === 'eval' ? { enonce: cas.enonce, questions: cas.questions } : { enonce: cas.enonce, docs: (cas.documents || []).length > 0 }, messages: hist };
   const r = await fetch(WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-App-Secret': SECRET }, body: JSON.stringify(body) });
   if (!r.ok) { let m = 'Erreur ' + r.status; try { const j = await r.json(); m = j.error + (j.details ? ' (' + j.details.join(', ') + ')' : ''); } catch {} throw new Error(m); }
   let out = '';
@@ -112,6 +122,23 @@ $('hint').onclick = async () => {
   if (busy || over || hist.length < 2) return;
   hist.push({ role: 'user', content: '(indice demandé)' }); await turn('chat', 'm patient indice');
 };
+const f = (s) => esc(String(s || ''));
+function docHTML(d) {
+  const pied = '<div class="pied">Document fictif à visée pédagogique' + (d.origine ? ' (' + f(d.origine) + ')' : '') + '.</div>';
+  if (d.type === 'ordonnance') return '<div class="feuille"><div class="fh"><div><b>Dr ' + (f(d.medecin) || '…') + '</b></div><small>' + f(d.date) + '</small></div><p>' + f(d.patient) + '</p><ol class="rx">' +
+    (d.lignes || []).map((l) => '<li><b>' + f(l.medicament) + '</b><br>' + f(l.posologie) + ' ' + f(l.duree) + '</li>').join('') + '</ol>' + pied + '</div>';
+  const ref = (d.lignes || []).some((l) => l.ref);
+  return '<div class="feuille"><div class="fh"><div><b>' + f(d.titre) + '</b><br><small>Laboratoire d\'analyses médicales</small></div><small>Dossier ' + cas.id + '</small></div><table><tr><th>Échantillon</th><th>Analyse</th><th>Résultat</th><th>Unité</th>' + (ref ? '<th>Référence</th>' : '') + '</tr>' +
+    (d.lignes || []).map((l) => '<tr><td>' + f(l.ech) + '</td><td>' + f(l.analyse) + '</td><td class="r">' + f(l.resultat) + '</td><td>' + f(l.unite) + '</td>' + (ref ? '<td>' + f(l.ref) + '</td>' : '') + '</tr>').join('') + '</table>' + pied + '</div>';
+}
+function openDoc(i) {
+  const ds = cas.documents || [];
+  $('tabs').innerHTML = ds.map((d, k) => '<button data-k="' + k + '"' + (k === i ? ' class="on"' : '') + '>' + f(d.titre || 'Ordonnance') + '</button>').join('') + '<button class="x" id="close">Fermer</button>';
+  $('tabs').querySelectorAll('button[data-k]').forEach((b) => { b.onclick = () => openDoc(+b.dataset.k); });
+  $('close').onclick = () => $('dlg').close(); $('doc').innerHTML = docHTML(ds[i]);
+}
+$('docbtn').onclick = () => { openDoc(0); $('dlg').showModal(); };
+$('dlg').onclick = (e) => { if (e.target === $('dlg')) $('dlg').close(); };
 $('new').onclick = newPatient;
 $('end').onclick = async () => {
   over = true; lock(true);

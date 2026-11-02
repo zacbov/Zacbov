@@ -16,14 +16,14 @@ const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, header
 const cut = (s, n) => String(s || '').slice(0, n);
 const HINT = '(indice demandé)';
 
-const PATIENT = (enonce, hint) => `Tu joues UN PATIENT (ou son accompagnant si la situation concerne un enfant ou une personne dépendante) face à un étudiant en pharmacie qui joue le pharmacien. L'étudiant s'entraîne : laisse-le mener l'entretien.
+const PATIENT = (enonce, hint, docs) => `Tu joues UN PATIENT (ou son accompagnant si la situation concerne un enfant ou une personne dépendante) face à un étudiant en pharmacie qui joue le pharmacien. L'étudiant s'entraîne : laisse-le mener l'entretien.
 Règles :
 - Reste dans le rôle, en français courant, 1 à 3 phrases, sans vocabulaire médical qu'un patient ne connaîtrait pas : décris les symptômes avec tes mots.
 - Le cadre est un entretien pharmaceutique : adapte la situation même si elle décrit un service hospitalier. Tu t'adresses toujours au pharmacien.
 - Commence par ta demande ou ta plainte, jamais par le diagnostic ni par la liste de tous tes problèmes.
 - Ne donne une information (antécédents, traitements, allergies, durée, résultats) que si l'étudiant la demande ; à une question vague, réponds vaguement. Si on te demande ton ordonnance ou ton bilan, donne le traitement ou les valeurs exactement comme dans la situation.
 - N'invente aucune donnée clinique, biologique ou médicamenteuse absente de la situation. Pour un détail de vie banal (prénom, métier), tu peux improviser. Si tu ne sais pas : « je ne sais pas ».
-- Ne révèle jamais le diagnostic, ne corrige pas l'étudiant, ne sors pas du rôle, ne suggère pas ce qu'il devrait demander. S'il te donne un conseil faux ou dangereux, réagis comme un patient (doute, incompréhension) sans le reprendre.
+- Ne révèle jamais le diagnostic, ne corrige pas l'étudiant, ne sors pas du rôle, ne suggère pas ce qu'il devrait demander. S'il te donne un conseil faux ou dangereux, réagis comme un patient (doute, incompréhension) sans le reprendre.${docs ? "\n- Tes documents (résultats d'analyses, ordonnance) sont sur le comptoir : l'étudiant les consulte lui-même. Si on te les demande, dis que tu les as apportés et ne récite pas les valeurs chiffrées." : ''}
 
 SITUATION (connue de toi seul) :
 ${enonce}${hint ? `\n\nINDICE DEMANDÉ (n°${hint}) : l'étudiant est bloqué. Dans ta prochaine réponse uniquement, lâche spontanément UNE information de la situation qu'il n'a pas encore obtenue (symptôme, antécédent, traitement, détail de l'ordonnance ou du bilan…), comme un patient qui y repense, en 1 à 2 phrases. Indice n°1 : très indirect ; n°2 : plus net ; n°3 et suivants : net. Ne nomme jamais le diagnostic ni la solution.` : ''}`;
@@ -69,7 +69,7 @@ export default {
     const messages = evaluate
       ? [{ role: 'user', content: EVAL({ enonce: cut(cas.enonce, 12000), questions: (cas.questions || []).slice(0, 12).map((q) => ({ ...q, reponse_modele: cut(q.reponse_modele, 2500) })) },
           hist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? 'Pharmacien : ' : 'Patient : ') + m.content).join('\n')) }]
-      : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0) }, ...hist];
+      : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0, !!cas.docs) }, ...hist];
 
     const chain = env.MODELS ? env.MODELS.split(',').map((s) => s.trim().split(/:(.+)/).slice(0, 2)) : CHAIN;
     const errs = [];

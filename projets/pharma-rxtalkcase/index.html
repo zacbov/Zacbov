@@ -47,18 +47,26 @@ dialog::backdrop{background:#000a}
 .feuille th{text-align:left;font-size:.85rem;color:#5b6a63;border-bottom:1px solid #c9d2cc}
 .feuille td{padding:.25rem .5rem .25rem 0;border-bottom:1px dotted #c9d2cc}.feuille td.r{font-weight:700}
 .rx li{margin:.5rem 0}
+#gauge{display:flex;align-items:center;gap:.7rem;padding:.35rem 1rem;background:var(--panneau);border-bottom:1px solid var(--trait);font-size:.9rem;color:var(--doux)}
+#gauge>div{flex:1;max-width:260px;height:8px;border-radius:4px;background:var(--nuit);overflow:hidden}#gbar{display:block;height:100%;width:0;background:var(--vert);transition:width .4s}
+#cf{padding:.8rem 1rem}#cf label{display:block;margin:.5rem 0 .1rem;color:var(--doux);font-size:.9rem}#cf input,#cf select{width:100%;background:var(--nuit);border:1px solid var(--trait);border-radius:6px;padding:.4rem .5rem;color:inherit;font:inherit}
+.res{margin-top:.9rem;font-size:1.3rem;font-weight:700;color:var(--vert)}
 </style>
 </head>
 <body>
 <header>
   <h1>Cas cliniques</h1>
   <select id="theme" aria-label="Thème"></select>
+  <select id="prof" aria-label="Profil du patient"><option value="">Patient neutre</option><option value="presse">Pressé</option><option value="bavard">Bavard</option><option value="anxieux">Anxieux</option><option value="observance">Suit mal son traitement</option><option value="*">Profil au hasard</option></select>
   <button id="new" class="main" disabled>Patient suivant</button>
+  <button id="calcbtn">Calculateurs</button>
   <button id="docbtn" disabled>Documents <span id="dc"></span></button>
   <button id="end" disabled>Terminer et débriefer</button>
 </header>
+<div id="gauge" hidden><div><i id="gbar"></i></div><span id="gtxt"></span></div>
 <main id="chat" aria-live="polite"><p class="vide">Choisissez un thème, puis appelez le premier patient.</p></main>
 <dialog id="dlg" aria-label="Documents du patient"><div class="dh" id="tabs"></div><div id="doc"></div></dialog>
+<dialog id="calc" aria-label="Calculateurs"><div class="dh"><select id="csel"></select><button class="x" id="cclose">Fermer</button></div><div id="cf"></div></dialog>
 <form id="f"><button type="button" id="hint" disabled aria-label="Demander un indice" title="Indice : le patient lâche une information utile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg><span id="hc"></span></button><textarea id="in" rows="1" placeholder="Votre réponse au patient" aria-label="Message" disabled></textarea><button id="send" class="main" disabled>Envoyer</button></form>
 <script>
 const WORKER = 'https://cas-cliniques.alterpaces1.workers.dev/';
@@ -67,7 +75,8 @@ const DATA = 'cas_cliniques.json';        // à placer à côté de cette page
 const $ = (id) => document.getElementById(id);
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-let db, cas, hist = [], busy = false, over = false;
+let db, cas, hist = [], busy = false, over = false, profil = '', points = null, got = new Set(), cv = 0;
+const PL = { presse: 'pressé', bavard: 'bavard', anxieux: 'anxieux', observance: 'suit mal son traitement' };
 
 function add(cls, html) { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; $('chat').append(d); d.scrollIntoView({ block: 'end' }); return d; }
 function lock(on) { busy = on; $('send').disabled = $('in').disabled = on || over || !cas; $('new').disabled = on || !db; $('end').disabled = on || over || hist.length < 3;
@@ -75,7 +84,7 @@ function lock(on) { busy = on; $('send').disabled = $('in').disabled = on || ove
   const nd = cas ? (cas.documents || []).length : 0; $('docbtn').disabled = !nd; $('dc').textContent = nd || ''; }
 
 async function ask(mode, el) {
-  const body = { mode, cas: mode === 'eval' ? { enonce: cas.enonce, questions: cas.questions } : { enonce: cas.enonce, docs: (cas.documents || []).length > 0 }, messages: hist };
+  const body = { mode, cas: mode === 'chat' ? { enonce: cas.enonce, docs: (cas.documents || []).length > 0 } : { enonce: cas.enonce, questions: cas.questions, points: points || [] }, profil, messages: hist };
   const r = await fetch(WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-App-Secret': SECRET }, body: JSON.stringify(body) });
   if (!r.ok) { let m = 'Erreur ' + r.status; try { const j = await r.json(); m = j.error + (j.details ? ' (' + j.details.join(', ') + ')' : ''); } catch {} throw new Error(m); }
   let out = '';
@@ -97,7 +106,7 @@ async function ask(mode, el) {
 
 async function turn(mode, cls) {
   lock(true); const el = add(cls, '…');
-  try { const out = await ask(mode, el); if (mode === 'chat') hist.push({ role: 'assistant', content: out }); return out; }
+  try { const out = await ask(mode, el); if (mode === 'chat') { hist.push({ role: 'assistant', content: out }); cover(); } return out; }
   catch (e) { el.remove(); add('err', esc(e.message)); if (mode === 'chat') hist.pop(); }
   finally { lock(false); }
 }
@@ -106,6 +115,9 @@ function newPatient() {
   const t = $('theme').value;
   const pool = db.cas.filter((c) => t === '*' || (t === '~' ? c.theme !== 'cardiologie_pediatrique' : c.theme === t));
   cas = pool[Math.floor(Math.random() * pool.length)]; over = false;
+  const pv = $('prof').value; profil = pv === '*' ? ['presse', 'bavard', 'anxieux', 'observance', ''][Math.floor(Math.random() * 5)] : pv;
+  points = null; got = new Set(); const k = ++cv; gauge();
+  setTimeout(() => ask('checklist', document.createElement('div')).then((t) => { const a = arr(t); if (a && k === cv) { points = a.map(String).slice(0, 10); gauge(); } }).catch(() => {}), 0);
   const lib = (db.meta.themes.find((x) => x.id === cas.theme) || {}).libelle || '';
   $('chat').innerHTML = ''; add('ticket', 'Un patient entre à l\'officine<b>' + cas.id + '</b>' + esc(lib));
   hist = [{ role: 'user', content: '(Le patient entre à l\'officine et prend la parole : dis ta première phrase.)' }];
@@ -139,13 +151,35 @@ function openDoc(i) {
 }
 $('docbtn').onclick = () => { openDoc(0); $('dlg').showModal(); };
 $('dlg').onclick = (e) => { if (e.target === $('dlg')) $('dlg').close(); };
+const arr = (t) => { try { return JSON.parse(t.match(/\[[\s\S]*\]/)[0]); } catch { return null; } };
+function gauge() { $('gauge').hidden = !points; if (!points) return; $('gbar').style.width = (100 * got.size / points.length) + '%'; $('gtxt').textContent = 'Informations clés : ' + got.size + '/' + points.length; }
+async function cover() { if (!points) return; const k = cv; try { const a = arr(await ask('cover', document.createElement('div'))); if (a && k === cv) { a.forEach((n) => { if (n >= 1 && n <= points.length) got.add(n); }); gauge(); } } catch {} }
+const AGE = ['age', 'Âge (ans)'], KG = ['kg', 'Poids (kg)'], CM = ['cm', 'Taille (cm)'], CR = ['cr', 'Créatinine (µmol/L)'], SX = ['sx', 'Sexe', ['Homme', 'Femme']];
+const CALCS = [
+ ['Clairance de la créatinine (Cockcroft-Gault)', [AGE, KG, CR, SX], (v) => [(140 - v.age) * v.kg * (v.sx ? 1.04 : 1.23) / v.cr, 'mL/min']],
+ ['DFG (CKD-EPI 2021)', [AGE, CR, SX], (v) => { const s = v.cr / 88.4, k = v.sx ? 0.7 : 0.9, a = v.sx ? -0.241 : -0.302; return [142 * Math.pow(Math.min(s / k, 1), a) * Math.pow(Math.max(s / k, 1), -1.2) * Math.pow(0.9938, v.age) * (v.sx ? 1.012 : 1), 'mL/min/1,73 m²']; }],
+ ['IMC', [KG, CM], (v) => [v.kg / Math.pow(v.cm / 100, 2), 'kg/m²']],
+ ['Surface corporelle (Mosteller)', [KG, CM], (v) => [Math.sqrt(v.kg * v.cm / 3600), 'm²']],
+ ['Dose pédiatrique (mg/kg/jour)', [KG, ['mgkg', 'Dose (mg/kg/jour)'], ['n', 'Prises par jour'], ['c', 'Concentration (mg/mL)']], (v) => { const p = v.kg * v.mgkg / v.n; return [p, 'mg par prise, soit ' + (p / v.c).toFixed(1) + ' mL par prise (' + (p * v.n).toFixed(0) + ' mg/jour)']; }],
+ ['mmol/L vers g/L', [['mm', 'Valeur (mmol/L)'], ['mw', 'Masse molaire (g/mol)']], (v) => [v.mm * v.mw / 1000, 'g/L']],
+ ['Créatinine µmol/L vers mg/dL', [CR], (v) => [v.cr / 88.4, 'mg/dL']],
+];
+function calcUI(i) {
+  const [, fs, run] = CALCS[i];
+  $('cf').innerHTML = fs.map(([id, lab, opt]) => '<label for="c_' + id + '">' + lab + '</label>' + (opt ? '<select id="c_' + id + '">' + opt.map((o) => '<option>' + o + '</option>').join('') + '</select>' : '<input id="c_' + id + '" type="number" step="any" inputmode="decimal">')).join('') + '<div class="res" id="cres"></div><p class="pied" style="color:var(--doux)">Résultat indicatif : se référer au RCP du médicament.</p>';
+  const go = () => { const v = {}; fs.forEach(([id, , opt]) => { const e = $('c_' + id); v[id] = opt ? e.selectedIndex : parseFloat(e.value.replace(',', '.')); }); const r = run(v); $('cres').textContent = Number.isFinite(r[0]) ? Number(r[0].toPrecision(3)) + ' ' + r[1] : 'Renseignez tous les champs.'; };
+  $('cf').oninput = go; go();
+}
+$('csel').innerHTML = CALCS.map((c, i) => '<option value="' + i + '">' + c[0] + '</option>').join(''); $('csel').onchange = () => calcUI(+$('csel').value);
+$('calcbtn').onclick = () => { calcUI(+$('csel').value); $('calc').showModal(); }; $('cclose').onclick = () => $('calc').close();
+$('calc').onclick = (e) => { if (e.target === $('calc')) $('calc').close(); };
 $('new').onclick = newPatient;
 $('end').onclick = async () => {
   over = true; lock(true);
   const out = await turn('eval', 'debrief');
   if (out) {
     const det = document.createElement('details');
-    det.innerHTML = '<summary>Réponses attendues du cas</summary>' + (cas.questions || []).map((q) => '<p><b>' + esc(q.question) + '</b>\n' + esc(q.reponse_modele) + '</p>').join('');
+    det.innerHTML = '<summary>Réponses attendues du cas</summary>' + (points ? '<p><b>Points clés</b>\n' + points.map((p, i) => (got.has(i + 1) ? '✔ ' : '✘ ') + esc(p)).join('\n') + '</p>' : '') + (profil ? '<p><b>Profil joué :</b> ' + PL[profil] + '</p>' : '') + (cas.questions || []).map((q) => '<p><b>' + esc(q.question) + '</b>\n' + esc(q.reponse_modele) + '</p>').join('');
     $('chat').append(det); det.scrollIntoView({ block: 'end' });
   }
   lock(false);

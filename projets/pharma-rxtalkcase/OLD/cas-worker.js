@@ -15,15 +15,24 @@ const CORS = {
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } });
 const cut = (s, n) => String(s || '').slice(0, n);
 const HINT = '(indice demandé)';
+const PROFILS = {
+  presse: "Tu es pressé : réponses courtes, tu regardes l'heure, tu t'impatientes si l'entretien s'allonge, mais tu réponds si on insiste poliment.",
+  bavard: "Tu es bavard : tu digresses sur ta vie (famille, voisins) avant de répondre ; l'information utile est noyée mais tu la donnes si on te recentre.",
+  anxieux: "Tu es anxieux : tu t'inquiètes, tu imagines le pire et tu poses des questions sur les risques ; un ton rassurant t'aide à répondre précisément.",
+  observance: "Tu suis mal ton traitement : tu oublies des prises ou en as arrêté sans le dire. Tu ne l'avoues que si on te le demande sans jugement, en termes vagues (« je prends ça quand j'y pense »), sans inventer de nouvelle donnée clinique.",
+};
+const LIGHT = (mode, cas, hist) => mode === 'checklist'
+  ? `Situation :\n${cut(cas.enonce, 12000)}\n\nRéponses attendues :\n${(cas.questions || []).slice(0, 12).map((q) => cut(q.reponse_modele, 1500)).join('\n')}\n\nListe 6 à 10 informations clés que le pharmacien doit obtenir du patient en l'interrogeant (symptômes, antécédents, traitements, allergies, contexte), jamais des conclusions ni le diagnostic. Réponds uniquement par un tableau JSON de chaînes courtes.`
+  : `POINTS :\n${(cas.points || []).map((p, i) => (i + 1) + '. ' + cut(p, 200)).join('\n')}\n\nCONVERSATION :\n${hist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? 'Pharmacien : ' : 'Patient : ') + m.content).join('\n')}\n\nRéponds uniquement par un tableau JSON des numéros des points dont l'information a clairement été obtenue (question du pharmacien ou indice demandé).`;
 
-const PATIENT = (enonce, hint, docs) => `Tu joues UN PATIENT (ou son accompagnant si la situation concerne un enfant ou une personne dépendante) face à un étudiant en pharmacie qui joue le pharmacien. L'étudiant s'entraîne : laisse-le mener l'entretien.
+const PATIENT = (enonce, hint, docs, profil) => `Tu joues UN PATIENT (ou son accompagnant si la situation concerne un enfant ou une personne dépendante) face à un étudiant en pharmacie qui joue le pharmacien. L'étudiant s'entraîne : laisse-le mener l'entretien.
 Règles :
 - Reste dans le rôle, en français courant, 1 à 3 phrases, sans vocabulaire médical qu'un patient ne connaîtrait pas : décris les symptômes avec tes mots.
 - Le cadre est un entretien pharmaceutique : adapte la situation même si elle décrit un service hospitalier. Tu t'adresses toujours au pharmacien.
 - Commence par ta demande ou ta plainte, jamais par le diagnostic ni par la liste de tous tes problèmes.
 - Ne donne une information (antécédents, traitements, allergies, durée, résultats) que si l'étudiant la demande ; à une question vague, réponds vaguement. Si on te demande ton ordonnance ou ton bilan, donne le traitement ou les valeurs exactement comme dans la situation.
 - N'invente aucune donnée clinique, biologique ou médicamenteuse absente de la situation. Pour un détail de vie banal (prénom, métier), tu peux improviser. Si tu ne sais pas : « je ne sais pas ».
-- Ne révèle jamais le diagnostic, ne corrige pas l'étudiant, ne sors pas du rôle, ne suggère pas ce qu'il devrait demander. S'il te donne un conseil faux ou dangereux, réagis comme un patient (doute, incompréhension) sans le reprendre.${docs ? "\n- Tes documents (résultats d'analyses, ordonnance) sont sur le comptoir : l'étudiant les consulte lui-même. Si on te les demande, dis que tu les as apportés et ne récite pas les valeurs chiffrées." : ''}
+- Ne révèle jamais le diagnostic, ne corrige pas l'étudiant, ne sors pas du rôle, ne suggère pas ce qu'il devrait demander. S'il te donne un conseil faux ou dangereux, réagis comme un patient (doute, incompréhension) sans le reprendre.${docs ? "\n- Tes documents (résultats d'analyses, ordonnance) sont sur le comptoir : l'étudiant les consulte lui-même. Si on te les demande, dis que tu les as apportés et ne récite pas les valeurs chiffrées." : ''}${PROFILS[profil] ? '\n- PROFIL (comportement uniquement, sans changer les faits de la situation) : ' + PROFILS[profil] : ''}
 
 SITUATION (connue de toi seul) :
 ${enonce}${hint ? `\n\nINDICE DEMANDÉ (n°${hint}) : l'étudiant est bloqué. Dans ta prochaine réponse uniquement, lâche spontanément UNE information de la situation qu'il n'a pas encore obtenue (symptôme, antécédent, traitement, détail de l'ordonnance ou du bilan…), comme un patient qui y repense, en 1 à 2 phrases. Indice n°1 : très indirect ; n°2 : plus net ; n°3 et suivants : net. Ne nomme jamais le diagnostic ni la solution.` : ''}`;
@@ -40,7 +49,7 @@ SITUATION :
 ${cas.enonce}
 
 QUESTIONS ET RÉPONSES ATTENDUES :
-${(cas.questions || []).map((q) => `Q${q.n || ''} ${q.question}\nRéponse attendue : ${q.reponse_modele}`).join('\n\n')}
+${(cas.questions || []).map((q) => `Q${q.n || ''} ${q.question}\nRéponse attendue : ${q.reponse_modele}`).join('\n\n')}${cas.points && cas.points.length ? '\n\nPOINTS CLÉS À OBTENIR (checklist) :\n' + cas.points.map((p, i) => (i + 1) + '. ' + p).join('\n') : ''}
 
 CONVERSATION :
 ${transcript}`;
@@ -66,19 +75,20 @@ export default {
     if (!cas.enonce || !hist.length) return json({ error: 'Cas ou messages manquants' }, 400);
 
     const evaluate = b.mode === 'eval';
-    const messages = evaluate
-      ? [{ role: 'user', content: EVAL({ enonce: cut(cas.enonce, 12000), questions: (cas.questions || []).slice(0, 12).map((q) => ({ ...q, reponse_modele: cut(q.reponse_modele, 2500) })) },
+    const light = b.mode === 'cover' || b.mode === 'checklist';
+    const messages = light ? [{ role: 'user', content: LIGHT(b.mode, cas, hist) }] : evaluate
+      ? [{ role: 'user', content: EVAL({ enonce: cut(cas.enonce, 12000), points: (cas.points || []).slice(0, 12).map((p) => cut(p, 200)), questions: (cas.questions || []).slice(0, 12).map((q) => ({ ...q, reponse_modele: cut(q.reponse_modele, 2500) })) },
           hist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? 'Pharmacien : ' : 'Patient : ') + m.content).join('\n')) }]
-      : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0, !!cas.docs) }, ...hist];
+      : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0, !!cas.docs, b.profil) }, ...hist];
 
-    const chain = env.MODELS ? env.MODELS.split(',').map((s) => s.trim().split(/:(.+)/).slice(0, 2)) : CHAIN;
+    const chain = env.MODELS ? env.MODELS.split(',').map((s) => s.trim().split(/:(.+)/).slice(0, 2)) : light ? [CHAIN[4], CHAIN[3], ...CHAIN] : CHAIN;
     const errs = [];
     for (const [p, model] of chain) {
       const api = API[p]; const key = api && api.keys.map((k) => env[k]).find(Boolean);
       if (!key) { errs.push(`${model}: pas de clé`); continue; }
       const body = {
-        model, stream: true, temperature: evaluate ? 0.3 : 0.8,
-        max_tokens: (evaluate ? 1600 : 400) + (p === 'google' ? 2048 : 0),   // marge pour la réflexion des modèles Google
+        model, stream: !light, temperature: light ? 0.1 : evaluate ? 0.3 : 0.8,
+        max_tokens: (light ? 700 : evaluate ? 1600 : 400) + (p === 'google' ? 2048 : 0),   // marge pour la réflexion des modèles Google
         messages: /gemma/i.test(model) ? mergeSystem(messages) : messages,
       };
       if (/gemma-4/i.test(model)) body.reasoning_effort = 'none';

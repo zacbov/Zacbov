@@ -81,6 +81,8 @@
   .cmd .ticket{display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
     color:var(--creme);opacity:.78;min-height:26px;margin-bottom:7px}
   .cmd .ticket svg{width:22px;height:22px;flex:none}
+  .cmd.nouveau{animation:cmdNouveau 1.2s ease-out 1}
+  @keyframes cmdNouveau{0%{transform:translateY(-14px) scale(.9);opacity:0}35%{transform:translateY(2px) scale(1.06);opacity:1;background:#27421f;border-color:#c8ff3f}100%{transform:none}}
   .cmd.chaud{animation:cmdChaud .6s ease-in-out infinite alternate}
   @keyframes cmdChaud{to{background:#3a1713;border-color:#e0523c}}
   .jauge{height:7px;background:#1a2a23;border-radius:4px;overflow:hidden}
@@ -1067,6 +1069,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
+renderer.localClippingEnabled = true;     // plans de découpe par matériau (silhouettes)
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
@@ -2153,8 +2156,9 @@ function animerJoueursFx(dt) {
       kx = 1 + 0.16 * k; ky = 1 - 0.2 * k;
     }
     j.mesh.scale.set(ECH_LARG * kx, ECH_HAUT * ky, ECH_LARG * kx);
-    const cache = Jeu.phase === 'jeu' && cacheDevant(j);
-    fantomesDe(j).forEach(f => { f.visible = cache; });
+    const hc = Jeu.phase === 'jeu' ? hauteurCachee(j) : 0;
+    if (hc > 0 && j.mesh.userData.planFantome) j.mesh.userData.planFantome.constant = hc;
+    fantomesDe(j).forEach(f => { f.visible = hc > 0; });
     const vit = Math.hypot(j.x - (j.xPrec === undefined ? j.x : j.xPrec), j.z - (j.zPrec === undefined ? j.z : j.zPrec)) / Math.max(dt, 1e-3);
     j.xPrec = j.x; j.zPrec = j.z;
     j.fxT = (j.fxT || 0) - dt;
@@ -2247,42 +2251,45 @@ function effetsFrame(dt) {
   }
 }
 
-/* Silhouette : une copie de chaque pièce du personnage, dessinée seulement là où quelque
-   chose la cache (depthFunc = GreaterDepth), enfant de la pièce d'origine pour suivre
-   toutes ses animations. */
-function ajouterSilhouette(racine, couleurHex, liste) {
+/* Silhouette des joueurs cachés. Copie de chaque pièce du personnage, dessinée PAR-DESSUS
+   le reste (depthTest désactivé) mais DÉCOUPÉE par un plan horizontal (clippingPlanes) à la
+   hauteur exacte que l'obstacle cache : seule cette partie-là est teintée. Aucune comparaison
+   de profondeur. (La première version utilisait depthFunc = GreaterDepth ; un test WebGL a
+   montré qu'avec deux shaders différents la copie passe sur TOUT le modèle, même avec un
+   polygonOffset de -4.) Enfant de la pièce d'origine : suit toutes les animations. */
+function ajouterSilhouette(racine, couleurHex, liste, plan) {
   try {
     const c = parseInt(String(couleurHex).replace('#', ''), 16);
     const pieces = [];
     racine.traverse(o => { if (o.isMesh && !o.userData.fantome) pieces.push(o); });
     pieces.forEach(o => {
-      // Deux garde-fous contre l'affichage par-dessus le modèle (z-fighting : même surface) :
-      // 1) polygonOffset négatif : le fantôme est tiré vers la caméra, donc jamais « plus profond »
-      //    que le modèle lui-même ; il ne passe que derrière un vrai obstacle ;
-      // 2) il reste invisible tant que `cacheDevant(j)` n'a pas détecté un obstacle (voir plus bas).
       const f = new THREE.Mesh(o.geometry, new THREE.MeshBasicMaterial({
-        color: c, transparent: true, opacity: 0.45, depthFunc: THREE.GreaterDepth, depthWrite: false,
-        polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4
+        color: c, transparent: true, opacity: 0.5, depthTest: false, depthWrite: false,
+        clippingPlanes: [plan]
       }));
-      f.userData.fantome = true; f.renderOrder = 30; f.visible = false;
+      f.userData.fantome = true; f.renderOrder = 60; f.visible = false;
       o.add(f);
       if (liste) liste.push(f);
     });
   } catch (e) { console.warn('Silhouette indisponible :', e); }
 }
-/* Vrai si un mur ou un poste est juste au sud du joueur (côté caméra) : seul cas où le
-   bas de son corps peut être caché. Mur de 1,5 de haut, caméra à 68° : il cache les pieds
-   à moins d'environ 0,6 case ; collision à 0,34, donc seulement quand on le longe. */
-function cacheDevant(j) {
+const TAN_PITCH = Math.tan(PITCH);
+/* Hauteur (unités du monde) sous laquelle le corps du joueur est caché par l'obstacle situé
+   juste au sud (côté caméra) ; 0 si rien n'est caché. Le rayon vers la caméra monte de
+   tan(angle) par unité de distance : un obstacle de hauteur H, à distance horizontale d du
+   point, cache ce point s'il est plus bas que H − d·tan(angle). Mur = 1,5 ; poste ≈ 1,0.
+   On retire 0,2 à la distance : la face avant du corps est plus près du mur que son centre. */
+function hauteurCachee(j) {
   const gz = Math.floor(j.z);
+  let meilleure = 0;
   for (const dx of [-0.28, 0, 0.28]) {
-    const cx = Math.floor(j.x + dx);
-    // poste (~1,0 de haut) : cache les pieds à moins de 0,4 case ; mur (1,5) : à moins de 0,6
-    const c1 = Math.floor(j.z + 0.4), c2 = Math.floor(j.z + 0.6);
-    if (c1 !== gz && estSolide(cx, c1)) return true;
-    if (c2 !== gz && caseA(cx, c2) === '#') return true;
+    const cx = Math.floor(j.x + dx), cz = gz + 1;
+    if (!estSolide(cx, cz)) continue;
+    const H = caseA(cx, cz) === '#' ? 1.5 : 1.0;
+    const d = Math.max(0, cz - j.z - 0.2);
+    meilleure = Math.max(meilleure, H - TAN_PITCH * d);
   }
-  return false;
+  return meilleure > 0.03 ? meilleure : 0;
 }
 function fantomesDe(j) {
   const l = (j.mesh && j.mesh.userData.fantomes) || [];
@@ -2342,6 +2349,7 @@ function decorerPerimetre() {
   for (let z = 1; z < HAUT - 1; z++) { cases.push([0, z]); cases.push([LARG - 1, z]); }
   cases.forEach(([x, z]) => {
     if (r() < 0.42) return;
+    if (z > 0 && PLAN[z - 1][x] === 'K') return;      // la case du client reste dégagée
     const prop = liste[Math.floor(r() * liste.length)]();
     prop.position.set(x + 0.5 + (r() - 0.5) * 0.3, 1.5, z + 0.5 + (r() - 0.5) * 0.3);
     prop.rotation.y = r() * 6.28;
@@ -2449,14 +2457,20 @@ for (let z = 0; z < HAUT; z++) {
     const cx = x + 0.5, cz = z + 0.5;
     let m = null, poste = null;
 
+    // Case de mur juste derrière un comptoir : c'est là que se tient le client. Mur bas
+    // (comptoir de service) pour qu'on le voie ; la collision reste celle du plan.
+    const derriereComptoir = (c === '#' && z > 0 && PLAN[z - 1][x] === 'K');
     if (c === '#') {
       if (niveauCourant.mode === 'glace') {
         // Seul le pourtour a des pics ; la rangée intérieure reste un obstacle
         // (collision par la grille) mais n'est plus dessinée : de l'eau libre.
-        if (x === 0 || z === 0 || x === LARG - 1 || z === HAUT - 1) {
+        if (!derriereComptoir && (x === 0 || z === 0 || x === LARG - 1 || z === HAUT - 1)) {
           m = creerMurIceberg();
           m.position.set(cx, 0, cz);
         }
+      } else if (derriereComptoir) {
+        m = matsMur ? new THREE.Mesh(new THREE.BoxGeometry(1, 0.45, 1), matsMur) : boite(1, 0.45, 1, niveauCourant.mur);
+        m.position.set(cx, 0.225, cz);
       } else {
         m = matsMur ? new THREE.Mesh(new THREE.BoxGeometry(1, 1.5, 1), matsMur) : boite(1, 1.5, 1, niveauCourant.mur);
         m.position.set(cx, 0.75, cz);
@@ -3043,7 +3057,8 @@ function creerJoueur(padId, nom, place, photo) {
   });
   g.scale.set(ECH_LARG, ECH_HAUT, ECH_LARG);
   g.userData.fantomes = [];
-  ajouterSilhouette(g, couleurHex, g.userData.fantomes);
+  g.userData.planFantome = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);   // garde y ≤ constante
+  ajouterSilhouette(g, couleurHex, g.userData.fantomes, g.userData.planFantome);
 
   if (photo) {
     // La photo remplace les traits dessinés, sinon le nez traverse le disque
@@ -3439,6 +3454,9 @@ function creerClient() {
   Jeu.clients.push(cl);
   Son.client();
   majCommandes();
+  flotter(new THREE.Vector3(poste.centre.x, 0, poste.centre.z + 1), 'Nouveau contrat', '#c8ff3f');
+  if (cl.carteDom) cl.carteDom.classList.add('nouveau');
+  annoncer('Nouveau contrat au comptoir', '#c8ff3f');
 }
 
 function retirerClient(cl) {
@@ -5303,7 +5321,7 @@ function appliquerAccessoire(j, id) {
   }
   acc.traverse(m => { if (m.isMesh) m.castShadow = true; });
   acc.userData.fantomes = [];
-  ajouterSilhouette(acc, j.couleur, acc.userData.fantomes);
+  ajouterSilhouette(acc, j.couleur, acc.userData.fantomes, j.mesh.userData.planFantome);
   j.mesh.add(acc);
   j.accessoire = acc;
   j.accessoireId = id;

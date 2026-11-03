@@ -51,6 +51,8 @@ dialog::backdrop{background:#000a}
 #gauge>div{flex:1;max-width:260px;height:8px;border-radius:4px;background:var(--nuit);overflow:hidden}#gbar{display:block;height:100%;width:0;background:var(--vert);transition:width .4s}
 #cf{padding:.8rem 1rem}#cf label{display:block;margin:.5rem 0 .1rem;color:var(--doux);font-size:.9rem}#cf input,#cf select{width:100%;background:var(--nuit);border:1px solid var(--trait);border-radius:6px;padding:.4rem .5rem;color:inherit;font:inherit}
 .res{margin-top:.9rem;font-size:1.3rem;font-weight:700;color:var(--vert)}
+.ping{border-color:var(--vert)!important;color:var(--vert);font-weight:700}
+#cf iframe{width:100%;height:68vh;border:0;border-radius:6px;background:#fff}
 </style>
 </head>
 <body>
@@ -59,7 +61,7 @@ dialog::backdrop{background:#000a}
   <select id="theme" aria-label="Thème"></select>
   <select id="prof" aria-label="Profil du patient"><option value="">Patient neutre</option><option value="presse">Pressé</option><option value="bavard">Bavard</option><option value="anxieux">Anxieux</option><option value="observance">Suit mal son traitement</option><option value="*">Profil au hasard</option></select>
   <button id="new" class="main" disabled>Patient suivant</button>
-  <button id="calcbtn">Calculateurs</button>
+  <button id="calcbtn">Outils</button>
   <button id="docbtn" disabled>Documents <span id="dc"></span></button>
   <button id="end" disabled>Terminer et débriefer</button>
 </header>
@@ -75,21 +77,21 @@ const DATA = 'cas_cliniques.json';        // à placer à côté de cette page
 const $ = (id) => document.getElementById(id);
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-let db, cas, hist = [], busy = false, over = false, profil = '', points = null, got = new Set(), cv = 0;
+let db, cas, hist = [], busy = false, over = false, profil = '', points = null, got = new Set(), cv = 0, unlocked = new Set();
 const PL = { presse: 'pressé', bavard: 'bavard', anxieux: 'anxieux', observance: 'suit mal son traitement' };
 
 function add(cls, html) { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; $('chat').append(d); d.scrollIntoView({ block: 'end' }); return d; }
 function lock(on) { busy = on; $('send').disabled = $('in').disabled = on || over || !cas; $('new').disabled = on || !db; $('end').disabled = on || over || hist.length < 3;
   $('hint').disabled = on || over || hist.length < 2; const n = hist.filter((m) => m.content === '(indice demandé)').length; $('hc').textContent = n || '';
-  const nd = cas ? (cas.documents || []).length : 0; $('docbtn').disabled = !nd; $('dc').textContent = nd || ''; }
+  const nd = unlocked.size; $('docbtn').disabled = !nd; $('dc').textContent = nd || ''; }
 
 async function ask(mode, el) {
-  const body = { mode, cas: mode === 'chat' ? { enonce: cas.enonce, docs: (cas.documents || []).length > 0 } : { enonce: cas.enonce, questions: cas.questions, points: points || [] }, profil, messages: hist };
+  const body = { mode, cas: mode === 'chat' ? { enonce: cas.enonce, docs: (cas.documents || []).map(docTitle) } : { enonce: cas.enonce, questions: cas.questions, points: points || [], interactions: (cas.connaissances || {}).interactions || [] }, profil, messages: hist };
   const r = await fetch(WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-App-Secret': SECRET }, body: JSON.stringify(body) });
   if (!r.ok) { let m = 'Erreur ' + r.status; try { const j = await r.json(); m = j.error + (j.details ? ' (' + j.details.join(', ') + ')' : ''); } catch {} throw new Error(m); }
   let out = '';
   if (!(r.headers.get('content-type') || '').includes('event-stream')) {
-    const j = await r.json(); out = (j.choices && j.choices[0].message.content) || ''; el.innerHTML = fmt(out); return out;
+    const j = await r.json(); out = (j.choices && j.choices[0].message.content) || ''; el.innerHTML = fmt(vis(out)); return out;
   }
   const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '';
   for (;;) {
@@ -97,7 +99,7 @@ async function ask(mode, el) {
     buf += dec.decode(value, { stream: true }); const lines = buf.split('\n'); buf = lines.pop();
     for (const l of lines) {
       if (!l.startsWith('data:')) continue; const d = l.slice(5).trim(); if (d === '[DONE]') continue;
-      try { const t = JSON.parse(d).choices[0].delta.content; if (t) { out += t; el.innerHTML = fmt(out); el.scrollIntoView({ block: 'end' }); } } catch {}
+      try { const t = JSON.parse(d).choices[0].delta.content; if (t) { out += t; el.innerHTML = fmt(vis(out)); el.scrollIntoView({ block: 'end' }); } } catch {}
     }
   }
   if (!out.trim()) throw new Error('Réponse vide : réessayez.');
@@ -106,7 +108,7 @@ async function ask(mode, el) {
 
 async function turn(mode, cls) {
   lock(true); const el = add(cls, '…');
-  try { const out = await ask(mode, el); if (mode === 'chat') { hist.push({ role: 'assistant', content: out }); cover(); } return out; }
+  try { const out = await ask(mode, el); if (mode === 'chat') { hist.push({ role: 'assistant', content: out }); cover(); unlockFrom(out); } return out; }
   catch (e) { el.remove(); add('err', esc(e.message)); if (mode === 'chat') hist.pop(); }
   finally { lock(false); }
 }
@@ -116,7 +118,7 @@ function newPatient() {
   const pool = db.cas.filter((c) => t === '*' || (t === '~' ? c.theme !== 'cardiologie_pediatrique' : c.theme === t));
   cas = pool[Math.floor(Math.random() * pool.length)]; over = false;
   const pv = $('prof').value; profil = pv === '*' ? ['presse', 'bavard', 'anxieux', 'observance', ''][Math.floor(Math.random() * 5)] : pv;
-  points = null; got = new Set(); const k = ++cv; gauge();
+  points = null; got = new Set(); unlocked = new Set(); $('docbtn').classList.remove('ping'); const k = ++cv; gauge();
   setTimeout(() => ask('checklist', document.createElement('div')).then((t) => { const a = arr(t); if (a && k === cv) { points = a.map(String).slice(0, 10); gauge(); } }).catch(() => {}), 0);
   const lib = (db.meta.themes.find((x) => x.id === cas.theme) || {}).libelle || '';
   $('chat').innerHTML = ''; add('ticket', 'Un patient entre à l\'officine<b>' + cas.id + '</b>' + esc(lib));
@@ -144,12 +146,12 @@ function docHTML(d) {
     (d.lignes || []).map((l) => '<tr><td>' + f(l.ech) + '</td><td>' + f(l.analyse) + '</td><td class="r">' + f(l.resultat) + '</td><td>' + f(l.unite) + '</td>' + (ref ? '<td>' + f(l.ref) + '</td>' : '') + '</tr>').join('') + '</table>' + pied + '</div>';
 }
 function openDoc(i) {
-  const ds = cas.documents || [];
+  const ds = [...unlocked].sort((x, y) => x - y).map((k) => cas.documents[k]);
   $('tabs').innerHTML = ds.map((d, k) => '<button data-k="' + k + '"' + (k === i ? ' class="on"' : '') + '>' + f(d.titre || 'Ordonnance') + '</button>').join('') + '<button class="x" id="close">Fermer</button>';
   $('tabs').querySelectorAll('button[data-k]').forEach((b) => { b.onclick = () => openDoc(+b.dataset.k); });
   $('close').onclick = () => $('dlg').close(); $('doc').innerHTML = docHTML(ds[i]);
 }
-$('docbtn').onclick = () => { openDoc(0); $('dlg').showModal(); };
+$('docbtn').onclick = () => { $('docbtn').classList.remove('ping'); openDoc(0); $('dlg').showModal(); };
 $('dlg').onclick = (e) => { if (e.target === $('dlg')) $('dlg').close(); };
 const arr = (t) => { try { return JSON.parse(t.match(/\[[\s\S]*\]/)[0]); } catch { return null; } };
 function gauge() { $('gauge').hidden = !points; if (!points) return; $('gbar').style.width = (100 * got.size / points.length) + '%'; $('gtxt').textContent = 'Informations clés : ' + got.size + '/' + points.length; }
@@ -163,9 +165,12 @@ const CALCS = [
  ['Dose pédiatrique (mg/kg/jour)', [KG, ['mgkg', 'Dose (mg/kg/jour)'], ['n', 'Prises par jour'], ['c', 'Concentration (mg/mL)']], (v) => { const p = v.kg * v.mgkg / v.n; return [p, 'mg par prise, soit ' + (p / v.c).toFixed(1) + ' mL par prise (' + (p * v.n).toFixed(0) + ' mg/jour)']; }],
  ['mmol/L vers g/L', [['mm', 'Valeur (mmol/L)'], ['mw', 'Masse molaire (g/mol)']], (v) => [v.mm * v.mw / 1000, 'g/L']],
  ['Créatinine µmol/L vers mg/dL', [CR], (v) => [v.cr / 88.4, 'mg/dL']],
+ ['Substitution générique (outil)', [], 'substitution_generique.html'],
+ ['Hémogramme, repères (outil)', [], 'hemogramme_nfs.html'],
 ];
 function calcUI(i) {
   const [, fs, run] = CALCS[i];
+  if (typeof run === 'string') { $('cf').innerHTML = '<iframe src="' + run + '" title="Outil"></iframe>'; $('cf').oninput = null; return; }
   $('cf').innerHTML = fs.map(([id, lab, opt]) => '<label for="c_' + id + '">' + lab + '</label>' + (opt ? '<select id="c_' + id + '">' + opt.map((o) => '<option>' + o + '</option>').join('') + '</select>' : '<input id="c_' + id + '" type="number" step="any" inputmode="decimal">')).join('') + '<div class="res" id="cres"></div><p class="pied" style="color:var(--doux)">Résultat indicatif : se référer au RCP du médicament.</p>';
   const go = () => { const v = {}; fs.forEach(([id, , opt]) => { const e = $('c_' + id); v[id] = opt ? e.selectedIndex : parseFloat(e.value.replace(',', '.')); }); const r = run(v); $('cres').textContent = Number.isFinite(r[0]) ? Number(r[0].toPrecision(3)) + ' ' + r[1] : 'Renseignez tous les champs.'; };
   $('cf').oninput = go; go();
@@ -173,6 +178,12 @@ function calcUI(i) {
 $('csel').innerHTML = CALCS.map((c, i) => '<option value="' + i + '">' + c[0] + '</option>').join(''); $('csel').onchange = () => calcUI(+$('csel').value);
 $('calcbtn').onclick = () => { calcUI(+$('csel').value); $('calc').showModal(); }; $('cclose').onclick = () => $('calc').close();
 $('calc').onclick = (e) => { if (e.target === $('calc')) $('calc').close(); };
+const nrm = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+function docTitle(d) { return d.titre || 'Ordonnance'; }
+function vis(s) { return s.replace(/\[DOC:[^\]]*\]/g, '').replace(/\[(?:D|DO|DOC|DOC:[^\]]*)?$/, ''); }
+function unlockFrom(t) {
+  for (const m of t.matchAll(/\[DOC:([^\]]+)\]/g)) (cas.documents || []).forEach((d, i) => { const a = nrm(docTitle(d)), b = nrm(m[1]); if (a.includes(b) || b.includes(a)) { if (!unlocked.has(i)) $('docbtn').classList.add('ping'); unlocked.add(i); } });
+}
 $('new').onclick = newPatient;
 $('end').onclick = async () => {
   over = true; lock(true);

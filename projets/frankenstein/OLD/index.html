@@ -14,6 +14,8 @@
   body{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;color:var(--creme)}
   canvas{display:block}
 
+  #vignette{position:fixed;inset:0;pointer-events:none;z-index:1;
+    background:radial-gradient(ellipse at 50% 46%, rgba(0,0,0,0) 58%, rgba(0,0,0,.42) 100%)}
   .hud{position:fixed;pointer-events:none;z-index:5}
 
   /* Bandeau haut */
@@ -57,15 +59,30 @@
   #medaille{font-size:15px;letter-spacing:.3em;text-transform:uppercase;font-weight:700}
 
   /* Commandes */
+  /* Tickets de commande : bandeau horizontal en haut (marge au-dessus du monde) */
   #commandes{
-    top:78px;right:20px;width:310px;display:flex;flex-direction:column;gap:11px;
+    top:8px;right:250px;display:flex;flex-direction:row;align-items:flex-start;gap:10px;
   }
   .cmd{
-    background:var(--panneau);border:1px solid var(--trait);border-left-width:6px;
-    border-radius:9px;padding:14px 16px;
+    width:188px;background:var(--panneau);border:1px solid var(--trait);border-left-width:6px;
+    border-radius:9px;padding:8px 11px 10px;position:relative;
+    clip-path:polygon(0 0,100% 0,100% calc(100% - 7px),calc(100% - 6px) 100%,calc(100% - 12px) calc(100% - 7px),calc(100% - 18px) 100%,calc(100% - 24px) calc(100% - 7px),0 calc(100% - 7px));
+    padding-bottom:16px;
   }
-  .cmd .nom{font-size:20px;font-weight:700;margin-bottom:8px;letter-spacing:.01em}
-  .cmd .ing{font-size:14px;color:var(--creme);opacity:.72;letter-spacing:.02em;margin-bottom:11px;line-height:1.4}
+  .cmd .nom{font-size:13px;font-weight:700;margin-bottom:6px;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cmd .ing{display:none}
+  .cmd .ligne{display:flex;align-items:center;gap:4px;margin-bottom:7px;min-height:26px}
+  .cmd .pl{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:800;color:#10161a;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18),0 0 0 1.5px rgba(0,0,0,.35)}
+  .cmd .plus{color:var(--creme);opacity:.55;font-weight:700;font-size:13px;padding:0 1px}
+  .cmd .etapes{display:flex;align-items:center;gap:3px;margin-left:auto;color:var(--creme);opacity:.8}
+  .cmd .etapes svg{width:17px;height:17px;display:block}
+  .cmd .etapes .fl{opacity:.45;font-size:11px}
+  .cmd .ticket{display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--creme);opacity:.78;min-height:26px;margin-bottom:7px}
+  .cmd .ticket svg{width:22px;height:22px;flex:none}
+  .cmd.chaud{animation:cmdChaud .6s ease-in-out infinite alternate}
+  @keyframes cmdChaud{to{background:#3a1713;border-color:#e0523c}}
   .jauge{height:7px;background:#1a2a23;border-radius:4px;overflow:hidden}
   .jauge i{display:block;height:100%;background:var(--vert);transition:width .12s linear}
   .jauge.chaud i{background:var(--rouge)}
@@ -84,6 +101,42 @@
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
     text-align:center;padding:40px;
   }
+  /* Accueil sur grand écran (16/9) : trois colonnes + une rangée de mondes */
+  @media (min-width:1000px) and (min-aspect-ratio:4/3){
+    #voile.accueil{
+      display:grid;grid-template-columns:minmax(230px,330px) minmax(0,1fr) minmax(250px,400px);
+      grid-template-rows:auto minmax(0,1fr) auto auto;
+      grid-template-areas:"titre titre titre" "qr joueurs lettre" "mondes mondes mondes" "consigne consigne consigne";
+      gap:16px 34px;align-items:start;justify-content:stretch;text-align:left;padding:26px 44px 22px;
+    }
+    #voile.accueil h1{grid-area:titre;text-align:center}
+    #voile.accueil #rejoindre{grid-area:qr;align-self:center;flex-direction:column;align-items:flex-start;gap:16px}
+    #voile.accueil #qr{width:min(230px,22vh);height:min(230px,22vh)}
+    #voile.accueil #code{font-size:clamp(42px,6.2vh,64px);margin-bottom:10px}
+    #voile.accueil #lien{max-width:300px}
+    #voile.accueil #liste{grid-area:joueurs;align-self:center;align-content:flex-start;justify-content:center;
+      max-height:100%;overflow:auto;padding:2px 4px 8px;gap:16px}
+    #voile.accueil .carteJ{flex:1 1 128px;width:auto;max-width:250px;min-width:0;padding:12px 10px 14px}
+    #voile.accueil .coloris{max-width:100%}
+    #voile.accueil .carteJ .apercu{width:min(100%,clamp(104px,19vh,220px));height:auto;aspect-ratio:208/264;margin-bottom:8px}
+    #voile.accueil .nivCarte{padding:clamp(12px,1.8vh,20px) 16px}
+    #voile.accueil #lettre{font-size:clamp(14px,1.5vh,17px)}
+    #voile.accueil #lettre{grid-area:lettre;max-width:none;margin:0;align-self:center}
+    #voile.accueil #niveaux{grid-area:mondes;max-width:none;width:100%;flex-wrap:nowrap;justify-content:stretch;margin:0;gap:12px}
+    #voile.accueil .nivCarte{flex:1 1 0;width:auto;min-width:0}
+    #voile.accueil #consigne{grid-area:consigne;text-align:center}
+  }
+  @media (min-width:1000px) and (min-aspect-ratio:4/3) and (max-width:1599px){
+    #voile.accueil{
+      grid-template-columns:minmax(220px,280px) minmax(0,1fr);
+      grid-template-rows:auto minmax(0,1fr) auto auto auto;
+      grid-template-areas:"titre titre" "qr joueurs" "lettre lettre" "mondes mondes" "consigne consigne";
+    }
+    #voile.accueil #lettre{align-self:stretch;padding:10px 18px}
+    #voile.accueil #lettre .lt-txt{font-size:13px;line-height:1.45}
+  }
+  #voile > *{flex-shrink:0}
+  #voile{overflow-y:auto}
   #voile h1{font-size:15px;letter-spacing:.42em;text-transform:uppercase;color:var(--vert);font-weight:500}
   #rejoindre{display:flex;align-items:center;gap:38px}
   #cadreQR{background:#f4f7f4;padding:16px;border-radius:14px;line-height:0}
@@ -110,11 +163,21 @@
     padding:10px 20px;border-radius:8px;border:1px solid var(--ambre);background:transparent;
     color:var(--ambre);cursor:pointer}
   #actionsFin button:hover{background:var(--ambre);color:#0b1014}
+  #lettre{max-width:640px;margin:6px auto 0;padding:14px 20px;border:1px solid #5a4a2e;border-radius:6px;
+    background:linear-gradient(180deg,#2a2218,#1e1912);color:#e6d9bd;text-align:left;
+    font-family:Georgia,'Times New Roman',serif;font-size:14px;line-height:1.55}
+  #lettre:empty{display:none}
+  #lettre .lt-ent{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#b9a06a;margin-bottom:6px}
+  #lettre .lt-sig{margin-top:6px;text-align:right;font-style:italic;color:#b9a06a}
+  #ps{max-width:560px;margin:0 auto;font-family:Georgia,serif;font-style:italic;font-size:14px;color:#d8c9a4}
   .carteJ{cursor:pointer;flex-direction:column;text-align:center;align-items:center}
   .carteJ:hover{border-color:var(--ambre)}
+  .pretok{display:block;margin-top:5px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--vert)}
   .coloris{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:132px;margin-top:7px}
   .pastille{width:18px;height:18px;border-radius:50%;border:2px solid transparent;padding:0;cursor:pointer;
     box-shadow:0 0 0 1px rgba(255,255,255,.25)}
+  .roleBtn{margin-top:8px;background:transparent;border:1px solid #5a4a2e;color:#d8c9a4;font:inherit;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:5px 9px;border-radius:6px;cursor:pointer}
+  .roleBtn:hover{background:#5a4a2e;color:#fff}
   .pastille.sel{border-color:#fff;transform:scale(1.15)}
   .pastille.pris{opacity:.22;cursor:not-allowed}
   .carteJ .apercu{display:block;width:104px;height:132px;margin:0 auto 6px;border-radius:8px;background:rgba(255,255,255,.04)}
@@ -151,7 +214,8 @@
   <b>Trappe</b> déposer sur le tapis → <b>Table</b> récupérer → <b>Portail</b> livrer.
 </div>
 
-<div id="voile">
+<div id="vignette"></div>
+<div id="voile" class="accueil">
   <h1>Frankenstein's Lab</h1>
   <div id="rejoindre">
     <div id="cadreQR"><canvas id="qr"></canvas></div>
@@ -163,6 +227,7 @@
   </div>
   <div id="liste"></div>
   <div id="niveaux"></div>
+  <div id="lettre"></div>
   <div id="consigne">En attente des manettes</div>
 </div>
 
@@ -527,7 +592,7 @@ function qrEncoder() {
 const REGL = {
   duree: 240,            // durée d'un service, en secondes
   vitesse: 4.3,          // vitesse des personnages (cases/s)
-  rayonJoueur: 0.30,
+  rayonJoueur: 0.34,
   porteeAction: 1.35,
   tapisVitesse: 2.7,     // cases/s — il faut suivre le rythme
   poussetapis: 0.8,      // le tapis pousse aussi les joueurs qui marchent dessus
@@ -604,32 +669,28 @@ const NIVEAUX = {
     accent: '#c8ff3f', fond: 0x0a0f14, sol: 0x14181c, damier: 0x1a1f24,
     mode: 'aucun',
     plan: [
-      '###############',
-      '#11...22...33.#',
-      '#.............#',
-      '######...######',
-      '#.............#',
-      '#..M.......M..#',
-      '#......X......#',
-      '#..A.......A..#',
-      '#.............#',
-      '#..E.......E..#',
-      '#.............#',
-      '####I####.#####',
-      '#>>>>>>>>>>>O.#',
-      '#.............#',
-      '#.K...B...K..K#',
-      '###############'
+      '#####################',
+      '#.11.....22.....33.G#',
+      '#...................#',
+      '#...M.A.E.X.E.A.M...#',
+      '#...................#',
+      '###I###.......#######',
+      '#>>>>>>>>>>>>>>>>O..#',
+      '#...................#',
+      '#..K....B...K....K..#',
+      '#####################'
     ],
-    spawns: [[4.5, 2.5], [11.5, 2.5], [4.5, 9.5], [12.5, 9.5]],
-    tapis: { x0: 1.5, x1: 11.5, z: 12.5 },
-    points: [[2.5, 10.5], [13.5, 5.5], [4.5, 1.5], [9.5, 10.5], [9.5, 1.5]]
+    spawns: [[3.5, 2.5], [7.5, 4.5], [13.5, 4.5], [17.5, 2.5]],
+    tapis: { x0: 1.5, x1: 16.5, z: 6.5 },
+    points: [[2.5, 7.5], [18.5, 4.5], [6.5, 2.5], [14.5, 7.5], [12.5, 2.5]]
   },
   banquise: {
     eclairage: { ambiante: [0x7fa8c4, 0.62], soleil: [0xeaf6ff, 0.85], appoint: [0x4bd1ff, 0.3] },
     id: 'banquise', mur: 0x2b4356, titre: "La Banquise", resume: "Deux rives, un chenal, un radeau. L'eau ne pardonne pas.",
     accent: '#8fd8ff', fond: 0x0b1620, sol: 0x1b2a36, damier: 0x22333f,
     mode: 'glace',
+    blocs: [{ cx: 5.2, cz: 2.5, w: 9.2, h: 3.6 }, { cx: 5.2, cz: 7.0, w: 9.2, h: 4.6 }, { cx: 15.8, cz: 2.5, w: 9.2, h: 3.6 }, { cx: 15.8, cz: 7.0, w: 9.2, h: 4.6 }],
+    ponts: [[4.5, 4.5], [16.5, 4.5]],
     // '~' = la seule br\u00e8che du chenal s\u00e9parant les deux rives : de l'eau
     // en permanence, jamais un mur. Le radeau (voir `radeau` ci-dessous)
     // est l'unique moyen de la franchir sans tomber.
@@ -637,57 +698,49 @@ const NIVEAUX = {
     // colonne du chenal -- on ne relie le haut et le bas d'une rive
     // qu'en passant par le radeau, jamais \u00e0 pied.
     plan: [
-      '###################',
-      '#........~........#',
-      '#.1..2.3.~........#',
-      '#........~........#',
-      '#........~........#',
-      '#..M..A..~...E....#',
-      '#........~........#',
-      '###...###~###...###',
-      '#........~........#',
-      '#..M..A..~...E....#',
-      '#..X.....~........#',
-      '#........~.I......#',
-      '#........~.>>>>>>O#',
-      '#........~..K.B.K.#',
-      '###################'
+      '#####################',
+      '#G.1.2.3..~........G#',
+      '#.........~.........#',
+      '#..M..A...~..E......#',
+      '###...####~####...###',
+      '#.........~.........#',
+      '#..M..A...~.IE......#',
+      '#..X......~.>>>>>>>O#',
+      '#.........~..K.B.K..#',
+      '#####################'
     ],
-    spawns: [[3.5, 3.5], [6.5, 10.5], [13.5, 3.5], [14.5, 10.5]],
-    tapis: { x0: 11.5, x1: 16.5, z: 12.5 },
-    points: [[6.5, 4.5], [3.5, 8.5], [14.5, 4.5], [15.5, 8.5], [5.5, 11.5]],
+    spawns: [[4.5, 2.5], [7.5, 7.5], [15.5, 2.5], [14.5, 5.5]],
+    tapis: { x0: 12.5, x1: 18.5, z: 7.5 },
+    points: [[2.5, 7.5], [18.5, 3.5], [4.5, 2.5], [16.5, 7.5], [8.5, 6.5]],
     // Ponton s\u00fbr o\u00f9 l'on r\u00e9apparait apr\u00e8s une chute \u00e0 l'eau (rive gauche,
     // loin du chenal pour ne pas replonger aussit\u00f4t).
     abri: [2.5, 12.5],
     // Trajet du radeau : parcourt tout le chenal de haut en bas, en
     // continu -- c'est lui qui relie les 4 zones entre elles.
-    radeau: { x: 9.5, z0: 1.5, z1: 13.5 },
+    radeau: { x: 10.5, z0: 1.5, z1: 8.5 },
   },
   village: {
     eclairage: { ambiante: [0x6b5535, 0.42], soleil: [0xffb877, 0.55], appoint: [0xff8a3d, 0.28] },
     id: 'village', mur: 0x2a2016, titre: "Le Village", resume: "Travaillez en silence : les villageois patrouillent.",
     accent: '#f0b429', fond: 0x120d0a, sol: 0x1d1712, damier: 0x241c16,
     mode: 'discretion',
+    lanternes: [[4, 2], [10, 4], [8, 5]],
+    grange: { x0: 0.5, x1: 11.5 },
     plan: [
-      '#################',
-      '#.1..2..3..######',
-      '#..........######',
-      '#...............#',
-      '#..M......#..#..#',
-      '#.........#..#..#',
-      '#..A......#.X#..#',
-      '#.........#..#..#',
-      '#..E............#',
-      '#I..............#',
-      '#>>>>>>>>>>>>>>O#',
-      '#...............#',
-      '#..K....B....K..#',
-      '#...............#',
-      '#################'
+      '#####################',
+      '#.1..2..3.G.........#',
+      '#...................#',
+      '#..M.A.E....#..#..#.#',
+      '#...........#..#.X#.#',
+      '#I..................#',
+      '#>>>>>>>>>>>>>>>>>O.#',
+      '#...................#',
+      '#...K....B.....K....#',
+      '#####################'
     ],
-    spawns: [[4.5, 2.5], [13.5, 8.5], [4.5, 11.5], [13.5, 11.5]],
-    tapis: { x0: 1.5, x1: 14.5, z: 10.5 },
-    points: [[4.5, 9.5], [15.5, 4.5], [7.5, 2.5], [11.5, 9.5], [1.5, 3.5]]
+    spawns: [[3.5, 2.5], [10.5, 4.5], [4.5, 7.5], [15.5, 7.5]],
+    tapis: { x0: 1.5, x1: 17.5, z: 6.5 },
+    points: [[5.5, 4.5], [9.5, 5.5], [7.5, 2.5], [15.5, 7.5], [3.5, 5.5]]
   },
   geneve: {
     eclairage: { ambiante: [0x4a1e2a, 0.4], soleil: [0xffc98a, 0.4], appoint: [0xe0523c, 0.35] },
@@ -695,63 +748,77 @@ const NIVEAUX = {
     accent: '#e0523c', fond: 0x0d0a12, sol: 0x191320, damier: 0x1f1828,
     mode: 'defense',
     plan: [
-      '#############',
-      '#..1..2..3..#',
-      '#...........#',
-      '#####...#####',
-      '#####...#####',
-      '#...M...A...#',
-      '#...........#',
-      '###.##.##.###',
-      '#.E.##.##.X.#',
-      '#...##.##...#',
-      '#####...#####',
-      '#####...#####',
-      '#I..........#',
-      '#>>>>>>>>>>O#',
-      '#####...#####',
-      '#...........#',
-      '#..K..B..K..#'
+      '#####################',
+      '#......1..2..3.....G#',
+      '#...................#',
+      '#..M..#.......#..E..#',
+      '#..A.............X..#',
+      '###I###.......##...##',
+      '#>>>>>>>>>>>>>>>>O..#',
+      '#...................#',
+      '#..K......B......K..#',
+      '#####################'
     ],
-    spawns: [[3.5, 6.5], [10.5, 6.5], [3.5, 15.5], [10.5, 15.5]],
-    tapis: { x0: 1.5, x1: 10.5, z: 13.5 },
-    points: [[5.5, 12.5], [10.5, 2.5], [2.5, 2.5], [6.5, 6.5], [10.5, 12.5]]
+    spawns: [[5.5, 2.5], [15.5, 2.5], [7.5, 7.5], [13.5, 7.5]],
+    tapis: { x0: 1.5, x1: 16.5, z: 6.5 },
+    points: [[4.5, 2.5], [16.5, 2.5], [10.5, 4.5], [5.5, 7.5], [15.5, 7.5]]
   },
   orcades: {
     eclairage: { ambiante: [0x4a5560, 0.5], soleil: [0xb8c8cf, 0.6], appoint: [0xb07de0, 0.32] },
     id: 'orcades', mur: 0x1e2a30, titre: "Les Orcades", resume: "D\u00e9montez la Fianc\u00e9e avant qu'elle ne s'\u00e9veille.",
     accent: '#b07de0', fond: 0x0a1014, sol: 0x161d22, damier: 0x1c242a,
     mode: 'demontage',
+    maree: { z0: 7, z1: 8 },
     plan: [
-      '#################',
-      '#...............#',
-      '#..1....2....3..#',
-      '#...............#',
-      '#...............#',
-      '#...M.......M...#',
-      '#.....##.##.....#',
-      '#.....#...#.....#',
-      '#...A.#...#.A...#',
-      '#.....##.##.....#',
-      '#.......X.......#',
-      '#...E.......E...#',
-      '#...............#',
-      '#I..............#',
-      '#>>>>>>>>>>>>>>O#',
-      '#..K....B....K..#',
-      '#################'
+      '#####################',
+      '#..................G#',
+      '#..1......2......3..#',
+      '#..M..A..####..A..M.#',
+      '#...E...X#..#...E...#',
+      '###I###.......#######',
+      '#>>>>>>>>>>>>>>>>>O.#',
+      '#...................#',
+      '#..K......B......K..#',
+      '#####################'
     ],
-    spawns: [[4.5, 9.5], [13.5, 8.5], [4.5, 15.5], [12.5, 15.5]],
-    tapis: { x0: 1.5, x1: 14.5, z: 14.5 },
-    points: [[3.5, 13.5], [14.5, 1.5], [2.5, 1.5], [15.5, 12.5], [8.5, 7.5]]
+    spawns: [[2.5, 4.5], [18.5, 4.5], [5.5, 7.5], [15.5, 7.5]],
+    tapis: { x0: 1.5, x1: 17.5, z: 6.5 },
+    points: [[2.5, 7.5], [19.5, 1.5], [2.5, 1.5], [18.5, 7.5], [10.5, 1.5]]
   }
 };
-const ORDRE_NIVEAUX = ['labo', 'banquise', 'village', 'geneve', 'orcades'];
+/* Ordre du roman (récit de Victor) : la création, la mort de William à Genève,
+   la chaumière des De Lacey, la seconde créature aux Orcades, la poursuite
+   dans les glaces. */
+
+const ORDRE_NIVEAUX = ['labo', 'geneve', 'village', 'orcades', 'banquise'];
+const CHAPITRES = {
+  labo: 'Chapitre I · Ingolstadt', geneve: 'Chapitre II · Genève', village: 'Chapitre III · La chaumière',
+  orcades: 'Chapitre IV · Les Orcades', banquise: 'Chapitre V · Les glaces du pôle'
+};
+/* Lettres du capitaine Walton à sa sœur, Mme Saville : cadre du roman. Textes
+   originaux, inspirés du récit de Victor (Mary Shelley, 1818, domaine public). */
+const LETTRES = {
+  labo: ['Ingolstadt, tel que me le conte mon hôte',
+    'Frankenstein a repris son récit. Il parle d\'une nuit de novembre : deux années de veilles, des charniers visités en secret, et une chandelle presque consumée quand son ouvrage ouvrit un œil terne. Songez, ma sœur, à ce qu\'eût été cette nuit s\'il avait eu des mains pour l\'aider.'],
+  geneve: ['Genève, de la même veillée',
+    'On lui a écrit la mort de son plus jeune frère, William. Sur la route, un éclair lui a montré une silhouette immense qui se glissait entre les arbres, et il s\'est tu. La servante Justine fut condamnée à sa place. Tenez jusqu\'à l\'aube, dit-il, comme on conseille un équipage dans la tempête.'],
+  village: ['La chaumière, selon la créature',
+    'Il tient ceci de la bouche même de son œuvre : une chaumière, un vieillard aveugle, son fils, sa fille. L\'être se cachait, coupait du bois la nuit pour les ménager et apprenait leur langue en les écoutant. Quand il se montra, on le chassa. Travaillez sans bruit : ceux qui veillent n\'aiment pas ce qu\'ils ne comprennent pas.'],
+  orcades: ['Une île nue, au nord de l\'Écosse',
+    'Pressé par la créature, Victor a commencé une compagne pour elle. Une nuit, voyant à la fenêtre le visage de l\'autre qui guettait, il a déchiré l\'ouvrage et jeté ses restes à la mer. La créature a juré d\'être près de lui le soir de ses noces. Je crois qu\'il ne s\'est jamais pardonné ce geste.'],
+  banquise: ['Notre navire, pris dans les glaces',
+    'Un traîneau a passé au loin, tiré par des chiens. Le lendemain nous avons recueilli un homme à bout de forces : mon hôte. Il poursuit, dit-il, ce qu\'il a lui-même mis au monde jusqu\'au pôle. Les chenaux se ferment, la glace craque : serrons les coudes, ou nous n\'y survivrons pas.']
+};
+function psWalton(score) {
+  if (score < 100) return 'P.-S. — La nuit fut rude : mes hommes disent qu\'on a vu mieux.';
+  if (score < 300) return 'P.-S. — Honorable ouvrage ; l\'équipage tient bon.';
+  return 'P.-S. — Admirable. Si tous mes marins travaillaient ainsi, je serais déjà au pôle.';
+}
 let niveauCourant = NIVEAUX.labo;
 
 let PLAN = niveauCourant.plan;
 let LARG = PLAN[0].length, HAUT = PLAN.length;
-const SOLIDE = new Set(['#', '1', '2', '3', 'M', 'A', 'E', 'X', 'I', 'O', 'K', 'B']);
+const SOLIDE = new Set(['#', '1', '2', '3', 'M', 'A', 'E', 'X', 'I', 'O', 'K', 'B', 'G']);
 const caseA = (gx, gz) => (gx < 0 || gz < 0 || gx >= LARG || gz >= HAUT) ? '#' : PLAN[gz][gx];
 // L'eau de la banquise n'est PAS un mur : on doit pouvoir y marcher --
 // et y tomber. C'est majMode('glace') qui détecte la noyade, pas la
@@ -799,11 +866,13 @@ function nomObjet(o) {
     case 'brulee':  return 'Reste calciné';
     case 'boite':   return 'Caisse — ' + RECETTES[o.r].n;
     case 'ticket':  return 'Contrat';
+    case 'offrande': return 'Glands, baies et racines';
   }
   return '';
 }
 function couleurObjet(o) {
   if (!o) return 0xffffff;
+  if (o.k === 'offrande') return 0xa0662b;
   if (o.k === 'plante' || o.k === 'poudre') return PLANTES[o.p].c;
   if (o.k === 'ratee') return 0x6b7a72;
   if (o.k === 'brulee') return 0x2b2b2b;
@@ -936,8 +1005,45 @@ const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 16
    calculé pour que le laboratoire remplisse l'écran quel que soit le format. */
 const PITCH = 1.19;
 const CENTRE = new THREE.Vector3(LARG / 2, 0, HAUT / 2 + 0.2);
+/* Caméra de suivi : zoom maximal quand les joueurs sont proches (×2 : une case
+   paraît deux fois plus grande), dézoom automatique pour garder TOUS les joueurs
+   à l'écran, jamais au-delà des bords du monde. Touche C : plan fixe ⇄ suivi. */
+const Cam = { suivre: true, zoom: 1, cx: 0, cz: 0, dFit: 20, zoomMax: 2, marge: 2.5 };
+try { Cam.suivre = localStorage.getItem('frankencook_camera') === 'suivi'; } catch (e) {}   // plan fixe par défaut
+function appliquerCamera() {
+  const d = Cam.dFit / Cam.zoom;
+  camera.position.set(Cam.cx, Math.sin(PITCH) * d, Cam.cz + Math.cos(PITCH) * d);
+  camera.lookAt(Cam.cx, 0, Cam.cz);
+  camera.updateProjectionMatrix();
+}
+function suivreCamera(dt) {
+  let zc = 1, cx = LARG / 2, cz = HAUT / 2 + 0.2;
+  const actifs = [];
+  Jeu.joueurs.forEach(j => { if (!j.deconnecte) actifs.push(j); });
+  if (Cam.suivre && Jeu.phase === 'jeu' && actifs.length) {
+    let mnx = 1e9, mxx = -1e9, mnz = 1e9, mxz = -1e9;
+    actifs.forEach(j => { mnx = Math.min(mnx, j.x); mxx = Math.max(mxx, j.x); mnz = Math.min(mnz, j.z); mxz = Math.max(mxz, j.z); });
+    const w = (mxx - mnx) + 2 * Cam.marge, h = (mxz - mnz) + 2 * Cam.marge;
+    zc = Math.max(1, Math.min(Cam.zoomMax, LARG / w, HAUT / h));
+    const visL = LARG / zc, visH = HAUT / zc;
+    cx = Math.max(visL / 2, Math.min(LARG - visL / 2, (mnx + mxx) / 2));
+    cz = Math.max(visH / 2, Math.min(HAUT - visH / 2, (mnz + mxz) / 2)) + 0.2;
+  }
+  const k = 1 - Math.exp(-Math.min(dt, 0.1) * 4);       // lissage
+  Cam.zoom += (zc - Cam.zoom) * k;
+  Cam.cx += (cx - Cam.cx) * k;
+  Cam.cz += (cz - Cam.cz) * k;
+  appliquerCamera();
+}
+function basculerCamera() {
+  Cam.suivre = !Cam.suivre;
+  try { localStorage.setItem('frankencook_camera', Cam.suivre ? 'suivi' : 'fixe'); } catch (e) {}
+  annoncer('Caméra : ' + (Cam.suivre ? 'suit les joueurs' : 'plan fixe'), '#c8ff3f');
+}
+
 function cadrerCamera() {
   CENTRE.set(LARG / 2, 0, HAUT / 2 + 0.2);
+  Cam.zoom = 1; Cam.cx = CENTRE.x; Cam.cz = CENTRE.z;
   ajusterCamera();
 }
 
@@ -951,9 +1057,9 @@ function ajusterCamera() {
   const distV = demiH / Math.tan(fov / 2);
   const distH = demiL / Math.tan(fov / 2) / camera.aspect;
   const d = Math.max(distV, distH);
-  camera.position.set(CENTRE.x, Math.sin(PITCH) * d, CENTRE.z + Math.cos(PITCH) * d);
-  camera.lookAt(CENTRE);
-  camera.updateProjectionMatrix();
+  Cam.dFit = d;
+  if (!Cam.cx) { Cam.cx = CENTRE.x; Cam.cz = CENTRE.z; }
+  appliquerCamera();
 }
 ajusterCamera();
 
@@ -982,11 +1088,22 @@ soleil.shadow.mapSize.set(2048, 2048);
 const dc = soleil.shadow.camera;
 dc.left = -16; dc.right = 16; dc.top = 16; dc.bottom = -16; dc.near = 1; dc.far = 45;
 scene.add(soleil);
+scene.add(soleil.target);
 const appoint = new THREE.DirectionalLight(0x8b3fbf, 0.4);
 appoint.position.set(10, 8, -6);
 scene.add(appoint);
 
 function appliquerEclairageNiveau() {
+  // Le soleil et son cadre d'ombres suivent le centre du monde (monde élargi 16/9)
+  const cxm = LARG / 2, czm = HAUT / 2;
+  soleil.target.position.set(cxm, 0, czm);
+  soleil.target.updateMatrixWorld();
+  soleil.position.set(cxm - 9, 17, czm + 7);
+  const demi = Math.hypot(LARG, HAUT) / 2 + 3;
+  dc.left = -demi; dc.right = demi; dc.top = demi; dc.bottom = -demi; dc.near = 1; dc.far = 60;
+  dc.updateProjectionMatrix();
+  appoint.position.set(cxm + 10, 8, czm - 6);
+  eclairLumiere.position.set(cxm, 15, HAUT * 0.2);
   const e = niveauCourant.eclairage;
   ambiante.color.setHex(e.ambiante[0]); ambiante.intensity = e.ambiante[1];
   soleil.color.setHex(e.soleil[0]); soleil.intensity = e.soleil[1];
@@ -1122,6 +1239,11 @@ function mat(c, r, m) {
     color: c, roughness: r === undefined ? 0.82 : r, metalness: m || 0
   });
 }
+
+/* Proportions des personnages, façon Overcooked : larges et trapus. Largeur ×1,5
+   par rapport à la case, hauteur à peine plus grande qu'à l'origine (×1,05). */
+const ECH_LARG = 1.5, ECH_HAUT = 1.05;
+const RATIO_ECH = ECH_LARG / ECH_HAUT;    // compense l'écrasement des enfants (objet porté, badge, jauge)
 
 function humanoide(o) {
   const peau = o.peau, tenue = o.tenue, accent = o.accent, cheveux = o.cheveux;
@@ -1729,6 +1851,505 @@ let tablePoste = null;
 
 /* Construit (ou reconstruit) tout le décor du niveau courant. Appelée au
    chargement et à chaque changement de monde depuis le sélecteur. */
+/* ---- Sols procéduraux : dalles de labo, pavés de Genève, ardoise des Orcades.
+   Dessin 2D pur (testable hors Three.js). L'échelle est de 1 case = P pixels. ---- */
+function rngSol(graine) {
+  let a = graine >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function teinteSol(hex, k) {            // k < 1 assombrit, k > 1 éclaircit
+  const r = Math.min(255, Math.round(((hex >> 16) & 255) * k));
+  const g = Math.min(255, Math.round(((hex >> 8) & 255) * k));
+  const b = Math.min(255, Math.round((hex & 255) * k));
+  return 'rgb(' + r + ',' + g + ',' + b + ')';
+}
+function dessinerSol(cv, mode, L, H, base, alt, estSolideFn) {
+  const P = 48;
+  cv.width = L * P; cv.height = H * P;
+  const g = cv.getContext('2d');
+  g.fillStyle = teinteSol(base, 1); g.fillRect(0, 0, cv.width, cv.height);
+  for (let z = 0; z < H; z++) {
+    for (let x = 0; x < L; x++) {
+      if (estSolideFn && estSolideFn(x, z)) continue;
+      const r = rngSol(x * 7919 + z * 104729 + 17);
+      const px = x * P, pz = z * P;
+      const damier = (x + z) % 2 === 0;
+      const teinte = (damier ? alt : base);
+      const vari = 0.94 + r() * 0.12;
+      if (mode === 'defense') {
+        // pavés : 2×2 pierres irrégulières, joints sombres
+        const cx = [0, 0.38 + r() * 0.24, 1], cz = [0, 0.38 + r() * 0.24, 1];
+        for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+          const x0 = px + cx[i] * P, x1 = px + cx[i + 1] * P, z0 = pz + cz[j] * P, z1 = pz + cz[j + 1] * P;
+          g.fillStyle = teinteSol(teinte, vari * (0.9 + r() * 0.22));
+          g.fillRect(x0 + 1.5, z0 + 1.5, x1 - x0 - 3, z1 - z0 - 3);
+          g.fillStyle = 'rgba(255,255,255,0.045)';          // arête éclairée
+          g.fillRect(x0 + 1.5, z0 + 1.5, x1 - x0 - 3, 1.5);
+        }
+        g.fillStyle = 'rgba(0,0,0,0.38)';                    // joints
+        g.fillRect(px + cx[1] * P - 1, pz, 2.5, P); g.fillRect(px, pz + cz[1] * P - 1, P, 2.5);
+        g.fillRect(px, pz, P, 2); g.fillRect(px, pz, 2, P);
+      } else if (mode === 'demontage') {
+        // grandes dalles d'ardoise, fissures, plaques d'humidité
+        g.fillStyle = teinteSol(teinte, vari);
+        g.fillRect(px + 1, pz + 1, P - 2, P - 2);
+        g.fillStyle = 'rgba(255,255,255,0.04)'; g.fillRect(px + 1, pz + 1, P - 2, 2);
+        g.strokeStyle = 'rgba(0,0,0,0.5)'; g.lineWidth = 2; g.strokeRect(px + 1, pz + 1, P - 2, P - 2);
+        if (r() < 0.45) {                                     // fissure
+          g.strokeStyle = 'rgba(0,0,0,0.42)'; g.lineWidth = 1.2; g.beginPath();
+          let fx = px + r() * P, fz = pz;
+          g.moveTo(fx, fz);
+          for (let s = 0; s < 4; s++) { fx += (r() - 0.5) * 14; fz += P / 4; g.lineTo(fx, Math.min(pz + P, fz)); }
+          g.stroke();
+        }
+        if (r() < 0.35) {                                     // humidité
+          g.fillStyle = 'rgba(70,120,150,' + (0.05 + r() * 0.05) + ')';
+          g.beginPath(); g.ellipse(px + P * (0.3 + r() * 0.4), pz + P * (0.3 + r() * 0.4), P * (0.18 + r() * 0.2), P * (0.12 + r() * 0.14), r() * 3, 0, 6.3); g.fill();
+        }
+      } else {
+        // dalles de laboratoire : bord biseauté, joint, griffures, taches
+        g.fillStyle = teinteSol(teinte, vari);
+        g.fillRect(px + 1, pz + 1, P - 2, P - 2);
+        g.fillStyle = 'rgba(255,255,255,0.055)'; g.fillRect(px + 1, pz + 1, P - 2, 1.5); g.fillRect(px + 1, pz + 1, 1.5, P - 2);
+        g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(px + 1, pz + P - 2.5, P - 2, 1.5); g.fillRect(px + P - 2.5, pz + 1, 1.5, P - 2);
+        g.strokeStyle = 'rgba(0,0,0,0.5)'; g.lineWidth = 1.6; g.strokeRect(px + 0.8, pz + 0.8, P - 1.6, P - 1.6);
+        for (let k = 0; k < 3; k++) {                          // griffures
+          if (r() > 0.5) continue;
+          g.strokeStyle = 'rgba(255,255,255,' + (0.03 + r() * 0.04) + ')'; g.lineWidth = 1;
+          g.beginPath(); const sx = px + 4 + r() * (P - 12), sz = pz + 4 + r() * (P - 12);
+          g.moveTo(sx, sz); g.lineTo(sx + (r() - 0.5) * 16, sz + (r() - 0.5) * 16); g.stroke();
+        }
+        if (r() < 0.12) {                                      // tache
+          g.fillStyle = 'rgba(30,70,45,0.10)'; g.beginPath();
+          g.ellipse(px + P * 0.5, pz + P * 0.5, P * (0.14 + r() * 0.2), P * (0.1 + r() * 0.16), r() * 3, 0, 6.3); g.fill();
+        }
+      }
+      // grain fin
+      for (let k = 0; k < 14; k++) {
+        g.fillStyle = r() < 0.5 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.05)';
+        g.fillRect(px + r() * P, pz + r() * P, 1.5, 1.5);
+      }
+    }
+  }
+  // Ombre d'occlusion au pied des murs et des postes : ancre les objets au sol
+  if (estSolideFn) {
+    for (let z = 0; z < H; z++) for (let x = 0; x < L; x++) {
+      if (estSolideFn(x, z)) continue;
+      const px = x * P, pz = z * P, e = 20, a = 0.42;
+      const bord = (cond, x0, z0, x1, z1, w, h) => {
+        if (!cond) return;
+        const gr = g.createLinearGradient(x0, z0, x1, z1);
+        gr.addColorStop(0, 'rgba(0,0,0,' + a + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = gr; g.fillRect(Math.min(x0, x1), Math.min(z0, z1), w, h);
+      };
+      bord(estSolideFn(x - 1, z), px, pz, px + e, pz, e, P);
+      bord(estSolideFn(x + 1, z), px + P, pz, px + P - e, pz, e, P);
+      bord(estSolideFn(x, z - 1), px, pz, px, pz + e, P, e);
+      bord(estSolideFn(x, z + 1), px, pz + P, px, pz + P - e, P, e);
+    }
+  }
+  return cv;
+}
+
+/* ---- Murs procéduraux : face latérale (maçonnerie) et dessus (chaperon). ---- */
+function dessinerMurCote(cv, mode, base) {
+  const W = 128, Hh = 192; cv.width = W; cv.height = Hh;
+  const g = cv.getContext('2d'); const r = rngSol(base + 7);
+  g.fillStyle = teinteSol(base, 1); g.fillRect(0, 0, W, Hh);
+  if (mode === 'discretion') {                       // planches verticales, clous
+    const n = 5, lw = W / n;
+    for (let i = 0; i < n; i++) {
+      g.fillStyle = teinteSol(base, 0.86 + r() * 0.26); g.fillRect(i * lw + 1, 0, lw - 2, Hh);
+      g.strokeStyle = 'rgba(0,0,0,0.16)'; g.lineWidth = 1;
+      for (let k = 0; k < 5; k++) { g.beginPath(); const x = i * lw + 3 + r() * (lw - 6); g.moveTo(x, 0); g.bezierCurveTo(x + 3, 60, x - 3, 120, x + 1, Hh); g.stroke(); }
+      g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(i * lw, 0, 1.5, Hh);
+      g.fillStyle = 'rgba(200,200,200,0.35)';
+      [24, 96, 168].forEach(y => { g.beginPath(); g.arc(i * lw + lw / 2, y, 2, 0, 6.3); g.fill(); });
+    }
+  } else {                                           // appareil de pierre / brique
+    const rangs = mode === 'aucun' ? 8 : 5, h = Hh / rangs;
+    for (let j = 0; j < rangs; j++) {
+      const nb = mode === 'aucun' ? 4 : (mode === 'defense' ? 2 + (j % 2) : 3);
+      const dec = (j % 2) * (W / nb / 2);
+      for (let i = -1; i <= nb; i++) {
+        const bx = i * (W / nb) + dec, bw = W / nb;
+        g.fillStyle = teinteSol(base, 0.88 + r() * 0.26);
+        g.fillRect(bx + 1.5, j * h + 1.5, bw - 3, h - 3);
+        g.fillStyle = 'rgba(255,255,255,0.06)'; g.fillRect(bx + 1.5, j * h + 1.5, bw - 3, 1.5);
+        g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(bx + 1.5, j * h + h - 3.5, bw - 3, 2);
+        if (r() < 0.25) { g.fillStyle = 'rgba(0,0,0,0.10)'; g.fillRect(bx + 3 + r() * 8, j * h + 3 + r() * 6, 6 + r() * 14, 3); }
+      }
+      g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillRect(0, j * h, W, 2);
+    }
+    if (mode === 'demontage') {                      // coulées de salpêtre
+      for (let k = 0; k < 7; k++) { const x = r() * W; const gr = g.createLinearGradient(0, 0, 0, Hh * (0.4 + r() * 0.5));
+        gr.addColorStop(0, 'rgba(150,180,190,0.16)'); gr.addColorStop(1, 'rgba(150,180,190,0)');
+        g.fillStyle = gr; g.fillRect(x, 0, 3 + r() * 5, Hh); }
+    }
+  }
+  const ombre = g.createLinearGradient(0, Hh * 0.55, 0, Hh);   // pied plus sombre / sali
+  ombre.addColorStop(0, 'rgba(0,0,0,0)'); ombre.addColorStop(1, 'rgba(0,0,0,0.38)');
+  g.fillStyle = ombre; g.fillRect(0, Hh * 0.55, W, Hh * 0.45);
+  if (mode !== 'discretion') { g.fillStyle = 'rgba(70,110,60,0.12)'; for (let k = 0; k < 6; k++) g.fillRect(r() * W, Hh - 10 - r() * 22, 8 + r() * 16, 8 + r() * 14); }
+  return cv;
+}
+function dessinerMurDessus(cv, mode, base) {
+  const S = 128; cv.width = S; cv.height = S; const g = cv.getContext('2d'); const r = rngSol(base + 31);
+  const clair = teinteSol(base, 1.32);
+  g.fillStyle = clair; g.fillRect(0, 0, S, S);
+  g.fillStyle = 'rgba(255,255,255,0.10)'; g.fillRect(0, 0, S, 6); g.fillRect(0, 0, 6, S);       // arête éclairée
+  g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(0, S - 6, S, 6); g.fillRect(S - 6, 0, 6, S);
+  g.strokeStyle = 'rgba(0,0,0,0.5)'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, S - 3, S - 3);
+  if (mode === 'discretion') {
+    g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 1.5;
+    for (let i = 1; i < 4; i++) { g.beginPath(); g.moveTo(i * S / 4, 4); g.lineTo(i * S / 4, S - 4); g.stroke(); }
+  } else if (r() < 2) {
+    g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(S * 0.5, 4); g.lineTo(S * 0.5 + (r() - 0.5) * 12, S - 4); g.stroke();
+  }
+  for (let k = 0; k < 60; k++) { g.fillStyle = r() < 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.07)'; g.fillRect(r() * S, r() * S, 2, 2); }
+  return cv;
+}
+
+function texCanvas(cv) {
+  const t = new THREE.CanvasTexture(cv);
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy ? Math.min(8, renderer.capabilities.getMaxAnisotropy()) : 1;
+  t.jetable = true;       // libérée à la reconstruction du monde
+  return t;
+}
+function creerTextureSol(mode, L, H, base, alt) {
+  const cv = document.createElement('canvas');
+  dessinerSol(cv, mode, L, H, base, alt, (x, z) => SOLIDE.has(caseA(x, z)));
+  return texCanvas(cv);
+}
+
+/* Qualité graphique (touche V) : « élevée » = sols texturés avec ombres
+   d'occlusion, lumière d'ambiance hémisphérique, vignettage, ombres sans
+   moirage ; « standard » = rendu précédent. Mémorisée dans le navigateur. */
+const Qualite = { haute: true };
+try { Qualite.haute = localStorage.getItem('frankencook_qualite') !== 'standard'; } catch (e) {}
+const hemisphere = new THREE.HemisphereLight(0x9fb4ff, 0x241a20, 0);
+scene.add(hemisphere);
+function appliquerQualite() {
+  hemisphere.intensity = Qualite.haute ? 0.22 : 0;
+  soleil.shadow.bias = Qualite.haute ? -0.0004 : 0;
+  soleil.shadow.normalBias = Qualite.haute ? 0.03 : 0;
+  const v = document.getElementById('vignette');
+  if (v) v.style.display = Qualite.haute ? 'block' : 'none';
+}
+function basculerQualite() {
+  Qualite.haute = !Qualite.haute;
+  try { localStorage.setItem('frankencook_qualite', Qualite.haute ? 'haute' : 'standard'); } catch (e) {}
+  appliquerQualite();
+  if (Jeu.phase !== 'jeu') construireMonde();      // les sols sont reconstruits ; en partie : au prochain monde
+  annoncer('Qualité graphique : ' + (Qualite.haute ? 'élevée' : 'standard'), '#c8ff3f');
+}
+appliquerQualite();
+
+/* ===================================================================================
+   EFFETS (qualité « élevée ») : indicateurs sur les postes, silhouette des joueurs
+   derrière les murs, décor du pourtour, particules et animations. Chaque partie est
+   protégée : en cas d'erreur, les effets se coupent seuls et le jeu continue.
+   ================================================================================== */
+const Fx = { ok: true, groupe: new THREE.Group(), actifs: [], libres: [], horloge: 0, tex: null };
+scene.add(Fx.groupe);
+
+function creerTexturesFx() {
+  const mk = (taille, dessiner) => {
+    const cv = document.createElement('canvas'); cv.width = taille; cv.height = taille;
+    dessiner(cv.getContext('2d'), taille);
+    return new THREE.CanvasTexture(cv);
+  };
+  const disque = mk(64, (g, T) => {
+    const gr = g.createRadialGradient(T / 2, T / 2, 2, T / 2, T / 2, T / 2);
+    gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, T, T);
+  });
+  const rond = (couleur) => (g, T) => {
+    g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.arc(T / 2 + 2, T / 2 + 4, T * 0.42, 0, 6.3); g.fill();
+    g.fillStyle = couleur; g.beginPath(); g.arc(T / 2, T / 2, T * 0.42, 0, 6.3); g.fill();
+    g.lineWidth = 5; g.strokeStyle = '#fff'; g.stroke();
+  };
+  const alerte = mk(96, (g, T) => {
+    g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.moveTo(T / 2 + 2, 10); g.lineTo(T - 6, T - 12); g.lineTo(10, T - 12); g.closePath(); g.fill();
+    g.fillStyle = '#e0323c'; g.beginPath(); g.moveTo(T / 2, 6); g.lineTo(T - 8, T - 16); g.lineTo(8, T - 16); g.closePath(); g.fill();
+    g.lineWidth = 6; g.lineJoin = 'round'; g.strokeStyle = '#fff'; g.stroke();
+    g.fillStyle = '#fff'; g.font = 'bold 50px sans-serif'; g.textAlign = 'center'; g.fillText('!', T / 2, T - 26);
+  });
+  const pret = mk(96, (g, T) => {
+    rond('#2fae7a')(g, T);
+    g.strokeStyle = '#fff'; g.lineWidth = 9; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.beginPath(); g.moveTo(T * 0.3, T * 0.52); g.lineTo(T * 0.45, T * 0.66); g.lineTo(T * 0.72, T * 0.36); g.stroke();
+  });
+  const maintenir = mk(96, (g, T) => {
+    rond('#f0b429')(g, T);
+    g.fillStyle = '#10161a'; g.font = 'bold 46px sans-serif'; g.textAlign = 'center'; g.fillText('B', T / 2, T * 0.64);
+  });
+  return { disque: disque, alerte: alerte, pret: pret, maintenir: maintenir };
+}
+
+const PRESETS_FX = {
+  vapeur:    { coul: 0xe8f0f4, t0: 0.22, t1: 0.75, vie: [0.9, 1.4], vy: [0.5, 0.9], derive: 0.18, opa: 0.42, add: false, g: 0 },
+  fumee:     { coul: 0x25252b, t0: 0.28, t1: 0.95, vie: [1.0, 1.6], vy: [0.6, 1.0], derive: 0.22, opa: 0.62, add: false, g: 0 },
+  etincelle: { coul: 0xffe27a, t0: 0.12, t1: 0.04, vie: [0.35, 0.6], vy: [1.2, 2.2], derive: 1.0, opa: 0.95, add: true, g: -5 },
+  poussiere: { coul: 0xb9a78a, t0: 0.12, t1: 0.32, vie: [0.35, 0.5], vy: [0.2, 0.45], derive: 0.45, opa: 0.42, add: false, g: 0 },
+  colere:    { coul: 0xe0523c, t0: 0.14, t1: 0.42, vie: [0.6, 0.9], vy: [0.5, 0.8], derive: 0.3, opa: 0.55, add: false, g: 0 },
+  bulle:     { coul: 0x9fef5f, t0: 0.08, t1: 0.17, vie: [0.5, 0.8], vy: [0.6, 1.0], derive: 0.25, opa: 0.85, add: true, g: 0 }
+};
+function creerPoolFx(n) {
+  Fx.tex = creerTexturesFx();
+  for (let i = 0; i < n; i++) {
+    const m = new THREE.SpriteMaterial({ map: Fx.tex.disque, transparent: true, depthWrite: false, opacity: 0 });
+    const sp = new THREE.Sprite(m);
+    sp.visible = false; sp.renderOrder = 40;
+    Fx.groupe.add(sp);
+    Fx.libres.push({ sp: sp, vie: 0, vie0: 1, vx: 0, vy: 0, vz: 0, pr: null });
+  }
+}
+const hasard = (a, b) => a + Math.random() * (b - a);
+function emettre(type, x, y, z) {
+  const pr = PRESETS_FX[type], e = Fx.libres.pop();
+  if (!pr || !e) return;
+  e.pr = pr; e.vie0 = e.vie = hasard(pr.vie[0], pr.vie[1]);
+  e.vx = hasard(-1, 1) * pr.derive; e.vz = hasard(-1, 1) * pr.derive; e.vy = hasard(pr.vy[0], pr.vy[1]);
+  e.sp.material.color.setHex(pr.coul);
+  e.sp.material.blending = pr.add ? THREE.AdditiveBlending : THREE.NormalBlending;
+  e.sp.position.set(x, y, z);
+  e.sp.scale.set(pr.t0, pr.t0, 1);
+  e.sp.material.opacity = 0; e.sp.visible = true;
+  Fx.actifs.push(e);
+}
+function majFx(dt) {
+  for (let i = Fx.actifs.length - 1; i >= 0; i--) {
+    const e = Fx.actifs[i], pr = e.pr;
+    e.vie -= dt;
+    if (e.vie <= 0) { e.sp.visible = false; Fx.libres.push(e); Fx.actifs.splice(i, 1); continue; }
+    const t = 1 - e.vie / e.vie0;
+    e.vy += pr.g * dt;
+    e.sp.position.x += e.vx * dt; e.sp.position.y = Math.max(0.05, e.sp.position.y + e.vy * dt); e.sp.position.z += e.vz * dt;
+    const tail = pr.t0 + (pr.t1 - pr.t0) * t;
+    e.sp.scale.set(tail, tail, 1);
+    e.sp.material.opacity = pr.opa * Math.min(1, t * 6) * Math.min(1, (1 - t) * 2.2);
+  }
+}
+function effetRamassage(j) {
+  if (!Fx.ok || !Qualite.haute) return;
+  j.rebond = 0.32;
+  for (let k = 0; k < 3; k++) emettre('poussiere', j.x + hasard(-0.2, 0.2), 0.12, j.z + hasard(-0.2, 0.2));
+  for (let k = 0; k < 2; k++) emettre('etincelle', j.x, 1.2, j.z);
+}
+function animerJoueursFx(dt) {
+  Jeu.joueurs.forEach(j => {
+    if (!j.mesh) return;
+    let kx = 1, ky = 1;
+    if (j.rebond > 0) {                           // écrasement puis étirement
+      j.rebond = Math.max(0, j.rebond - dt);
+      const t = 1 - j.rebond / 0.32, k = Math.sin(t * Math.PI * 2) * (1 - t);
+      kx = 1 + 0.16 * k; ky = 1 - 0.2 * k;
+    }
+    j.mesh.scale.set(ECH_LARG * kx, ECH_HAUT * ky, ECH_LARG * kx);
+    const cache = Jeu.phase === 'jeu' && cacheDevant(j);
+    fantomesDe(j).forEach(f => { f.visible = cache; });
+    const vit = Math.hypot(j.x - (j.xPrec === undefined ? j.x : j.xPrec), j.z - (j.zPrec === undefined ? j.z : j.zPrec)) / Math.max(dt, 1e-3);
+    j.xPrec = j.x; j.zPrec = j.z;
+    j.fxT = (j.fxT || 0) - dt;
+    if (Jeu.phase === 'jeu' && vit > 2.6 && j.fxT <= 0) { emettre('poussiere', j.x, 0.1, j.z); j.fxT = 0.17; }
+  });
+}
+function emissionsFx(dt) {
+  Jeu.postes.forEach(p => {
+    p.fxT = (p.fxT || 0) - dt;
+    if (p.fxT > 0 || !p.centre) return;
+    const cx = p.centre.x + hasard(-0.2, 0.2), cz = p.centre.z + hasard(-0.2, 0.2);
+    if (p.t === 'etuve' && p.objet && !(p.panne > 0)) {
+      if (p.etat === 'cuisson') { emettre('etincelle', cx, 1.3, cz); if (Math.random() < 0.45) emettre('vapeur', cx, 1.4, cz); p.fxT = 0.2; }
+      else if (p.etat === 'brule') { emettre('fumee', cx, 1.4, cz); p.fxT = 0.1; }
+      else if (p.etat === 'pret') {
+        const reste = 1 - (p.t0 - REGL.cuisson) / REGL.fenetrePrete;
+        if (reste < 0.4) { emettre('fumee', cx, 1.4, cz); p.fxT = 0.25; }
+      }
+    } else if (p.t === 'alambic' && p.prog > 0 && !p.sortie) {
+      emettre('bulle', cx, 1.15, cz); p.fxT = 0.14;
+    } else if (p.t === 'mortier' && p.objet && p.objet.k === 'plante' && p.prog > 0) {
+      emettre('poussiere', cx, 1.05, cz); p.fxT = 0.18;
+    }
+  });
+  Jeu.clients.forEach(cl => {
+    if (!cl.mesh) return;
+    if (cl.reste / cl.total < 0.3) {
+      cl.fxT = (cl.fxT || 0) - dt;
+      if (cl.fxT <= 0) { emettre('colere', cl.mesh.position.x + hasard(-0.15, 0.15), 2.3, cl.mesh.position.z); cl.fxT = 0.33; }
+    }
+  });
+}
+/* Pastille d'état au-dessus des machines : « ! » (va brûler / en panne), ✓ (à prendre),
+   B (maintenir B pour travailler). */
+function majIndicateurs(dt) {
+  Jeu.postes.forEach(p => {
+    if (p.t !== 'etuve' && p.t !== 'alambic' && p.t !== 'mortier') return;
+    let etat = null;
+    if (p.t === 'etuve') {
+      if (p.panne > 0) etat = 'alerte';
+      else if (p.objet) {
+        if (p.etat === 'brule') etat = 'alerte';
+        else if (p.etat === 'pret') etat = (1 - (p.t0 - REGL.cuisson) / REGL.fenetrePrete) < 0.4 ? 'alerte' : 'pret';
+      }
+    } else if (p.t === 'alambic') {
+      if (p.sortie) etat = 'pret';
+      else if (p.contenu.length >= 2 && !(p.prog > 0)) etat = 'maintenir';
+    } else if (p.objet) {
+      if (p.objet.k === 'poudre') etat = 'pret';
+      else if (p.objet.k === 'plante' && !(p.prog > 0)) etat = 'maintenir';
+    }
+    if (etat === 'maintenir') {                    // seulement si quelqu'un est près : pas de bruit visuel inutile
+      let pres = false;
+      Jeu.joueurs.forEach(j => { if (Math.hypot(j.x - p.centre.x, j.z - p.centre.z) < 4) pres = true; });
+      if (!pres) etat = null;
+    }
+    if (!p.indic) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: Fx.tex.pret, transparent: true, depthTest: false, depthWrite: false }));
+      sp.renderOrder = 50; sp.visible = false; sp.scale.set(0.62, 0.62, 1);
+      groupeMonde.add(sp); p.indic = sp;
+    }
+    const sp = p.indic;
+    if (!etat) { sp.visible = false; return; }
+    if (p.etatIndic !== etat) { sp.material.map = Fx.tex[etat]; p.etatIndic = etat; }
+    sp.visible = true;
+    sp.position.set(p.centre.x, 1.95 + Math.sin(Fx.horloge * 5 + p.centre.x) * 0.06, p.centre.z);
+    const pulse = etat === 'alerte' ? 0.62 * (1 + 0.16 * Math.sin(Fx.horloge * 12)) : 0.62;
+    sp.scale.set(pulse, pulse, 1);
+  });
+}
+function masquerFx() {
+  while (Fx.actifs.length) { const e = Fx.actifs.pop(); e.sp.visible = false; Fx.libres.push(e); }
+  Jeu.postes.forEach(p => { if (p.indic) p.indic.visible = false; });
+  Jeu.joueurs.forEach(j => { if (j.mesh) { j.mesh.scale.set(ECH_LARG, ECH_HAUT, ECH_LARG); fantomesDe(j).forEach(f => { f.visible = false; }); } });
+}
+function effetsFrame(dt) {
+  if (!Fx.ok) return;
+  try {
+    if (!Qualite.haute) { masquerFx(); return; }
+    if (!Fx.tex) creerPoolFx(150);
+    Fx.horloge += dt;
+    animerJoueursFx(dt);
+    if (Jeu.phase === 'jeu') { emissionsFx(dt); majIndicateurs(dt); }
+    else Jeu.postes.forEach(p => { if (p.indic) p.indic.visible = false; });
+    majFx(dt);
+  } catch (e) {
+    Fx.ok = false;
+    console.warn('Effets désactivés :', e);
+    try { masquerFx(); } catch (e2) {}
+  }
+}
+
+/* Silhouette : une copie de chaque pièce du personnage, dessinée seulement là où quelque
+   chose la cache (depthFunc = GreaterDepth), enfant de la pièce d'origine pour suivre
+   toutes ses animations. */
+function ajouterSilhouette(racine, couleurHex, liste) {
+  try {
+    const c = parseInt(String(couleurHex).replace('#', ''), 16);
+    const pieces = [];
+    racine.traverse(o => { if (o.isMesh && !o.userData.fantome) pieces.push(o); });
+    pieces.forEach(o => {
+      // Deux garde-fous contre l'affichage par-dessus le modèle (z-fighting : même surface) :
+      // 1) polygonOffset négatif : le fantôme est tiré vers la caméra, donc jamais « plus profond »
+      //    que le modèle lui-même ; il ne passe que derrière un vrai obstacle ;
+      // 2) il reste invisible tant que `cacheDevant(j)` n'a pas détecté un obstacle (voir plus bas).
+      const f = new THREE.Mesh(o.geometry, new THREE.MeshBasicMaterial({
+        color: c, transparent: true, opacity: 0.45, depthFunc: THREE.GreaterDepth, depthWrite: false,
+        polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4
+      }));
+      f.userData.fantome = true; f.renderOrder = 30; f.visible = false;
+      o.add(f);
+      if (liste) liste.push(f);
+    });
+  } catch (e) { console.warn('Silhouette indisponible :', e); }
+}
+/* Vrai si un mur ou un poste est juste au sud du joueur (côté caméra) : seul cas où le
+   bas de son corps peut être caché. Mur de 1,5 de haut, caméra à 68° : il cache les pieds
+   à moins d'environ 0,6 case ; collision à 0,34, donc seulement quand on le longe. */
+function cacheDevant(j) {
+  const gz = Math.floor(j.z);
+  for (const dx of [-0.28, 0, 0.28]) {
+    const cx = Math.floor(j.x + dx);
+    // poste (~1,0 de haut) : cache les pieds à moins de 0,4 case ; mur (1,5) : à moins de 0,6
+    const c1 = Math.floor(j.z + 0.4), c2 = Math.floor(j.z + 0.6);
+    if (c1 !== gz && estSolide(cx, c1)) return true;
+    if (c2 !== gz && caseA(cx, c2) === '#') return true;
+  }
+  return false;
+}
+function fantomesDe(j) {
+  const l = (j.mesh && j.mesh.userData.fantomes) || [];
+  return (j.accessoire && j.accessoire.userData.fantomes) ? l.concat(j.accessoire.userData.fantomes) : l;
+}
+
+/* Décor du pourtour : petits objets posés sur le haut des murs extérieurs (vus de dessus,
+   ils remplissent le cadre autour de la zone de jeu sans prendre de place au sol). */
+function decorerPerimetre() {
+  const mode = niveauCourant.mode;
+  if (mode === 'glace') return;
+  const r = rngSol(LARG * 131 + HAUT * 17 + mode.length * 7);
+  const M = (c, rug, extra) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: rug === undefined ? 0.8 : rug }, extra || {}));
+  const verre = (c, em) => M(c, 0.2, { transparent: true, opacity: 0.55, emissive: em, emissiveIntensity: 0.7 });
+  const flamme = M(0xffd08a, 0.4, { emissive: 0xffa84a, emissiveIntensity: 1.2 });
+  const bois = M(0x5a3d22, 0.9), boisSombre = M(0x3b2815, 0.9), fer = M(0x3a3f45, 0.5), osier = M(0x7a5a2e, 0.95), pierre = M(0x59606a, 0.95);
+  const C = (rt, rb, h, m, seg) => new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 12), m);
+  const B = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  const T = (R, tube, m) => new THREE.Mesh(new THREE.TorusGeometry(R, tube, 8, 16), m);
+  const S = (rad, m) => new THREE.Mesh(new THREE.SphereGeometry(rad, 10, 8), m);
+  const grp = (...parts) => { const g = new THREE.Group(); parts.forEach(([m, x, y, z]) => { m.position.set(x || 0, y || 0, z || 0); g.add(m); }); return g; };
+  const livres = () => grp([B(0.38, 0.1, 0.28, M(0x7a2a2a)), 0, 0.05, 0], [B(0.34, 0.09, 0.26, M(0x2a4a7a)), 0.02, 0.145, 0.01], [B(0.3, 0.08, 0.24, M(0x3a6a3a)), -0.02, 0.23, -0.01]);
+  const tonneau = () => grp([C(0.19, 0.19, 0.42, bois), 0, 0.21, 0], [T(0.19, 0.022, fer), 0, 0.1, 0].map((v, i) => i === 0 ? (v.rotation.x = Math.PI / 2, v) : v), [(() => { const t = T(0.19, 0.022, fer); t.rotation.x = Math.PI / 2; return t; })(), 0, 0.32, 0]);
+  const fabriques = {
+    aucun: [
+      () => grp([C(0.17, 0.17, 0.34, verre(0x7fd8b0, 0x1a6a46)), 0, 0.17, 0], [C(0.09, 0.09, 0.07, bois), 0, 0.38, 0]),
+      () => grp([S(0.14, M(0xe8e2d0, 0.7)), 0, 0.17, 0], [B(0.15, 0.07, 0.12, M(0xd8d2c0, 0.7)), 0, 0.05, 0.03]),
+      livres,
+      () => grp([C(0.07, 0.07, 0.9, fer, 10), 0, 0.12, 0], [T(0.08, 0.02, M(0x8a6a2a, 0.5)), 0, 0.12, 0.3], [T(0.08, 0.02, M(0x8a6a2a, 0.5)), 0, 0.12, -0.3]),
+      () => grp([S(0.12, verre(0xb06bd8, 0x5a1a8a)), 0, 0.12, 0], [C(0.04, 0.05, 0.22, verre(0xb06bd8, 0x5a1a8a)), 0, 0.3, 0])
+    ],
+    defense: [
+      () => grp([C(0.1, 0.13, 0.12, M(0xc9a24a, 0.4)), 0, 0.06, 0], [C(0.03, 0.03, 0.3, M(0xc9a24a, 0.4)), 0, 0.25, 0],
+        [C(0.03, 0.03, 0.18, M(0xe8e0cf, 0.9)), 0, 0.5, 0], [S(0.04, flamme), 0, 0.62, 0]),
+      livres,
+      () => grp([B(0.22, 0.14, 0.22, pierre), 0, 0.07, 0], [S(0.12, M(0xb8bcc4, 0.7)), 0, 0.26, 0]),
+      () => grp([C(0.12, 0.17, 0.34, M(0x6a4a7a, 0.6)), 0, 0.17, 0], [C(0.14, 0.12, 0.05, M(0x6a4a7a, 0.6)), 0, 0.36, 0])
+    ],
+    discretion: [
+      () => grp([B(0.58, 0.34, 0.42, M(0xc9a24a, 0.95)), 0, 0.17, 0], [B(0.6, 0.04, 0.05, M(0x8a6a2a)), 0, 0.2, 0.1], [B(0.6, 0.04, 0.05, M(0x8a6a2a)), 0, 0.2, -0.1]),
+      tonneau,
+      () => grp([B(0.42, 0.38, 0.42, bois), 0, 0.19, 0], [B(0.44, 0.05, 0.05, boisSombre), 0, 0.12, 0.2], [B(0.44, 0.05, 0.05, boisSombre), 0, 0.3, 0.2]),
+      () => grp([B(0.16, 0.2, 0.16, fer), 0, 0.1, 0], [S(0.09, flamme), 0, 0.12, 0], [T(0.09, 0.015, fer), 0, 0.3, 0]),
+      () => grp([C(0.015, 0.015, 0.6, boisSombre, 6), 0, 0.3, 0], [C(0.015, 0.015, 0.14, fer, 6), -0.05, 0.62, 0], [C(0.015, 0.015, 0.14, fer, 6), 0.05, 0.62, 0])
+    ],
+    demontage: [
+      () => grp([B(0.5, 0.28, 0.34, osier), 0, 0.14, 0], [B(0.52, 0.03, 0.05, boisSombre), 0, 0.2, 0], [B(0.05, 0.3, 0.36, boisSombre), 0, 0.14, 0]),
+      () => { const t = T(0.18, 0.05, M(0xd8c9a0, 0.95)); t.rotation.x = Math.PI / 2; return grp([t, 0, 0.06, 0]); },
+      tonneau,
+      () => grp([new THREE.Mesh(new THREE.DodecahedronGeometry(0.22), pierre), 0, 0.18, 0]),
+      () => { const t = T(0.17, 0.06, M(0xe0523c, 0.6)); t.rotation.x = Math.PI / 2; const t2 = T(0.17, 0.062, M(0xf2f6f3, 0.6)); t2.rotation.x = Math.PI / 2; t2.rotation.z = 0.9; return grp([t, 0, 0.08, 0], [t2, 0, 0.081, 0]); }
+    ]
+  };
+  const liste = fabriques[mode] || fabriques.aucun;
+  const cases = [];
+  for (let x = 0; x < LARG; x++) { cases.push([x, 0]); cases.push([x, HAUT - 1]); }
+  for (let z = 1; z < HAUT - 1; z++) { cases.push([0, z]); cases.push([LARG - 1, z]); }
+  cases.forEach(([x, z]) => {
+    if (r() < 0.42) return;
+    const prop = liste[Math.floor(r() * liste.length)]();
+    prop.position.set(x + 0.5 + (r() - 0.5) * 0.3, 1.5, z + 0.5 + (r() - 0.5) * 0.3);
+    prop.rotation.y = r() * 6.28;
+    prop.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    groupeMonde.add(prop);
+  });
+}
+
 function construireMonde() {
   Jeu.dejaJoue = false;   // monde tout neuf : rien à remettre à zéro au prochain départ
   // Purge du monde précédent, géométries et matériaux compris
@@ -1737,7 +2358,10 @@ function construireMonde() {
     groupeMonde.remove(o);
     o.traverse && o.traverse(n => {
       if (n.geometry) n.geometry.dispose();
-      if (n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => m.dispose());
+      if (n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => {
+        if (m.map && m.map.jetable) m.map.dispose();
+        m.dispose();
+      });
     });
   }
   Jeu.postes.length = 0;
@@ -1755,6 +2379,17 @@ if (niveauCourant.mode === 'discretion') {
   texEauSol.needsUpdate = true;
   texEauSol.repeat.set(LARG / 2, HAUT / 2);
   matSol = new THREE.MeshStandardMaterial({ map: texEauSol, color: 0x1a4258, roughness: 0.15, metalness: 0.25 });
+} else if (Qualite.haute) {
+  try {
+    matSol = new THREE.MeshStandardMaterial({
+      map: creerTextureSol(niveauCourant.mode, LARG, HAUT, niveauCourant.sol, niveauCourant.damier), roughness: 0.92
+    });
+  } catch (e) {
+    // Filet de sécurité : si les effets de qualité échouent, on revient au rendu standard
+    console.warn('Qualité élevée désactivée (sol) :', e);
+    Qualite.haute = false; appliquerQualite();
+    matSol = new THREE.MeshStandardMaterial({ color: niveauCourant.sol, roughness: 0.95 });
+  }
 } else {
   matSol = new THREE.MeshStandardMaterial({ color: niveauCourant.sol, roughness: 0.95 });
 }
@@ -1767,7 +2402,7 @@ groupeMonde.add(sol);
 // Damier léger pour lire les distances (inutile sur un plancher de
 // grange : le veinage du bois joue déjà ce rôle, et un damier plat
 // dessus aurait fait disparaître la moitié des lattes)
-if (niveauCourant.mode !== 'discretion' && niveauCourant.mode !== 'glace')
+if (niveauCourant.mode !== 'discretion' && niveauCourant.mode !== 'glace' && !Qualite.haute)
 for (let z = 0; z < HAUT; z++) {
   for (let x = 0; x < LARG; x++) {
     if ((x + z) % 2 || SOLIDE.has(caseA(x, z))) continue;
@@ -1795,6 +2430,19 @@ tapisSalle.position.set(LARG / 2, 0.02, TAPIS_Z + 1.2);
 tapisSalle.receiveShadow = true;
 groupeMonde.add(tapisSalle);
 
+// Murs texturés (qualité élevée) : maçonnerie sur les côtés, chaperon dessus
+let matsMur = null;
+if (Qualite.haute && niveauCourant.mode !== 'glace') {
+  try {
+    const mCote = new THREE.MeshStandardMaterial({ map: texCanvas(dessinerMurCote(document.createElement('canvas'), niveauCourant.mode, niveauCourant.mur)), roughness: 0.9 });
+    const mDessus = new THREE.MeshStandardMaterial({ map: texCanvas(dessinerMurDessus(document.createElement('canvas'), niveauCourant.mode, niveauCourant.mur)), roughness: 0.85 });
+    matsMur = [mCote, mCote, mDessus, mCote, mCote, mCote];      // +x −x +y −y +z −z
+  } catch (e) {
+    console.warn('Qualité élevée désactivée (murs) :', e);
+    matsMur = null; Qualite.haute = false; appliquerQualite();
+  }
+}
+
 for (let z = 0; z < HAUT; z++) {
   for (let x = 0; x < LARG; x++) {
     const c = PLAN[z][x];
@@ -1810,7 +2458,7 @@ for (let z = 0; z < HAUT; z++) {
           m.position.set(cx, 0, cz);
         }
       } else {
-        m = boite(1, 1.5, 1, niveauCourant.mur);
+        m = matsMur ? new THREE.Mesh(new THREE.BoxGeometry(1, 1.5, 1), matsMur) : boite(1, 1.5, 1, niveauCourant.mur);
         m.position.set(cx, 0.75, cz);
       }
 
@@ -2010,6 +2658,31 @@ for (let z = 0; z < HAUT; z++) {
       groupeMonde.add(lampe);
       poste = { t: 'etuve', gx: x, gz: z, objet: null, etat: 'vide', t0: 0, panne: 0, lampe: lampe };
 
+    } else if (c === 'G') {
+      // Panier de la créature : glands, baies et racines (elle ne mange pas de chair)
+      m = new THREE.Group();
+      const osier = mat(0x7a5a2e, 0.95);
+      const corbeille = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.28, 0.34, 14), osier);
+      corbeille.position.y = 0.17;
+      const bord = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.035, 8, 18), mat(0x5c4322, 0.95));
+      bord.rotation.x = Math.PI / 2; bord.position.y = 0.34;
+      m.add(corbeille, bord);
+      for (let k = 0; k < 9; k++) {
+        const a = k * 0.7, r = 0.1 + (k % 3) * 0.07;
+        const fruit = new THREE.Mesh(new THREE.SphereGeometry(k % 2 ? 0.055 : 0.05, 8, 6),
+          mat(k % 2 ? 0x7a1f3d : 0xa0662b, 0.6));
+        fruit.position.set(Math.cos(a) * r, 0.37 + (k % 3) * 0.02, Math.sin(a) * r);
+        m.add(fruit);
+      }
+      const racine = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, 0.34, 6), mat(0xd9c9a0, 0.9));
+      racine.rotation.z = 1.1; racine.position.set(0.05, 0.43, -0.05);
+      m.add(racine);
+      m.position.set(cx, 0, cz);
+      const et = etiquette('Glands & baies', '#c9a24a', 0.72);
+      et.position.set(cx, 1.3, cz);
+      groupeMonde.add(et);
+      poste = { t: 'panier', gx: x, gz: z };
+
     } else if (c === 'X') {
       m = new THREE.Mesh(
         new THREE.CylinderGeometry(0.36, 0.3, 0.85, 14),
@@ -2146,6 +2819,10 @@ Jeu.postes.forEach(p => {
   // Recalé ici : ces références pointaient sur l'ancien monde
   tablePoste = Jeu.postes.find(p => p.t === 'table');
   construireDecorNiveau();
+  if (Qualite.haute) {
+    try { decorerPerimetre(); }
+    catch (e) { console.warn('Décor du pourtour indisponible :', e); }
+  }
   appliquerEclairageNiveau();
   cadrerCamera();
 }
@@ -2192,6 +2869,17 @@ function meshObjet(o) {
     tag.position.set(-0.17, 0.09, -0.05);
     tag.rotation.y = 0.4;
     g.add(tag);
+
+  } else if (o.k === 'offrande') {
+    const coupe = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.11, 0.12, 12, 1, true),
+      new THREE.MeshStandardMaterial({ color: 0x7a5a2e, roughness: 0.95, side: THREE.DoubleSide }));
+    coupe.position.y = 0.12;
+    g.add(coupe);
+    for (let k = 0; k < 5; k++) {
+      const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), mat(k % 2 ? 0x7a1f3d : 0xa0662b, 0.6));
+      fruit.position.set(Math.cos(k * 1.3) * 0.07, 0.19 + (k % 2) * 0.02, Math.sin(k * 1.3) * 0.07);
+      g.add(fruit);
+    }
 
   } else if (o.k === 'mixture' || o.k === 'ratee') {
     // Bocal de formol : verre cylindrique cerclé de fer, spécimen flottant
@@ -2353,6 +3041,9 @@ function creerJoueur(padId, nom, place, photo) {
     accent: couleur,
     charlotte: true
   });
+  g.scale.set(ECH_LARG, ECH_HAUT, ECH_LARG);
+  g.userData.fantomes = [];
+  ajouterSilhouette(g, couleurHex, g.userData.fantomes);
 
   if (photo) {
     // La photo remplace les traits dessinés, sinon le nez traverse le disque
@@ -2361,7 +3052,9 @@ function creerJoueur(padId, nom, place, photo) {
   }
 
   const et = badgeJoueur(nom, couleurHex, photo);
-  et.position.y = 2.14;
+  et.position.y = 1.95;
+  et.scale.multiplyScalar(0.8);
+  et.scale.y *= RATIO_ECH;
   g.add(et);
 
   const halo = new THREE.Mesh(
@@ -2379,10 +3072,12 @@ function creerJoueur(padId, nom, place, photo) {
   // Les mains portent l'objet devant le torse
   const porteAncre = new THREE.Group();
   porteAncre.position.set(0, 0.72, 0.42);
+  porteAncre.scale.set(1, RATIO_ECH, 1);      // l'objet porté garde des proportions normales
   g.add(porteAncre);
 
   const jaugeCharge = jauge3d(0.9, 0xf0b429);
   jaugeCharge.position.y = 1.78;
+  jaugeCharge.scale.y = RATIO_ECH;
   g.add(jaugeCharge);
 
   return {
@@ -2398,6 +3093,7 @@ function creerJoueur(padId, nom, place, photo) {
 }
 
 function poser(j, o) {
+  if (o) effetRamassage(j);
   if (j.meshObjet) { j.ancre.remove(j.meshObjet); j.meshObjet = null; }
   j.objet = o;
   if (o) { j.meshObjet = meshObjet(o); j.ancre.add(j.meshObjet); }
@@ -2449,6 +3145,7 @@ function connecter() {
     let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
     if (m.t === 'padleave') { retirerJoueur(m.id); return; }
     if (m.t === 'perso') { persoDepuisManette(m); return; }
+    if (m.t === 'cmd') { commandeDepuisManette(m); return; }
     if (m.t === 'join') { accueillir(m.id, (m.nom || 'Joueur').slice(0, 10), m.photo, m.jeton); return; }
     if (m.t === 'in') {
       const j = Jeu.joueurs.get(m.id);
@@ -2493,6 +3190,7 @@ function accueillir(padId, nom, photo, jeton) {
     envoyerHud(j);
     annoncer(j.nom + ' est de retour', j.couleur);
     majEquipe();
+    if (Jeu.phase === 'fin') envoyerFinPads();
     return;
   }
 
@@ -2502,6 +3200,7 @@ function accueillir(padId, nom, photo, jeton) {
   const j = creerJoueur(padId, nom, place, photo);
   accessoireInitial(j);
   colorisInitial(j);
+  j.role = lireRoles()[j.nom] || null;
   j.jeton = jeton || null;
   Jeu.joueurs.set(padId, j);
   if (jeton) Jeu.parJeton.set(jeton, j);
@@ -2585,6 +3284,8 @@ const touches = {};
 addEventListener('keydown', (e) => {
   touches[e.code] = true;
   if (e.code === 'KeyT') basculerLocal();
+  if (e.code === 'KeyV') basculerQualite();
+  if (e.code === 'KeyC') basculerCamera();
   if (e.code === 'KeyM') reglerSon(Son.estMuet() ? 'son' : 'muet');
   if (e.code === 'Minus' || e.code === 'NumpadSubtract') reglerSon('moins');
   if (e.code === 'Equal' || e.code === 'NumpadAdd') reglerSon('plus');
@@ -2638,12 +3339,18 @@ function majSelecteur() {
     const d = document.createElement('div');
     d.className = 'nivCarte' + (n === niveauCourant ? ' actif' : '');
     d.style.setProperty('--acc', n.accent);
-    d.innerHTML = '<div class="num">Monde ' + (i + 1) + '</div>' +
+    d.innerHTML = '<div class="num">' + CHAPITRES[id] + '</div>' +
                   '<div class="tt">' + n.titre + '</div>' +
                   '<div class="ds">' + n.resume + '</div>';
     d.addEventListener('click', () => choisirNiveau(id));
     el.appendChild(d);
   });
+  const l = document.getElementById('lettre');
+  if (l) {
+    const lt = LETTRES[niveauCourant.id];
+    l.innerHTML = lt ? '<div class="lt-ent">À Mme Saville, Angleterre — ' + lt[0] + '</div><div class="lt-txt">' + lt[1] +
+      '</div><div class="lt-sig">— R. Walton</div>' : '';
+  }
 }
 addEventListener('keyup', (e) => { touches[e.code] = false; });
 
@@ -2656,6 +3363,7 @@ function basculerLocal() {
   const j = creerJoueur(id, 'Clavier', place);
   accessoireInitial(j);
   colorisInitial(j);
+  j.role = lireRoles()[j.nom] || null;
   j.local = true;
   Jeu.joueurs.set(id, j);
   joueurLocal = j;
@@ -2674,10 +3382,11 @@ function lireClavier() {
 }
 
 /* ============================== CLIENTS ============================== */
-const comptoirs = Jeu.postes.filter(p => p.t === 'comptoir');
-
+/* Les postes sont reconstruits à chaque changement de monde : on relit la liste à
+   chaque appel. (Avant : copie prise une seule fois au chargement, quand la liste
+   était encore vide, donc aucun client n'apparaissait jamais.) */
 function creerClient() {
-  const libres = comptoirs.filter(c => !c.client);
+  const libres = Jeu.postes.filter(p => p.t === 'comptoir' && !p.client);
   if (!libres.length) return;
   const poste = libres[Math.floor(Math.random() * libres.length)];
 
@@ -2701,6 +3410,7 @@ function creerClient() {
   });
   g.position.set(poste.centre.x, 0, poste.centre.z + 1.15);
   g.rotation.y = Math.PI;   // face au comptoir, donc dos à la caméra
+  g.scale.setScalar(1.1);    // un peu plus gros, sans devenir géant
 
   /* L'étiquette mesure 0,675 de haut et la jauge 0,23 : il faut au moins
      0,45 d'écart entre leurs centres pour qu'elles ne se chevauchent pas. */
@@ -2757,6 +3467,7 @@ function actionA(j, p) {
   // Actions propres au monde courant, prioritaires sur les postes
   const cm = cibleMode(j);
   if (cm) {
+    if (cm.t === 'offrande') { poser(j, null); apaiserMonstre('offrande'); buzz(j, true); return; }
     if (cm.t === 'bougie') {
       const neuf = cm.b.meche <= 0.02;
       if (neuf) { cm.b.meche = cm.b.reserve; cm.b.reserve = Math.max(0.4, cm.b.reserve - 0.12); }
@@ -2790,6 +3501,13 @@ function actionA(j, p) {
   }
   if (!p) return;
   const o = j.objet;
+
+  if (p.t === 'panier') {
+    if (!o) { poser(j, { k: 'offrande' }); Son.prendre(); buzz(j); }
+    else if (o.k === 'offrande') { poser(j, null); Son.poser(); }
+    else Son.refus();
+    return;
+  }
 
   if (p.t === 'etagere') {
     if (!o) { poser(j, { k: 'plante', p: p.p }); Son.prendre(); buzz(j); }
@@ -3018,6 +3736,9 @@ function ramasserAuSol(j) {
 /* Cible de mode la plus proche (bougie éteinte, membre de la Fiancée).
    Renvoie null si le monde courant n'en propose pas. */
 function cibleMode(j) {
+  const mo = Jeu.monstre;
+  if (mo && mo.actif && j.objet && j.objet.k === 'offrande' &&
+      Math.hypot(j.x - mo.x, j.z - mo.z) < REGL.monstrePortee + 0.5) return { t: 'offrande' };
   if (niveauCourant.mode === 'defense') {
     let best = null, bd = 1.5;
     Mode.bougies.forEach(b => {
@@ -3037,6 +3758,7 @@ function cibleMode(j) {
 function libelleAction(j, p) {
   const o = j.objet;
   const cm = cibleMode(j);
+  if (cm && cm.t === 'offrande') return 'Offrir à la créature';
   if (cm) return cm.t === 'bougie' ? (cm.b.meche <= 0.02 ? 'Remplacer le cierge' : 'Rallumer la bougie') : 'Retirer un membre';
   if (!p) {
     if (!o && Jeu.ausol.some(e => Math.hypot(e.x - j.x, e.z - j.z) < 0.85)) return 'Ramasser';
@@ -3064,6 +3786,7 @@ function libelleAction(j, p) {
     case 'passe':   return o && o.k === 'boite' ? 'Expédier' : '';
     case 'table':   return !o && p.pile.length ? 'Prendre la caisse' : (o && o.k === 'boite' ? 'Déposer' : '');
     case 'poubelle':return o ? 'Jeter' : '';
+    case 'panier':  return !o ? 'Cueillir glands et baies' : (o.k === 'offrande' ? 'Reposer' : '');
     case 'comptoir':
       if (o && o.k === 'boite' && p.client) return p.client.revelee ? 'Livrer' : 'Contrat non lu';
       if (!o && p.client && p.client.ticketDispo) return 'Prendre le contrat';
@@ -3158,6 +3881,8 @@ function boucle() {
 
   // Les jauges sont des sprites : elles s'orientent d'elles-mêmes.
 
+  effetsFrame(dt);
+  suivreCamera(dt);
   renderer.render(scene, camera);
 }
 
@@ -3551,8 +4276,18 @@ function declencherEvenement() {
     /* Un amas de gravats tombe et gêne la circulation, mais jamais dans
        les arches de passage : un amas dans le seul goulet couperait le
        labo en deux et rendrait la partie irrécupérable.
-       Ces cinq points ont été validés par script (voir PROGRESS.md). */
-    const points = [[7.5, 4.5], [3.5, 6.5], [11.5, 6.5], [7.5, 8.5], [7.5, 10.5]];
+       Les points sont calculés sur le plan du monde : seulement des cases dont le
+       voisinage 3×3 est entièrement libre (hors tapis), donc jamais dans une porte. */
+    const ouverts = [];
+    for (let z = 2; z < HAUT - 2; z++) for (let x = 2; x < LARG - 2; x++) {
+      let ok = true;
+      for (let dz = -1; dz <= 1 && ok; dz++) for (let dx = -1; dx <= 1; dx++) {
+        if (estSolide(x + dx, z + dz) || caseA(x + dx, z + dz) === '>') { ok = false; break; }
+      }
+      if (ok) ouverts.push([x + 0.5, z + 0.5]);
+    }
+    const pasPts = Math.max(1, Math.floor(ouverts.length / 6));
+    const points = ouverts.filter((_, i) => i % pasPts === 0);
     const libres = points.filter(p =>
       !Jeu.obstacles.some(o => Math.hypot(o.x - p[0], o.z - p[1]) < 1.2) &&
       !Array.from(Jeu.joueurs.values()).some(j => Math.hypot(j.x - p[0], j.z - p[1]) < 0.9));
@@ -3628,17 +4363,64 @@ function creerMonstreMesh() {
   return g;
 }
 
+/* Poursuite de la créature : recherche de chemin sur la grille (elle contourne
+   les murs et passe les portes au lieu de foncer contre le premier mur).
+   Un joueur sur un radeau ou de l'autre côté de l'eau est inaccessible : elle
+   reste alors sur place. */
+function cheminMonstre(mo) {
+  const sx = Math.floor(mo.x), sz = Math.floor(mo.z), cle = (x, z) => x * 64 + z;
+  const parent = new Map([[cle(sx, sz), null]]), q = [[sx, sz]];
+  const cibles = new Map();
+  Jeu.joueurs.forEach(j => { if (!j.deconnecte) cibles.set(cle(Math.floor(j.x), Math.floor(j.z)), j); });
+  let trouve = null;
+  for (let i = 0; i < q.length && !trouve; i++) {
+    const [x, z] = q[i];
+    if (cibles.has(cle(x, z))) { trouve = [x, z]; break; }
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const a = x + dx, b = z + dz, k = cle(a, b);
+      if (a < 0 || b < 0 || a >= LARG || b >= HAUT || parent.has(k) || estSolide(a, b)) continue;
+      parent.set(k, [x, z]); q.push([a, b]);
+    }
+  }
+  if (!trouve) return null;
+  let c = trouve, pr = parent.get(cle(c[0], c[1]));
+  while (pr && !(pr[0] === sx && pr[1] === sz)) { c = pr; pr = parent.get(cle(c[0], c[1])); }
+  return { pas: c, cible: cibles.get(cle(trouve[0], trouve[1])), memeCase: trouve[0] === sx && trouve[1] === sz };
+}
+/* Distance de marche (en cases) depuis le joueur le plus proche, pour chaque case accessible. */
+function distancesDepuisJoueurs() {
+  const cle = (x, z) => x * 64 + z, dist = new Map(), q = [];
+  Jeu.joueurs.forEach(j => {
+    const x = Math.floor(j.x), z = Math.floor(j.z);
+    if (!estSolide(x, z) && !dist.has(cle(x, z))) { dist.set(cle(x, z), 0); q.push([x, z]); }
+  });
+  for (let i = 0; i < q.length; i++) {
+    const [x, z] = q[i], d = dist.get(cle(x, z));
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const a = x + dx, b = z + dz, k = cle(a, b);
+      if (a < 0 || b < 0 || a >= LARG || b >= HAUT || dist.has(k) || estSolide(a, b)) continue;
+      dist.set(k, d + 1); q.push([a, b]);
+    }
+  }
+  return dist;
+}
+
 function reveillerMonstre() {
   if (Jeu.monstre && Jeu.monstre.actif) return;
   if (!Jeu.monstre) Jeu.monstre = { actif: false, mesh: null };
   if (!Jeu.monstre.mesh) Jeu.monstre.mesh = creerMonstreMesh();
   // Apparaît dans la salle de dissection, au point le plus loin de tout le monde
-  const candidats = [[7.5, 4.5], [3.5, 6.5], [11.5, 6.5], [7.5, 8.5], [7.5, 10.5]];
+  const candidats = [];
+  for (let gz = 2; gz < HAUT - 1; gz += 2) for (let gx = 2; gx < LARG - 1; gx += 2) {
+    if (!estSolide(gx, gz) && !estSolide(gx - 1, gz) && !estSolide(gx + 1, gz) &&
+        !estSolide(gx, gz - 1) && !estSolide(gx, gz + 1)) candidats.push([gx + 0.5, gz + 0.5]);
+  }
+  if (!candidats.length) candidats.push([SPAWNS[0][0], SPAWNS[0][1]]);
   let pt = candidats[0], meilleure = -1;
+  const marche = distancesDepuisJoueurs();
   candidats.forEach(c => {
-    const joueurs = Array.from(Jeu.joueurs.values());
-    const d = joueurs.length ? Math.min(...joueurs.map(j => Math.hypot(j.x - c[0], j.z - c[1]))) : 0;
-    if (d > meilleure) { meilleure = d; pt = c; }
+    const d = marche.get(Math.floor(c[0]) * 64 + Math.floor(c[1]));
+    if (d !== undefined && d > meilleure) { meilleure = d; pt = c; }
   });
   Object.assign(Jeu.monstre, {
     actif: true, x: pt[0], z: pt[1], dirX: 0, dirZ: 1,
@@ -3649,7 +4431,7 @@ function reveillerMonstre() {
   Son.reveil();
   buzzTous();
   diffuserPad({ t: 'monstre_etat', phase: 'eveille' });
-  diffuserPad({ t: 'alerte', texte: 'La créature rôde ! Approchez et maintenez B' });
+  diffuserPad({ t: 'alerte', texte: 'La créature rôde ! Portez-lui glands et baies (panier), ou maintenez B' });
 }
 
 function apaiserMonstre(bonus) {
@@ -3657,11 +4439,17 @@ function apaiserMonstre(bonus) {
   if (!mo || !mo.actif) return;
   mo.actif = false;
   if (mo.mesh) mo.mesh.visible = false;
-  if (bonus) {
+  if (bonus === 'offrande') {
+    Jeu.score += 100;
+    flotter(new THREE.Vector3(mo.x, 0, mo.z), 'Elle accepte l\'offrande +100', '#c9a24a');
+    annoncer('La créature mange les glands et s\'éloigne', '#c9a24a');
+  } else if (bonus) {
     Jeu.score += 60;
     flotter(new THREE.Vector3(mo.x, 0, mo.z), 'Apaisée +60', '#c8ff3f');
+    annoncer('La créature s\'est calmée', '#c8ff3f');
+  } else {
+    annoncer('La créature s\'est calmée', '#c8ff3f');
   }
-  annoncer('La créature s\'est calmée', '#c8ff3f');
   Son.apaise();
   diffuserPad({ t: 'monstre_etat', phase: 'calme' });
 }
@@ -3671,23 +4459,29 @@ function majMonstre(dt) {
   if (!mo || !mo.actif) return;
   const r = REGL.monstreRayon;
 
-  // Erre vers l'assistant le plus proche
-  let cible = null, meilleure = Infinity;
-  Jeu.joueurs.forEach(j => {
-    if (j.deconnecte) return;
-    const d = Math.hypot(j.x - mo.x, j.z - mo.z);
-    if (d < meilleure) { meilleure = d; cible = j; }
-  });
-  if (cible) {
-    const dx = cible.x - mo.x, dz = cible.z - mo.z, n = Math.hypot(dx, dz) || 1;
-    mo.dirX = dx / n; mo.dirZ = dz / n;
+  // Marche vers l'assistant le plus proche (par le chemin, pas à vol d'oiseau)
+  const ch = cheminMonstre(mo);
+  let vx = 0, vz = 0;
+  if (ch) {
+    let wx, wz;
+    if (ch.memeCase) { wx = ch.cible.x; wz = ch.cible.z; }
+    else { wx = ch.pas[0] + 0.5; wz = ch.pas[1] + 0.5; }
+    let dx = wx - mo.x, dz = wz - mo.z;
+    // s'aligner sur le centre de la case avant de s'engager dans un couloir
+    if (!ch.memeCase) {
+      if (Math.abs(dz) >= Math.abs(dx)) { if (Math.abs(dx) > 0.12) dz *= 0.15; }
+      else if (Math.abs(dz) > 0.12) dx *= 0.15;
+    }
+    const n = Math.hypot(dx, dz) || 1;
+    vx = dx / n; vz = dz / n;
+    mo.dirX = vx; mo.dirZ = vz;
   }
   const libre = (x, z) => !['-1', '1'].some(sx => ['-1', '1'].some(sz =>
     estSolide(Math.floor(x + Number(sx) * r), Math.floor(z + Number(sz) * r))));
   const pas = REGL.monstreVitesse * dt;
-  const nx = mo.x + mo.dirX * pas;
+  const nx = mo.x + vx * pas;
   if (libre(nx, mo.z)) mo.x = nx;
-  const nz = mo.z + mo.dirZ * pas;
+  const nz = mo.z + vz * pas;
   if (libre(mo.x, nz)) mo.z = nz;
 
   // Piétine les gravats sur son passage
@@ -3778,6 +4572,7 @@ function ligneLibre(x0, z0, x1, z1) {
 }
 
 function construireDecorNiveau() {
+  const GR = niveauCourant.grange || { x0: 0.5, x1: 9.5 };   // étendue de la grange (village)
   Mode.lanternes.length = 0; Mode.bougies.length = 0;
   Mode.derive.length = 0; Mode.eclaboussures.length = 0;
   Mode.radeaux.length = 0; Mode.casesEauChenal.length = 0;
@@ -3830,12 +4625,12 @@ function construireDecorNiveau() {
     // Poutres au-dessus de la grange principale seulement (jamais
     // flottantes par-dessus l'aile murée des stalles)
     for (let i = 0; i < 5; i++) {
-      const poutre = boite(9, 0.22, 0.22, 0x2a1e12, 0.95);
-      poutre.position.set(5, 2.55, 1.5 + i * ((HAUT - 3) / 4));
+      const poutre = boite(GR.x1 - GR.x0, 0.22, 0.22, 0x2a1e12, 0.95);
+      poutre.position.set((GR.x0 + GR.x1) / 2, 2.55, 1.5 + i * ((HAUT - 3) / 4));
       groupeMonde.add(poutre);
     }
     // Poteaux de soutien, aux quatre coins de la grange
-    [[1.3, 1.3], [9.5, 1.3], [1.3, HAUT - 2.3], [9.5, HAUT - 2.3]].forEach(([x, z]) => {
+    [[GR.x0 + 0.8, 1.3], [GR.x1, 1.3], [GR.x0 + 0.8, HAUT - 2.3], [GR.x1, HAUT - 2.3]].forEach(([x, z]) => {
       const poteau = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 2.6, 8), mat(0x2a1e12, 0.9));
       poteau.position.set(x, 1.3, z);
       groupeMonde.add(poteau);
@@ -3855,10 +4650,10 @@ function construireDecorNiveau() {
     });
     // Une porte de grange entrouverte, au fond, d'où filtre la lumière du soir
     const porte = boite(1.6, 2.3, 0.15, 0x241a10, 0.9);
-    porte.position.set(2.2, 1.15, 0.72);   // encastrée dans le mur du fond
+    porte.position.set(GR.x0 + 1.7, 1.15, 0.72);   // encastrée dans le mur du fond
     groupeMonde.add(porte);
     const lueur = new THREE.PointLight(0xffb877, 0.9, 6, 2);
-    lueur.position.set(2.2, 1.3, 1.3);     // la lumière du soir filtre dans la grange
+    lueur.position.set(GR.x0 + 1.7, 1.3, 1.3);     // la lumière du soir filtre dans la grange
     groupeMonde.add(lueur);
   }
   if (m === 'defense') {
@@ -3917,12 +4712,7 @@ function construireDecorNiveau() {
     // Une seule zone par quadrant, dimensionnée pour le couvrir
     // ENTIÈREMENT, sans jamais déborder dans le chenal (largeur pile 8,
     // la rive fait exactement 8 cases).
-    const BLOCS = [
-      { cx: 4.9,  cz: 3.9,  w: gigue(8.8, 0.01), h: gigue(6.5, 0.02) },
-      { cx: 4.9,  cz: 11.1, w: gigue(8.8, 0.01), h: gigue(6.5, 0.02) },
-      { cx: 14.1, cz: 3.9,  w: gigue(8.8, 0.01), h: gigue(6.5, 0.02) },
-      { cx: 14.1, cz: 11.1, w: gigue(8.8, 0.01), h: gigue(6.5, 0.02) }
-    ];
+    const BLOCS = niveauCourant.blocs.map(b => ({ cx: b.cx, cz: b.cz, w: gigue(b.w, 0.01), h: gigue(b.h, 0.02) }));
     BLOCS.forEach((b, iBloc) => {
       const floe = new THREE.Mesh(
         new THREE.PlaneGeometry(b.w, b.h),
@@ -3938,10 +4728,10 @@ function construireDecorNiveau() {
     // Deux ponts de glace pleins reliant haut et bas (rangée 7, colonnes
     // 3-5 et 13-15 : cases libres dans le plan). Plus larges et plus longs
     // que les cases pour mordre sur les deux floes sans couture visible.
-    [4.5, 14.5].forEach((px, iPont) => {
+    niveauCourant.ponts.forEach(([px, pz], iPont) => {
       const pont = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 2.4), MAT_GRANDS[(iPont + 2) % MAT_GRANDS.length]);
       pont.rotation.x = -Math.PI / 2;
-      pont.position.set(px, 0.035 + iPont * 0.0015, 7.5);
+      pont.position.set(px, 0.035 + iPont * 0.0015, pz);
       pont.receiveShadow = true;
       groupeMonde.add(pont);
     });
@@ -4010,7 +4800,7 @@ function construireDecorNiveau() {
   if (m === 'discretion') {
     /* Lanternes de patrouille : des cônes qui balaient la grange. Faire du
        bruit dans un cône fait monter la jauge du village. */
-    [[3, 2], [11, 3], [7, 6]].forEach(([x, z], i) => {
+    (niveauCourant.lanternes || [[3, 2], [11, 3], [7, 6]]).forEach(([x, z], i) => {
       const halo = new THREE.Mesh(
         new THREE.CircleGeometry(1.7, 24),
         new THREE.MeshBasicMaterial({ color: 0xffd98a, transparent: true, opacity: 0.16 })
@@ -4024,8 +4814,8 @@ function construireDecorNiveau() {
       // Plage de patrouille = tronçon de sol libre autour du point de départ
       // (la lanterne ne traverse plus ni murs ni stalles)
       let gx = x, dx = x;
-      while (!estSolide(gx - 1, z)) gx--;
-      while (!estSolide(dx + 1, z)) dx++;
+      while (!estSolide(gx - 1, z) && x - gx < 5) gx--;       // patrouille bornée (±5 cases)
+      while (!estSolide(dx + 1, z) && dx - x < 5) dx++;
       const villageois = humanoide({
         peau: 0xd9b48f, tenue: 0x6b4a2f, accent: 0xc9a24a,
         cheveux: 0x2a1c12, pantalon: 0x3a2a1f, charlotte: false
@@ -4073,15 +4863,16 @@ function construireDecorNiveau() {
     Mode.fiancee = { mesh: f, x: cx, z: cz };
     Mode.membresRestants = 4;
     Mode.conscience = 0;
-    // Marée : bande d'eau dans le couloir menant au tapis (rangées 11-12)
+    // Marée : bande d'eau dans le couloir menant au tapis (niveauCourant.maree)
+    const bandeM = niveauCourant.maree || { z0: 9, z1: 10 };
     const nappe = new THREE.Mesh(
-      new THREE.PlaneGeometry(15, 2),
+      new THREE.PlaneGeometry(LARG - 2, bandeM.z1 - bandeM.z0),
       new THREE.MeshBasicMaterial({ color: 0x4aa3c7, transparent: true, opacity: 0, depthWrite: false })
     );
     nappe.rotation.x = -Math.PI / 2;
-    nappe.position.set(8.5, 0.045, 12);
+    nappe.position.set(LARG / 2, 0.045, (bandeM.z0 + bandeM.z1) / 2);
     groupeMonde.add(nappe);
-    Mode.maree = { mesh: nappe, z0: 11, z1: 13, etat: 'basse', reste: 26 };
+    Mode.maree = { mesh: nappe, z0: bandeM.z0, z1: bandeM.z1, etat: 'basse', reste: 26 };
   }
 }
 
@@ -4354,7 +5145,7 @@ const $consigne = document.getElementById('consigne');
 $code.textContent = Jeu.salon;
 
 /* Lien de la manette + QR code à scanner */
-const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+const base = ((location.origin && location.origin !== 'null') ? location.origin + location.pathname : location.href.split(/[?#]/)[0]).replace(/[^/]*$/, '');
 let urlManette = base + 'controller.html?room=' + Jeu.salon;
 if (params.get('relay')) urlManette += '&relay=' + encodeURIComponent(params.get('relay'));
 
@@ -4424,8 +5215,24 @@ const ACCESSOIRES = [
   { id: 'bonnet', nom: 'Bonnet' },
   { id: 'hautdeforme', nom: 'Haut-de-forme' },
   { id: 'lunettes', nom: 'Lunettes' },
-  { id: 'boulons', nom: 'Boulons' }
+  { id: 'ruban', nom: 'Ruban' },
+  { id: 'marin', nom: 'Bonnet de marin' },
+  { id: 'foulard', nom: 'Foulard' }
 ];
+/* Costumes : les personnages du roman (Mary Shelley, 1818). Chacun règle un
+   accessoire et un coloris (le coloris n'est pris que s'il est libre). */
+const ROLES = [
+  { id: 'victor',    nom: 'Victor Frankenstein', acc: 'lunettes',    col: 'noir' },
+  { id: 'clerval',   nom: 'Henry Clerval',       acc: 'bonnet',      col: 'vert' },
+  { id: 'elizabeth', nom: 'Elizabeth Lavenza',   acc: 'ruban',       col: 'rose' },
+  { id: 'justine',   nom: 'Justine Moritz',      acc: 'ruban',       col: 'jaune' },
+  { id: 'walton',    nom: 'Robert Walton',       acc: 'marin',       col: 'bleu' },
+  { id: 'waldman',   nom: 'M. Waldman',          acc: 'hautdeforme', col: 'violet' },
+  { id: 'safie',     nom: 'Safie',               acc: 'foulard',     col: 'orange' }
+];
+function lireRoles() {
+  try { return JSON.parse(localStorage.getItem('frankencook_role') || '{}') || {}; } catch (e) { return {}; }
+}
 function lirePersos() {
   try { return JSON.parse(localStorage.getItem('frankencook_perso') || '{}') || {}; } catch (e) { return {}; }
 }
@@ -4433,8 +5240,10 @@ function appliquerAccessoire(j, id) {
   if (!ACCESSOIRES.some(a => a.id === id)) id = 'bonnet';
   if (j.accessoire) { j.mesh.remove(j.accessoire); j.accessoire = null; }
   const coiffe = j.mesh.userData.coiffe || [];
-  coiffe.forEach(m => { m.visible = (id !== 'hautdeforme' && id !== 'boulons'); });
+  const sansBonnet = ['hautdeforme', 'ruban', 'marin', 'foulard'];
+  coiffe.forEach(m => { m.visible = sansBonnet.indexOf(id) < 0; });
   const c = parseInt(j.couleur.slice(1), 16);
+  const cc = (typeof COLORIS !== 'undefined' && COLORIS.find(x => x.id === j.coloris) || { haut: c }).haut;
   const acc = new THREE.Group();
   if (id === 'hautdeforme') {
     const noir = mat(0x1d1f24, 0.6);
@@ -4457,21 +5266,44 @@ function appliquerAccessoire(j, id) {
     const sangle = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.012, 6, 24), mat(0x1d1f24, 0.8));
     sangle.position.y = 1.43; sangle.rotation.x = Math.PI / 2; sangle.scale.set(1, 1, 0.9);
     acc.add(sangle);
-  } else if (id === 'boulons') {
+  } else if (id === 'ruban') {
     const cheveux = new THREE.Mesh(
-      new THREE.SphereGeometry(0.192, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2.2), mat(0x2a1c12, 0.95)
+      new THREE.SphereGeometry(0.192, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2.2), mat(0x4a3222, 0.95)
     );
     cheveux.position.y = 1.4;
-    acc.add(cheveux);
-    [-1, 1].forEach(sx => {
-      const tige = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.12, 8), mat(0x9aa4a8, 0.3));
-      tige.rotation.z = Math.PI / 2; tige.position.set(sx * 0.2, 1.36, 0);
-      const bout = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), mat(0x9aa4a8, 0.3));
-      bout.position.set(sx * 0.27, 1.36, 0);
-      acc.add(tige, bout);
+    const noeud = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), mat(cc, 0.5));
+    noeud.position.set(0.15, 1.53, 0.07);
+    acc.add(cheveux, noeud);
+    [-1, 1].forEach(sg => {
+      const aile = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.12, 8), mat(cc, 0.5));
+      aile.rotation.z = sg * Math.PI / 2;
+      aile.position.set(0.15 + sg * 0.07, 1.53, 0.07);
+      acc.add(aile);
+    });
+  } else if (id === 'marin') {
+    const laine = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2.1), mat(0x1f3550, 0.95));
+    laine.position.y = 1.4;
+    const revers = new THREE.Mesh(new THREE.TorusGeometry(0.198, 0.035, 8, 20), mat(0x2d4a6e, 0.9));
+    revers.rotation.x = Math.PI / 2; revers.position.y = 1.47;
+    const pompon = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), mat(0xf2f6f3, 0.9));
+    pompon.position.y = 1.62;
+    acc.add(laine, revers, pompon);
+  } else if (id === 'foulard') {
+    const tissu = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2.0), mat(cc, 0.85));
+    tissu.position.y = 1.4;
+    const noeud = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), mat(cc, 0.85));
+    noeud.position.set(0, 1.5, -0.2);
+    acc.add(tissu, noeud);
+    [-1, 1].forEach(sg => {
+      const pan = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.14, 6), mat(cc, 0.85));
+      pan.rotation.x = Math.PI; pan.rotation.z = sg * 0.4;
+      pan.position.set(sg * 0.05, 1.4, -0.22);
+      acc.add(pan);
     });
   }
   acc.traverse(m => { if (m.isMesh) m.castShadow = true; });
+  acc.userData.fantomes = [];
+  ajouterSilhouette(acc, j.couleur, acc.userData.fantomes);
   j.mesh.add(acc);
   j.accessoire = acc;
   j.accessoireId = id;
@@ -4497,6 +5329,7 @@ function apercuJoueur(j) {
       Apercu.cam.lookAt(0, 1.12, 0);
     }
     const copie = j.mesh.clone(true);
+    copie.scale.set(1, ECH_HAUT / ECH_LARG, 1);
     copie.position.set(0, 0, 0);
     copie.rotation.set(0, 0.45, 0);
     Apercu.scene.add(copie);
@@ -4538,6 +5371,7 @@ function appliquerColoris(j, id) {
   if (u.tenueMat) u.tenueMat.color.setHex(c.haut);
   if (u.pantalonMat) u.pantalonMat.color.setHex(c.bas);
   j.coloris = c.id;
+  if (j.accessoireId) appliquerAccessoire(j, j.accessoireId);   // ruban / foulard prennent la couleur
 }
 function colorisInitial(j) {
   const pris = colorisPris(j);
@@ -4548,6 +5382,7 @@ function colorisInitial(j) {
 }
 function choisirColoris(j, id) {
   if (Jeu.phase === 'jeu' || colorisPris(j).has(id)) return;
+  oublierRole(j);
   appliquerColoris(j, id);
   try {
     const m = lireColoris(); m[j.nom] = id;
@@ -4556,11 +5391,34 @@ function choisirColoris(j, id) {
   majEquipe();
 }
 
+function oublierRole(j) {
+  if (!j.role) return;
+  j.role = null;
+  try { const r = lireRoles(); delete r[j.nom]; localStorage.setItem('frankencook_role', JSON.stringify(r)); } catch (e) {}
+}
+function definirRole(j, id) {
+  const r = ROLES.find(x => x.id === id);
+  if (!r || Jeu.phase === 'jeu') return;
+  appliquerAccessoire(j, r.acc);
+  if (!colorisPris(j).has(r.col)) appliquerColoris(j, r.col);
+  j.role = r.id;
+  try {
+    const p = lirePersos(); p[j.nom] = j.accessoireId; localStorage.setItem('frankencook_perso', JSON.stringify(p));
+    const c = lireColoris(); c[j.nom] = j.coloris; localStorage.setItem('frankencook_coloris', JSON.stringify(c));
+    const ro = lireRoles(); ro[j.nom] = r.id; localStorage.setItem('frankencook_role', JSON.stringify(ro));
+  } catch (e) {}
+  majEquipe();
+}
+function roleSuivant(j) {
+  const i = ROLES.findIndex(x => x.id === j.role);
+  definirRole(j, ROLES[(i + 1) % ROLES.length].id);
+}
 function accessoireInitial(j) {
   appliquerAccessoire(j, lirePersos()[j.nom]);
 }
 function definirAccessoire(j, id) {
   if (Jeu.phase === 'jeu' || !ACCESSOIRES.some(a => a.id === id)) return;
+  oublierRole(j);
   appliquerAccessoire(j, id);
   try {
     const p = lirePersos(); p[j.nom] = id;
@@ -4584,13 +5442,16 @@ function diffuserPersos() {
   if (Jeu.phase !== 'lobby') return;
   const listeAcc = ACCESSOIRES.map(a => ({ id: a.id, nom: a.nom }));
   const listeCol = COLORIS.map(c => ({ id: c.id, nom: c.nom, hex: '#' + c.haut.toString(16).padStart(6, '0') }));
+  const humains = [...Jeu.joueurs.values()].filter(j => !j.local && !j.deconnecte);
   Jeu.joueurs.forEach(j => {
     if (j.local || j.deconnecte) return;
     const msg = {
-      t: 'perso_etat', acc: j.accessoireId, col: j.coloris,
-      pris: Array.from(colorisPris(j)), accessoires: listeAcc, coloris: listeCol
+      t: 'perso_etat', acc: j.accessoireId, col: j.coloris, role: j.role || '',
+      roles: ROLES.map(r => ({ id: r.id, nom: r.nom })),
+      pris: Array.from(colorisPris(j)), accessoires: listeAcc, coloris: listeCol,
+      pret: !!j.pret, prets: humains.filter(h => h.pret).length, total: humains.length
     };
-    const cle = j.accessoireId + '|' + j.coloris;
+    const cle = j.accessoireId + '|' + j.coloris + '|' + (j.role || '');
     if (j.persoCle !== cle) {
       const img = apercuJoueur(j);
       if (img) msg.apercu = img;
@@ -4603,6 +5464,7 @@ function persoDepuisManette(m) {
   const j = Jeu.joueurs.get(m.id);
   if (!j) return;
   if (Jeu.phase === 'lobby') {
+    if (typeof m.role === 'string') definirRole(j, m.role);
     if (typeof m.acc === 'string') definirAccessoire(j, m.acc);
     if (typeof m.col === 'string') choisirColoris(j, m.col);
   }
@@ -4633,7 +5495,8 @@ function majEquipe() {
     const img = Jeu.phase === 'lobby' ? apercuJoueur(j) : '';
     c.innerHTML = (img ? '<img class="apercu" alt="" src="' + img + '">' : '') +
       vignette(j, '') + j.nom +
-      '<span class="perso">' + (acc ? acc.nom : 'Bonnet') + ' · clic pour changer</span>';
+      '<span class="perso">' + (j.role ? ROLES.find(x => x.id === j.role).nom : (acc ? acc.nom : 'Bonnet')) + ' · clic pour changer</span>' +
+      (j.pret ? '<span class="pretok">Prêt ✓</span>' : '');
     const pris = colorisPris(j);
     const pastilles = document.createElement('div');
     pastilles.className = 'coloris';
@@ -4646,6 +5509,10 @@ function majEquipe() {
       pastilles.appendChild(b);
     });
     c.appendChild(pastilles);
+    const bR = document.createElement('button');
+    bR.className = 'roleBtn'; bR.textContent = 'Costume du roman ▸';
+    bR.onclick = ev => { ev.stopPropagation(); roleSuivant(j); };
+    c.appendChild(bR);
     c.title = 'Clic : changer d\'accessoire';
     c.onclick = () => changerAccessoire(j);
     $listeJ.appendChild(c);
@@ -4659,6 +5526,13 @@ function majEquipe() {
   }
 }
 
+/* Icônes des étapes (broyer → mélanger → charger) et du contrat */
+const SVG_ETAPE = {
+  mortier: '<svg viewBox="0 0 24 24"><path d="M3 10h18l-2 9a3 3 0 0 1-3 2H8a3 3 0 0 1-3-2z" fill="currentColor"/><rect x="12.5" y="1.5" width="3.4" height="12" rx="1.7" transform="rotate(24 14 8)" fill="currentColor"/></svg>',
+  alambic: '<svg viewBox="0 0 24 24"><path d="M9 2h6v2h-1v5l5.2 9.2A2 2 0 0 1 17.4 21H6.6a2 2 0 0 1-1.8-2.8L10 9V4H9z" fill="currentColor"/></svg>',
+  etuve: '<svg viewBox="0 0 24 24"><path d="M13.5 2 4.5 14H10l-1.2 8L19 10h-5.8z" fill="currentColor"/></svg>',
+  contrat: '<svg viewBox="0 0 24 24"><path d="M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4z" fill="currentColor"/></svg>'
+};
 function majCommandes() {
   $commandes.innerHTML = '';
   Jeu.clients.forEach(cl => {
@@ -4666,12 +5540,19 @@ function majCommandes() {
     const d = document.createElement('div');
     d.className = 'cmd';
     d.style.borderLeftColor = cl.revelee ? '#' + r.c.toString(16).padStart(6, '0') : '#4a5b53';
-    const titre = cl.revelee ? r.n : 'Contrat non lu';
-    const ing = cl.revelee ? r.ing.map(i => PLANTES[i].n).join(' + ')
-      : (cl.ticketDispo ? 'À prendre au portail' : 'En route vers le tableau');
-    d.innerHTML = '<div class="nom">' + titre + '</div>' +
-      '<div class="ing">' + ing + '</div>' +
-      '<div class="jauge"><i style="width:100%"></i></div>';
+    let corps;
+    if (cl.revelee) {
+      const pastilles = r.ing.map(i => '<span class="pl" style="background:#' + PLANTES[i].c.toString(16).padStart(6, '0') +
+        '" title="' + PLANTES[i].n + '">' + PLANTES[i].n.charAt(0) + '</span>').join('<span class="plus">+</span>');
+      corps = '<div class="nom">' + r.n + '</div>' +
+        '<div class="ligne">' + pastilles + '<span class="etapes">' + SVG_ETAPE.mortier + '<span class="fl">›</span>' +
+        SVG_ETAPE.alambic + '<span class="fl">›</span>' + SVG_ETAPE.etuve + '</span></div>';
+    } else {
+      corps = '<div class="nom">Contrat non lu</div>' +
+        '<div class="ticket">' + SVG_ETAPE.contrat + '<span>' + (cl.ticketDispo ? 'À prendre au comptoir' : 'À lire au tableau') + '</span></div>';
+    }
+    d.innerHTML = corps + '<div class="jauge"><i style="width:100%"></i></div>';
+    cl.carteDom = d;
     cl.dom = d.querySelector('i');
     cl.domJauge = d.querySelector('.jauge');
     $commandes.appendChild(d);
@@ -4683,6 +5564,7 @@ setInterval(() => {
     const r = Math.max(0, cl.reste / cl.total);
     cl.dom.style.width = (r * 100) + '%';
     cl.domJauge.classList.toggle('chaud', r < 0.3);
+    if (cl.carteDom) cl.carteDom.classList.toggle('chaud', r < 0.3);
   });
 }, 120);
 
@@ -4696,7 +5578,7 @@ function demarrer() {
   if (Jeu.dejaJoue) construireMonde();
   Jeu.dejaJoue = true;
   // Les manettes referment leur écran « Apparence »
-  Jeu.joueurs.forEach(j => { if (!j.local) versPad(j.id, { t: 'perso_fin' }); });
+  Jeu.joueurs.forEach(j => { j.pret = false; if (!j.local) versPad(j.id, { t: 'perso_fin' }); });
   // Remise à zéro
   Jeu.clients.slice().forEach(retirerClient);
   Jeu.tapis.forEach(e => groupeMonde.remove(e.mesh));
@@ -4738,9 +5620,46 @@ function demarrer() {
   majHud();
 }
 
+function monderSuivant() {
+  if (Jeu.phase !== 'fin') return;
+  const i = ORDRE_NIVEAUX.indexOf(niveauCourant.id);
+  choisirNiveau(ORDRE_NIVEAUX[(i + 1) % ORDRE_NIVEAUX.length]);
+  envoyerFinPads();         // les manettes affichent le nouveau monde
+}
+
+/* Tableau des scores sur les manettes : { t:'fin_partie', score, record,
+   neuf, monde }. Retour : { t:'cmd', c:'rejouer' | 'suivant' | 'menu' }. */
+function envoyerFinPads() {
+  if (Jeu.phase !== 'fin') return;
+  const b = Jeu.bilan || { record: 0, neuf: false };
+  Jeu.joueurs.forEach(j => {
+    if (j.local || j.deconnecte) return;
+    versPad(j.id, { t: 'fin_partie', score: Jeu.score, record: b.record, neuf: b.neuf, monde: niveauCourant.titre, ps: b.ps || '' });
+  });
+}
+/* Lobby : chaque téléphone appuie sur « Prêt » ; la partie démarre quand tous
+   les téléphones connectés le sont (un joueur clavier ne bloque pas). */
+function verifierPrets() {
+  if (Jeu.phase !== 'lobby') return;
+  const humains = [...Jeu.joueurs.values()].filter(j => !j.local && !j.deconnecte);
+  if (humains.length && humains.every(j => j.pret)) demarrer();
+}
+function commandeDepuisManette(m) {
+  const jm = Jeu.joueurs.get(m.id);
+  if (jm && Jeu.phase === 'lobby') {
+    if (m.c === 'pret') { jm.pret = !jm.pret; majEquipe(); verifierPrets(); }
+    return;
+  }
+  if (!jm || Jeu.phase !== 'fin') return;   // sinon : seulement au tableau des scores
+  if (m.c === 'rejouer') demarrer();
+  else if (m.c === 'suivant') monderSuivant();
+  else if (m.c === 'menu') retourMenu();
+}
+
 let lobbyNoeuds = null;   // écran d'accueil mis de côté pendant le tableau des scores
 function retourMenu() {
   if (Jeu.phase !== 'fin' || !lobbyNoeuds) return;
+  $voile.classList.add('accueil');
   $voile.replaceChildren(...lobbyNoeuds);
   lobbyNoeuds = null;
   Jeu.phase = 'lobby';
@@ -4780,8 +5699,10 @@ function terminer() {
     if (Jeu.score > record) { neuf = record > 0; record = Jeu.score; localStorage.setItem(cle, String(record)); }
   } catch (e) { /* stockage indisponible : on n'affiche pas de record */ }
 
+  const ps = psWalton(Jeu.score);
   // On garde l'écran d'accueil (QR, joueurs) pour pouvoir y revenir
   if (!lobbyNoeuds) lobbyNoeuds = Array.from($voile.childNodes);
+  $voile.classList.remove('accueil');
   $voile.innerHTML =
     '<h1>Nuit terminée</h1>' +
     '<div id="bilan">' + Jeu.score + '</div>' +
@@ -4794,18 +5715,19 @@ function terminer() {
         ' · ' + (OBJECTIFS.find(o => Jeu.score < o.s).s - Jeu.score) + ' points pour le palier suivant') +
     '</div>' +
     '<div id="podium">' + fiches + '</div>' +
+    '<div id="ps">' + ps + '</div>' +
     '<div id="niveaux"></div>' +
+    '<div id="lettre"></div>' +
     '<div id="actionsFin"><button id="btnRejouer">Rejouer ce monde</button>' +
       '<button id="btnSuivant">Monde suivant ▸</button>' +
       '<button id="btnMenu">Retour à la sélection</button></div>' +
     '<div id="consigne" class="pret">Entrée pour relancer · ← → monde · Échap sélection</div>';
   $voile.style.display = 'flex';
+  Jeu.bilan = { record: record, neuf: neuf, ps: ps };
+  envoyerFinPads();
   document.getElementById('btnRejouer').onclick = () => demarrer();
   document.getElementById('btnMenu').onclick = () => retourMenu();
-  document.getElementById('btnSuivant').onclick = () => {
-    const i = ORDRE_NIVEAUX.indexOf(niveauCourant.id);
-    choisirNiveau(ORDRE_NIVEAUX[(i + 1) % ORDRE_NIVEAUX.length]);
-  };
+  document.getElementById('btnSuivant').onclick = () => monderSuivant();
   majSelecteur();
 }
 

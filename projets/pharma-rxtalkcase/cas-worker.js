@@ -15,7 +15,12 @@ const CORS = {
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } });
 const cut = (s, n) => String(s || '').slice(0, n);
 const HINT = '(indice demandé)';
-const DOCS = (c) => (c.docs_etat && c.docs_etat.length ? '\n\nDOCUMENTS DU CAS :\n' + c.docs_etat.map((d) => '- ' + d.titre + ' : ' + (d.ouvert ? "demandé par l'étudiant" : 'jamais demandé')).join('\n') : '') + (c.notes && c.notes.length ? "\n\nANALYSE DES DOCUMENTS PAR L'ÉTUDIANT (ses notes) :\n" + c.notes.map((n) => '- ' + n.doc + ' : ' + n.texte).join('\n') : '');
+const CADRES = {
+  officine: { role: "UN PATIENT (ou son accompagnant si la situation concerne un enfant ou une personne dépendante) face à un étudiant en pharmacie qui joue le pharmacien d'officine", ton: "Sans vocabulaire médical qu'un patient ne connaîtrait pas : décris les symptômes avec tes mots.", lieu: "Le cadre est un entretien au comptoir de l'officine : adapte la situation même si elle décrit un service hospitalier. Tu t'adresses au pharmacien." },
+  hospitalier: { role: "UN SOIGNANT (médecin, interne ou infirmier(ère)) du service où se trouve le patient décrit dans la situation ; tu sollicites un étudiant en pharmacie qui joue le pharmacien hospitalier de la pharmacie à usage intérieur", ton: "Vocabulaire professionnel courant, ton bref et factuel, comme un soignant pressé qui connaît le dossier.", lieu: "Le cadre est un service hospitalier : tu appelles ou croises le pharmacien au sujet du traitement ou du dossier de ce patient. Tu connais le dossier (la situation), pas plus." },
+  industrie_recherche: { role: "UN COLLÈGUE (médecin investigateur, responsable de pharmacovigilance, de la qualité ou chercheur) qui soumet une situation à un étudiant en pharmacie jouant le pharmacien d'un laboratoire, d'un site industriel ou d'un centre de recherche", ton: "Vocabulaire scientifique et réglementaire courant, ton professionnel.", lieu: "Le cadre est un laboratoire, un site industriel ou un centre de recherche : tu présentes la situation comme un dossier à analyser. Tu connais le dossier (la situation), pas plus." },
+};
+const DOCS = (c) => (c.docs_etat && c.docs_etat.length ? '\n\nDOCUMENTS DU CAS :\n' + c.docs_etat.map((d) => '- ' + d.titre + ' : ' + (d.ouvert ? "demandé par l'étudiant" : 'jamais demandé')).join('\n') : "\n\nLE CAS NE CONTIENT AUCUN DOCUMENT : n'écris pas la rubrique « Analyse des documents ».") + (c.notes && c.notes.length ? "\n\nANALYSE DES DOCUMENTS PAR L'ÉTUDIANT (ses notes) :\n" + c.notes.map((n) => '- ' + n.doc + ' : ' + n.texte).join('\n') : '');
 const INT = (a) => (a && a.length ? '\n\nINTERACTIONS DU THÉSAURUS ANSM (sept. 2023) entre les médicaments du cas, détectées automatiquement (à vérifier) :\n' + a.slice(0, 8).map((i) => '- ' + (i.entre || []).join(' + ') + ' : ' + (i.niveau || []).join(' / ') + '. ' + cut(i.mecanisme, 300) + ' Conduite : ' + cut(i.conduite, 300)).join('\n') : '');
 const PROFILS = {
   presse: "Tu es pressé : réponses courtes, tu regardes l'heure, tu t'impatientes si l'entretien s'allonge, mais tu réponds si on insiste poliment.",
@@ -25,21 +30,21 @@ const PROFILS = {
 };
 const LIGHT = (mode, cas, hist) => mode === 'checklist'
   ? `Situation :\n${cut(cas.enonce, 12000)}\n\nRéponses attendues :\n${(cas.questions || []).slice(0, 12).map((q) => cut(q.reponse_modele, 1500)).join('\n')}${INT(cas.interactions)}\n\nListe 6 à 10 informations clés que le pharmacien doit obtenir du patient en l'interrogeant (symptômes, antécédents, traitements, allergies, contexte), jamais des conclusions ni le diagnostic. Réponds uniquement par un tableau JSON de chaînes courtes.`
-  : `POINTS :\n${(cas.points || []).map((p, i) => (i + 1) + '. ' + cut(p, 200)).join('\n')}\n\nCONVERSATION :\n${hist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? 'Pharmacien : ' : 'Patient : ') + m.content).join('\n')}\n\nRéponds uniquement par un tableau JSON des numéros des points dont l'information a clairement été obtenue (question du pharmacien ou indice demandé).`;
+  : `POINTS :\n${(cas.points || []).map((p, i) => (i + 1) + '. ' + cut(p, 200)).join('\n')}\n\nCONVERSATION :\n${hist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? 'Pharmacien : ' : (cas.pop && cas.pop !== 'officine' ? 'Interlocuteur : ' : 'Patient : ')) + m.content).join('\n')}\n\nRéponds uniquement par un tableau JSON des numéros des points dont l'information a clairement été obtenue (question du pharmacien ou indice demandé).`;
 
-const PATIENT = (enonce, hint, docs, profil) => `Tu joues UN PATIENT (ou son accompagnant si la situation concerne un enfant ou une personne dépendante) face à un étudiant en pharmacie qui joue le pharmacien. L'étudiant s'entraîne : laisse-le mener l'entretien.
+const PATIENT = (enonce, hint, docs, profil, pop) => `Tu joues ${(CADRES[pop] || CADRES.officine).role}. L'étudiant s'entraîne : laisse-le mener l'entretien.
 Règles :
-- Reste dans le rôle, en français courant, 1 à 3 phrases, sans vocabulaire médical qu'un patient ne connaîtrait pas : décris les symptômes avec tes mots.
-- Le cadre est un entretien pharmaceutique : adapte la situation même si elle décrit un service hospitalier. Tu t'adresses toujours au pharmacien.
+- Reste dans le rôle, en français, 1 à 3 phrases. ${(CADRES[pop] || CADRES.officine).ton}
+- ${(CADRES[pop] || CADRES.officine).lieu}
 - Commence par ta demande ou ta plainte, jamais par le diagnostic ni par la liste de tous tes problèmes.
 - Ne donne une information (antécédents, traitements, allergies, durée, résultats) que si l'étudiant la demande ; à une question vague, réponds vaguement. Si on te demande ton ordonnance ou ton bilan, donne le traitement ou les valeurs exactement comme dans la situation.
 - N'invente aucune donnée clinique, biologique ou médicamenteuse absente de la situation. Pour un détail de vie banal (prénom, métier), tu peux improviser. Si tu ne sais pas : « je ne sais pas ».
-- Ne révèle jamais le diagnostic, ne corrige pas l'étudiant, ne sors pas du rôle, ne suggère pas ce qu'il devrait demander. S'il te donne un conseil faux ou dangereux, réagis comme un patient (doute, incompréhension) sans le reprendre.${docs && docs.length ? "\n- Tu as sur toi ces documents : " + docs.join(', ') + ". Tu peux dire de vive voix ce qu'ils contiennent si on te le demande, mais tu ne les tends que si l'étudiant te les demande explicitement (le dossier pharmaceutique ne s'ouvre que si l'étudiant te demande ton accord pour l'ouvrir). Quand tu en tends un, termine ta phrase par la balise [DOC:nom exact] (exemples : [DOC:Hémogramme], [DOC:Ordonnance]). Sans demande explicite, n'ajoute jamais de balise." : ''}${PROFILS[profil] ? '\n- PROFIL (comportement uniquement, sans changer les faits de la situation) : ' + PROFILS[profil] : ''}
+- Ne révèle jamais le diagnostic, ne corrige pas l'étudiant, ne sors pas du rôle, ne suggère pas ce qu'il devrait demander. S'il te donne un conseil faux ou dangereux, réagis comme un patient (doute, incompréhension) sans le reprendre.${docs && docs.length ? "\n- Tu as sur toi ces documents : " + docs.join(', ') + ". Tu peux dire de vive voix ce qu'ils contiennent si on te le demande, mais tu ne les tends que si l'étudiant te les demande explicitement (le dossier pharmaceutique ne s'ouvre que si l'étudiant te demande ton accord pour l'ouvrir). Quand tu en tends un, termine ta phrase par la balise [DOC:nom exact] (exemples : [DOC:Hémogramme], [DOC:Ordonnance]). Sans demande explicite, n'ajoute jamais de balise." : "\n- Tu n'as aucun document sur toi. Si on te demande ton ordonnance ou des résultats, dis ce que tu en sais de vive voix sans prétendre tendre un papier. N'invente aucun nom de médicament ni aucune valeur absents de la situation : si l'énoncé n'en cite pas, dis que tu ne t'en souviens pas."}${PROFILS[profil] ? '\n- PROFIL (comportement uniquement, sans changer les faits de la situation) : ' + PROFILS[profil] : ''}
 
 SITUATION (connue de toi seul) :
 ${enonce}${hint ? `\n\nINDICE DEMANDÉ (n°${hint}) : l'étudiant est bloqué. Dans ta prochaine réponse uniquement, lâche spontanément UNE information de la situation qu'il n'a pas encore obtenue (symptôme, antécédent, traitement, détail de l'ordonnance ou du bilan…), comme un patient qui y repense, en 1 à 2 phrases. Indice n°1 : très indirect ; n°2 : plus net ; n°3 et suivants : net. Ne nomme jamais le diagnostic ni la solution.` : ''}`;
 
-const EVAL = (cas, transcript) => `Tu es l'évaluateur d'un entraînement de pharmacie. Ci-dessous : la situation, les questions d'examen associées avec leurs réponses attendues (elles font foi), puis la conversation entre l'étudiant (pharmacien) et le patient simulé.
+const EVAL = (cas, transcript) => `Tu es l'évaluateur d'un entraînement de pharmacie. Ci-dessous : la situation, les questions d'examen associées avec leurs réponses attendues (elles font foi). IMPORTANT : l'étudiant n'a jamais vu ces questions et n'avait pas à y répondre ; elles servent de référence sur ce qu'un bon pharmacien devait établir, savoir et conseiller. Ne le note donc pas sur ces questions : note la consultation (informations utiles obtenues, justesse de ses propos et conseils par rapport à ces réponses, décision, documents). Une consultation courte mais juste n'est pas à 0. Termine par une rubrique **Connaissances du cas non mobilisées** tirée des réponses attendues. Puis la conversation entre l'étudiant (pharmacien) et le patient simulé.
 Fais un débrief en français, précis et honnête, uniquement à partir des réponses attendues et de ce qui a été dit :
 **Note : x/20** et une phrase de bilan.
 **Bien fait** : ce qui est juste.
@@ -72,7 +77,7 @@ export default {
 
     let b;
     try { b = await request.json(); } catch { return json({ error: 'JSON invalide' }, 400); }
-    const cas = b.cas || {};
+    const cas = b.cas || {}; cas.pop = b.pop;
     const hist = (Array.isArray(b.messages) ? b.messages : []).slice(-40)
       .map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: cut(m.content, 2000) }));
     if (!cas.enonce || !hist.length) return json({ error: 'Cas ou messages manquants' }, 400);
@@ -81,10 +86,10 @@ export default {
     const light = b.mode === 'cover' || b.mode === 'checklist';
     const messages = light ? [{ role: 'user', content: LIGHT(b.mode, cas, hist) }] : evaluate
       ? [{ role: 'user', content: EVAL({ enonce: cut(cas.enonce, 12000), points: (cas.points || []).slice(0, 12).map((p) => cut(p, 200)), interactions: (cas.interactions || []).slice(0, 8), notes: (cas.notes || []).slice(0, 12).map((n) => ({ doc: cut(n.doc, 60), texte: cut(n.texte, 1500) })), docs_etat: (cas.docs_etat || []).slice(0, 20).map((d) => ({ titre: cut(d.titre, 60), ouvert: !!d.ouvert })), questions: (cas.questions || []).slice(0, 12).map((q) => ({ ...q, reponse_modele: cut(q.reponse_modele, 2500) })) },
-          hist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? 'Pharmacien : ' : 'Patient : ') + m.content).join('\n')) }]
-      : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0, Array.isArray(cas.docs) ? cas.docs.slice(0, 12).map((d) => cut(d, 60)) : [], b.profil) }, ...hist];
+          hist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? 'Pharmacien : ' : (cas.pop && cas.pop !== 'officine' ? 'Interlocuteur : ' : 'Patient : ')) + m.content).join('\n')) }]
+      : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0, Array.isArray(cas.docs) ? cas.docs.slice(0, 12).map((d) => cut(d, 60)) : [], b.profil, b.pop) }, ...hist];
 
-    const chain = env.MODELS ? env.MODELS.split(',').map((s) => s.trim().split(/:(.+)/).slice(0, 2)) : light ? [CHAIN[4], CHAIN[3], ...CHAIN] : CHAIN;
+    const chain = env.MODELS ? env.MODELS.split(',').map((s) => s.trim().split(/:(.+)/).slice(0, 2)) : light ? [CHAIN[4], CHAIN[3]] : CHAIN;
     const errs = [];
     for (const [p, model] of chain) {
       const api = API[p]; const key = api && api.keys.map((k) => env[k]).find(Boolean);
@@ -95,6 +100,7 @@ export default {
         messages: /gemma/i.test(model) ? mergeSystem(messages) : messages,
       };
       if (/gemma-4/i.test(model)) body.reasoning_effort = 'none';
+      else if (p === 'google' && !evaluate && !light) body.reasoning_effort = 'low';
       const send = () => fetch(api.url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key }, body: JSON.stringify(body) });
       try {
         let r = await send();

@@ -269,8 +269,7 @@
 /* Le relais est déduit de l'URL de la page : la manette est servie
    par le même domaine que l'écran. On peut forcer avec ?relay=... */
 const params = new URLSearchParams(location.search);
-const RELAY = params.get('relay') ||
-  ((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
+const RELAY = params.get('relay') || 'wss://frankenstein-lab.zacharybov.workers.dev';
 
 const el = (id) => document.getElementById(id);
 const $connexion = el('connexion'), $etat = el('etat'), $deco = el('deco');

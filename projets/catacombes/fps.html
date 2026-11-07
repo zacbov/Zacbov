@@ -1558,6 +1558,9 @@ function swing(){
   const P=G.p, w=G.weapon;
   P.atkT=attackCd();
   P.swingT=0.22; P.swingDir=Math.atan2(P.fy,P.fx);
+  if (typeof spawnSlashEffect === 'function' && G && G.p) {
+    spawnSlashEffect(G.p.x - Math.sin(playerYaw) * 0.7, 0.5, G.p.y - Math.cos(playerYaw) * 0.7, playerYaw);
+  }
   const list=[];
   for(const m of G.mobs){
     const dx=m.x-P.x, dy=m.y-P.y, d=Math.hypot(dx,dy);
@@ -1584,6 +1587,10 @@ function hitMob(m,w){
   if(m.guard && facingPlayer(m)) dmg*=(1-m.guard);
   dmg=Math.round(dmg);
   hurtMob(m,dmg,false,P.x,P.y);
+  // Impact d'étincelles et de sang 3D
+  if (typeof spawn3DImpact === 'function') {
+    spawn3DImpact(m.x, 0.55, m.y, crit ? 0xffcc22 : 0xaa1111, crit ? 24 : 14, crit ? 3.6 : 2.4);
+  }
   popNum(m.x,m.y,dmg,crit?'#ffe08a':'#f0f0f0',crit?1.35:1);
   if(crit){ G.flash=.5; G.shake=Math.max(G.shake,.28); hitstop(0.035); }
   /* recul */
@@ -2415,12 +2422,16 @@ let scene, camera, renderer3D;
 let wallMeshGroup = null;
 let decorGroup = null;
 let floorCeilMesh = null;
+let mob3DMap = new Map(); // Monstres réels en mesh 3D géométrique
+let item3DMap = new Map(); // Objets 3D réels sculptés
 let mobSprites = new Map();
 let itemSprites = new Map();
 let mobShadows = new Map();
 let mobHPBars = new Map();
 let itemPillars = new Map();
 let lightSources = [];
+let particles3D = [];
+let mobRagdolls = [];
 let playerTorchLight = null;
 let spriteTextureCache = {};
 let playerYaw = 0;
@@ -2428,6 +2439,9 @@ let playerPitch = 0;
 let isPointerLocked = false;
 let CW = 0, CH = 0;
 let weaponSprite = null;
+let weaponMesh3D = null;
+let dustParticles = null;
+let torchFlickerLight = null;
 let shotSprites = new Map();
 let hitSparkSprites = [];
 let mmcv = null, mmcx = null;
@@ -2456,8 +2470,14 @@ function init3D() {
   camera.add(playerTorchLight);
   scene.add(camera);
 
-  // Viewmodel d'arme 3D attaché à la caméra
-  const wTex = getTextureFromCanvasDraw('viewmodel_weapon', () => {
+  // Viewmodel d'arme 3D réaliste attaché à la caméra
+  weaponMesh3D = create3DViewmodelWeapon();
+  weaponMesh3D.position.set(0.24, -0.22, -0.42);
+  camera.add(weaponMesh3D);
+
+  initVolumetricDust();
+
+  const wTex = getTextureFromCanvasDraw('viewmodel_weapon_backup', () => {
     // Épée médiévale détaillée
     cx.fillStyle = '#b0b8c8';
     poly([[.12,.88],[.76,.14],[.88,.22],[.22,.94]]);
@@ -2477,7 +2497,7 @@ function init3D() {
   weaponSprite = new THREE.Sprite(wMat);
   weaponSprite.scale.set(0.52, 0.52, 1);
   weaponSprite.position.set(0.22, -0.18, -0.40);
-  camera.add(weaponSprite);
+  weaponSprite.visible = false;
   scene.add(camera);
 
   mmcv = document.getElementById('mmcv');
@@ -2666,11 +2686,1205 @@ function getShadowTexture() {
   return tex;
 }
 
+
+/* ==========================================================================
+   CONSTRUCTEURS DE MODÈLES 3D RÉELS POUR LES MONSTRES
+   Chaque monstre possède un corps 3D, une tête, des membres/ailes animés et des yeux lumineux
+   ========================================================================== */
+/* ==========================================================================
+   BESTIAIRE 3D RÉALISTE DARK FANTASY (STYLE SKYRIM / DARK SOULS)
+   Modélisation procédurale multicouche : squelettes desséchés, bêtes féroces,
+   draugrs cuirassés, cultistes encapuchonnés, boss gigantesques.
+   Chaque monstre possède des matériaux PBR (rugosité, reflets métalliques),
+   des yeux émissifs lumineux, des armes réalistes et des membres animés articulés.
+   ========================================================================== */
+
+// Cache de matériaux procéduraux PBR pour performance optimale
+/* ==========================================================================
+   GÉNÉRATEUR DE TEXTURES PROCÉDURALES RÉALISTES POUR MONSTRES (PBR)
+   Chaque monstre dispose d'une texture haute définition avec détails organiques,
+   veines de pourriture, os calcinés, sang séché, mailles de fer et yeux incandescents.
+   ========================================================================== */
+
+/* ==========================================================================
+   MOTEUR DE CRÉATURES 3D ULTRA-DÉTAILLÉES (STYLE ELDEN RING / SKYRIM HD)
+   Modélisation procédurale cinématique multicouche :
+   - Articulation bipède hiérarchique : Épaules -> Coudes -> Poignets / Bassin -> Genoux -> Bottes
+   - Anatomie complexe : cage thoracique, côtes décharnées, orbites oculaires avec lueur volumétrique point-light
+   - Armures composées de plates rivetées, gemmes lumineuses et fourrures
+   - Animations riches : respiration, balancement de tête, attaque en piqué, foulée de charge
+   ========================================================================== */
+
+function createOrganTexture(type, baseColorHex, detailColorHex) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 512;
+  const g = c.getContext('2d');
+
+  g.fillStyle = baseColorHex;
+  g.fillRect(0, 0, 512, 512);
+
+  if (type === 'bone') {
+    // Texture d'os calciné et craquelé
+    g.strokeStyle = detailColorHex || '#544b3c';
+    g.lineWidth = 2;
+    for (let i = 0; i < 40; i++) {
+      let x = Math.random() * 512, y = Math.random() * 512;
+      g.beginPath(); g.moveTo(x, y);
+      for (let s = 0; s < 5; s++) {
+        x += (Math.random() - 0.5) * 45;
+        y += Math.random() * 40;
+        g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+  } else if (type === 'fur') {
+    // Pelage d'animal et poils texturés
+    g.strokeStyle = detailColorHex || '#120d09';
+    g.lineWidth = 1.5;
+    for (let i = 0; i < 700; i++) {
+      const x = Math.random() * 512, y = Math.random() * 512;
+      g.beginPath(); g.moveTo(x, y);
+      g.lineTo(x + (Math.random() - 0.5) * 12, y + 8 + Math.random() * 20);
+      g.stroke();
+    }
+  } else if (type === 'flesh') {
+    // Chair corrompue de goule avec vaisseaux nécrosés et sang séché
+    g.strokeStyle = detailColorHex || '#1e281b';
+    g.lineWidth = 3;
+    for (let v = 0; v < 30; v++) {
+      let vx = Math.random() * 512, vy = Math.random() * 512;
+      g.beginPath(); g.moveTo(vx, vy);
+      for (let s = 0; s < 6; s++) {
+        vx += (Math.random() - 0.5) * 55;
+        vy += (Math.random() - 0.5) * 55;
+        g.lineTo(vx, vy);
+      }
+      g.stroke();
+    }
+    for (let p = 0; p < 35; p++) {
+      g.fillStyle = 'rgba(60, 15, 15, 0.55)';
+      g.beginPath();
+      g.arc(Math.random() * 512, Math.random() * 512, 6 + Math.random() * 26, 0, 6.28);
+      g.fill();
+    }
+  } else if (type === 'armor') {
+    // Plaques de fer martelées avec rayures de taille et rivets
+    g.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+    g.lineWidth = 2;
+    for (let s = 0; s < 50; s++) {
+      const x = Math.random() * 512, y = Math.random() * 512;
+      g.beginPath(); g.moveTo(x, y);
+      g.lineTo(x + (Math.random() - 0.5) * 60, y + (Math.random() - 0.5) * 60);
+      g.stroke();
+    }
+    for (let r = 0; r < 40; r++) {
+      g.fillStyle = 'rgba(95, 40, 20, 0.38)';
+      g.beginPath();
+      g.arc(Math.random() * 512, Math.random() * 512, 8 + Math.random() * 24, 0, 6.28);
+      g.fill();
+    }
+  }
+
+  // Grain et patine réaliste
+  const imgData = g.getImageData(0, 0, 512, 512);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (Math.random() - 0.5) * 28;
+    d[i] = Math.min(255, Math.max(0, d[i] + n));
+    d[i+1] = Math.min(255, Math.max(0, d[i+1] + n));
+    d[i+2] = Math.min(255, Math.max(0, d[i+2] + n));
+  }
+  g.putImageData(imgData, 0, 0);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+function createProceduralBumpMap(style) {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#808080';
+  g.fillRect(0, 0, 256, 256);
+
+  if (style === 'noise') {
+    const imgData = g.getImageData(0, 0, 256, 256);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const v = 128 + (((Math.random() - 0.5) * 90) | 0);
+      d[i] = v; d[i+1] = v; d[i+2] = v;
+    }
+    g.putImageData(imgData, 0, 0);
+  } else if (style === 'plates') {
+    g.strokeStyle = '#202020';
+    g.lineWidth = 3;
+    for (let y = 16; y < 256; y += 32) {
+      g.beginPath(); g.moveTo(0, y); g.lineTo(256, y); g.stroke();
+    }
+    for (let x = 16; x < 256; x += 32) {
+      g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 256); g.stroke();
+    }
+  } else if (style === 'cracks') {
+    g.strokeStyle = '#101010';
+    g.lineWidth = 2;
+    for (let i = 0; i < 20; i++) {
+      let x = Math.random() * 256, y = Math.random() * 256;
+      g.beginPath(); g.moveTo(x, y);
+      for (let j = 0; j < 5; j++) {
+        x += (Math.random() - 0.5) * 40;
+        y += (Math.random() - 0.5) * 40;
+        g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+const BUMP_NOISE = createProceduralBumpMap('noise');
+const BUMP_CRACKS = createProceduralBumpMap('cracks');
+const BUMP_PLATES = createProceduralBumpMap('plates');
+
+const ADV_MATS = {
+  bone: new THREE.MeshStandardMaterial({
+    map: createOrganTexture('bone', '#c8c0ae', '#5c5443'),
+    bumpMap: BUMP_CRACKS,
+    bumpScale: 0.05,
+    roughness: 0.75, metalness: 0.05
+  }),
+  boneDark: new THREE.MeshStandardMaterial({
+    map: createOrganTexture('bone', '#6f6452', '#332b21'),
+    bumpMap: BUMP_CRACKS,
+    bumpScale: 0.07,
+    roughness: 0.85, metalness: 0.05
+  }),
+  ironRusty: new THREE.MeshStandardMaterial({
+    map: createOrganTexture('armor', '#383332', '#642b1a'),
+    bumpMap: BUMP_PLATES,
+    bumpScale: 0.08,
+    roughness: 0.65, metalness: 0.82
+  }),
+  steel: new THREE.MeshStandardMaterial({
+    map: createOrganTexture('armor', '#98a2b2', '#3a4454'),
+    bumpMap: BUMP_NOISE,
+    bumpScale: 0.03,
+    roughness: 0.28, metalness: 0.94
+  }),
+  fleshGhoul: new THREE.MeshStandardMaterial({
+    map: createOrganTexture('flesh', '#485646', '#222920'),
+    bumpMap: BUMP_NOISE,
+    bumpScale: 0.09,
+    roughness: 0.52, metalness: 0.15
+  }),
+  furBrown: new THREE.MeshStandardMaterial({
+    map: createOrganTexture('fur', '#3a2718', '#160e08'),
+    bumpMap: BUMP_NOISE,
+    bumpScale: 0.08,
+    roughness: 0.95
+  }),
+  furDark: new THREE.MeshStandardMaterial({
+    map: createOrganTexture('fur', '#181210', '#080605'),
+    bumpMap: BUMP_NOISE,
+    bumpScale: 0.09,
+    roughness: 0.95
+  }),
+  goldAncient: new THREE.MeshStandardMaterial({ color: 0xb58c38, bumpMap: BUMP_PLATES, bumpScale: 0.05, roughness: 0.38, metalness: 0.90 }),
+  clothRobe: new THREE.MeshStandardMaterial({ color: 0x16121c, bumpMap: BUMP_NOISE, bumpScale: 0.04, roughness: 0.92 }),
+  cultRobe: new THREE.MeshStandardMaterial({ color: 0x541414, bumpMap: BUMP_NOISE, bumpScale: 0.04, roughness: 0.88 }),
+  woodDark: new THREE.MeshStandardMaterial({ color: 0x28190e, bumpMap: BUMP_NOISE, bumpScale: 0.05, roughness: 0.92 }),
+  glowRed: new THREE.MeshBasicMaterial({ color: 0xff1500 }),
+  glowGold: new THREE.MeshBasicMaterial({ color: 0xffb000 }),
+  glowCyan: new THREE.MeshBasicMaterial({ color: 0x30e5d8 }),
+  glowPurple: new THREE.MeshBasicMaterial({ color: 0xc83aff }),
+  glowGreen: new THREE.MeshBasicMaterial({ color: 0x39ff14 }),
+};
+
+function create3DMonster(m) {
+  const group = new THREE.Group();
+  const kind = m.k;
+  group.userData = { parts: {}, kind: kind, origMats: [] };
+
+  const themeHex = parseInt((m.c || '#7f9b6a').replace('#', ''), 16);
+  const themeSkinMat = new THREE.MeshStandardMaterial({
+    color: themeHex, roughness: 0.62, metalness: 0.18, bumpMap: BUMP_NOISE, bumpScale: 0.06
+  });
+
+  // -------------------------------------------------------------------------
+  // 1. SQUELETTES & ARCHERS : Draugrs nordiques AAA sculptés
+  // -------------------------------------------------------------------------
+  if (kind === 'skel' || kind === 'archer') {
+    const sc = 0.95;
+
+    // Colonne vertébrale détaillée avec vertèbres sculptées
+    const spine = new THREE.Group();
+    for (let v = 0; v < 6; v++) {
+      const vert = new THREE.Mesh(new THREE.CylinderGeometry(0.042 * sc, 0.046 * sc, 0.07 * sc, 6), ADV_MATS.boneDark);
+      vert.position.y = (0.24 + v * 0.065) * sc;
+      spine.add(vert);
+    }
+    group.add(spine);
+
+    // Bassin sculpté
+    const pelvis = new THREE.Mesh(new THREE.BoxGeometry(0.26 * sc, 0.12 * sc, 0.18 * sc), ADV_MATS.boneDark);
+    pelvis.position.set(0, 0.25 * sc, 0);
+    group.add(pelvis);
+
+    // Jupe de cotte de mailles en lambeaux
+    const chainSkirt = new THREE.Mesh(new THREE.CylinderGeometry(0.18 * sc, 0.24 * sc, 0.18 * sc, 7), ADV_MATS.ironRusty);
+    chainSkirt.position.set(0, 0.22 * sc, 0);
+    group.add(chainSkirt);
+
+    // Cage thoracique réaliste à 6 côtes biseautées
+    const ribGroup = new THREE.Group();
+    for (let r = 0; r < 6; r++) {
+      const rib = new THREE.Mesh(new THREE.TorusGeometry(0.105 * sc + r * 0.015 * sc, 0.018 * sc, 4, 12, Math.PI * 1.35), ADV_MATS.bone);
+      rib.rotation.x = Math.PI / 2;
+      rib.position.y = 0.32 * sc + r * 0.065 * sc;
+      ribGroup.add(rib);
+    }
+    const sternum = new THREE.Mesh(new THREE.BoxGeometry(0.038 * sc, 0.32 * sc, 0.025 * sc), ADV_MATS.bone);
+    sternum.position.set(0, 0.48 * sc, -0.15 * sc);
+    ribGroup.add(sternum);
+    // Clavicules
+    const clavL = new THREE.Mesh(new THREE.CylinderGeometry(0.018 * sc, 0.018 * sc, 0.24 * sc, 4), ADV_MATS.bone);
+    clavL.rotation.z = Math.PI / 2.3;
+    clavL.position.set(0.12 * sc, 0.65 * sc, -0.06 * sc);
+    const clavR = clavL.clone();
+    clavR.rotation.z = -Math.PI / 2.3;
+    clavR.position.x = -0.12 * sc;
+    ribGroup.add(clavL); ribGroup.add(clavR);
+    group.add(ribGroup);
+
+    // Tête avec crâne sculpté, dents et mâchoire menaçante
+    const headGroup = new THREE.Group();
+    const cranium = new THREE.Mesh(new THREE.SphereGeometry(0.125 * sc, 8, 8), ADV_MATS.bone);
+    cranium.scale.set(1.0, 1.15, 1.25);
+    headGroup.add(cranium);
+
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.11 * sc, 0.065 * sc, 0.14 * sc), ADV_MATS.boneDark);
+    jaw.position.set(0, -0.09 * sc, -0.06 * sc);
+    headGroup.add(jaw);
+    group.userData.parts.jaw = jaw;
+
+    // Dents sculptées
+    const teethTop = new THREE.Mesh(new THREE.BoxGeometry(0.08 * sc, 0.02 * sc, 0.03 * sc), ADV_MATS.bone);
+    teethTop.position.set(0, -0.05 * sc, -0.13 * sc);
+    headGroup.add(teethTop);
+
+    const eyeMat = kind === 'archer' ? ADV_MATS.glowGreen : ADV_MATS.glowRed;
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.028 * sc, 6, 6), eyeMat);
+    eyeL.position.set(0.045 * sc, 0.01 * sc, -0.13 * sc);
+    const eyeR = eyeL.clone();
+    eyeR.position.x = -0.045 * sc;
+    headGroup.add(eyeL); headGroup.add(eyeR);
+
+    // Casque antique en fer rouillé avec cornes médiévales
+    const helmet = new THREE.Mesh(new THREE.CylinderGeometry(0.13 * sc, 0.15 * sc, 0.12 * sc, 8), ADV_MATS.ironRusty);
+    helmet.position.set(0, 0.08 * sc, 0);
+    const hornL = new THREE.Mesh(new THREE.ConeGeometry(0.04 * sc, 0.22 * sc, 5), ADV_MATS.boneDark);
+    hornL.position.set(0.15 * sc, 0.06 * sc, 0);
+    hornL.rotation.z = -Math.PI / 2.6;
+    const hornR = hornL.clone();
+    hornR.position.x = -0.15 * sc;
+    hornR.rotation.z = Math.PI / 2.6;
+    helmet.add(hornL); helmet.add(hornR);
+    headGroup.add(helmet);
+
+    headGroup.position.set(0, 0.75 * sc, 0);
+    group.add(headGroup);
+    group.userData.parts.head = headGroup;
+
+    // Articulations des jambes (Hanche -> Genou -> Pied)
+    function createLeg(xSide) {
+      const hip = new THREE.Group();
+      hip.position.set(xSide * 0.11 * sc, 0.24 * sc, 0);
+      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.028 * sc, 0.024 * sc, 0.22 * sc, 5), ADV_MATS.bone);
+      thigh.position.y = -0.11 * sc;
+      hip.add(thigh);
+
+      const knee = new THREE.Group();
+      knee.position.set(0, -0.22 * sc, 0);
+      const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.024 * sc, 0.020 * sc, 0.22 * sc, 5), ADV_MATS.bone);
+      shin.position.y = -0.11 * sc;
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(0.06 * sc, 0.035 * sc, 0.12 * sc), ADV_MATS.boneDark);
+      foot.position.set(0, -0.22 * sc, -0.04 * sc);
+      knee.add(shin); knee.add(foot);
+      hip.add(knee);
+
+      return { root: hip, knee: knee };
+    }
+
+    const legL = createLeg(1);
+    const legR = createLeg(-1);
+    group.add(legL.root); group.add(legR.root);
+    group.userData.parts.legL = legL.root;
+    group.userData.parts.legR = legR.root;
+    group.userData.parts.kneeL = legL.knee;
+    group.userData.parts.kneeR = legR.knee;
+
+    // Articulations des bras (Épaule -> Coude -> Poignet)
+    function createArm(xSide) {
+      const shoulder = new THREE.Group();
+      shoulder.position.set(xSide * 0.24 * sc, 0.64 * sc, 0);
+      // Épaulière en fer rouillé
+      const pauldron = new THREE.Mesh(new THREE.SphereGeometry(0.08 * sc, 5, 5), ADV_MATS.ironRusty);
+      pauldron.position.set(0, 0.02 * sc, 0);
+      shoulder.add(pauldron);
+
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.026 * sc, 0.022 * sc, 0.21 * sc, 5), ADV_MATS.bone);
+      upper.position.y = -0.10 * sc;
+      shoulder.add(upper);
+
+      const elbow = new THREE.Group();
+      elbow.position.set(0, -0.21 * sc, 0);
+      const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.023 * sc, 0.019 * sc, 0.21 * sc, 5), ADV_MATS.bone);
+      forearm.position.y = -0.10 * sc;
+      elbow.add(forearm);
+      shoulder.add(elbow);
+
+      return { root: shoulder, elbow: elbow };
+    }
+
+    const armL = createArm(1);
+    const armR = createArm(-1);
+    group.add(armL.root); group.add(armR.root);
+    group.userData.parts.armL = armL.root;
+    group.userData.parts.armR = armR.root;
+    group.userData.parts.elbowL = armL.elbow;
+    group.userData.parts.elbowR = armR.elbow;
+
+    if (kind === 'archer') {
+      const bow = new THREE.Mesh(new THREE.TorusGeometry(0.32 * sc, 0.024 * sc, 5, 14, Math.PI * 0.95), ADV_MATS.woodDark);
+      bow.position.set(0, -0.12 * sc, -0.05 * sc);
+      bow.rotation.y = Math.PI / 2;
+      armL.elbow.add(bow);
+      // Carquois dans le dos
+      const quiver = new THREE.Mesh(new THREE.CylinderGeometry(0.06 * sc, 0.05 * sc, 0.45 * sc, 6), ADV_MATS.woodDark);
+      quiver.rotation.z = Math.PI / 4;
+      quiver.position.set(0.08 * sc, 0.52 * sc, 0.14 * sc);
+      group.add(quiver);
+    } else {
+      // Épée antique ébréchée
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(0.055 * sc, 0.68 * sc, 0.022 * sc), ADV_MATS.ironRusty);
+      const cross = new THREE.Mesh(new THREE.BoxGeometry(0.20 * sc, 0.038 * sc, 0.045 * sc), ADV_MATS.ironRusty);
+      cross.position.y = -0.26 * sc;
+      blade.add(cross);
+      blade.position.set(0, -0.14 * sc, -0.16 * sc);
+      blade.rotation.x = Math.PI / 3;
+      armL.elbow.add(blade);
+
+      // Bouclier rond bosselé avec ferrures
+      const shield = new THREE.Mesh(new THREE.CylinderGeometry(0.24 * sc, 0.24 * sc, 0.038 * sc, 10), ADV_MATS.woodDark);
+      const boss = new THREE.Mesh(new THREE.SphereGeometry(0.07 * sc, 6, 6), ADV_MATS.ironRusty);
+      boss.position.y = 0.02 * sc;
+      shield.add(boss);
+      shield.rotation.x = Math.PI / 2;
+      shield.position.set(0, -0.10 * sc, -0.06 * sc);
+      armR.elbow.add(shield);
+    }
+
+  // -------------------------------------------------------------------------
+  // 2. RATS DE CRYPTE, CHIENS DU PUITS & WARGS (Quadrupèdes féroces AAA)
+  // -------------------------------------------------------------------------
+  } else if (kind === 'rat' || kind === 'warg' || kind === 'hound') {
+    const isBig = (kind === 'warg' || kind === 'hound');
+    const sc = isBig ? 1.45 : 0.85;
+    const furMat = isBig ? ADV_MATS.furDark : ADV_MATS.furBrown;
+
+    // Corps musclé avec colonne arquée
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.20 * sc, 0.28 * sc, 0.64 * sc, 8), furMat);
+    body.rotation.x = Math.PI / 2.3;
+    body.position.set(0, 0.26 * sc, 0);
+    group.add(body);
+
+    // Épines dorsales le long du dos pour les wargs/chiens
+    if (isBig) {
+      for (let sp = 0; sp < 5; sp++) {
+        const spineSpike = new THREE.Mesh(new THREE.ConeGeometry(0.035 * sc, 0.15 * sc, 4), ADV_MATS.boneDark);
+        spineSpike.position.set(0, 0.38 * sc + sp * 0.04 * sc, -0.18 * sc + sp * 0.12 * sc);
+        spineSpike.rotation.x = -Math.PI / 4;
+        group.add(spineSpike);
+      }
+    }
+
+    const headGroup = new THREE.Group();
+    const skull = new THREE.Mesh(new THREE.CylinderGeometry(0.14 * sc, 0.17 * sc, 0.28 * sc, 7), furMat);
+    skull.rotation.x = -Math.PI / 4;
+    headGroup.add(skull);
+
+    const snout = new THREE.Mesh(new THREE.ConeGeometry(0.13 * sc, 0.32 * sc, 6), furMat);
+    snout.rotation.x = -Math.PI / 2;
+    snout.position.set(0, 0.02 * sc, -0.20 * sc);
+    headGroup.add(snout);
+
+    // Mâchoire inférieure articulée
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.11 * sc, 0.06 * sc, 0.24 * sc), furMat);
+    jaw.position.set(0, -0.07 * sc, -0.15 * sc);
+    headGroup.add(jaw);
+    group.userData.parts.jaw = jaw;
+
+    // Crocs 3D saillants
+    const toothL = new THREE.Mesh(new THREE.ConeGeometry(0.024 * sc, 0.09 * sc, 4), ADV_MATS.bone);
+    toothL.position.set(0.048 * sc, -0.065 * sc, -0.24 * sc);
+    toothL.rotation.x = Math.PI;
+    const toothR = toothL.clone();
+    toothR.position.x = -0.048 * sc;
+    headGroup.add(toothL); headGroup.add(toothR);
+
+    // Yeux rouges brillants
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.035 * sc, 6, 6), ADV_MATS.glowRed);
+    eyeL.position.set(0.08 * sc, 0.08 * sc, -0.15 * sc);
+    const eyeR = eyeL.clone();
+    eyeR.position.x = -0.08 * sc;
+    headGroup.add(eyeL); headGroup.add(eyeR);
+
+    // Oreilles taillées
+    const earL = new THREE.Mesh(new THREE.ConeGeometry(0.045 * sc, 0.16 * sc, 4), furMat);
+    earL.position.set(0.11 * sc, 0.18 * sc, -0.04 * sc);
+    earL.rotation.z = -Math.PI / 5;
+    const earR = earL.clone();
+    earR.position.x = -0.11 * sc;
+    earR.rotation.z = Math.PI / 5;
+    headGroup.add(earL); headGroup.add(earR);
+
+    headGroup.position.set(0, 0.38 * sc, -0.28 * sc);
+    group.add(headGroup);
+    group.userData.parts.head = headGroup;
+
+    // 4 pattes articulées avec coussinets et griffes
+    function createPaw(x, z) {
+      const hip = new THREE.Group();
+      hip.position.set(x * sc, 0.22 * sc, z * sc);
+      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.052 * sc, 0.042 * sc, 0.18 * sc, 6), furMat);
+      thigh.position.y = -0.09 * sc;
+      hip.add(thigh);
+      const knee = new THREE.Group();
+      knee.position.set(0, -0.18 * sc, 0);
+      const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.040 * sc, 0.032 * sc, 0.18 * sc, 6), furMat);
+      shin.position.y = -0.09 * sc;
+      const claw = new THREE.Mesh(new THREE.ConeGeometry(0.02 * sc, 0.07 * sc, 4), ADV_MATS.boneDark);
+      claw.rotation.x = -Math.PI / 2.5;
+      claw.position.set(0, -0.17 * sc, -0.04 * sc);
+      knee.add(shin); knee.add(claw);
+      hip.add(knee);
+      return { root: hip, knee: knee };
+    }
+
+    const pFL = createPaw(0.18, -0.22);
+    const pFR = createPaw(-0.18, -0.22);
+    const pBL = createPaw(0.18, 0.22);
+    const pBR = createPaw(-0.18, 0.22);
+    group.add(pFL.root); group.add(pFR.root); group.add(pBL.root); group.add(pBR.root);
+    group.userData.parts.pFL = pFL.root;
+    group.userData.parts.pFR = pFR.root;
+    group.userData.parts.pBL = pBL.root;
+    group.userData.parts.pBR = pBR.root;
+    group.userData.parts.kneeFL = pFL.knee;
+    group.userData.parts.kneeFR = pFR.knee;
+    group.userData.parts.kneeBL = pBL.knee;
+    group.userData.parts.kneeBR = pBR.knee;
+
+    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.022 * sc, 0.048 * sc, 0.54 * sc, 5), furMat);
+    tail.rotation.x = Math.PI / 3;
+    tail.position.set(0, 0.28 * sc, 0.42 * sc);
+    group.add(tail);
+    group.userData.parts.tail = tail;
+
+  // -------------------------------------------------------------------------
+  // 3. CHAUVE-SOURIS GÉANTE DES PROFONDEURS (Ailes de membrane articulées)
+  // -------------------------------------------------------------------------
+  } else if (kind === 'bat') {
+    const sc = 1.05;
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.20 * sc, 8, 8), ADV_MATS.furDark);
+    body.scale.set(0.9, 1.25, 0.85);
+    group.add(body);
+
+    const headGroup = new THREE.Group();
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.13 * sc, 7, 7), ADV_MATS.furDark);
+    headGroup.add(head);
+
+    // Crocs vampiriques
+    const bFangL = new THREE.Mesh(new THREE.ConeGeometry(0.018 * sc, 0.06 * sc, 4), ADV_MATS.bone);
+    bFangL.position.set(0.04 * sc, -0.06 * sc, -0.11 * sc);
+    bFangL.rotation.x = Math.PI;
+    const bFangR = bFangL.clone();
+    bFangR.position.x = -0.04 * sc;
+    headGroup.add(bFangL); headGroup.add(bFangR);
+
+    const earL = new THREE.Mesh(new THREE.ConeGeometry(0.048 * sc, 0.18 * sc, 4), ADV_MATS.furBrown);
+    earL.position.set(0.09 * sc, 0.14 * sc, 0);
+    earL.rotation.z = -Math.PI / 6;
+    const earR = earL.clone();
+    earR.position.x = -0.09 * sc;
+    earR.rotation.z = Math.PI / 6;
+    headGroup.add(earL); headGroup.add(earR);
+
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.034 * sc, 5, 5), ADV_MATS.glowGold);
+    eyeL.position.set(0.05 * sc, 0.02 * sc, -0.12 * sc);
+    const eyeR = eyeL.clone();
+    eyeR.position.x = -0.05 * sc;
+    headGroup.add(eyeL); headGroup.add(eyeR);
+
+    headGroup.position.set(0, 0.18 * sc, -0.14 * sc);
+    group.add(headGroup);
+
+    // Ailes articulées à membrane double
+    function createBatWing(side) {
+      const root = new THREE.Group();
+      root.position.set(side * 0.16 * sc, 0.08 * sc, 0);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.022 * sc, 0.028 * sc, 0.32 * sc, 5), ADV_MATS.boneDark);
+      arm.rotation.z = side * Math.PI / 2.5;
+      arm.position.x = side * 0.14 * sc;
+      root.add(arm);
+
+      const tip = new THREE.Group();
+      tip.position.set(side * 0.28 * sc, 0.06 * sc, 0);
+      const wingGeo = new THREE.PlaneGeometry(0.36 * sc, 0.36 * sc);
+      const wingMat = new THREE.MeshStandardMaterial({ color: 0x16101a, side: THREE.DoubleSide, roughness: 0.85 });
+      const wingMesh = new THREE.Mesh(wingGeo, wingMat);
+      wingMesh.position.x = side * 0.18 * sc;
+      tip.add(wingMesh);
+      root.add(tip);
+
+      return { root, tip };
+    }
+
+    const wingL = createBatWing(1);
+    const wingR = createBatWing(-1);
+    group.add(wingL.root); group.add(wingR.root);
+    group.userData.parts.wingL = wingL.root;
+    group.userData.parts.wingR = wingR.root;
+    group.userData.parts.wingTipL = wingL.tip;
+    group.userData.parts.wingTipR = wingR.tip;
+
+  // -------------------------------------------------------------------------
+  // 4. CHEVALIER DÉCHU, GEÔLIER & BOSS : Armure gothique intégrale AAA
+  // -------------------------------------------------------------------------
+  } else if (kind === 'knight' || kind === 'jailer' || kind === 'statue' || kind === 'ossu' || kind === 'bearer') {
+    const isBoss = (kind === 'jailer' || kind === 'ossu' || m.boss);
+    const sc = isBoss ? 1.75 : 1.25;
+    const plateMat = (kind === 'statue') ? ADV_MATS.boneDark : (isBoss ? ADV_MATS.ironRusty : ADV_MATS.steel);
+
+    // Plastron gothique biseauté et nervuré
+    const chest = new THREE.Mesh(new THREE.BoxGeometry(0.56 * sc, 0.60 * sc, 0.38 * sc), plateMat);
+    chest.position.set(0, 0.60 * sc, 0);
+    group.add(chest);
+
+    // Gorgerin de protection du cou
+    const gorget = new THREE.Mesh(new THREE.CylinderGeometry(0.18 * sc, 0.22 * sc, 0.12 * sc, 8), plateMat);
+    gorget.position.set(0, 0.88 * sc, 0);
+    group.add(gorget);
+
+    // Grandes épaulières à plates superposées
+    const pauldronL = new THREE.Mesh(new THREE.BoxGeometry(0.28 * sc, 0.26 * sc, 0.36 * sc), plateMat);
+    pauldronL.position.set(-0.38 * sc, 0.84 * sc, 0);
+    pauldronL.rotation.z = Math.PI / 7;
+    const pauldronR = pauldronL.clone();
+    pauldronR.position.x = 0.38 * sc;
+    pauldronR.rotation.z = -Math.PI / 7;
+    group.add(pauldronL); group.add(pauldronR);
+
+    // Grand heaume à visière cruciforme luminescente
+    const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.20 * sc, 0.22 * sc, 0.32 * sc, 8), plateMat);
+    helm.position.set(0, 1.02 * sc, 0);
+    const crest = new THREE.Mesh(new THREE.BoxGeometry(0.045 * sc, 0.14 * sc, 0.30 * sc), ADV_MATS.ironRusty);
+    crest.position.set(0, 0.20 * sc, 0);
+    helm.add(crest);
+
+    const visorHoriz = new THREE.Mesh(new THREE.BoxGeometry(0.24 * sc, 0.04 * sc, 0.10 * sc), ADV_MATS.glowRed);
+    visorHoriz.position.set(0, 0.02 * sc, -0.18 * sc);
+    helm.add(visorHoriz);
+    const visorVert = new THREE.Mesh(new THREE.BoxGeometry(0.04 * sc, 0.14 * sc, 0.10 * sc), ADV_MATS.glowRed);
+    visorVert.position.set(0, -0.03 * sc, -0.18 * sc);
+    helm.add(visorVert);
+    group.add(helm);
+    group.userData.parts.head = helm;
+
+    // Tassettes de protection des cuisses
+    const tassetL = new THREE.Mesh(new THREE.BoxGeometry(0.18 * sc, 0.20 * sc, 0.04 * sc), plateMat);
+    tassetL.position.set(0.14 * sc, 0.36 * sc, -0.16 * sc);
+    const tassetR = tassetL.clone();
+    tassetR.position.x = -0.14 * sc;
+    group.add(tassetL); group.add(tassetR);
+
+    // Jambes articulées en armure
+    function createArmorLeg(xSide) {
+      const hip = new THREE.Group();
+      hip.position.set(xSide * 0.18 * sc, 0.40 * sc, 0);
+      const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.17 * sc, 0.26 * sc, 0.19 * sc), plateMat);
+      thigh.position.y = -0.13 * sc;
+      hip.add(thigh);
+
+      const knee = new THREE.Group();
+      knee.position.set(0, -0.26 * sc, 0);
+      const poleyn = new THREE.Mesh(new THREE.SphereGeometry(0.08 * sc, 5, 5), ADV_MATS.ironRusty);
+      poleyn.position.set(0, 0, -0.10 * sc);
+      knee.add(poleyn);
+      const shin = new THREE.Mesh(new THREE.BoxGeometry(0.16 * sc, 0.26 * sc, 0.18 * sc), plateMat);
+      shin.position.y = -0.13 * sc;
+      const sabaton = new THREE.Mesh(new THREE.BoxGeometry(0.16 * sc, 0.08 * sc, 0.22 * sc), plateMat);
+      sabaton.position.set(0, -0.24 * sc, -0.04 * sc);
+      knee.add(shin); knee.add(sabaton);
+      hip.add(knee);
+
+      return { root: hip, knee: knee };
+    }
+
+    const legL = createArmorLeg(1);
+    const legR = createArmorLeg(-1);
+    group.add(legL.root); group.add(legR.root);
+    group.userData.parts.legL = legL.root;
+    group.userData.parts.legR = legR.root;
+    group.userData.parts.kneeL = legL.knee;
+    group.userData.parts.kneeR = legR.knee;
+
+    // Bras articulés avec coudières
+    function createArmorArm(xSide) {
+      const shoulder = new THREE.Group();
+      shoulder.position.set(xSide * 0.38 * sc, 0.74 * sc, 0);
+      const upper = new THREE.Mesh(new THREE.BoxGeometry(0.15 * sc, 0.25 * sc, 0.17 * sc), plateMat);
+      upper.position.y = -0.12 * sc;
+      shoulder.add(upper);
+
+      const elbow = new THREE.Group();
+      elbow.position.set(0, -0.25 * sc, 0);
+      const couter = new THREE.Mesh(new THREE.SphereGeometry(0.07 * sc, 5, 5), ADV_MATS.ironRusty);
+      couter.position.set(0, 0, 0.08 * sc);
+      elbow.add(couter);
+      const forearm = new THREE.Mesh(new THREE.BoxGeometry(0.14 * sc, 0.25 * sc, 0.16 * sc), plateMat);
+      forearm.position.y = -0.12 * sc;
+      elbow.add(forearm);
+      shoulder.add(elbow);
+
+      return { root: shoulder, elbow: elbow };
+    }
+
+    const armL = createArmorArm(1);
+    const armR = createArmorArm(-1);
+    group.add(armL.root); group.add(armR.root);
+    group.userData.parts.armL = armL.root;
+    group.userData.parts.armR = armR.root;
+    group.userData.parts.elbowL = armL.elbow;
+    group.userData.parts.elbowR = armR.elbow;
+
+    if (kind === 'bearer') {
+      const towerShield = new THREE.Mesh(new THREE.BoxGeometry(0.54 * sc, 0.98 * sc, 0.08 * sc), ADV_MATS.ironRusty);
+      const rim = new THREE.Mesh(new THREE.BoxGeometry(0.56 * sc, 0.06 * sc, 0.09 * sc), ADV_MATS.goldAncient);
+      towerShield.add(rim);
+      towerShield.position.set(0, -0.14 * sc, -0.14 * sc);
+      armR.elbow.add(towerShield);
+    } else {
+      // Espadon runique
+      const greatsword = new THREE.Mesh(new THREE.BoxGeometry(0.09 * sc, 1.05 * sc, 0.035 * sc), ADV_MATS.steel);
+      const fuller = new THREE.Mesh(new THREE.BoxGeometry(0.02 * sc, 0.85 * sc, 0.038 * sc), ADV_MATS.glowRed);
+      greatsword.add(fuller);
+      const hilt = new THREE.Mesh(new THREE.BoxGeometry(0.34 * sc, 0.06 * sc, 0.07 * sc), ADV_MATS.goldAncient);
+      hilt.position.y = -0.38 * sc;
+      greatsword.add(hilt);
+      greatsword.position.set(0, -0.14 * sc, -0.20 * sc);
+      greatsword.rotation.x = Math.PI / 4;
+      armL.elbow.add(greatsword);
+    }
+
+  // -------------------------------------------------------------------------
+  // 5. GOULES & GOBELINS : Mutants sauvages avec pustules et griffes
+  // -------------------------------------------------------------------------
+  } else if (kind === 'ghoul' || kind === 'gob' || kind === 'howler' || kind === 'ogre') {
+    const isOgre = (kind === 'ogre');
+    const sc = isOgre ? 1.75 : (kind === 'gob' ? 0.80 : 1.15);
+    const fleshMat = isOgre ? ADV_MATS.furBrown : ADV_MATS.fleshGhoul;
+
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.26 * sc, 0.20 * sc, 0.58 * sc, 7), fleshMat);
+    torso.position.set(0, 0.52 * sc, 0);
+    group.add(torso);
+
+    // Pustules & excroissances squelettiques sur le dos
+    for (let p = 0; p < 4; p++) {
+      const lump = new THREE.Mesh(new THREE.SphereGeometry(0.07 * sc, 5, 5), ADV_MATS.boneDark);
+      lump.position.set((p % 2 === 0 ? 0.1 : -0.1) * sc, (0.42 + p * 0.08) * sc, 0.14 * sc);
+      group.add(lump);
+    }
+
+    const headGroup = new THREE.Group();
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.19 * sc, 8, 8), fleshMat);
+    head.scale.set(1.0, 1.25, 1.15);
+    headGroup.add(head);
+
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.15 * sc, 0.08 * sc, 0.18 * sc), fleshMat);
+    jaw.position.set(0, -0.13 * sc, -0.07 * sc);
+    headGroup.add(jaw);
+    group.userData.parts.jaw = jaw;
+
+    // Crocs inférieurs baveux
+    const f1 = new THREE.Mesh(new THREE.ConeGeometry(0.025 * sc, 0.08 * sc, 4), ADV_MATS.bone);
+    f1.position.set(0.045 * sc, -0.08 * sc, -0.15 * sc);
+    const f2 = f1.clone(); f2.position.x = -0.045 * sc;
+    headGroup.add(f1); headGroup.add(f2);
+
+    const earL = new THREE.Mesh(new THREE.ConeGeometry(0.045 * sc, 0.20 * sc, 4), fleshMat);
+    earL.position.set(0.18 * sc, 0.09 * sc, 0);
+    earL.rotation.z = -Math.PI / 3;
+    const earR = earL.clone();
+    earR.position.x = -0.18 * sc;
+    earR.rotation.z = Math.PI / 3;
+    headGroup.add(earL); headGroup.add(earR);
+
+    const eyeMat = isOgre ? ADV_MATS.glowGold : ADV_MATS.glowRed;
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.040 * sc, 5, 5), eyeMat);
+    eyeL.position.set(0.08 * sc, 0.03 * sc, -0.18 * sc);
+    const eyeR = eyeL.clone();
+    eyeR.position.x = -0.08 * sc;
+    headGroup.add(eyeL); headGroup.add(eyeR);
+
+    headGroup.position.set(0, 0.86 * sc, -0.07 * sc);
+    group.add(headGroup);
+    group.userData.parts.head = headGroup;
+
+    // Membres noueux
+    function createFleshLeg(xSide) {
+      const hip = new THREE.Group();
+      hip.position.set(xSide * 0.16 * sc, 0.34 * sc, 0);
+      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.08 * sc, 0.065 * sc, 0.22 * sc, 6), fleshMat);
+      thigh.position.y = -0.11 * sc;
+      hip.add(thigh);
+      const knee = new THREE.Group();
+      knee.position.set(0, -0.22 * sc, 0);
+      const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.065 * sc, 0.055 * sc, 0.22 * sc, 6), fleshMat);
+      shin.position.y = -0.11 * sc;
+      knee.add(shin);
+      hip.add(knee);
+      return { root: hip, knee: knee };
+    }
+
+    const legL = createFleshLeg(1);
+    const legR = createFleshLeg(-1);
+    group.add(legL.root); group.add(legR.root);
+    group.userData.parts.legL = legL.root;
+    group.userData.parts.legR = legR.root;
+    group.userData.parts.kneeL = legL.knee;
+    group.userData.parts.kneeR = legR.knee;
+
+    function createFleshArm(xSide) {
+      const shoulder = new THREE.Group();
+      shoulder.position.set(xSide * 0.32 * sc, 0.68 * sc, 0);
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.075 * sc, 0.065 * sc, 0.26 * sc, 6), fleshMat);
+      upper.position.y = -0.13 * sc;
+      shoulder.add(upper);
+      const elbow = new THREE.Group();
+      elbow.position.set(0, -0.26 * sc, 0);
+      const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.065 * sc, 0.055 * sc, 0.26 * sc, 6), fleshMat);
+      forearm.position.y = -0.13 * sc;
+      // Griffes
+      const claw = new THREE.Mesh(new THREE.ConeGeometry(0.03 * sc, 0.10 * sc, 4), ADV_MATS.boneDark);
+      claw.position.set(0, -0.26 * sc, -0.04 * sc);
+      claw.rotation.x = Math.PI / 4;
+      elbow.add(forearm); elbow.add(claw);
+      shoulder.add(elbow);
+      return { root: shoulder, elbow: elbow };
+    }
+
+    const armL = createFleshArm(1);
+    const armR = createFleshArm(-1);
+    group.add(armL.root); group.add(armR.root);
+    group.userData.parts.armL = armL.root;
+    group.userData.parts.armR = armR.root;
+    group.userData.parts.elbowL = armL.elbow;
+    group.userData.parts.elbowR = armR.elbow;
+
+    if (isOgre) {
+      const club = new THREE.Mesh(new THREE.CylinderGeometry(0.10 * sc, 0.05 * sc, 0.90 * sc, 6), ADV_MATS.woodDark);
+      // Clous sur la massue
+      for (let n = 0; n < 6; n++) {
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.02 * sc, 0.08 * sc, 4), ADV_MATS.ironRusty);
+        spike.position.set(Math.cos(n) * 0.11 * sc, 0.20 * sc + n * 0.05 * sc, Math.sin(n) * 0.11 * sc);
+        club.add(spike);
+      }
+      club.position.set(0, -0.16 * sc, -0.20 * sc);
+      club.rotation.x = Math.PI / 4;
+      armL.elbow.add(club);
+    }
+
+  // -------------------------------------------------------------------------
+  // 6. CULTISTE, NÉCROMANCIEN & MAGES : Robes plissées et bâton à crâne
+  // -------------------------------------------------------------------------
+  } else if (kind === 'cult' || kind === 'necro' || kind === 'arch') {
+    const sc = kind === 'arch' ? 1.55 : 1.10;
+    const robeMat = kind === 'cult' ? ADV_MATS.cultRobe : ADV_MATS.clothRobe;
+
+    const robe = new THREE.Mesh(new THREE.CylinderGeometry(0.20 * sc, 0.44 * sc, 0.94 * sc, 9), robeMat);
+    robe.position.set(0, 0.47 * sc, 0);
+    group.add(robe);
+
+    const hood = new THREE.Mesh(new THREE.SphereGeometry(0.23 * sc, 8, 8), robeMat);
+    hood.position.set(0, 0.88 * sc, -0.02 * sc);
+    hood.scale.set(0.92, 1.2, 1.2);
+    group.add(hood);
+
+    const eyeColor = kind === 'necro' ? ADV_MATS.glowPurple : ADV_MATS.glowRed;
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.035 * sc, 5, 5), eyeColor);
+    eyeL.position.set(0.07 * sc, 0.88 * sc, -0.20 * sc);
+    const eyeR = eyeL.clone();
+    eyeR.position.x = -0.07 * sc;
+    group.add(eyeL); group.add(eyeR);
+
+    // Manches plissées
+    const sleeveL = new THREE.Mesh(new THREE.CylinderGeometry(0.08 * sc, 0.15 * sc, 0.48 * sc, 6), robeMat);
+    sleeveL.position.set(-0.32 * sc, 0.58 * sc, -0.12 * sc);
+    sleeveL.rotation.x = Math.PI / 4;
+    const sleeveR = sleeveL.clone();
+    sleeveR.position.x = 0.32 * sc;
+    group.add(sleeveL); group.add(sleeveR);
+    group.userData.parts.armL = sleeveL;
+    group.userData.parts.armR = sleeveR;
+
+    // Bâton rituel surmonté d'un crâne magique aux yeux rayonnants
+    const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.026 * sc, 0.034 * sc, 1.25 * sc, 6), ADV_MATS.woodDark);
+    const skullTop = new THREE.Mesh(new THREE.SphereGeometry(0.08 * sc, 6, 6), ADV_MATS.boneDark);
+    skullTop.position.y = 0.65 * sc;
+    const orb = new THREE.Mesh(new THREE.OctahedronGeometry(0.09 * sc, 1), eyeColor);
+    orb.position.y = 0.80 * sc;
+    staff.add(skullTop);
+    staff.add(orb);
+    staff.position.set(0.36 * sc, 0.58 * sc, -0.26 * sc);
+    group.add(staff);
+    group.userData.parts.staffOrb = orb;
+
+  // -------------------------------------------------------------------------
+  // 7. LE ROI VER & SPECTRES ÉTHÉRÉS
+  // -------------------------------------------------------------------------
+  } else if (kind === 'worm' || kind === 'slime' || kind === 'spore' || kind === 'spec' || kind === 'wraith') {
+    const isWorm = (kind === 'worm');
+    const isSpectre = (kind === 'spec' || kind === 'wraith');
+    const sc = isWorm ? 1.95 : 1.05;
+
+    if (isWorm) {
+      const segments = [];
+      for (let s = 0; s < 7; s++) {
+        const seg = new THREE.Mesh(new THREE.TorusGeometry(0.32 * sc - s * 0.035 * sc, 0.14 * sc, 7, 14), themeSkinMat);
+        seg.rotation.x = Math.PI / 2;
+        seg.position.set(0, 0.23 * sc, -0.24 * sc * s);
+        // Épines dorsales chitineuses sur chaque anneau
+        const dorsalSpike = new THREE.Mesh(new THREE.ConeGeometry(0.04 * sc, 0.14 * sc, 4), ADV_MATS.boneDark);
+        dorsalSpike.position.set(0, 0.16 * sc, 0);
+        seg.add(dorsalSpike);
+        group.add(seg);
+        segments.push(seg);
+      }
+      group.userData.parts.segments = segments;
+
+      // Bouche circulaire monstrueuse à triple rangée de crocs
+      const maw = new THREE.Mesh(new THREE.TorusGeometry(0.34 * sc, 0.10 * sc, 6, 16), ADV_MATS.furDark);
+      maw.position.set(0, 0.25 * sc, 0.10 * sc);
+      for (let t = 0; t < 8; t++) {
+        const fang = new THREE.Mesh(new THREE.ConeGeometry(0.025 * sc, 0.10 * sc, 4), ADV_MATS.bone);
+        fang.position.set(Math.cos(t * Math.PI / 4) * 0.28 * sc, Math.sin(t * Math.PI / 4) * 0.28 * sc, 0.05 * sc);
+        fang.rotation.z = t * Math.PI / 4 - Math.PI / 2;
+        maw.add(fang);
+      }
+      group.add(maw);
+
+      const eyeCenter = new THREE.Mesh(new THREE.SphereGeometry(0.14 * sc, 6, 6), ADV_MATS.glowGreen);
+      eyeCenter.position.set(0, 0.25 * sc, -0.04 * sc);
+      group.add(eyeCenter);
+
+    } else if (isSpectre) {
+      const specColor = (kind === 'wraith') ? 0xb590e0 : 0x82d4e8;
+      const specMat = new THREE.MeshStandardMaterial({
+        color: specColor,
+        roughness: 0.10, metalness: 0.25, transparent: true, opacity: 0.72
+      });
+      const shroud = new THREE.Mesh(new THREE.ConeGeometry(0.36, 1.0, 9), specMat);
+      shroud.position.set(0, 0.50, 0);
+      group.add(shroud);
+
+      // Crâne spectral flottant
+      const fSkull = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 8), specMat);
+      fSkull.position.set(0, 0.90, 0);
+      const eyeColor = (kind === 'wraith') ? ADV_MATS.glowPurple : ADV_MATS.glowCyan;
+      const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.042, 5, 5), eyeColor);
+      eyeL.position.set(0.06, 0.92, -0.15);
+      const eyeR = eyeL.clone();
+      eyeR.position.x = -0.06;
+      group.add(fSkull); group.add(eyeL); group.add(eyeR);
+
+    } else {
+      const blob = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 10), new THREE.MeshStandardMaterial({
+        color: themeHex, roughness: 0.15, metalness: 0.35, transparent: true, opacity: 0.88, bumpMap: BUMP_NOISE, bumpScale: 0.08
+      }));
+      blob.scale.set(1.18, 0.76, 1.18);
+      blob.position.set(0, 0.24, 0);
+      group.add(blob);
+      group.userData.parts.blob = blob;
+
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), ADV_MATS.glowGreen);
+      eye.position.set(0.09, 0.26, -0.31);
+      const eye2 = eye.clone();
+      eye2.position.set(-0.09, 0.26, -0.31);
+      group.add(eye); group.add(eye2);
+    }
+
+  // -------------------------------------------------------------------------
+  // 8. CRÉATURE STANDARD PAR DÉFAUT
+  // -------------------------------------------------------------------------
+  } else {
+    const sc = 1.05;
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.20 * sc, 0.16 * sc, 0.56 * sc, 8), themeSkinMat);
+    body.position.set(0, 0.45 * sc, 0);
+    group.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.18 * sc, 8, 8), themeSkinMat);
+    head.position.set(0, 0.78 * sc, 0);
+    group.add(head);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.040 * sc, 5, 5), ADV_MATS.glowRed);
+    eye.position.set(0.07 * sc, 0.80 * sc, -0.16 * sc);
+    const eye2 = eye.clone();
+    eye2.position.x = -0.07 * sc;
+    group.add(eye); group.add(eye2);
+  }
+
+  // Enregistre les matériaux d'origine pour le hit-flash rouge réaliste
+  group.traverse(child => {
+    if (child.isMesh && child.material) {
+      group.userData.origMats.push({ mesh: child, mat: child.material });
+    }
+  });
+
+  return group;
+}
+function create3DItemMesh(it) {
+  const group = new THREE.Group();
+  const rar = (it.rar !== undefined) ? it.rar : 0;
+  const rarColors = [0x8d8798, 0x5e9a86, 0x5a86c4, 0x9a6ec4, 0xe0a44c];
+  const rCol = rarColors[rar] || 0xffffff;
+
+  // Socle de rareté lumineux
+  const pedestalGeo = new THREE.CylinderGeometry(0.22, 0.28, 0.06, 8);
+  const pedestalMat = new THREE.MeshStandardMaterial({ color: rCol, metalness: 0.8, roughness: 0.2 });
+  const pedestal = new THREE.Mesh(pedestalGeo, pedestalMat);
+  pedestal.position.set(0, 0.03, 0);
+  group.add(pedestal);
+
+  // Anneau de runes brillantes de rareté
+  const ringGeo = new THREE.TorusGeometry(0.26, 0.02, 6, 16);
+  ringGeo.rotateX(Math.PI / 2);
+  const ringMat = new THREE.MeshBasicMaterial({ color: rCol });
+  const runicRing = new THREE.Mesh(ringGeo, ringMat);
+  runicRing.position.set(0, 0.05, 0);
+  group.add(runicRing);
+
+  // Modèle 3D spécifique au type d'objet
+  if (it.t === 'potion') {
+    // Fiole d'alchimiste en verre avec bouchon
+    const bottleGeo = new THREE.SphereGeometry(0.14, 8, 8);
+    const pColHex = parseInt(icol(it).replace('#',''), 16) || 0xc8503a;
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: pColHex, roughness: 0.1, metalness: 0.4, transparent: true, opacity: 0.85
+    });
+    const bottle = new THREE.Mesh(bottleGeo, glassMat);
+    bottle.position.set(0, 0.20, 0);
+    group.add(bottle);
+
+    // Goulot et bouchon de liège
+    const neckGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.12, 6);
+    const neck = new THREE.Mesh(neckGeo, glassMat);
+    neck.position.set(0, 0.32, 0);
+    const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.038, 0.05, 6), new THREE.MeshStandardMaterial({ color: 0x8a623a }));
+    cork.position.set(0, 0.38, 0);
+    group.add(neck); group.add(cork);
+
+  } else if (it.t === 'weapon') {
+    // Épée médiévale 3D fichée dans le sol
+    const bladeGeo = new THREE.BoxGeometry(0.06, 0.48, 0.02);
+    const bladeMat = new THREE.MeshStandardMaterial({ color: 0xc8d2dc, metalness: 0.8, roughness: 0.2 });
+    const blade = new THREE.Mesh(bladeGeo, bladeMat);
+    blade.position.set(0, 0.26, 0);
+
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.04, 0.05), new THREE.MeshStandardMaterial({ color: rCol, metalness: 0.9 }));
+    guard.position.set(0, 0.46, 0);
+
+    const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.14, 6), new THREE.MeshStandardMaterial({ color: 0x4a3222 }));
+    grip.position.set(0, 0.54, 0);
+    const pommel = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 6), new THREE.MeshStandardMaterial({ color: rCol }));
+    pommel.position.set(0, 0.62, 0);
+
+    group.add(blade); group.add(guard); group.add(grip); group.add(pommel);
+
+  } else if (it.t === 'armor') {
+    // Cuirasse protectrice en relief
+    const cuirassGeo = new THREE.CylinderGeometry(0.18, 0.14, 0.32, 6);
+    const cuirassMat = new THREE.MeshStandardMaterial({ color: 0x5a6068, metalness: 0.7, roughness: 0.3 });
+    const cuirass = new THREE.Mesh(cuirassGeo, cuirassMat);
+    cuirass.position.set(0, 0.24, 0);
+    group.add(cuirass);
+
+  } else if (it.t === 'scroll') {
+    // Rouleau de parchemin ancien ficelé
+    const scrollGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.28, 7);
+    scrollGeo.rotateZ(Math.PI / 2);
+    const scrollMat = new THREE.MeshStandardMaterial({ color: 0xd8cba8, roughness: 0.9 });
+    const scroll = new THREE.Mesh(scrollGeo, scrollMat);
+    scroll.position.set(0, 0.18, 0);
+    group.add(scroll);
+
+  } else if (it.t === 'gold') {
+    // Tas de pièces d'or scintillantes
+    for (let c = 0; c < 5; c++) {
+      const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.02, 7), new THREE.MeshStandardMaterial({ color: 0xffcc33, metalness: 0.9, roughness: 0.1 }));
+      coin.position.set((Math.random() - 0.5) * 0.12, 0.08 + c * 0.022, (Math.random() - 0.5) * 0.12);
+      coin.rotation.y = Math.random() * Math.PI;
+      group.add(coin);
+    }
+  } else {
+    // Anneau / Amulette / Autre relique
+    const jewel = new THREE.Mesh(new THREE.OctahedronGeometry(0.12, 0), new THREE.MeshStandardMaterial({ color: rCol, metalness: 0.9, roughness: 0.1 }));
+    jewel.position.set(0, 0.22, 0);
+    group.add(jewel);
+  }
+
+  // Icône flottante au-dessus pour identification instantanée
+  const iconTex = getTextureFromCanvasDraw('icon_it_' + it.t + '_' + (it.k || ''), () => {
+    (ISPR[it.t] || ISPR.gold)(icol(it));
+  }, 128);
+  const iconSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTex, transparent: true }));
+  iconSpr.scale.set(0.35, 0.35, 1);
+  iconSpr.position.set(0, 0.75, 0);
+  group.add(iconSpr);
+
+  return group;
+}
+
+
+/* ==========================================================================
+   MOTEUR DE PARTICULES 3D AAA (IMPACTS, ÉTINCELLES DE FER, SANG & POUSSIÈRES)
+   ========================================================================== */
+function spawn3DImpact(x, y, z, colorHex, count = 18, speed = 2.4) {
+  if (!scene) return;
+  const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
+  const pGeo = new THREE.BoxGeometry(0.025, 0.025, 0.025);
+
+  for (let i = 0; i < count; i++) {
+    const mesh = new THREE.Mesh(pGeo, pMat);
+    mesh.position.set(x + (Math.random() - 0.5) * 0.1, y + (Math.random() - 0.5) * 0.1, z + (Math.random() - 0.5) * 0.1);
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.random() * Math.PI;
+    const sp = speed * (0.5 + Math.random() * 0.8);
+
+    const vx = Math.sin(phi) * Math.cos(theta) * sp;
+    const vy = Math.cos(phi) * sp + 0.8; // impulsion vers le haut
+    const vz = Math.sin(phi) * Math.sin(theta) * sp;
+
+    scene.add(mesh);
+    particles3D.push({ mesh, vx, vy, vz, life: 0.45 + Math.random() * 0.25, maxLife: 0.6 });
+  }
+}
+
+function spawnSlashEffect(x, y, z, angle) {
+  if (!scene) return;
+  // Arc de sillage tranchant lumineux lors du coup
+  const arcGeo = new THREE.RingGeometry(0.25, 0.38, 12, 1, 0, Math.PI * 0.85);
+  const arcMat = new THREE.MeshBasicMaterial({
+    color: 0xeef5ff, transparent: true, opacity: 0.85, side: THREE.DoubleSide
+  });
+  const arc = new THREE.Mesh(arcGeo, arcMat);
+  arc.position.set(x, y, z);
+  arc.rotation.set(0, angle, Math.PI / 4);
+  scene.add(arc);
+  particles3D.push({ mesh: arc, vx: 0, vy: 0, vz: 0, life: 0.12, maxLife: 0.12, isSlash: true });
+}
+
+function initVolumetricDust() {
+  // Poussières flottant dans les faisceaux de torche
+  const count = 140;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count * 3; i += 3) {
+    pos[i] = (Math.random() - 0.5) * 16;
+    pos[i+1] = Math.random() * 1.8;
+    pos[i+2] = (Math.random() - 0.5) * 16;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({
+    color: 0xffdfaa, size: 0.035, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending
+  });
+  dustParticles = new THREE.Points(geo, mat);
+  scene.add(dustParticles);
+}
+
+
+function create3DViewmodelWeapon() {
+  const group = new THREE.Group();
+
+  // Matériaux de forge réalistes
+  const steelMat = new THREE.MeshStandardMaterial({
+    color: 0xccd4e0, roughness: 0.18, metalness: 0.95
+  });
+  const edgeMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff, roughness: 0.1, metalness: 0.98
+  });
+  const bronzeMat = new THREE.MeshStandardMaterial({
+    color: 0xb58c38, roughness: 0.35, metalness: 0.85
+  });
+  const leatherMat = new THREE.MeshStandardMaterial({
+    color: 0x382215, roughness: 0.85, metalness: 0.05
+  });
+
+  // Lame biseautée à double tranchant
+  const bladeGeo = new THREE.BoxGeometry(0.045, 0.68, 0.015);
+  const blade = new THREE.Mesh(bladeGeo, steelMat);
+  blade.position.set(0, 0.34, 0);
+  group.add(blade);
+
+  // Fil du tranchant lumineux
+  const edgeGeo = new THREE.BoxGeometry(0.052, 0.64, 0.005);
+  const edge = new THREE.Mesh(edgeGeo, edgeMat);
+  edge.position.set(0, 0.34, 0);
+  group.add(edge);
+
+  // Pointe affûtée
+  const tipGeo = new THREE.ConeGeometry(0.032, 0.12, 4);
+  const tip = new THREE.Mesh(tipGeo, steelMat);
+  tip.position.set(0, 0.73, 0);
+  group.add(tip);
+
+  // Garde cruciforme sculptée en bronze
+  const guardGeo = new THREE.BoxGeometry(0.20, 0.035, 0.045);
+  const guard = new THREE.Mesh(guardGeo, bronzeMat);
+  guard.position.set(0, 0.02, 0);
+  group.add(guard);
+
+  // Poignée en cuir torsadé
+  const gripGeo = new THREE.CylinderGeometry(0.018, 0.018, 0.16, 8);
+  const grip = new THREE.Mesh(gripGeo, leatherMat);
+  grip.position.set(0, -0.07, 0);
+  group.add(grip);
+
+  // Pommeau en bronze ouvragé
+  const pommelGeo = new THREE.DodecahedronGeometry(0.028, 0);
+  const pommel = new THREE.Mesh(pommelGeo, bronzeMat);
+  pommel.position.set(0, -0.16, 0);
+  group.add(pommel);
+
+  group.scale.set(0.85, 0.85, 0.85);
+  group.rotation.set(-Math.PI / 12, Math.PI / 8, -Math.PI / 7);
+  return group;
+}
+
 function buildLevel3D() {
   if (!scene) return;
   if (wallMeshGroup) scene.remove(wallMeshGroup);
   if (decorGroup) scene.remove(decorGroup);
   if (floorCeilMesh) scene.remove(floorCeilMesh);
+  mob3DMap.forEach(m => scene.remove(m));
+  mob3DMap.clear();
+  mobRagdolls.forEach(r => scene.remove(r.mesh));
+  mobRagdolls = [];
+  item3DMap.forEach(it => scene.remove(it));
+  item3DMap.clear();
   mobSprites.forEach(s => scene.remove(s));
   mobSprites.clear();
   mobShadows.forEach(s => scene.remove(s));
@@ -2839,38 +4053,140 @@ function update3D(dt, ts) {
   for (const m of G.mobs) {
     if (m.hp <= 0) continue;
     activeMobs.add(m);
-    let spr = mobSprites.get(m);
-    if (!spr) {
-      const tex = getTextureFromCanvasDraw('mob_' + m.k, () => {
-        (SPR[m.k] || SPR.gob)(m.c, 0);
-      }, 256);
-      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
-      spr = new THREE.Sprite(mat);
-      const baseScale = (m.r / 0.33) * (m.boss ? 1.8 : 1.1);
-      spr.scale.set(baseScale, baseScale, 1);
-      scene.add(spr);
-      mobSprites.set(m, spr);
+
+    // Modèle 3D réel du monstre
+    let mMesh = mob3DMap.get(m);
+    if (!mMesh) {
+      mMesh = create3DMonster(m);
+      scene.add(mMesh);
+      mob3DMap.set(m, mMesh);
     }
 
-    // Animation organique du monstre (respiration, marche, réaction)
-    const isMoving = (m.state === 'chase' || Math.hypot(m.vx||0, m.vy||0) > 0.1);
-    const mWalk = isMoving ? Math.sin(ts / 140 + (m.ph || 0) * 10) : 0;
-    const mBreath = Math.sin(ts / 380 + (m.ph || 0) * 10) * 0.03;
-    const mTilt = isMoving ? Math.sin(ts / 140 + (m.ph || 0) * 10) * 0.08 : 0;
-    const mBounce = Math.abs(mWalk) * 0.05;
-
-    const baseScale = (m.r / 0.33) * (m.boss ? 1.8 : 1.1);
-    // Tressaillement au coup porté
-    const hitSquash = (m.flash > 0) ? 1.25 : 1.0;
-    spr.scale.set(
-      baseScale * (1 + mBreath) * (m.flash > 0 ? 1.2 : 1.0),
-      baseScale * (1 - mBreath) * (m.flash > 0 ? 0.85 : 1.0),
-      1
-    );
-    spr.material.rotation = mTilt;
-    spr.position.set(m.x, 0.52 + mBounce, m.y);
     const isVis = (G.vis && G.vis[(m.y | 0) * MW + (m.x | 0)] === 1);
-    spr.visible = isVis;
+    mMesh.visible = isVis;
+
+    if (isVis) {
+      // Rotation vers le joueur (face au joueur en 3D)
+      const toPlayerAngle = Math.atan2(G.p.x - m.x, G.p.y - m.y);
+      mMesh.rotation.y = toPlayerAngle + Math.PI;
+
+      // Animation 3D des membres, respiration et préparation de frappe (windup)
+      const isMoving = (m.state === 'chase' || Math.hypot(m.vx || 0, m.vy || 0) > 0.05);
+      const isAttacking = (m.state === 'wind');
+      const attackProgress = isAttacking ? Math.max(0, 1 - (m.wt || 0) / (m.wind || 0.6)) : 0;
+      const walkCycle = Math.sin(ts / 120 + (m.ph || 0) * 10);
+      const breath = Math.sin(ts / 350 + (m.ph || 0) * 5) * 0.03;
+
+      // Animation cinématique avancée des membres et articulations (Épaule, Coude, Genou, Tête)
+      if (mMesh.userData.parts.wingL && mMesh.userData.parts.wingR) {
+        // Vol battant rapide avec double articulation
+        const flap = Math.sin(ts / 45) * 0.75;
+        mMesh.userData.parts.wingL.rotation.z = flap;
+        mMesh.userData.parts.wingR.rotation.z = -flap;
+        if (mMesh.userData.parts.wingTipL && mMesh.userData.parts.wingTipR) {
+          mMesh.userData.parts.wingTipL.rotation.z = flap * 0.6;
+          mMesh.userData.parts.wingTipR.rotation.z = -flap * 0.6;
+        }
+        mMesh.position.set(m.x, 0.62 + Math.sin(ts / 130) * 0.14, m.y);
+      } else {
+        // Balancement cinématique réaliste des jambes avec flexion des genoux
+        if (mMesh.userData.parts.legL && mMesh.userData.parts.legR) {
+          const legAngle = isMoving ? walkCycle * 0.85 : 0;
+          mMesh.userData.parts.legL.rotation.x = legAngle;
+          mMesh.userData.parts.legR.rotation.x = -legAngle;
+          if (mMesh.userData.parts.kneeL && mMesh.userData.parts.kneeR) {
+            // Flexion naturelle des genoux vers l'arrière
+            mMesh.userData.parts.kneeL.rotation.x = isMoving ? Math.max(0, -legAngle * 0.9) : 0;
+            mMesh.userData.parts.kneeR.rotation.x = isMoving ? Math.max(0, legAngle * 0.9) : 0;
+          }
+        }
+
+        // Balancement des bras et posture d'attaque cinématique
+        if (mMesh.userData.parts.armL && mMesh.userData.parts.armR) {
+          if (isAttacking) {
+            // Bras armé levé haut prêt à s'abattre (télégraphie visuelle de l'attaque)
+            const windupPose = Math.PI / 2.2 + Math.sin(attackProgress * Math.PI) * 0.6;
+            mMesh.userData.parts.armL.rotation.x = windupPose;
+            mMesh.userData.parts.armR.rotation.x = -0.2;
+            if (mMesh.userData.parts.elbowL) mMesh.userData.parts.elbowL.rotation.x = Math.PI / 3;
+          } else {
+            const armSwing = isMoving ? walkCycle * 0.7 : Math.sin(ts / 400) * 0.08;
+            mMesh.userData.parts.armL.rotation.x = armSwing;
+            mMesh.userData.parts.armR.rotation.x = -armSwing;
+            if (mMesh.userData.parts.elbowL && mMesh.userData.parts.elbowR) {
+              mMesh.userData.parts.elbowL.rotation.x = Math.PI / 6 + (isMoving ? Math.sin(walkCycle) * 0.2 : 0);
+              mMesh.userData.parts.elbowR.rotation.x = Math.PI / 6 - (isMoving ? Math.sin(walkCycle) * 0.2 : 0);
+            }
+          }
+        }
+
+        // Quadrupèdes : Pattes avant et arrière avec articulations des jarrets
+        if (mMesh.userData.parts.pFL && mMesh.userData.parts.pFR) {
+          const run = walkCycle * 0.85;
+          mMesh.userData.parts.pFL.rotation.x = isMoving ? run : 0;
+          mMesh.userData.parts.pBR.rotation.x = isMoving ? run : 0;
+          mMesh.userData.parts.pFR.rotation.x = isMoving ? -run : 0;
+          mMesh.userData.parts.pBL.rotation.x = isMoving ? -run : 0;
+          if (mMesh.userData.parts.kneeFL) {
+            mMesh.userData.parts.kneeFL.rotation.x = isMoving ? Math.max(0, -run * 0.6) : 0;
+            mMesh.userData.parts.kneeFR.rotation.x = isMoving ? Math.max(0, run * 0.6) : 0;
+          }
+        }
+
+        // Tête prédatrice : traque dynamique et mâchoire
+        if (mMesh.userData.parts.head) {
+          const headBob = Math.sin(ts / 200 + (m.ph || 0)) * 0.08;
+          mMesh.userData.parts.head.rotation.y = headBob;
+          mMesh.userData.parts.head.rotation.x = isMoving ? 0.20 : 0;
+        }
+        if (mMesh.userData.parts.jaw) {
+          mMesh.userData.parts.jaw.rotation.x = isMoving ? Math.sin(ts / 90) * 0.25 : 0;
+        }
+
+        // Ondulation du ver géant
+        if (mMesh.userData.parts.segments) {
+          const segs = mMesh.userData.parts.segments;
+          for (let si = 0; si < segs.length; si++) {
+            segs[si].position.x = Math.sin(ts / 120 + si * 0.8) * 0.12;
+            segs[si].position.y = 0.22 * (m.boss ? 1.85 : 1.0) + Math.cos(ts / 120 + si * 0.8) * 0.05;
+          }
+        }
+
+        if (mMesh.userData.parts.tail) {
+          mMesh.userData.parts.tail.rotation.y = Math.sin(ts / 85) * 0.6;
+        }
+        if (mMesh.userData.parts.staffOrb) {
+          mMesh.userData.parts.staffOrb.rotation.y = ts / 300;
+          mMesh.userData.parts.staffOrb.rotation.x = ts / 450;
+        }
+        if (mMesh.userData.parts.blob) {
+          const squish = Math.sin(ts / 160) * 0.10;
+          mMesh.userData.parts.blob.scale.set(1.15 + squish, 0.75 - squish, 1.15 + squish);
+        }
+
+        const bounce = isMoving ? Math.abs(walkCycle) * 0.05 : 0;
+        mMesh.position.set(m.x, bounce, m.y);
+        mMesh.scale.set(1 + breath, 1 - breath, 1 + breath);
+      }
+
+      // Flash rouge réaliste d'impact type AAA
+      if (m.flash > 0) {
+        mMesh.scale.multiplyScalar(1.12);
+        if (mMesh.userData && mMesh.userData.origMats) {
+          mMesh.userData.origMats.forEach(item => {
+            if (item.mesh.material !== ADV_MATS.glowRed) {
+              item.mesh.material = ADV_MATS.glowRed;
+            }
+          });
+        }
+      } else if (mMesh.userData && mMesh.userData.origMats) {
+        mMesh.userData.origMats.forEach(item => {
+          if (item.mesh.material !== item.mat) {
+            item.mesh.material = item.mat;
+          }
+        });
+      }
+    }
 
     // Ombre circulaire au sol
     let shw = mobShadows.get(m);
@@ -2886,6 +4202,24 @@ function update3D(dt, ts) {
     shw.scale.set(shwScale, 1, shwScale);
     shw.position.set(m.x, 0.02, m.y);
     shw.visible = isVis;
+
+    // Halo d'aura magique 3D au sol pour les Boss et Élites
+    if (m.boss) {
+      if (!mMesh.userData.bossAura) {
+        const auraGeo = new THREE.RingGeometry(0.55 * m.r / 0.33, 0.75 * m.r / 0.33, 16);
+        auraGeo.rotateX(-Math.PI / 2);
+        const auraMat = new THREE.MeshBasicMaterial({
+          color: 0xe0a44c, transparent: true, opacity: 0.45, side: THREE.DoubleSide
+        });
+        const aura = new THREE.Mesh(auraGeo, auraMat);
+        scene.add(aura);
+        mMesh.userData.bossAura = aura;
+      }
+      mMesh.userData.bossAura.position.set(m.x, 0.025, m.y);
+      mMesh.userData.bossAura.rotation.y = ts * 0.002;
+      mMesh.userData.bossAura.material.opacity = 0.35 + Math.sin(ts / 200) * 0.15;
+      mMesh.userData.bossAura.visible = isVis;
+    }
 
     // Barre de vie au-dessus de la tête si blessé
     let hpBar = mobHPBars.get(m);
@@ -2907,17 +4241,36 @@ function update3D(dt, ts) {
       const pct = Math.max(0, Math.min(1, m.hp / m.mhp));
       g.fillRect(1, 1, Math.round(62 * pct), 6);
       hpBar.tex.needsUpdate = true;
-      hpBar.sprite.position.set(m.x, 0.95 + (m.boss ? 0.35 : 0.1), m.y);
+      hpBar.sprite.position.set(m.x, 1.05 + (m.boss ? 0.45 : 0.1), m.y);
       hpBar.sprite.visible = isVis;
     } else if (hpBar) {
       hpBar.sprite.visible = false;
     }
   }
 
-  mobSprites.forEach((spr, m) => {
+  // Effondrement cinématique (Ragdoll 3D) & nettoyage des monstres vaincus
+  mob3DMap.forEach((mesh, m) => {
     if (!activeMobs.has(m)) {
-      scene.remove(spr);
-      mobSprites.delete(m);
+      // Si le monstre était visible ou proche, lance une animation d'effondrement ragdoll
+      const isVis = (G.vis && G.vis[(m.y | 0) * MW + (m.x | 0)] === 1);
+      if (isVis && mobRagdolls.length < 24) {
+        // Détache le monstre pour l'animer en chute avec bascule
+        const fallAngle = (Math.random() - 0.5) * 0.4;
+        const pushDir = Math.atan2(m.x - G.p.x, m.y - G.p.y);
+        mobRagdolls.push({
+          mesh: mesh,
+          life: 4.5,
+          rotSpeedX: 1.8 + Math.random() * 1.2,
+          tiltZ: fallAngle,
+          vx: Math.sin(pushDir) * 0.8,
+          vz: Math.cos(pushDir) * 0.8,
+          curRotX: 0,
+          curY: mesh.position.y
+        });
+      } else {
+        scene.remove(mesh);
+      }
+      mob3DMap.delete(m);
       const shw = mobShadows.get(m);
       if (shw) { scene.remove(shw); mobShadows.delete(m); }
       const hp = mobHPBars.get(m);
@@ -2925,73 +4278,138 @@ function update3D(dt, ts) {
     }
   });
 
+  // Mise à jour des ragdolls de monstres au sol
+  for (let ri = mobRagdolls.length - 1; ri >= 0; ri--) {
+    const rd = mobRagdolls[ri];
+    rd.life -= dt;
+    if (rd.curRotX < Math.PI / 2.1) {
+      rd.curRotX += rd.rotSpeedX * dt;
+      rd.mesh.rotation.x = rd.curRotX;
+      rd.mesh.rotation.z = rd.tiltZ;
+      rd.mesh.position.y = Math.max(0.04, rd.mesh.position.y - 0.9 * dt);
+      rd.mesh.position.x += rd.vx * dt;
+      rd.mesh.position.z += rd.vz * dt;
+      rd.vx *= 0.88; rd.vz *= 0.88;
+    }
+    // Disparition progressive par enfoncement / fondu à la fin
+    if (rd.life < 1.0) {
+      const k = Math.max(0, rd.life);
+      rd.mesh.scale.setScalar(k);
+    }
+    if (rd.life <= 0) {
+      scene.remove(rd.mesh);
+      mobRagdolls.splice(ri, 1);
+    }
+  }
+
   const activeItems = new Set(G.items);
   for (const it of G.items) {
-    let spr = itemSprites.get(it);
-    if (!spr) {
-      const tex = getTextureFromCanvasDraw('item_' + it.t + '_' + (it.k || ''), () => {
-        (ISPR[it.t] || ISPR.gold)(icol(it));
-      }, 256);
-      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
-      spr = new THREE.Sprite(mat);
-      spr.scale.set(0.55, 0.55, 1);
-      scene.add(spr);
-      itemSprites.set(it, spr);
+    let iMesh = item3DMap.get(it);
+    if (!iMesh) {
+      iMesh = create3DItemMesh(it);
+      scene.add(iMesh);
+      item3DMap.set(it, iMesh);
     }
     const isVis = (G.vis && G.vis[(it.y | 0) * MW + (it.x | 0)] === 1);
-    const bob = Math.sin(ts / 580 + (it.bob || 0)) * 0.06;
-    spr.position.set(it.x, 0.28 + bob, it.y);
-    spr.visible = isVis;
+    iMesh.visible = isVis;
 
-    // Colonne de lueur sous les objets pour un aspect magique et bien visible
+    if (isVis) {
+      // Rotation lente et lévitation élégante
+      iMesh.position.set(it.x, Math.sin(ts / 520 + (it.bob || 0)) * 0.04, it.y);
+      iMesh.rotation.y = ts / 750 + (it.bob || 0);
+    }
+
+    // Colonne de lueur colorée selon la rareté
     let pillar = itemPillars.get(it);
     if (!pillar) {
       const pCol = icol(it);
-      const pGeo = new THREE.CylinderGeometry(0.06, 0.2, 0.6, 8, 1, true);
-      const pMat = new THREE.MeshBasicMaterial({ color: parseInt(pCol.replace('#',''), 16), transparent: true, opacity: 0.35, side: THREE.DoubleSide });
+      const pGeo = new THREE.CylinderGeometry(0.06, 0.22, 0.7, 8, 1, true);
+      const pMat = new THREE.MeshBasicMaterial({ color: parseInt(pCol.replace('#',''), 16), transparent: true, opacity: 0.45, side: THREE.DoubleSide });
       pillar = new THREE.Mesh(pGeo, pMat);
       scene.add(pillar);
       itemPillars.set(it, pillar);
     }
-    pillar.position.set(it.x, 0.22, it.y);
-    pillar.rotation.y = ts / 800;
+    pillar.position.set(it.x, 0.25, it.y);
+    pillar.rotation.y = -ts / 600;
     pillar.visible = isVis;
   }
 
-  itemSprites.forEach((spr, it) => {
+  item3DMap.forEach((mesh, it) => {
     if (!activeItems.has(it)) {
-      scene.remove(spr);
-      itemSprites.delete(it);
+      scene.remove(mesh);
+      item3DMap.delete(it);
       const p = itemPillars.get(it);
       if (p) { scene.remove(p); itemPillars.delete(it); }
     }
   });
 
-    // Animation de l'arme en première personne
+  // Animation de l'arme en première personne
   if (weaponSprite) {
     const isSwinging = (G.p.swingT > 0);
     const swingProg = isSwinging ? (G.p.swingT / 0.16) : 0;
     const walkBobX = Math.sin(ts / 180) * (Math.hypot(INPUT.mx, INPUT.my) > 0.1 ? 0.015 : 0.002);
     const walkBobY = Math.abs(Math.cos(ts / 180)) * (Math.hypot(INPUT.mx, INPUT.my) > 0.1 ? 0.015 : 0.002);
     
-    // Animation de coup d'épée réaliste (arc de taille tranchant)
-    let swingOffsetX = 0, swingOffsetY = 0, swingOffsetZ = 0, swingRot = 0;
+    // Animation cinématique AAA de l'arme en 3D
+    let swingOffsetX = 0, swingOffsetY = 0, swingOffsetZ = 0;
+    let swingRotX = 0, swingRotY = 0, swingRotZ = 0;
+
     if (isSwinging) {
-      // Progression de 0 à 1 (rapide à l'impact, retour souple)
-      const p = 1.0 - swingProg; 
-      const slash = Math.sin(p * Math.PI);
-      swingOffsetX = -Math.sin(p * Math.PI) * 0.28;
-      swingOffsetY = Math.sin(p * Math.PI * 1.5) * 0.16;
-      swingOffsetZ = -Math.sin(p * Math.PI) * 0.22;
-      swingRot = -p * 1.4; // Rotation de lame tranchante
+      const p = 1.0 - swingProg; // 0 à 1
+      const slashCurve = Math.sin(p * Math.PI);
+      swingOffsetX = -slashCurve * 0.32;
+      swingOffsetY = Math.sin(p * Math.PI * 1.4) * 0.18;
+      swingOffsetZ = -slashCurve * 0.28;
+      swingRotX = slashCurve * 1.2;
+      swingRotY = -slashCurve * 0.9;
+      swingRotZ = -slashCurve * 1.4;
     }
 
-    weaponSprite.position.set(
-      0.22 + walkBobX + swingOffsetX,
-      -0.18 + walkBobY + swingOffsetY,
-      -0.40 + swingOffsetZ
-    );
-    weaponSprite.material.rotation = swingRot;
+    if (weaponMesh3D) {
+      weaponMesh3D.position.set(
+        0.24 + walkBobX + swingOffsetX,
+        -0.22 + walkBobY + swingOffsetY,
+        -0.42 + swingOffsetZ
+      );
+      weaponMesh3D.rotation.set(
+        -Math.PI / 12 + swingRotX,
+        Math.PI / 8 + swingRotY,
+        -Math.PI / 7 + swingRotZ
+      );
+    }
+
+    // Mise à jour du système de particules 3D (impacts, étincelles, poussières)
+    const gravity = -6.5;
+    for (let pi = particles3D.length - 1; pi >= 0; pi--) {
+      const p = particles3D[pi];
+      p.life -= dt;
+      if (p.life <= 0) {
+        scene.remove(p.mesh);
+        particles3D.splice(pi, 1);
+        continue;
+      }
+      if (p.isSlash) {
+        p.mesh.material.opacity = p.life / p.maxLife;
+        p.mesh.scale.multiplyScalar(1.06);
+      } else {
+        p.vy += gravity * dt;
+        p.mesh.position.x += p.vx * dt;
+        p.mesh.position.y += p.vy * dt;
+        p.mesh.position.z += p.vz * dt;
+        // Collision simple avec le sol
+        if (p.mesh.position.y < 0.02) {
+          p.mesh.position.y = 0.02;
+          p.vy = -p.vy * 0.35; // rebond
+          p.vx *= 0.7; p.vz *= 0.7;
+        }
+      }
+    }
+
+    // Animation des poussières volumétriques autour de la caméra
+    if (dustParticles) {
+      dustParticles.position.copy(camera.position);
+      dustParticles.rotation.y = ts * 0.0001;
+    }
   }
 
   // Rendu 3D des projectiles (flèches, boules de feu, traits de lance)

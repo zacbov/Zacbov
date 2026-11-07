@@ -54,6 +54,12 @@ dialog::backdrop{background:#000a}
 .ping{border-color:var(--vert)!important;color:var(--vert);font-weight:700}
 #cf iframe{width:100%;height:68vh;border:0;border-radius:6px;background:#fff}
 #mdl{color:var(--doux);font-size:.75rem;font-weight:400;margin-left:.5rem}
+#dlg{width:min(1000px,96vw)}
+#zoom{padding:0;border:0;background:#000;max-width:98vw;max-height:98vh;overflow:auto}
+#zoom img{display:block;max-width:96vw;max-height:94vh;margin:auto;cursor:zoom-in}#zoom img.full{max-width:none;max-height:none;cursor:zoom-out}
+#zclose{position:sticky;top:.4rem;float:right;margin:.4rem;z-index:2;background:#000c;color:#fff}
+.feuille img[data-zoom]{cursor:zoom-in}
+#ff{padding:.8rem 1rem}#ff label{display:block;margin:.5rem 0 .1rem;color:var(--doux);font-size:.9rem}#ff input,#ff select,#ff textarea{width:100%;background:var(--nuit);border:1px solid var(--trait);border-radius:6px;padding:.4rem .5rem;color:inherit;font:inherit;resize:vertical}
 </style>
 </head>
 <body>
@@ -63,6 +69,7 @@ dialog::backdrop{background:#000a}
   <select id="theme" aria-label="Thème"></select>
   <select id="prof" aria-label="Profil du patient"><option value="">Patient neutre</option><option value="presse">Pressé</option><option value="bavard">Bavard</option><option value="anxieux">Anxieux</option><option value="observance">Suit mal son traitement</option><option value="*">Profil au hasard</option></select>
   <button id="new" class="main" disabled>Patient suivant</button>
+  <button id="fichebtn" disabled>Fiche patient</button>
   <button id="calcbtn">Outils</button>
   <button id="docbtn" disabled>Documents <span id="dc"></span></button>
   <button id="end" disabled>Terminer et débriefer</button>
@@ -71,6 +78,8 @@ dialog::backdrop{background:#000a}
 <main id="chat" aria-live="polite"><p class="vide">Choisissez un thème, puis appelez le premier patient.</p></main>
 <dialog id="dlg" aria-label="Documents du patient"><div class="dh" id="tabs"></div><div id="doc"></div></dialog>
 <dialog id="calc" aria-label="Calculateurs"><div class="dh"><select id="csel"></select><button class="x" id="cclose">Fermer</button></div><div id="cf"></div></dialog>
+<dialog id="zoom" aria-label="Agrandissement du document"><button id="zclose" type="button">Fermer</button><img id="zimg" alt="" title="Cliquer pour passer en taille réelle"></dialog>
+<dialog id="fiche" aria-label="Fiche patient"><div class="dh"><b>Ma fiche patient</b><button class="x" id="fclose" type="button">Fermer</button></div><div id="ff"></div></dialog>
 <form id="f"><button type="button" id="hint" disabled aria-label="Demander un indice" title="Indice : le patient lâche une information utile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg><span id="hc"></span></button><textarea id="in" rows="1" placeholder="Votre réponse au patient" aria-label="Message" disabled></textarea><button id="send" class="main" disabled>Envoyer</button></form>
 <script>
 const WORKER = 'https://cas-cliniques.alterpaces1.workers.dev/';
@@ -79,19 +88,19 @@ const DATA = 'cas_cliniques.json';        // à placer à côté de cette page
 const $ = (id) => document.getElementById(id);
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-let db, cas, hist = [], busy = false, over = false, profil = '', points = null, got = new Set(), cv = 0, unlocked = new Set(), notes = {};
+let db, cas, hist = [], busy = false, over = false, profil = '', points = null, got = new Set(), cv = 0, unlocked = new Set(), notes = {}, fiche = {};
 const POPS = { officine: { ticket: "Un patient entre à l'officine", open: "(Le patient entre à l'officine et prend la parole : dis ta première phrase.)" }, hospitalier: { ticket: "Appel d'un service à la pharmacie hospitalière", open: "(Le téléphone de la pharmacie hospitalière sonne : le soignant prend la parole et expose sa demande en une ou deux phrases.)" }, industrie_recherche: { ticket: 'Sollicitation au laboratoire', open: "(Un collègue vous sollicite : il prend la parole et expose sa demande en une ou deux phrases.)" } };
 const PL = { presse: 'pressé', bavard: 'bavard', anxieux: 'anxieux', observance: 'suit mal son traitement' };
 
 function add(cls, html) { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; $('chat').append(d); d.scrollIntoView({ block: 'end' }); return d; }
 function lock(on) { busy = on; $('send').disabled = $('in').disabled = on || over || !cas; $('new').disabled = on || !db; $('end').disabled = on || over || hist.length < 3;
   $('hint').disabled = on || over || hist.length < 2; const n = hist.filter((m) => m.content === '(indice demandé)').length; $('hc').textContent = n || '';
-  const nd = unlocked.size; $('docbtn').disabled = !nd; $('dc').textContent = nd || ''; }
+  $('fichebtn').disabled = !cas; const nd = unlocked.size; $('docbtn').disabled = !nd; $('dc').textContent = nd || ''; }
 
 let lastModel = '', lastFt = 0;
 async function ask(mode, el) {
   const t0 = performance.now();
-  const body = { mode, pop: cas.pop || 'officine', cas: mode === 'chat' ? { enonce: cas.enonce, docs: (cas.documents || []).map(docTitle) } : { enonce: cas.enonce, questions: cas.questions, points: points || [], interactions: (cas.connaissances || {}).interactions || [], notes: Object.entries(notes).filter(([, v]) => v.trim()).map(([doc, texte]) => ({ doc, texte })), docs_etat: (cas.documents || []).map((d, i) => ({ titre: docTitle(d), ouvert: unlocked.has(i) })) }, profil, messages: hist };
+  const body = { mode, pop: cas.pop || 'officine', cas: mode === 'chat' ? { enonce: cas.enonce, docs: (cas.documents || []).map(docTitle), fiche: cas.fiche || null } : { enonce: cas.enonce, questions: cas.questions, points: points || [], interactions: (cas.connaissances || {}).interactions || [], notes: Object.entries(notes).filter(([, v]) => v.trim()).map(([doc, texte]) => ({ doc, texte })), docs_etat: (cas.documents || []).map((d, i) => ({ titre: docTitle(d), ouvert: unlocked.has(i) })), fiche_saisie: fiche, fiche_ref: cas.fiche || null }, profil, messages: hist };
   const r = await fetch(WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-App-Secret': SECRET }, body: JSON.stringify(body) });
   if (mode === 'chat') { lastModel = r.headers.get('X-Model') || ''; lastFt = 0; }
   if (!r.ok) { let m = 'Erreur ' + r.status; try { const j = await r.json(); m = j.error + (j.details ? ' (' + j.details.join(', ') + ')' : ''); } catch {} throw new Error(m); }
@@ -125,7 +134,7 @@ function newPatient() {
   if (!pool.length) { $('chat').innerHTML = '<p class="vide">Aucun cas pour ce parcours et ce thème.</p>'; return; }
   cas = pool[Math.floor(Math.random() * pool.length)]; over = false;
   const pv = $('prof').value; profil = pv === '*' ? ['presse', 'bavard', 'anxieux', 'observance', ''][Math.floor(Math.random() * 5)] : pv;
-  points = null; got = new Set(); unlocked = new Set(); notes = {}; $('docbtn').classList.remove('ping'); const k = ++cv; gauge();
+  points = null; got = new Set(); unlocked = new Set(); notes = {}; fiche = {}; $('docbtn').classList.remove('ping'); const k = ++cv; gauge();
   setTimeout(() => ask('checklist', document.createElement('div')).then((t) => { const a = arr(t); if (a && k === cv) { points = a.map(String).slice(0, 10); gauge(); } }).catch(() => {}), 0);
   const lib = (db.meta.themes.find((x) => x.id === cas.theme) || {}).libelle || '';
   $('chat').innerHTML = ''; add('ticket', POPS[cas.pop || 'officine'].ticket + '<b>' + cas.id + '</b>' + esc(lib));
@@ -148,6 +157,7 @@ function docHTML(d) {
   const pied = '<div class="pied">Document fictif à visée pédagogique' + (d.origine ? ' (' + f(d.origine) + ')' : '') + '.</div>';
   if (d.type === 'ordonnance') return '<div class="feuille"><div class="fh"><div><b>Dr ' + (f(d.medecin) || '…') + '</b></div><small>' + f(d.date) + '</small></div><p>' + f(d.patient) + '</p><ol class="rx">' +
     (d.lignes || []).map((l) => '<li><b>' + f(l.medicament) + '</b><br>' + f(l.posologie) + ' ' + f(l.duree) + '</li>').join('') + '</ol>' + pied + '</div>';
+  if (d.type === 'image') return '<div class="feuille"><div class="fh"><div><b>' + f(d.titre) + '</b><br><small>' + f(d.legende) + '</small></div><small>Dossier ' + cas.id + '</small></div><div style="position:relative"><img src="' + f(d.fichier) + '" alt="' + f(d.titre) + '" title="Cliquer pour agrandir" data-zoom="1" style="width:100%;display:block">' + (d.champs || []).map((c) => '<span style="position:absolute;left:' + (+c.x || 0) + '%;top:' + (+c.y || 0) + '%;font:' + (+c.taille || 14) + 'px/1.2 cursive;color:#12308f">' + f(c.texte) + '</span>').join('') + '</div>' + pied + '</div>';
   if (d.type === 'tableau') return '<div class="feuille"><div class="fh"><div><b>' + f(d.titre) + '</b><br><small>' + f(d.sous_titre) + '</small></div><small>Dossier ' + cas.id + '</small></div><table><tr>' + (d.colonnes || []).map((c) => '<th>' + f(c) + '</th>').join('') + '</tr>' + (d.lignes || []).map((r) => '<tr>' + r.map((v) => '<td>' + f(v) + '</td>').join('') + '</tr>').join('') + '</table>' + pied + '</div>';
   if (d.type === 'compte_rendu') return '<div class="feuille"><div class="fh"><div><b>' + f(d.titre) + '</b><br><small>Compte rendu</small></div><small>Dossier ' + cas.id + '</small></div><p style="white-space:pre-wrap">' + f(d.texte) + '</p>' + pied + '</div>';
   if (d.type === 'dp') return '<div class="feuille"><div class="fh"><div><b>Dossier pharmaceutique</b><br><small>Médicaments délivrés récemment</small></div><small>Dossier ' + cas.id + '</small></div><table><tr><th>Médicament</th><th>Substance(s)</th></tr>' + (d.lignes || []).map((l) => '<tr><td>' + f(l.medicament) + '</td><td>' + f(l.substances) + '</td></tr>').join('') + '</table>' + pied + '</div>';
@@ -183,6 +193,8 @@ function calcUI(i) {
   const [, fs, run] = CALCS[i];
   if (typeof run === 'string') { $('cf').innerHTML = '<iframe src="' + run + '" title="Outil"></iframe>'; $('cf').oninput = null; return; }
   $('cf').innerHTML = fs.map(([id, lab, opt]) => '<label for="c_' + id + '">' + lab + '</label>' + (opt ? '<select id="c_' + id + '">' + opt.map((o) => '<option>' + o + '</option>').join('') + '</select>' : '<input id="c_' + id + '" type="number" step="any" inputmode="decimal">')).join('') + '<div class="res" id="cres"></div><p class="pied" style="color:var(--doux)">Résultat indicatif : se référer au RCP du médicament.</p>';
+  const MAP = { age: 'age', kg: 'kg', cm: 'cm', cr: 'cr', sx: 'sexe' };
+  fs.forEach(([id, , opt]) => { const v = fiche[MAP[id]], e = $('c_' + id); if (e && v) { if (opt) e.selectedIndex = v === 'Femme' ? 1 : 0; else e.value = v; } });
   const go = () => { const v = {}; fs.forEach(([id, , opt]) => { const e = $('c_' + id); v[id] = opt ? e.selectedIndex : parseFloat(e.value.replace(',', '.')); }); const r = run(v); $('cres').textContent = Number.isFinite(r[0]) ? Number(r[0].toPrecision(3)) + ' ' + r[1] : 'Renseignez tous les champs.'; };
   $('cf').oninput = go; go();
 }
@@ -195,6 +207,16 @@ function vis(s) { return s.replace(/\[DOC:[^\]]*\]/g, '').replace(/\[(?:D|DO|DOC
 function unlockFrom(t) {
   for (const m of t.matchAll(/\[DOC:([^\]]+)\]/g)) (cas.documents || []).forEach((d, i) => { const a = nrm(docTitle(d)), b = nrm(m[1]); if (a.includes(b) || b.includes(a)) { if (!unlocked.has(i)) $('docbtn').classList.add('ping'); unlocked.add(i); } });
 }
+$('doc').addEventListener('click', (e) => { const i = e.target.closest('img[data-zoom]'); if (i) { $('zimg').src = i.src; $('zimg').className = ''; $('zoom').showModal(); } });
+$('zimg').onclick = () => $('zimg').classList.toggle('full'); $('zclose').onclick = () => $('zoom').close();
+$('zoom').onclick = (e) => { if (e.target === $('zoom')) $('zoom').close(); };
+const FF = [['sexe', 'Sexe', ['', 'Homme', 'Femme']], ['age', 'Âge (ans)'], ['kg', 'Poids (kg)'], ['cm', 'Taille (cm)'], ['cr', 'Créatinine (µmol/L)'], ['gr', 'Grossesse ou allaitement', ['', 'Non', 'Enceinte', 'Allaite']], ['all', 'Allergies'], ['tt', 'Traitements en cours', 'area'], ['nt', 'Remarques', 'area']];
+$('fichebtn').onclick = () => {
+  $('ff').innerHTML = '<p style="color:var(--doux);margin:0">Notez ici ce que vous apprenez du patient. Les calculateurs se préremplissent avec ces valeurs.</p>' + FF.map(([k, l, o]) => '<label for="f_' + k + '">' + l + '</label>' + (Array.isArray(o) ? '<select id="f_' + k + '">' + o.map((x) => '<option>' + x + '</option>').join('') + '</select>' : o === 'area' ? '<textarea id="f_' + k + '" rows="2"></textarea>' : '<input id="f_' + k + '" inputmode="decimal">')).join('');
+  FF.forEach(([k]) => { const e = $('f_' + k); e.value = fiche[k] || ''; e.oninput = () => { fiche[k] = e.value; }; });
+  $('fiche').showModal();
+};
+$('fclose').onclick = () => $('fiche').close(); $('fiche').onclick = (e) => { if (e.target === $('fiche')) $('fiche').close(); };
 $('new').onclick = newPatient;
 $('end').onclick = async () => {
   over = true; lock(true);
@@ -211,7 +233,8 @@ $('end').onclick = async () => {
   lock(false);
 };
 
-fetch(DATA).then((r) => r.json()).then((d) => {
+Promise.all([fetch(DATA).then((r) => r.json()), fetch('cas_qcm_pharma.json').then((r) => (r.ok ? r.json() : null)).catch(() => null)]).then(([d, x]) => {
+  if (x) { d.cas = d.cas.concat(x.cas); (x.meta.themes || []).forEach((t) => { if (!d.meta.themes.find((u) => u.id === t.id)) d.meta.themes.push({ id: t.id, libelle: t.libelle, nb_cas: 0 }); }); d.meta.themes.forEach((t) => { t.nb_cas = d.cas.filter((c) => c.theme === t.id).length; }); }
   db = d;
   $('theme').innerHTML = '<option value="~">Au hasard, hors cardio pédiatrique</option><option value="*">Au hasard, tous les thèmes</option>' +
     d.meta.themes.filter((t) => t.nb_cas).map((t) => `<option value="${t.id}">${esc(t.libelle)} (${t.nb_cas})</option>`).join('');

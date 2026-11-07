@@ -53,11 +53,13 @@ dialog::backdrop{background:#000a}
 .res{margin-top:.9rem;font-size:1.3rem;font-weight:700;color:var(--vert)}
 .ping{border-color:var(--vert)!important;color:var(--vert);font-weight:700}
 #cf iframe{width:100%;height:68vh;border:0;border-radius:6px;background:#fff}
+#mdl{color:var(--doux);font-size:.75rem;font-weight:400;margin-left:.5rem}
 </style>
 </head>
 <body>
 <header>
-  <h1>Cas cliniques</h1>
+  <h1>Cas cliniques <small id="mdl" title="Modèle utilisé et délai de la dernière réponse"></small></h1>
+  <select id="pop" aria-label="Parcours"><option value="">Tous les parcours</option><option value="officine">Officine</option><option value="hospitalier">Hospitalier</option><option value="industrie_recherche">Industrie et recherche</option></select>
   <select id="theme" aria-label="Thème"></select>
   <select id="prof" aria-label="Profil du patient"><option value="">Patient neutre</option><option value="presse">Pressé</option><option value="bavard">Bavard</option><option value="anxieux">Anxieux</option><option value="observance">Suit mal son traitement</option><option value="*">Profil au hasard</option></select>
   <button id="new" class="main" disabled>Patient suivant</button>
@@ -78,6 +80,7 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 let db, cas, hist = [], busy = false, over = false, profil = '', points = null, got = new Set(), cv = 0, unlocked = new Set(), notes = {};
+const POPS = { officine: { ticket: "Un patient entre à l'officine", open: "(Le patient entre à l'officine et prend la parole : dis ta première phrase.)" }, hospitalier: { ticket: "Appel d'un service à la pharmacie hospitalière", open: "(Le téléphone de la pharmacie hospitalière sonne : le soignant prend la parole et expose sa demande en une ou deux phrases.)" }, industrie_recherche: { ticket: 'Sollicitation au laboratoire', open: "(Un collègue vous sollicite : il prend la parole et expose sa demande en une ou deux phrases.)" } };
 const PL = { presse: 'pressé', bavard: 'bavard', anxieux: 'anxieux', observance: 'suit mal son traitement' };
 
 function add(cls, html) { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; $('chat').append(d); d.scrollIntoView({ block: 'end' }); return d; }
@@ -85,9 +88,12 @@ function lock(on) { busy = on; $('send').disabled = $('in').disabled = on || ove
   $('hint').disabled = on || over || hist.length < 2; const n = hist.filter((m) => m.content === '(indice demandé)').length; $('hc').textContent = n || '';
   const nd = unlocked.size; $('docbtn').disabled = !nd; $('dc').textContent = nd || ''; }
 
+let lastModel = '', lastFt = 0;
 async function ask(mode, el) {
-  const body = { mode, cas: mode === 'chat' ? { enonce: cas.enonce, docs: (cas.documents || []).map(docTitle) } : { enonce: cas.enonce, questions: cas.questions, points: points || [], interactions: (cas.connaissances || {}).interactions || [], notes: Object.entries(notes).filter(([, v]) => v.trim()).map(([doc, texte]) => ({ doc, texte })), docs_etat: (cas.documents || []).map((d, i) => ({ titre: docTitle(d), ouvert: unlocked.has(i) })) }, profil, messages: hist };
+  const t0 = performance.now();
+  const body = { mode, pop: cas.pop || 'officine', cas: mode === 'chat' ? { enonce: cas.enonce, docs: (cas.documents || []).map(docTitle) } : { enonce: cas.enonce, questions: cas.questions, points: points || [], interactions: (cas.connaissances || {}).interactions || [], notes: Object.entries(notes).filter(([, v]) => v.trim()).map(([doc, texte]) => ({ doc, texte })), docs_etat: (cas.documents || []).map((d, i) => ({ titre: docTitle(d), ouvert: unlocked.has(i) })) }, profil, messages: hist };
   const r = await fetch(WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-App-Secret': SECRET }, body: JSON.stringify(body) });
+  if (mode === 'chat') { lastModel = r.headers.get('X-Model') || ''; lastFt = 0; }
   if (!r.ok) { let m = 'Erreur ' + r.status; try { const j = await r.json(); m = j.error + (j.details ? ' (' + j.details.join(', ') + ')' : ''); } catch {} throw new Error(m); }
   let out = '';
   if (!(r.headers.get('content-type') || '').includes('event-stream')) {
@@ -99,7 +105,7 @@ async function ask(mode, el) {
     buf += dec.decode(value, { stream: true }); const lines = buf.split('\n'); buf = lines.pop();
     for (const l of lines) {
       if (!l.startsWith('data:')) continue; const d = l.slice(5).trim(); if (d === '[DONE]') continue;
-      try { const t = JSON.parse(d).choices[0].delta.content; if (t) { out += t; el.innerHTML = fmt(vis(out)); el.scrollIntoView({ block: 'end' }); } } catch {}
+      try { const t = JSON.parse(d).choices[0].delta.content; if (t) { if (!lastFt && mode === 'chat') lastFt = performance.now() - t0; out += t; el.innerHTML = fmt(vis(out)); el.scrollIntoView({ block: 'end' }); } } catch {}
     }
   }
   if (!out.trim()) throw new Error('Réponse vide : réessayez.');
@@ -108,21 +114,22 @@ async function ask(mode, el) {
 
 async function turn(mode, cls) {
   lock(true); const el = add(cls, '…');
-  try { const out = await ask(mode, el); if (mode === 'chat') { hist.push({ role: 'assistant', content: out }); cover(); unlockFrom(out); } return out; }
+  try { const t0 = performance.now(); const out = await ask(mode, el); if (mode === 'chat') $('mdl').textContent = (lastModel || '?') + ' : 1er mot ' + (lastFt / 1000).toFixed(1) + ' s, total ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s'; if (mode === 'chat') { hist.push({ role: 'assistant', content: out }); cover(); unlockFrom(out); } return out; }
   catch (e) { el.remove(); add('err', esc(e.message)); if (mode === 'chat') hist.pop(); }
   finally { lock(false); }
 }
 
 function newPatient() {
   const t = $('theme').value;
-  const pool = db.cas.filter((c) => t === '*' || (t === '~' ? c.theme !== 'cardiologie_pediatrique' : c.theme === t));
+  const pool = db.cas.filter((c) => t === '*' || (t === '~' ? c.theme !== 'cardiologie_pediatrique' : c.theme === t)).filter((c) => !$('pop').value || c.pop === $('pop').value);
+  if (!pool.length) { $('chat').innerHTML = '<p class="vide">Aucun cas pour ce parcours et ce thème.</p>'; return; }
   cas = pool[Math.floor(Math.random() * pool.length)]; over = false;
   const pv = $('prof').value; profil = pv === '*' ? ['presse', 'bavard', 'anxieux', 'observance', ''][Math.floor(Math.random() * 5)] : pv;
   points = null; got = new Set(); unlocked = new Set(); notes = {}; $('docbtn').classList.remove('ping'); const k = ++cv; gauge();
   setTimeout(() => ask('checklist', document.createElement('div')).then((t) => { const a = arr(t); if (a && k === cv) { points = a.map(String).slice(0, 10); gauge(); } }).catch(() => {}), 0);
   const lib = (db.meta.themes.find((x) => x.id === cas.theme) || {}).libelle || '';
-  $('chat').innerHTML = ''; add('ticket', 'Un patient entre à l\'officine<b>' + cas.id + '</b>' + esc(lib));
-  hist = [{ role: 'user', content: '(Le patient entre à l\'officine et prend la parole : dis ta première phrase.)' }];
+  $('chat').innerHTML = ''; add('ticket', POPS[cas.pop || 'officine'].ticket + '<b>' + cas.id + '</b>' + esc(lib));
+  hist = [{ role: 'user', content: POPS[cas.pop || 'officine'].open }];
   turn('chat', 'm patient');
 }
 

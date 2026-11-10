@@ -1905,6 +1905,22 @@ function onDeath(m){
   passHook('onkill',m);
   if(G.p.base.harvest) healP(G.p.base.harvest);
   blood(m.x,m.y,m.c,22,RNG()*6.28);
+  // Explosion 3D de particules thématiques à la mort
+  if (typeof spawn3DImpact === 'function') {
+    const deathColors = {
+      skel: 0xc8c0ae, archer: 0xc8c0ae, // éclats d'os
+      rat: 0x5a1111, warg: 0x5a1111, hound: 0x5a1111, // sang
+      bat: 0x5a1111,
+      knight: 0xaab0c4, jailer: 0xaab0c4, statue: 0x7a7060, ossu: 0x7a7060, bearer: 0xaab0c4, // étincelles métalliques
+      ghoul: 0x3a5a3a, gob: 0x3a5a3a, howler: 0x3a5a3a, ogre: 0x4a3820, // fluide putride
+      cult: 0x8a2020, necro: 0x9040c0, arch: 0x9040c0, // énergie arcane
+      spec: 0x60c8e0, wraith: 0xa070d0, // ectoplasme
+      worm: 0x40a040, slime: 0x40c040, spore: 0x40c040
+    };
+    const dCol = deathColors[m.k] || 0xaa1111;
+    const dCount = m.boss ? 45 : 22;
+    spawn3DImpact(m.x, 0.45, m.y, dCol, dCount, m.boss ? 4.0 : 2.5);
+  }
   if(m.stolen) G.gold+=m.stolen;
   if(m.beh==='split' && (m.gen||0)<2 && m.mhp>10){
     for(let i=0;i<2;i++){
@@ -3647,6 +3663,20 @@ function create3DMonster(m) {
     group.add(eye); group.add(eye2);
   }
 
+  // Point de lumière dynamique sur les yeux du monstre (ambiance sinistre)
+  const eyeGlowColors = {
+    skel: 0xffb000, archer: 0x39ff14, rat: 0xff2200, warg: 0xff2200, hound: 0xff2200,
+    bat: 0xffb000, knight: 0xff1500, jailer: 0xff1500, statue: 0xff1500, ossu: 0xff1500,
+    bearer: 0xff1500, ghoul: 0xff1500, gob: 0xff1500, howler: 0xff1500, ogre: 0xffb000,
+    cult: 0xff1500, necro: 0xc83aff, arch: 0xc83aff, spec: 0x30e5d8, wraith: 0xc83aff,
+    worm: 0x39ff14
+  };
+  const eyeCol = eyeGlowColors[kind] || 0xff1500;
+  const eyeLight = new THREE.PointLight(eyeCol, 0.6, 2.5, 2.0);
+  eyeLight.position.set(0, 0.8, -0.15);
+  group.add(eyeLight);
+  group.userData.parts.eyeLight = eyeLight;
+
   // Enregistre les matériaux d'origine pour le hit-flash rouge réaliste
   group.traverse(child => {
     if (child.isMesh && child.material) {
@@ -4088,6 +4118,19 @@ function update3D(dt, ts) {
           mMesh.userData.parts.wingTipR.rotation.z = -flap * 0.6;
         }
         mMesh.position.set(m.x, 0.62 + Math.sin(ts / 130) * 0.14, m.y);
+      } else if (mMesh.userData.kind === 'spec' || mMesh.userData.kind === 'wraith') {
+        // Spectres : flottement éthéré et ondulation du linceul
+        const float = Math.sin(ts / 200 + (m.ph || 0) * 4) * 0.18;
+        const sway = Math.sin(ts / 340 + (m.ph || 0)) * 0.12;
+        mMesh.position.set(m.x + sway * 0.3, 0.12 + float, m.y);
+        mMesh.rotation.z = sway * 0.15;
+        // Pulsation d'opacité spectrale
+        mMesh.traverse(child => {
+          if (child.isMesh && child.material && child.material.transparent) {
+            child.material.opacity = 0.55 + Math.sin(ts / 150) * 0.18;
+          }
+        });
+        mMesh.scale.set(1 + breath, 1 - breath, 1 + breath);
       } else {
         // Balancement cinématique réaliste des jambes avec flexion des genoux
         if (mMesh.userData.parts.legL && mMesh.userData.parts.legR) {
@@ -4120,53 +4163,101 @@ function update3D(dt, ts) {
           }
         }
 
-        // Quadrupèdes : Pattes avant et arrière avec articulations des jarrets
+        // Quadrupèdes : Galop réaliste avec phase de suspension
         if (mMesh.userData.parts.pFL && mMesh.userData.parts.pFR) {
-          const run = walkCycle * 0.85;
-          mMesh.userData.parts.pFL.rotation.x = isMoving ? run : 0;
-          mMesh.userData.parts.pBR.rotation.x = isMoving ? run : 0;
-          mMesh.userData.parts.pFR.rotation.x = isMoving ? -run : 0;
-          mMesh.userData.parts.pBL.rotation.x = isMoving ? -run : 0;
+          const gSpeed = isAttacking ? 1.6 : 1.0;
+          const gCycle = Math.sin(ts / (100 / gSpeed) + (m.ph || 0) * 10);
+          const gCycle2 = Math.sin(ts / (100 / gSpeed) + (m.ph || 0) * 10 + Math.PI * 0.35);
+          const frontStride = isMoving ? gCycle * 0.95 : 0;
+          const backStride = isMoving ? gCycle2 * 0.95 : 0;
+          mMesh.userData.parts.pFL.rotation.x = frontStride;
+          mMesh.userData.parts.pFR.rotation.x = -frontStride;
+          mMesh.userData.parts.pBL.rotation.x = -backStride;
+          mMesh.userData.parts.pBR.rotation.x = backStride;
           if (mMesh.userData.parts.kneeFL) {
-            mMesh.userData.parts.kneeFL.rotation.x = isMoving ? Math.max(0, -run * 0.6) : 0;
-            mMesh.userData.parts.kneeFR.rotation.x = isMoving ? Math.max(0, run * 0.6) : 0;
+            mMesh.userData.parts.kneeFL.rotation.x = isMoving ? Math.max(0, -frontStride * 0.7) : 0;
+            mMesh.userData.parts.kneeFR.rotation.x = isMoving ? Math.max(0, frontStride * 0.7) : 0;
+          }
+          // Phase de suspension en galop rapide
+          if (isMoving) {
+            const suspense = Math.abs(Math.sin(ts / (50 / gSpeed))) * 0.06;
+            mMesh.position.y += suspense;
           }
         }
 
-        // Tête prédatrice : traque dynamique et mâchoire
+        // Tête prédatrice : traque le joueur en 3D avec regard et mâchoire
         if (mMesh.userData.parts.head) {
-          const headBob = Math.sin(ts / 200 + (m.ph || 0)) * 0.08;
-          mMesh.userData.parts.head.rotation.y = headBob;
-          mMesh.userData.parts.head.rotation.x = isMoving ? 0.20 : 0;
+          // Calcul de la direction locale vers le joueur pour le suivi de tête
+          const dist2P = Math.hypot(G.p.x - m.x, G.p.y - m.y);
+          const headLookY = Math.sin(ts / 200 + (m.ph || 0)) * 0.06;
+          // Penche vers le joueur proportionnellement à la distance
+          const lookDown = dist2P < 2.5 ? Math.min(0.4, (2.5 - dist2P) * 0.18) : 0;
+          mMesh.userData.parts.head.rotation.y = headLookY;
+          mMesh.userData.parts.head.rotation.x = isMoving ? 0.22 : -lookDown;
+          // Crispation d'attaque : tête baissée prête à charger
+          if (isAttacking) {
+            mMesh.userData.parts.head.rotation.x = 0.35 + attackProgress * 0.3;
+          }
         }
         if (mMesh.userData.parts.jaw) {
-          mMesh.userData.parts.jaw.rotation.x = isMoving ? Math.sin(ts / 90) * 0.25 : 0;
+          // Mâchoire claque quand en mode attaque, grogne quand en poursuite
+          const jawOpen = isAttacking ? Math.sin(ts / 50) * 0.45 : (isMoving ? Math.sin(ts / 90) * 0.28 : Math.sin(ts / 600) * 0.06);
+          mMesh.userData.parts.jaw.rotation.x = jawOpen;
         }
 
-        // Ondulation du ver géant
+        // Ondulation sinusoïdale réaliste du ver géant en 3 axes
         if (mMesh.userData.parts.segments) {
           const segs = mMesh.userData.parts.segments;
+          const wSpeed = isMoving ? 80 : 160;
           for (let si = 0; si < segs.length; si++) {
-            segs[si].position.x = Math.sin(ts / 120 + si * 0.8) * 0.12;
-            segs[si].position.y = 0.22 * (m.boss ? 1.85 : 1.0) + Math.cos(ts / 120 + si * 0.8) * 0.05;
+            const phase = ts / wSpeed + si * 0.9;
+            segs[si].position.x = Math.sin(phase) * (0.14 + si * 0.02);
+            segs[si].position.y = 0.22 * (m.boss ? 1.95 : 1.0) + Math.cos(phase) * 0.08;
+            segs[si].position.z = -0.24 * si * (m.boss ? 1.95 : 1.0) + Math.sin(phase * 0.7) * 0.06;
+            segs[si].rotation.z = Math.sin(phase) * 0.15;
           }
         }
 
         if (mMesh.userData.parts.tail) {
-          mMesh.userData.parts.tail.rotation.y = Math.sin(ts / 85) * 0.6;
+          const tailSpeed = isMoving ? 60 : 120;
+          const tailSwing = Math.sin(ts / tailSpeed + (m.ph || 0)) * (isMoving ? 0.9 : 0.4);
+          mMesh.userData.parts.tail.rotation.y = tailSwing;
+          mMesh.userData.parts.tail.rotation.x = Math.PI / 3 + Math.sin(ts / (tailSpeed * 1.3)) * 0.15;
         }
         if (mMesh.userData.parts.staffOrb) {
-          mMesh.userData.parts.staffOrb.rotation.y = ts / 300;
-          mMesh.userData.parts.staffOrb.rotation.x = ts / 450;
+          mMesh.userData.parts.staffOrb.rotation.y = ts / 200;
+          mMesh.userData.parts.staffOrb.rotation.x = ts / 320;
+          // Pulsation de l'orbe magique avec halo de lumière
+          const orbPulse = 1.0 + Math.sin(ts / 120) * 0.25;
+          mMesh.userData.parts.staffOrb.scale.setScalar(orbPulse);
+          // Intensifie la lumière des yeux quand l'orbe pulse
+          if (mMesh.userData.parts.eyeLight) {
+            mMesh.userData.parts.eyeLight.intensity = 0.7 + orbPulse * 0.5;
+          }
         }
         if (mMesh.userData.parts.blob) {
           const squish = Math.sin(ts / 160) * 0.10;
           mMesh.userData.parts.blob.scale.set(1.15 + squish, 0.75 - squish, 1.15 + squish);
         }
 
-        const bounce = isMoving ? Math.abs(walkCycle) * 0.05 : 0;
+        const bounce = isMoving ? Math.abs(walkCycle) * 0.06 : 0;
         mMesh.position.set(m.x, bounce, m.y);
+        // Inclinaison du torse vers l'avant en course (body lean)
+        if (isMoving && !isAttacking) {
+          mMesh.rotation.x = 0.12;
+        } else if (isAttacking) {
+          // Posture d'attaque : corps penché en arrière puis se projette
+          mMesh.rotation.x = -0.15 + attackProgress * 0.5;
+        } else {
+          mMesh.rotation.x = 0;
+        }
         mMesh.scale.set(1 + breath, 1 - breath, 1 + breath);
+
+        // Scintillement sinistre des yeux lumineux
+        if (mMesh.userData.parts.eyeLight) {
+          const eyeFlick = 0.5 + Math.sin(ts / 80 + (m.ph || 0) * 7) * 0.3 + Math.sin(ts / 190) * 0.15;
+          mMesh.userData.parts.eyeLight.intensity = isAttacking ? 1.8 : eyeFlick;
+        }
       }
 
       // Flash rouge réaliste d'impact type AAA

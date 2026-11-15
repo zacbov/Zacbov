@@ -1,0 +1,19 @@
+# TODO (par lots)
+- [x] Lot 1 : cité ronde, secteurs des chevaliers, remparts de base, routes, terrain, anneaux, aperçu fantôme et zones d'influence
+- [x] Lot 2 (noyau) : chantiers visibles, démolir et améliorer, villageois qui bâtissent et transportent, rendement selon la distance, entrepôts
+- [x] Lot 2 (reste, fait) : déplacer un bâtiment (25 % du prix), main-d'œuvre réelle (postes, part de bâtisseurs 25/50/75 %), réfugiés
+- [x] Lot 2 (reste, fait) : forêts et gisements finis (la forêt repousse, le rocher non)
+- [x] Lot 2 (reste, fait) : priorités de main-d'œuvre par catégorie (vivres, matériaux, services)
+- [x] Lot 3 (noyau) : saisons, repas et chauffage, trésor en deniers (impôts, marché, taverne, entretien), chaînes boulangerie et charpenterie
+- [x] Lot 3 (reste, fait) : élevage, pêche et chasse (Pêcherie, Élevage, Pavillon de chasse)
+- [x] Lot 3 (reste, fait) : marchands itinérants et prix variables, usure et réparation des bâtiments
+- [x] Lot 4 (noyau) : Espoir et Colère, Codex des Lois, crises annoncées par les tours de guet, assauts sur les remparts, défaite
+- [x] Lot 4 (reste, fait) : expéditions de chevaliers hors de la carte (4 destinations, butin, blessure, mort)
+- [x] Lot 4 (reste, fait) : défense (garnison, attitudes face à l'assaut, murs à fortifier et réparer)
+- [x] Lot 5 (noyau) : 5 chapitres, six chevaliers (loyauté, pouvoirs, mort définitive), Merlin et ses 3 enchantements, Queste du Graal, 3 fins, 14 événements d'exemple
+- [ ] Lot 5 (reste) : 100 événements écrits (objectif atteint) (vos cinq volumes dans `evenements.json`)
+- [x] Lot 6 (noyau) : pause et vitesses, tendances par cycle, alertes cliquables, calques (trajets, secteurs), cycle jour/nuit, équilibrage par JSON (bâtiments et lois)
+- [x] Lot 6 (reste, fait) : fumées de cheminées, eau qui scintille, collines au loin, échafaudages qui palpitent
+- [ ] Lot 6 (reste) : vrai relief jouable (hauteurs du terrain), arbres instanciés, animations de villageois plus riches
+
+- [x] Test de fumée sans navigateur (`npm run fumee`)

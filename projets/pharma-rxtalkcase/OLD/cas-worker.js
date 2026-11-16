@@ -21,6 +21,14 @@ const CADRES = {
   industrie_recherche: { role: "UN COLLÈGUE (médecin investigateur, responsable de pharmacovigilance, de la qualité ou chercheur) qui soumet une situation à un étudiant en pharmacie jouant le pharmacien d'un laboratoire, d'un site industriel ou d'un centre de recherche", ton: "Vocabulaire scientifique et réglementaire courant, ton professionnel.", lieu: "Le cadre est un laboratoire, un site industriel ou un centre de recherche : tu présentes la situation comme un dossier à analyser. Tu connais le dossier (la situation), pas plus." },
 };
 const DOCS = (c) => (c.docs_etat && c.docs_etat.length ? '\n\nDOCUMENTS DU CAS :\n' + c.docs_etat.map((d) => '- ' + d.titre + ' : ' + (d.ouvert ? "demandé par l'étudiant" : 'jamais demandé')).join('\n') : "\n\nLE CAS NE CONTIENT AUCUN DOCUMENT : n'écris pas la rubrique « Analyse des documents ».") + (c.notes && c.notes.length ? "\n\nANALYSE DES DOCUMENTS PAR L'ÉTUDIANT (ses notes) :\n" + c.notes.map((n) => '- ' + n.doc + ' : ' + n.texte).join('\n') : '');
+const FICHE = (f) => {
+  if (!f) return '';
+  const L = [], add = (k, v) => { if (v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && !v.length)) L.push(k + ' : ' + (Array.isArray(v) ? v.join(', ') : v)); };
+  add('sexe', f.sexe); add('âge', f.age ? f.age + ' ' + (f.age_unite || 'ans') : null); add('poids', f.poids_kg ? f.poids_kg + ' kg' : null); add('taille', f.taille_cm ? f.taille_cm + ' cm' : null);
+  add('grossesse', f.grossesse); add('allaitement', f.allaitement); add('allergies', f.allergies); add('traitements connus', f.traitements);
+  return L.length ? "\n- FICHE PATIENT (faits établis, ne les contredis pas ; pour tout élément absent de la situation et de cette fiche, dis que tu ne sais pas ou ne t'en souviens pas) : " + L.join(' ; ') : '';
+};
+const FICHEV = (c) => (c.fiche_saisie && Object.values(c.fiche_saisie).some((v) => String(v).trim()) ? "\n\nFICHE PATIENT REMPLIE PAR L'ÉTUDIANT :\n" + Object.entries(c.fiche_saisie).filter(([, v]) => String(v).trim()).map(([k, v]) => '- ' + k + ' : ' + cut(v, 300)).join('\n') + (c.fiche_ref ? '\nFICHE DE RÉFÉRENCE (extraction automatique, null = non précisé) : ' + cut(JSON.stringify(c.fiche_ref), 800) : '') : '');
 const INT = (a) => (a && a.length ? '\n\nINTERACTIONS DU THÉSAURUS ANSM (sept. 2023) entre les médicaments du cas, détectées automatiquement (à vérifier) :\n' + a.slice(0, 8).map((i) => '- ' + (i.entre || []).join(' + ') + ' : ' + (i.niveau || []).join(' / ') + '. ' + cut(i.mecanisme, 300) + ' Conduite : ' + cut(i.conduite, 300)).join('\n') : '');
 const PROFILS = {
   presse: "Tu es pressé : réponses courtes, tu regardes l'heure, tu t'impatientes si l'entretien s'allonge, mais tu réponds si on insiste poliment.",
@@ -32,14 +40,14 @@ const LIGHT = (mode, cas, hist) => mode === 'checklist'
   ? `Situation :\n${cut(cas.enonce, 12000)}\n\nRéponses attendues :\n${(cas.questions || []).slice(0, 12).map((q) => cut(q.reponse_modele, 1500)).join('\n')}${INT(cas.interactions)}\n\nListe 6 à 10 informations clés que le pharmacien doit obtenir du patient en l'interrogeant (symptômes, antécédents, traitements, allergies, contexte), jamais des conclusions ni le diagnostic. Réponds uniquement par un tableau JSON de chaînes courtes.`
   : `POINTS :\n${(cas.points || []).map((p, i) => (i + 1) + '. ' + cut(p, 200)).join('\n')}\n\nCONVERSATION :\n${hist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? 'Pharmacien : ' : (cas.pop && cas.pop !== 'officine' ? 'Interlocuteur : ' : 'Patient : ')) + m.content).join('\n')}\n\nRéponds uniquement par un tableau JSON des numéros des points dont l'information a clairement été obtenue (question du pharmacien ou indice demandé).`;
 
-const PATIENT = (enonce, hint, docs, profil, pop) => `Tu joues ${(CADRES[pop] || CADRES.officine).role}. L'étudiant s'entraîne : laisse-le mener l'entretien.
+const PATIENT = (enonce, hint, docs, profil, pop, fiche) => `Tu joues ${(CADRES[pop] || CADRES.officine).role}. L'étudiant s'entraîne : laisse-le mener l'entretien.
 Règles :
 - Reste dans le rôle, en français, 1 à 3 phrases. ${(CADRES[pop] || CADRES.officine).ton}
 - ${(CADRES[pop] || CADRES.officine).lieu}
 - Commence par ta demande ou ta plainte, jamais par le diagnostic ni par la liste de tous tes problèmes.
 - Ne donne une information (antécédents, traitements, allergies, durée, résultats) que si l'étudiant la demande ; à une question vague, réponds vaguement. Si on te demande ton ordonnance ou ton bilan, donne le traitement ou les valeurs exactement comme dans la situation.
 - N'invente aucune donnée clinique, biologique ou médicamenteuse absente de la situation. Pour un détail de vie banal (prénom, métier), tu peux improviser. Si tu ne sais pas : « je ne sais pas ».
-- Ne révèle jamais le diagnostic, ne corrige pas l'étudiant, ne sors pas du rôle, ne suggère pas ce qu'il devrait demander. S'il te donne un conseil faux ou dangereux, réagis comme un patient (doute, incompréhension) sans le reprendre.${docs && docs.length ? "\n- Tu as sur toi ces documents : " + docs.join(', ') + ". Tu peux dire de vive voix ce qu'ils contiennent si on te le demande, mais tu ne les tends que si l'étudiant te les demande explicitement (le dossier pharmaceutique ne s'ouvre que si l'étudiant te demande ton accord pour l'ouvrir). Quand tu en tends un, termine ta phrase par la balise [DOC:nom exact] (exemples : [DOC:Hémogramme], [DOC:Ordonnance]). Sans demande explicite, n'ajoute jamais de balise." : "\n- Tu n'as aucun document sur toi. Si on te demande ton ordonnance ou des résultats, dis ce que tu en sais de vive voix sans prétendre tendre un papier. N'invente aucun nom de médicament ni aucune valeur absents de la situation : si l'énoncé n'en cite pas, dis que tu ne t'en souviens pas."}${PROFILS[profil] ? '\n- PROFIL (comportement uniquement, sans changer les faits de la situation) : ' + PROFILS[profil] : ''}
+- Ne révèle jamais le diagnostic, ne corrige pas l'étudiant, ne sors pas du rôle, ne suggère pas ce qu'il devrait demander. S'il te donne un conseil faux ou dangereux, réagis comme un patient (doute, incompréhension) sans le reprendre.${docs && docs.length ? "\n- Tu as sur toi ces documents : " + docs.join(', ') + ". Tu peux dire de vive voix ce qu'ils contiennent si on te le demande, mais tu ne les tends que si l'étudiant te les demande explicitement (le dossier pharmaceutique ne s'ouvre que si l'étudiant te demande ton accord pour l'ouvrir). Quand tu en tends un, termine ta phrase par la balise [DOC:nom exact] (exemples : [DOC:Hémogramme], [DOC:Ordonnance]). Sans demande explicite, n'ajoute jamais de balise." : "\n- Tu n'as aucun document sur toi. Si on te demande ton ordonnance ou des résultats, dis ce que tu en sais de vive voix sans prétendre tendre un papier. N'invente aucun nom de médicament ni aucune valeur absents de la situation : si l'énoncé n'en cite pas, dis que tu ne t'en souviens pas."}${PROFILS[profil] ? '\n- PROFIL (comportement uniquement, sans changer les faits de la situation) : ' + PROFILS[profil] : ''}${FICHE(fiche)}
 
 SITUATION (connue de toi seul) :
 ${enonce}${hint ? `\n\nINDICE DEMANDÉ (n°${hint}) : l'étudiant est bloqué. Dans ta prochaine réponse uniquement, lâche spontanément UNE information de la situation qu'il n'a pas encore obtenue (symptôme, antécédent, traitement, détail de l'ordonnance ou du bilan…), comme un patient qui y repense, en 1 à 2 phrases. Indice n°1 : très indirect ; n°2 : plus net ; n°3 et suivants : net. Ne nomme jamais le diagnostic ni la solution.` : ''}`;
@@ -50,6 +58,7 @@ Fais un débrief en français, précis et honnête, uniquement à partir des ré
 **Bien fait** : ce qui est juste.
 **À rechercher ou à corriger** : informations clés non demandées, erreurs, avec la réponse attendue correspondante.
 **Conduite attendue** : la décision finale en quelques lignes.
+**Fiche patient** : exactitude et complétude de la fiche remplie par l'étudiant par rapport à la fiche de référence (si fournie).
 **Analyse des documents** : justesse de l'interprétation de l'étudiant, et documents déterminants jamais demandés (si le cas en contient).
 Les lignes « (indice demandé) » sont des demandes d'aide au patient : indique leur nombre et tiens-en compte dans la note. Si la conversation est trop courte pour juger, dis-le. Signale toute information médicale que tu ajoutes hors des réponses attendues.
 
@@ -57,7 +66,7 @@ SITUATION :
 ${cas.enonce}
 
 QUESTIONS ET RÉPONSES ATTENDUES :
-${(cas.questions || []).map((q) => `Q${q.n || ''} ${q.question}\nRéponse attendue : ${q.reponse_modele}`).join('\n\n')}${DOCS(cas)}${INT(cas.interactions)}${cas.points && cas.points.length ? '\n\nPOINTS CLÉS À OBTENIR (checklist) :\n' + cas.points.map((p, i) => (i + 1) + '. ' + p).join('\n') : ''}
+${(cas.questions || []).map((q) => `Q${q.n || ''} ${q.question}\nRéponse attendue : ${q.reponse_modele}`).join('\n\n')}${FICHEV(cas)}${DOCS(cas)}${INT(cas.interactions)}${cas.points && cas.points.length ? '\n\nPOINTS CLÉS À OBTENIR (checklist) :\n' + cas.points.map((p, i) => (i + 1) + '. ' + p).join('\n') : ''}
 
 CONVERSATION :
 ${transcript}`;
@@ -85,9 +94,9 @@ export default {
     const evaluate = b.mode === 'eval';
     const light = b.mode === 'cover' || b.mode === 'checklist';
     const messages = light ? [{ role: 'user', content: LIGHT(b.mode, cas, hist) }] : evaluate
-      ? [{ role: 'user', content: EVAL({ enonce: cut(cas.enonce, 12000), points: (cas.points || []).slice(0, 12).map((p) => cut(p, 200)), interactions: (cas.interactions || []).slice(0, 8), notes: (cas.notes || []).slice(0, 12).map((n) => ({ doc: cut(n.doc, 60), texte: cut(n.texte, 1500) })), docs_etat: (cas.docs_etat || []).slice(0, 20).map((d) => ({ titre: cut(d.titre, 60), ouvert: !!d.ouvert })), questions: (cas.questions || []).slice(0, 12).map((q) => ({ ...q, reponse_modele: cut(q.reponse_modele, 2500) })) },
+      ? [{ role: 'user', content: EVAL({ enonce: cut(cas.enonce, 12000), points: (cas.points || []).slice(0, 12).map((p) => cut(p, 200)), interactions: (cas.interactions || []).slice(0, 8), fiche_saisie: cas.fiche_saisie || null, fiche_ref: cas.fiche_ref || null, notes: (cas.notes || []).slice(0, 12).map((n) => ({ doc: cut(n.doc, 60), texte: cut(n.texte, 1500) })), docs_etat: (cas.docs_etat || []).slice(0, 20).map((d) => ({ titre: cut(d.titre, 60), ouvert: !!d.ouvert })), questions: (cas.questions || []).slice(0, 12).map((q) => ({ ...q, reponse_modele: cut(q.reponse_modele, 2500) })) },
           hist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? 'Pharmacien : ' : (cas.pop && cas.pop !== 'officine' ? 'Interlocuteur : ' : 'Patient : ')) + m.content).join('\n')) }]
-      : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0, Array.isArray(cas.docs) ? cas.docs.slice(0, 12).map((d) => cut(d, 60)) : [], b.profil, b.pop) }, ...hist];
+      : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0, Array.isArray(cas.docs) ? cas.docs.slice(0, 12).map((d) => cut(d, 60)) : [], b.profil, b.pop, cas.fiche) }, ...hist];
 
     const chain = env.MODELS ? env.MODELS.split(',').map((s) => s.trim().split(/:(.+)/).slice(0, 2)) : light ? [CHAIN[4], CHAIN[3]] : CHAIN;
     const errs = [];

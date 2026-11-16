@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cas cliniques : le patient arrive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--nuit:#0d1613;--panneau:#15221d;--trait:#2a3d35;--encre:#16201b;--papier:#e9eee4;--tampon:#3a5bc7;--vert:#37c48f;--texte:#dfe9e3;--doux:#8fa89b;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;background:var(--nuit);color:var(--texte);font:17px/1.5 "Atkinson Hyperlegible",system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;padding:.7rem 1rem;border-bottom:1px solid var(--trait);background:var(--panneau)}
+h1{font-size:1.05rem;margin:0 auto 0 0;font-weight:700}
+select,button,textarea{font:inherit;color:inherit}
+select{background:var(--nuit);border:1px solid var(--trait);border-radius:6px;padding:.4rem .5rem;max-width:100%}
+button{border:1px solid var(--trait);background:transparent;border-radius:6px;padding:.45rem .8rem;cursor:pointer}
+button.main{background:var(--vert);border-color:var(--vert);color:#04150e;font-weight:700}
+button:disabled{opacity:.4;cursor:default}
+:focus-visible{outline:2px solid var(--vert);outline-offset:2px}
+#chat{flex:1;overflow-y:auto;padding:1.2rem 1rem;display:flex;flex-direction:column;gap:.8rem;max-width:760px;width:100%;margin:0 auto}
+.vide{margin:auto;text-align:center;color:var(--doux);max-width:30ch}
+.ticket{align-self:center;text-align:center;border:2px dashed var(--doux);border-radius:10px;padding:.6rem 1.6rem;color:var(--doux)}
+.ticket b{display:block;font-size:2rem;letter-spacing:.06em;color:var(--texte);line-height:1.1}
+.m{max-width:85%;padding:.6rem .85rem;border-radius:4px 14px 14px 14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.patient{align-self:flex-start;background:var(--papier);color:var(--encre);box-shadow:2px 3px 0 #0006}
+.eleve{align-self:flex-end;background:var(--tampon);color:#fff;border-radius:14px 4px 14px 14px}
+.err{align-self:center;color:#ffb4a8;border:1px solid #7a3a30;border-radius:8px;padding:.5rem .8rem}
+.debrief{border:1px solid var(--vert);border-radius:10px;padding:1rem;background:var(--panneau);white-space:pre-wrap}
+details{border:1px solid var(--trait);border-radius:10px;padding:.6rem .9rem;background:var(--panneau)}
+details p{margin:.5rem 0;white-space:pre-wrap}
+form{display:flex;gap:.6rem;padding:.7rem 1rem;border-top:1px solid var(--trait);background:var(--panneau);padding-bottom:max(.7rem,env(safe-area-inset-bottom))}
+textarea{flex:1;resize:none;background:var(--nuit);border:1px solid var(--trait);border-radius:8px;padding:.5rem .7rem;max-height:30vh}
+#hint{display:flex;align-items:center;gap:.3rem;color:#f2c14e;border-color:#5b4a1d}
+#hc{font-weight:700;min-width:.6em}
+.indice{border-left:4px solid #f2c14e}
+.indice::before{content:"Indice";display:block;font-size:.8rem;font-weight:700;color:#8a6a0e;margin-bottom:.1rem}
+dialog{border:1px solid var(--trait);border-radius:12px;background:var(--panneau);color:var(--texte);padding:0;width:min(720px,94vw);max-height:90dvh}
+dialog::backdrop{background:#000a}
+.dh{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.6rem .8rem;border-bottom:1px solid var(--trait)}
+.dh button.on{border-color:var(--vert);color:var(--vert)}.dh .x{margin-left:auto}
+.feuille{margin:.8rem;background:#f3f5f2;color:#1b2420;border-radius:3px;padding:1rem 1.2rem;box-shadow:0 2px 0 #0007;overflow-x:auto}
+.fh{display:flex;justify-content:space-between;gap:1rem;border-bottom:3px solid var(--tampon);padding-bottom:.5rem;margin-bottom:.7rem}
+.fh small,.pied{color:#5b6a63}.pied{margin-top:.8rem;font-size:.8rem}
+.feuille table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.feuille th{text-align:left;font-size:.85rem;color:#5b6a63;border-bottom:1px solid #c9d2cc}
+.feuille td{padding:.25rem .5rem .25rem 0;border-bottom:1px dotted #c9d2cc}.feuille td.r{font-weight:700}
+.rx li{margin:.5rem 0}
+#gauge{display:flex;align-items:center;gap:.7rem;padding:.35rem 1rem;background:var(--panneau);border-bottom:1px solid var(--trait);font-size:.9rem;color:var(--doux)}
+#gauge>div{flex:1;max-width:260px;height:8px;border-radius:4px;background:var(--nuit);overflow:hidden}#gbar{display:block;height:100%;width:0;background:var(--vert);transition:width .4s}
+#cf{padding:.8rem 1rem}#cf label{display:block;margin:.5rem 0 .1rem;color:var(--doux);font-size:.9rem}#cf input,#cf select{width:100%;background:var(--nuit);border:1px solid var(--trait);border-radius:6px;padding:.4rem .5rem;color:inherit;font:inherit}
+.res{margin-top:.9rem;font-size:1.3rem;font-weight:700;color:var(--vert)}
+.ping{border-color:var(--vert)!important;color:var(--vert);font-weight:700}
+#cf iframe{width:100%;height:68vh;border:0;border-radius:6px;background:#fff}
+#mdl{color:var(--doux);font-size:.75rem;font-weight:400;margin-left:.5rem}
+#dlg{width:min(1000px,96vw)}
+#zoom{padding:0;border:0;background:#000;max-width:98vw;max-height:98vh;overflow:auto}
+#zoom img{display:block;max-width:96vw;max-height:94vh;margin:auto;cursor:zoom-in}#zoom img.full{max-width:none;max-height:none;cursor:zoom-out}
+#zclose{position:sticky;top:.4rem;float:right;margin:.4rem;z-index:2;background:#000c;color:#fff}
+.feuille img[data-zoom]{cursor:zoom-in}
+#wrap{flex:1;display:flex;min-height:0;position:relative}
+#col{flex:1;display:flex;flex-direction:column;min-width:0}
+#stage{position:relative;flex:0 0 44%;max-width:640px;border-right:1px solid var(--trait);background:#13201b;overflow:hidden}
+#stage.off{display:none}
+#stage .tools{position:absolute;right:.6rem;top:.6rem;display:flex;flex-direction:column;gap:.4rem;z-index:5}
+#stage .tools button{background:#0d1613cc;color:var(--texte);font-size:.85rem;padding:.35rem .6rem;backdrop-filter:blur(4px)}
+#stage .note{position:absolute;left:.6rem;top:.7rem;right:7.5rem;color:#dfe9e3;font-size:.8rem;pointer-events:none;text-shadow:0 1px 2px #000;transition:opacity .6s}
+#stage .phone{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:.6rem;color:var(--doux);text-align:center;padding:2rem}
+#stage.tel .phone{display:flex}#stage.tel canvas,#stage.tel .tools .pat{display:none}
+.geste{align-self:center;font-size:.85rem;color:var(--doux);border:1px dashed var(--trait);border-radius:20px;padding:.2rem .8rem}
+#avbtn.on{border-color:var(--vert);color:var(--vert)}
+@media (max-width:900px){#wrap{flex-direction:column}#stage{flex:0 0 38vh;max-width:none;border-right:0;border-bottom:1px solid var(--trait)}}
+#ff{padding:.8rem 1rem}#ff label{display:block;margin:.5rem 0 .1rem;color:var(--doux);font-size:.9rem}#ff input,#ff select,#ff textarea{width:100%;background:var(--nuit);border:1px solid var(--trait);border-radius:6px;padding:.4rem .5rem;color:inherit;font:inherit;resize:vertical}
+#stage .intg{position:absolute;left:8px;bottom:8px;display:flex;flex-wrap:wrap;gap:4px 10px;max-width:calc(100% - 16px);background:rgba(255,255,255,.85);border-radius:8px;padding:6px 10px;font-size:.78rem;z-index:3;color:#16241e}#stage .intg label{white-space:nowrap;cursor:pointer}#stage .intg[hidden]{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Cas cliniques <small id="mdl" title="Modèle utilisé et délai de la dernière réponse"></small></h1>
+  <select id="pop" aria-label="Parcours"><option value="">Tous les parcours</option><option value="officine">Officine</option><option value="hospitalier">Hospitalier</option><option value="industrie_recherche">Industrie et recherche</option></select>
+  <select id="theme" aria-label="Thème"></select>
+  <select id="prof" aria-label="Profil du patient"><option value="">Patient neutre</option><option value="presse">Pressé</option><option value="bavard">Bavard</option><option value="anxieux">Anxieux</option><option value="observance">Suit mal son traitement</option><option value="*">Profil au hasard</option></select>
+  <button id="new" class="main" disabled>Patient suivant</button>
+  <button id="fichebtn" disabled>Fiche patient</button>
+  <button id="calcbtn">Outils</button>
+  <button id="docbtn" disabled>Documents <span id="dc"></span></button>
+  <button id="end" disabled>Terminer et débriefer</button>
+  <button id="avbtn" class="on" title="Afficher ou masquer le patient en 3D">Patient 3D</button>
+</header>
+<div id="gauge" hidden><div><i id="gbar"></i></div><span id="gtxt"></span></div>
+<div id="wrap">
+<section id="stage" aria-label="Patient en 3D"><div class="tools"><button id="mute" type="button" title="Voix du patient">🔊 Voix</button><button id="bp" class="pat" type="button" disabled>Prendre la tension</button><button id="bpm" class="pat" type="button" hidden>Mesurer</button><button id="bpx" class="pat" type="button" hidden>Fin de la mesure</button><button id="res" class="pat" type="button" disabled>Réserve</button><button id="eqx" class="pat" type="button" hidden>Terminer le geste</button><button id="obs" class="pat" type="button" hidden title="Approcher pour observer la lésion">Regarder de près</button><button id="j3" class="pat" type="button" hidden title="Le patient revient quelques jours plus tard">Revoir dans 3 jours</button><button id="expl" class="pat" type="button" hidden title="Expliquer la maladie ou le traitement à la patiente, avec le schéma du corps">Expliquer au patient</button><button id="int" class="pat" type="button" hidden title="Peau en transparence : organes de CorpoAtlas recalés sur la patiente">Voir l'intérieur</button></div><div class="intg" id="intg" hidden></div><div class="phone"><div style="font-size:2.5rem">☎</div><div>Échange avec un professionnel : pas de patient en face.</div></div><div class="note" id="avnote">Chargement du patient…</div></section>
+<div id="col">
+<main id="chat" aria-live="polite"><p class="vide">Choisissez un thème, puis appelez le premier patient.</p></main>
+<form id="f"><button type="button" id="hint" disabled aria-label="Demander un indice" title="Indice : le patient lâche une information utile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg><span id="hc"></span></button><textarea id="in" rows="1" placeholder="Votre réponse au patient" aria-label="Message" disabled></textarea><button id="send" class="main" disabled>Envoyer</button></form>
+</div>
+</div>
+<dialog id="dlg" aria-label="Documents du patient"><div class="dh" id="tabs"></div><div id="doc"></div></dialog>
+<dialog id="calc" aria-label="Calculateurs"><div class="dh"><select id="csel"></select><button class="x" id="cclose">Fermer</button></div><div id="cf"></div></dialog>
+<dialog id="zoom" aria-label="Agrandissement du document"><button id="zclose" type="button">Fermer</button><img id="zimg" alt="" title="Cliquer pour passer en taille réelle"></dialog>
+<dialog id="fiche" aria-label="Fiche patient"><div class="dh"><b>Ma fiche patient</b><button class="x" id="fclose" type="button">Fermer</button></div><div id="ff"></div></dialog>
+
+<script>
+const WORKER = 'https://cas-cliniques.alterpaces1.workers.dev/';
+const SECRET = 'rxtalkcase';             // = secret APP_SECRET du worker
+const DATA = 'cas_cliniques.json';        // à placer à côté de cette page
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+let pending = [];   // gestes du pharmacien (tension, objets) transmis avec le prochain message
+let db, cas, hist = [], busy = false, over = false, profil = '', points = null, got = new Set(), cv = 0, unlocked = new Set(), notes = {}, fiche = {};
+const POPS = { officine: { ticket: "Un patient entre à l'officine", open: "(Le patient entre à l'officine et prend la parole : dis ta première phrase.)" }, hospitalier: { ticket: "Appel d'un service à la pharmacie hospitalière", open: "(Le téléphone de la pharmacie hospitalière sonne : le soignant prend la parole et expose sa demande en une ou deux phrases.)" }, industrie_recherche: { ticket: 'Sollicitation au laboratoire', open: "(Un collègue vous sollicite : il prend la parole et expose sa demande en une ou deux phrases.)" } };
+const PL = { presse: 'pressé', bavard: 'bavard', anxieux: 'anxieux', observance: 'suit mal son traitement' };
+
+function add(cls, html) { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; $('chat').append(d); d.scrollIntoView({ block: 'end' }); return d; }
+function lock(on) { busy = on; $('send').disabled = $('in').disabled = on || over || !cas; $('new').disabled = on || !db; $('end').disabled = on || over || hist.length < 3;
+  $('hint').disabled = on || over || hist.length < 2; const n = hist.filter((m) => m.content === '(indice demandé)').length; $('hc').textContent = n || '';
+  $('fichebtn').disabled = !cas; if (window.AV) AV.lock(on || over || !cas); const nd = unlocked.size; $('docbtn').disabled = !nd; $('dc').textContent = nd || ''; }
+
+let lastModel = '', lastFt = 0;
+async function ask(mode, el) {
+  const t0 = performance.now();
+  const body = { mode, avatar: !!window.AV, pop: cas.pop || 'officine', cas: mode === 'chat' ? { enonce: cas.enonce, docs: (cas.documents || []).map(docTitle), fiche: cas.fiche || null } : { enonce: cas.enonce, questions: cas.questions, points: points || [], interactions: (cas.connaissances || {}).interactions || [], notes: Object.entries(notes).filter(([, v]) => v.trim()).map(([doc, texte]) => ({ doc, texte })), docs_etat: (cas.documents || []).map((d, i) => ({ titre: docTitle(d), ouvert: unlocked.has(i) })), fiche_saisie: fiche, fiche_ref: cas.fiche || null }, profil, messages: hist };
+  const r = await fetch(WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-App-Secret': SECRET }, body: JSON.stringify(body) });
+  if (mode === 'chat') { lastModel = r.headers.get('X-Model') || ''; lastFt = 0; }
+  if (!r.ok) { let m = 'Erreur ' + r.status; try { const j = await r.json(); m = j.error + (j.details ? ' (' + j.details.join(', ') + ')' : ''); } catch {} throw new Error(m); }
+  let out = '';
+  if (!(r.headers.get('content-type') || '').includes('event-stream')) {
+    const j = await r.json(); out = (j.choices && j.choices[0].message.content) || ''; el.innerHTML = fmt(vis(out)); return out;
+  }
+  const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '';
+  for (;;) {
+    const { done, value } = await rd.read(); if (done) break;
+    buf += dec.decode(value, { stream: true }); const lines = buf.split('\n'); buf = lines.pop();
+    for (const l of lines) {
+      if (!l.startsWith('data:')) continue; const d = l.slice(5).trim(); if (d === '[DONE]') continue;
+      try { const t = JSON.parse(d).choices[0].delta.content; if (t) { if (!lastFt && mode === 'chat') lastFt = performance.now() - t0; out += t; el.innerHTML = fmt(vis(out)); el.scrollIntoView({ block: 'end' }); } } catch {}
+    }
+  }
+  if (!out.trim()) throw new Error('Réponse vide : réessayez.');
+  return out;
+}
+
+async function turn(mode, cls) {
+  lock(true); const el = add(cls, '…');
+  try { const t0 = performance.now(); const out = await ask(mode, el); if (mode === 'chat') $('mdl').textContent = (lastModel || '?') + ' : 1er mot ' + (lastFt / 1000).toFixed(1) + ' s, total ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s'; if (mode === 'chat') { hist.push({ role: 'assistant', content: out }); cover(); unlockFrom(out); if (window.AV) AV.reply(out, cls.includes('indice')); } return out; }
+  catch (e) { el.remove(); add('err', esc(e.message)); if (mode === 'chat') hist.pop(); }
+  finally { lock(false); }
+}
+
+function newPatient() {
+  const t = $('theme').value;
+  const pool = db.cas.filter((c) => t === '*' || (t === '~' ? c.theme !== 'cardiologie_pediatrique' : c.theme === t)).filter((c) => !$('pop').value || c.pop === $('pop').value);
+  if (!pool.length) { $('chat').innerHTML = '<p class="vide">Aucun cas pour ce parcours et ce thème.</p>'; return; }
+  cas = pool[Math.floor(Math.random() * pool.length)]; over = false;
+  const pv = $('prof').value; profil = pv === '*' ? ['presse', 'bavard', 'anxieux', 'observance', ''][Math.floor(Math.random() * 5)] : pv;
+  points = null; got = new Set(); unlocked = new Set(); notes = {}; fiche = {}; (cas.documents || []).forEach((d, i) => { if (d.libre) unlocked.add(i); }); setTimeout(() => lock(busy), 0); $('docbtn').classList.remove('ping'); const k = ++cv; gauge();
+  setTimeout(() => ask('checklist', document.createElement('div')).then((t) => { const a = arr(t); if (a && k === cv) { points = a.map(String).slice(0, 10); gauge(); } }).catch(() => {}), 0);
+  const lib = (db.meta.themes.find((x) => x.id === cas.theme) || {}).libelle || '';
+  $('chat').innerHTML = ''; add('ticket', POPS[cas.pop || 'officine'].ticket + '<b>' + cas.id + '</b>' + esc(lib));
+  hist = [{ role: 'user', content: POPS[cas.pop || 'officine'].open }];
+  if (window.AV) AV.newCase(cas, profil);
+  pending = [];
+  turn('chat', 'm patient');
+}
+
+$('f').onsubmit = async (e) => {
+  e.preventDefault(); const t = $('in').value.trim(); if (!t || busy || over || !cas) return;
+  $('in').value = ''; hist.push({ role: 'user', content: (pending.length ? pending.join(' ') + '\n' : '') + t }); pending = []; window.nEleve = (window.nEleve || 0) + 1; window.dernierEleve = t; (window.msgsEleve = window.msgsEleve || []).push(t); add('m eleve', fmt(t));
+  await turn('chat', 'm patient');
+};
+$('in').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('f').requestSubmit(); } };
+$('hint').onclick = async () => {
+  if (busy || over || hist.length < 2) return;
+  hist.push({ role: 'user', content: '(indice demandé)' }); await turn('chat', 'm patient indice');
+};
+const f = (s) => esc(String(s || ''));
+const IDC = 'https://proxy.imaging.datacommons.cancer.gov/current/viewer-only-no-downloads-see-tinyurl-dot-com-slash-3j3d9jyp/dicomWeb';
+function lameHTML(d) { return '<div class="feuille"><div class="fh"><div><b>' + f(d.titre) + '</b><br><small>' + f(d.legende) + '</small></div><small>Dossier ' + cas.id + '</small></div><div id="osd" style="height:min(60vh,520px);background:#000;border-radius:6px;position:relative"><div style="position:absolute;inset:0;display:grid;place-items:center;color:#aaa">Chargement de la lame…</div></div><div class="pied">' + f(d.attribution) + ' Molette ou pincement : zoom.</div></div>'; }
+function chargerOSD() { return window.OpenSeadragon ? Promise.resolve() : new Promise((ok, ko) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/openseadragon.min.js'; s.onload = ok; s.onerror = ko; document.head.append(s); }); }
+let osd = null;
+async function ouvrirLame(d) {                              // lame DICOM (NCI IDC) en tuiles, comme dans CorpoAtlas
+  const vp = document.getElementById('osd'); if (!vp) return;
+  try {
+    await chargerOSD();
+    const metas = await Promise.all(d.levels.map((lv) => fetch(IDC + '/studies/' + d.study + '/series/' + d.series + '/instances/' + lv.sop + '/metadata', { headers: { Accept: 'application/dicom+json' } }).then((r) => r.json()).then((j) => { const x = Array.isArray(j) ? j[0] : j, V = (t) => x[t] && x[t].Value ? x[t].Value[0] : undefined; const tw = +V('00280011'), th = +V('00280010'), W = +V('00480006'), H = +V('00480007'); return { sop: lv.sop, tw, th, W, H, nf: +V('00280008') || 1, cols: Math.ceil(W / tw), rows: Math.ceil(H / th) }; })
+      .catch(() => ({ sop: lv.sop, tw: 256, th: 256, W: lv.w, H: lv.h, nf: Math.ceil(lv.w / 256) * Math.ceil(lv.h / 256), cols: Math.ceil(lv.w / 256), rows: Math.ceil(lv.h / 256) }))));
+    metas.sort((a, b) => b.W * b.H - a.W * a.H); const L = metas.slice().reverse(), big = metas[0], mx = L.length - 1, lv = (l) => L[Math.max(0, Math.min(l, mx))];
+    vp.innerHTML = ''; if (osd) try { osd.destroy(); } catch (e) {}
+    osd = OpenSeadragon({ element: vp, prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/images/', showNavigator: true, crossOriginPolicy: 'Anonymous', loadTilesWithAjax: true, ajaxHeaders: { Accept: 'image/jpeg' },
+      tileSources: { width: big.W, height: big.H, tileWidth: big.tw, tileHeight: big.th, minLevel: 0, maxLevel: mx, tileOverlap: 0,
+        getLevelScale: (l) => lv(l).W / big.W, getNumTiles: (l) => new OpenSeadragon.Point(lv(l).cols, lv(l).rows), getTileWidth: (l) => lv(l).tw, getTileHeight: (l) => lv(l).th,
+        getTileUrl: (l, x, y) => { const m = lv(l), fr = Math.min(m.nf, Math.max(1, Math.min(y, m.rows - 1) * m.cols + Math.min(x, m.cols - 1) + 1)); return IDC + '/studies/' + d.study + '/series/' + d.series + '/instances/' + m.sop + '/frames/' + fr + '/rendered'; } } });
+  } catch (e) { vp.innerHTML = '<div style="position:absolute;inset:0;display:grid;place-items:center;color:#aaa">Visualiseur indisponible (connexion ?)</div>'; }
+}
+function docHTML(d) {
+  if (d.type === 'lame') return lameHTML(d);
+  if (d.type === 'imagerie') return '<div class="feuille"><div class="fh"><div><b>' + f(d.titre) + '</b><br><small>' + f(d.legende) + '</small></div><small>Dossier ' + cas.id + '</small></div><iframe src="' + f(d.url) + '" style="width:100%;height:min(62vh,560px);border:0;background:#000;border-radius:6px" allow="fullscreen" title="Imagerie"></iframe><div class="pied">' + f(d.attribution) + '</div></div>';
+  const pied = '<div class="pied">Document fictif à visée pédagogique' + (d.origine ? ' (' + f(d.origine) + ')' : '') + '.</div>';
+  if (d.type === 'ordonnance') return '<div class="feuille"><div class="fh"><div><b>Dr ' + (f(d.medecin) || '…') + '</b></div><small>' + f(d.date) + '</small></div><p>' + f(d.patient) + '</p><ol class="rx">' +
+    (d.lignes || []).map((l) => '<li><b>' + f(l.medicament) + '</b><br>' + f(l.posologie) + ' ' + f(l.duree) + '</li>').join('') + '</ol>' + pied + '</div>';
+  if (d.type === 'image') return '<div class="feuille"><div class="fh"><div><b>' + f(d.titre) + '</b><br><small>' + f(d.legende) + '</small></div><small>Dossier ' + cas.id + '</small></div><div style="position:relative"><img src="' + f(d.fichier) + '" alt="' + f(d.titre) + '" title="Cliquer pour agrandir" data-zoom="1" style="width:100%;display:block">' + (d.champs || []).map((c) => '<span style="position:absolute;left:' + (+c.x || 0) + '%;top:' + (+c.y || 0) + '%;font:' + (+c.taille || 14) + 'px/1.2 cursive;color:#12308f">' + f(c.texte) + '</span>').join('') + '</div>' + pied + '</div>';
+  if (d.type === 'tableau') return '<div class="feuille"><div class="fh"><div><b>' + f(d.titre) + '</b><br><small>' + f(d.sous_titre) + '</small></div><small>Dossier ' + cas.id + '</small></div><table><tr>' + (d.colonnes || []).map((c) => '<th>' + f(c) + '</th>').join('') + '</tr>' + (d.lignes || []).map((r) => '<tr>' + r.map((v) => '<td>' + f(v) + '</td>').join('') + '</tr>').join('') + '</table>' + pied + '</div>';
+  if (d.type === 'compte_rendu') return '<div class="feuille"><div class="fh"><div><b>' + f(d.titre) + '</b><br><small>Compte rendu</small></div><small>Dossier ' + cas.id + '</small></div><p style="white-space:pre-wrap">' + f(d.texte) + '</p>' + pied + '</div>';
+  if (d.type === 'dp') return '<div class="feuille"><div class="fh"><div><b>Dossier pharmaceutique</b><br><small>Médicaments délivrés récemment</small></div><small>Dossier ' + cas.id + '</small></div><table><tr><th>Médicament</th><th>Substance(s)</th></tr>' + (d.lignes || []).map((l) => '<tr><td>' + f(l.medicament) + '</td><td>' + f(l.substances) + '</td></tr>').join('') + '</table>' + pied + '</div>';
+  const ref = (d.lignes || []).some((l) => l.ref);
+  return '<div class="feuille"><div class="fh"><div><b>' + f(d.titre) + '</b><br><small>Laboratoire d\'analyses médicales</small></div><small>Dossier ' + cas.id + '</small></div><table><tr><th>Échantillon</th><th>Analyse</th><th>Résultat</th><th>Unité</th>' + (ref ? '<th>Référence</th>' : '') + '</tr>' +
+    (d.lignes || []).map((l) => '<tr><td>' + f(l.ech) + '</td><td>' + f(l.analyse) + '</td><td class="r">' + f(l.resultat) + '</td><td>' + f(l.unite) + '</td>' + (ref ? '<td>' + f(l.ref) + '</td>' : '') + '</tr>').join('') + '</table>' + pied + '</div>';
+}
+function openDoc(i) {
+  const ds = [...unlocked].sort((x, y) => x - y).map((k) => cas.documents[k]);
+  $('tabs').innerHTML = ds.map((d, k) => '<button data-k="' + k + '"' + (k === i ? ' class="on"' : '') + '>' + f(d.titre || 'Ordonnance') + '</button>').join('') + '<button class="x" id="close">Fermer</button>';
+  $('tabs').querySelectorAll('button[data-k]').forEach((b) => { b.onclick = () => openDoc(+b.dataset.k); });
+  $('close').onclick = () => $('dlg').close(); $('doc').innerHTML = docHTML(ds[i]) + '<div style="padding:0 .8rem .8rem"><label for="note" style="color:var(--doux);font-size:.9rem">Mon analyse de ce document</label><textarea id="note" rows="3" style="width:100%" placeholder="Anomalies, valeurs à interpréter, questions à poser au patient"></textarea></div>';
+  if (ds[i].type === 'lame') ouvrirLame(ds[i]);
+  const key = docTitle(ds[i]); $('note').value = notes[key] || ''; $('note').oninput = () => { notes[key] = $('note').value; };
+}
+$('docbtn').onclick = () => { $('docbtn').classList.remove('ping'); openDoc(0); $('dlg').showModal(); };
+$('dlg').onclick = (e) => { if (e.target === $('dlg')) $('dlg').close(); };
+function situation(txt, aff) { pending.push('(Situation : ' + txt + ')'); add('geste', esc(aff || txt)); }
+window.situation = situation;
+window.envoyerSituation = async () => { if (busy || over || !cas) return; hist.push({ role: 'user', content: pending.join(' ') }); pending = []; await turn('chat', 'm patient'); };
+function geste(txt) { pending.push('(Geste du pharmacien : ' + txt + ')'); add('geste', esc(txt)); }
+window.geste = geste;
+const arr = (t) => { try { return JSON.parse(t.match(/\[[\s\S]*\]/)[0]); } catch { return null; } };
+function gauge() { $('gauge').hidden = !points; if (!points) return; $('gbar').style.width = (100 * got.size / points.length) + '%'; $('gtxt').textContent = 'Informations clés : ' + got.size + '/' + points.length; }
+async function cover() { if (!points) return; const k = cv; try { const a = arr(await ask('cover', document.createElement('div'))); if (a && k === cv) { a.forEach((n) => { if (n >= 1 && n <= points.length) got.add(n); }); gauge(); } } catch {} }
+const AGE = ['age', 'Âge (ans)'], KG = ['kg', 'Poids (kg)'], CM = ['cm', 'Taille (cm)'], CR = ['cr', 'Créatinine (µmol/L)'], SX = ['sx', 'Sexe', ['Homme', 'Femme']];
+const CALCS = [
+ ['Clairance de la créatinine (Cockcroft-Gault)', [AGE, KG, CR, SX], (v) => [(140 - v.age) * v.kg * (v.sx ? 1.04 : 1.23) / v.cr, 'mL/min']],
+ ['DFG (CKD-EPI 2021)', [AGE, CR, SX], (v) => { const s = v.cr / 88.4, k = v.sx ? 0.7 : 0.9, a = v.sx ? -0.241 : -0.302; return [142 * Math.pow(Math.min(s / k, 1), a) * Math.pow(Math.max(s / k, 1), -1.2) * Math.pow(0.9938, v.age) * (v.sx ? 1.012 : 1), 'mL/min/1,73 m²']; }],
+ ['IMC', [KG, CM], (v) => [v.kg / Math.pow(v.cm / 100, 2), 'kg/m²']],
+ ['Surface corporelle (Mosteller)', [KG, CM], (v) => [Math.sqrt(v.kg * v.cm / 3600), 'm²']],
+ ['Dose pédiatrique (mg/kg/jour)', [KG, ['mgkg', 'Dose (mg/kg/jour)'], ['n', 'Prises par jour'], ['c', 'Concentration (mg/mL)']], (v) => { const p = v.kg * v.mgkg / v.n; return [p, 'mg par prise, soit ' + (p / v.c).toFixed(1) + ' mL par prise (' + (p * v.n).toFixed(0) + ' mg/jour)']; }],
+ ['mmol/L vers g/L', [['mm', 'Valeur (mmol/L)'], ['mw', 'Masse molaire (g/mol)']], (v) => [v.mm * v.mw / 1000, 'g/L']],
+ ['Créatinine µmol/L vers mg/dL', [CR], (v) => [v.cr / 88.4, 'mg/dL']],
+ ['Substitution générique (outil)', [], 'substitution_generique.html'],
+ ['Hémogramme, repères (outil)', [], 'hemogramme_nfs.html'],
+];
+function calcUI(i) {
+  const [, fs, run] = CALCS[i];
+  if (typeof run === 'string') { $('cf').innerHTML = '<iframe src="' + run + '" title="Outil"></iframe>'; $('cf').oninput = null; return; }
+  $('cf').innerHTML = fs.map(([id, lab, opt]) => '<label for="c_' + id + '">' + lab + '</label>' + (opt ? '<select id="c_' + id + '">' + opt.map((o) => '<option>' + o + '</option>').join('') + '</select>' : '<input id="c_' + id + '" type="number" step="any" inputmode="decimal">')).join('') + '<div class="res" id="cres"></div><p class="pied" style="color:var(--doux)">Résultat indicatif : se référer au RCP du médicament.</p>';
+  const MAP = { age: 'age', kg: 'kg', cm: 'cm', cr: 'cr', sx: 'sexe' };
+  fs.forEach(([id, , opt]) => { const v = fiche[MAP[id]], e = $('c_' + id); if (e && v) { if (opt) e.selectedIndex = v === 'Femme' ? 1 : 0; else e.value = v; } });
+  const go = () => { const v = {}; fs.forEach(([id, , opt]) => { const e = $('c_' + id); v[id] = opt ? e.selectedIndex : parseFloat(e.value.replace(',', '.')); }); const r = run(v); $('cres').textContent = Number.isFinite(r[0]) ? Number(r[0].toPrecision(3)) + ' ' + r[1] : 'Renseignez tous les champs.'; };
+  $('cf').oninput = go; go();
+}
+$('csel').innerHTML = CALCS.map((c, i) => '<option value="' + i + '">' + c[0] + '</option>').join(''); $('csel').onchange = () => calcUI(+$('csel').value);
+$('calcbtn').onclick = () => { calcUI(+$('csel').value); $('calc').showModal(); }; $('cclose').onclick = () => $('calc').close();
+$('calc').onclick = (e) => { if (e.target === $('calc')) $('calc').close(); };
+const nrm = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+function docTitle(d) { return d.titre || 'Ordonnance'; }
+function vis(s) { return s.replace(/\[(?:DOC|EMO|ZONE|DECOUVRE):[^\]]*\]/g, '').replace(/\[(?:D|DO|DOC|DE|DEC|DECO|DECOU|DECOUV|DECOUVR|DECOUVRE|E|EM|EMO|Z|ZO|ZON|ZONE)?(?::[^\]]*)?$/, '').trimEnd(); }
+function unlockFrom(t) {
+  for (const m of t.matchAll(/\[DOC:([^\]]+)\]/g)) (cas.documents || []).forEach((d, i) => { const a = nrm(docTitle(d)), b = nrm(m[1]); if (a.includes(b) || b.includes(a)) { if (!unlocked.has(i)) $('docbtn').classList.add('ping'); unlocked.add(i); } });
+}
+$('doc').addEventListener('click', (e) => { const i = e.target.closest('img[data-zoom]'); if (i) { $('zimg').src = i.src; $('zimg').className = ''; $('zoom').showModal(); } });
+$('zimg').onclick = () => $('zimg').classList.toggle('full'); $('zclose').onclick = () => $('zoom').close();
+$('zoom').onclick = (e) => { if (e.target === $('zoom')) $('zoom').close(); };
+const FF = [['sexe', 'Sexe', ['', 'Homme', 'Femme']], ['age', 'Âge (ans)'], ['kg', 'Poids (kg)'], ['cm', 'Taille (cm)'], ['cr', 'Créatinine (µmol/L)'], ['gr', 'Grossesse ou allaitement', ['', 'Non', 'Enceinte', 'Allaite']], ['all', 'Allergies'], ['tt', 'Traitements en cours', 'area'], ['nt', 'Remarques', 'area']];
+$('fichebtn').onclick = () => {
+  $('ff').innerHTML = '<p style="color:var(--doux);margin:0">Notez ici ce que vous apprenez du patient. Les calculateurs se préremplissent avec ces valeurs.</p>' + FF.map(([k, l, o]) => '<label for="f_' + k + '">' + l + '</label>' + (Array.isArray(o) ? '<select id="f_' + k + '">' + o.map((x) => '<option>' + x + '</option>').join('') + '</select>' : o === 'area' ? '<textarea id="f_' + k + '" rows="2"></textarea>' : '<input id="f_' + k + '" inputmode="decimal">')).join('');
+  FF.forEach(([k]) => { const e = $('f_' + k); e.value = fiche[k] || ''; e.oninput = () => { fiche[k] = e.value; }; });
+  $('fiche').showModal();
+};
+$('fclose').onclick = () => $('fiche').close(); $('fiche').onclick = (e) => { if (e.target === $('fiche')) $('fiche').close(); };
+$('new').onclick = newPatient;
+$('end').onclick = async () => {
+  if (pending.length) { hist.push({ role: 'user', content: pending.join(' ') }); pending = []; }
+  over = true; lock(true);
+  const out = await turn('eval', 'debrief');
+  if (out) {
+    const det = document.createElement('details');
+    det.innerHTML = '<summary>Réponses attendues du cas</summary>' + (points ? '<p><b>Points clés</b>\n' + points.map((p, i) => (got.has(i + 1) ? '✔ ' : '✘ ') + esc(p)).join('\n') + '</p>' : '') + (profil ? '<p><b>Profil joué :</b> ' + PL[profil] + '</p>' : '') + (cas.questions || []).map((q) => '<p><b>' + esc(q.question) + '</b>\n' + esc(q.reponse_modele) + '</p>').join('');
+    $('chat').append(det);
+    const kn = cas.connaissances || {}, ms = kn.medicaments || [], it = kn.interactions || [], dc = cas.documents || [];
+    let sd = document.createElement('details');
+    sd.innerHTML = `<summary>Ce que l'évaluateur a consulté</summary><p><b>Médicaments repérés (fiches)</b>\n${ms.length ? ms.map((m) => esc(m.terme) + ' : ' + esc((m.substances || []).join(', '))).join('\n') : 'aucun'}</p><p><b>Interactions du thésaurus ANSM</b>\n${it.length ? it.map((i) => esc(i.entre.join(' + ')) + ' : ' + esc(i.niveau.join(' / '))).join('\n') : 'aucune détectée'}</p><p><b>Documents du cas</b>\n${dc.length ? dc.map((d, i) => esc(docTitle(d)) + (unlocked.has(i) ? ' (demandé)' : ' (non demandé)')).join('\n') : 'aucun'}</p>`;
+    $('chat').append(sd);
+    const ak = cas.atlas || (cas.peau && cas.peau.maladie), fa = ak && window.ficheAtlas ? await window.ficheAtlas(ak) : null;
+    { const sans = (x) => (x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''), dit = sans((window.msgsEleve || []).join(' \n ')), trt = sans((cas.fiche && cas.fiche.traitements) || ''), out = [];
+      for (const r of cas.alertes_conseils || []) { let m = null; try { m = new RegExp(r.si, 'i').exec(dit); } catch (e) {} if (m) out.push('⚠ Vous avez évoqué « ' + esc(m[0]) + ' » : ' + esc(r.rappel)); }
+      const cite = (med) => { const k = sans(med).slice(0, 7); return k.length > 4 && (dit.includes(k) ? 'dit' : trt.includes(k) ? 'trt' : null); };
+      for (const x of (fa && fa.ddi) || []) { const hits = x.m.map((md) => [md, cite(md)]).filter((h) => h[1]); if (hits.some((h) => h[1] === 'dit')) out.push((hits.length > 1 ? '⚠ Interaction : ' : 'À connaître, vous avez cité ' + hits.map((h) => h[0]).join(', ') + ' : ') + esc(x.t.replace(/\*\*/g, ''))); }
+      const medsDits = ((fa && fa.ddi) || []).flatMap((x) => x.m).filter((md) => cite(md) === 'dit');
+      for (const f of (fa && fa.food) || []) if ((f.m || []).some((md) => cite(md) === 'dit') || (!(f.m || []).length && medsDits.length)) out.push('Conseil alimentaire (' + esc(f.f) + ') : ' + esc(f.d) + (dit.includes(sans(f.f).slice(0, 5)) ? ' — vous l\'avez abordé.' : ' — non abordé.'));
+      if (cas.alertes_conseils || (fa && (fa.ddi || []).length)) { const vd = document.createElement('details'); vd.open = out.length > 0; vd.className = 'verif';
+        vd.innerHTML = '<summary>Vérification de vos conseils' + (out.length ? ' (' + out.length + ')' : ' : rien à signaler') + '</summary><p>' + (out.length ? out.join('\n\n') : 'Aucun conseil à risque repéré dans vos messages, et aucune interaction de la fiche avec les médicaments que vous avez cités.') + '</p><p style="font-size:.8rem;color:var(--doux)">Repérage automatique par mots-clés dans vos messages (règles du cas et interactions de la fiche CorpoAtlas) : un message peut être signalé à tort si vous avez cité le produit pour le déconseiller.</p>';
+        $('chat').append(vd); } }
+    if (window.bilanExpl && window.carteExplication) $('chat').append(window.carteExplication(window.bilanExpl));
+    if (fa) { const ad = document.createElement('details'); ad.className = 'atlas';
+      ad.innerHTML = '<summary>Ce que dit CorpoAtlas : ' + esc(fa.nom || ak) + '</summary><p>' + esc(fa.desc || '') + '</p>' + (fa.pieges && fa.pieges.length ? '<p><b>Pièges</b>\n' + fa.pieges.map((x) => '• ' + esc(x)).join('\n') + '</p>' : '') + (fa.diff && fa.diff.length ? '<p><b>À distinguer de</b>\n' + fa.diff.map(esc).join(' · ') + '</p>' : '') + '<p style="font-size:.8rem;color:var(--doux)">Fiche générée à partir d\'un jeu de données de synthèse (CorpoAtlas), à vérifier.</p>';
+      $('chat').append(ad); sd = ad; }
+    sd.scrollIntoView({ block: 'end' });
+  }
+  lock(false);
+};
+
+/* Le parcours (officine, hospitalier, industrie et recherche) filtre la liste des thèmes : seuls les thèmes qui ont des cas pour ce parcours apparaissent, avec leur nombre */
+function fillThemes() {
+  const p = $('pop').value, pool = db.cas.filter((c) => !p || c.pop === p), prev = $('theme').value, n = {};
+  pool.forEach((c) => { n[c.theme] = (n[c.theme] || 0) + 1; });
+  const hors = pool.filter((c) => c.theme !== 'cardiologie_pediatrique').length;
+  $('theme').innerHTML = `<option value="~">Au hasard, hors cardio pédiatrique (${hors})</option><option value="*">Au hasard, tous les thèmes (${pool.length})</option>` +
+    db.meta.themes.filter((t) => n[t.id]).map((t) => `<option value="${t.id}">${esc(t.libelle)} (${n[t.id]})</option>`).join('');
+  if ([...$('theme').options].some((o) => o.value === prev)) $('theme').value = prev;
+}
+
+Promise.all([fetch(DATA).then((r) => r.json()), fetch('cas_qcm_pharma.json').then((r) => (r.ok ? r.json() : null)).catch(() => null)]).then(([d, x]) => {
+  if (x) { d.cas = d.cas.concat(x.cas); (x.meta.themes || []).forEach((t) => { if (!d.meta.themes.find((u) => u.id === t.id)) d.meta.themes.push({ id: t.id, libelle: t.libelle, nb_cas: 0 }); }); d.meta.themes.forEach((t) => { t.nb_cas = d.cas.filter((c) => c.theme === t.id).length; }); }
+  db = d;
+  [...$('pop').options].forEach((o) => { o.dataset.l = o.dataset.l || o.textContent; o.textContent = o.dataset.l + ' (' + d.cas.filter((c) => !o.value || c.pop === o.value).length + ')'; });
+  fillThemes(); $('pop').onchange = fillThemes;
+  lock(false);
+}).catch(() => { $('chat').innerHTML = '<p class="err">Impossible de charger ' + DATA + '. Placez-le à côté de la page et ouvrez la page via un serveur web (pas en file://).</p>'; });
+</script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+/* Patient en 3D : il prononce les répliques de l'IA, avec l'émotion et la zone du corps indiquées par les balises [EMO:…] [ZONE:…] (ou devinées dans le texte) */
+import { createAvatar, guessEmotion, guessTouch, EMOTIONS, PROFIL_EMO } from './avatar/avatar.js';
+import { createEquip } from './avatar/equip.js';
+import { valeursDuCas, pertinent, ETONNEMENT, REACTIONS } from './avatar/objets.js';
+import { chargerPeau, createPeau, trouverMaladie, ficheAtlas, infoStades } from './avatar/peau.js';
+import { createReserve } from './avatar/reserve.js';
+const $ = (id) => document.getElementById(id), BASE = window.AVATAR_BASE || 'avatar/';
+const EMOS = Object.keys(EMOTIONS), PARTS = ['front', 'gorge', 'poitrine', 'ventre', 'epaule', 'bras', 'reins', 'cuisse'];
+const plain = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+let A = null, EQ = null, RS = null, cas = null, profil = '', locked = true, nReply = 0, queue = null, tel = false, modele = null, mast = null, eleveA = 0, sansExpl = false, chargement = null, peauCle = null, peauStade = 0, jours = 0;
+function tags(t) {
+  const e = /\[EMO:\s*([^\]]+?)\s*\]/i.exec(t), z = /\[ZONE:\s*([a-zéèêô]+)(?:[\s_-]+(gauche|droite|droit))?\s*\]/i.exec(t);
+  const zp = z && plain(z[1]).replace(/^tete$/, 'front').replace(/^dos$/, 'reins').replace(/^jambe$/, 'cuisse');
+  const dc = /\[DECOUVRE:\s*([a-zé]+)\s*\]/i.exec(t);
+  return { emo: e && plain(e[1]), zone: zp && PARTS.includes(zp) ? { part: zp, side: z[2] && plain(z[2]) === 'gauche' ? 'Left' : 'Right' } : null, decouvre: dc && plain(dc[1]) };
+}
+const clean = (t) => t.replace(/\[(?:DOC|EMO|ZONE|DECOUVRE):[^\]]*\]/g, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+function pickVoice(sexe) {
+  const vs = (A && A.voices) || []; if (!vs.length) return;
+  const F = /denise|julie|hortense|am[ée]lie|marie|audrey|aur[ée]lie|virginie|c[ée]line|chantal|elsa|sylvie|eloise|vivienne|female|femme|google fran/i, M = /henri|paul|claude|thomas|nicolas|antoine|jean|guillaume|mathieu|r[ée]my|remi|gerard|male|homme/i;
+  const want = sexe === 'Femme' ? F : M, i = vs.findIndex((v) => want.test(v.name) && !(sexe === 'Femme' ? M : F).test(v.name));
+  if (i >= 0) A.voiceIndex = i;
+}
+function setButtons() {
+  const off = !A || locked || tel; $('bp').disabled = off; $('res').disabled = off;
+}
+async function applyCase() {
+  if (!A || !cas) return;
+  const sx0 = cas.fiche && cas.fiche.sexe, want = sx0 === 'Femme' ? 'femme' : 'homme';
+  tel = !!(cas.pop && cas.pop !== 'officine') && !cas.peau && !cas.visage;
+  if (modele !== want && !tel) { if (!chargement || chargement.want !== want) { chargement = monter(want); chargement.want = want; } const c = chargement; await c; if (chargement === c) chargement = null; if (!A || (cas.fiche && cas.fiche.sexe === 'Femme' ? 'femme' : 'homme') !== modele) return; }
+  A.stop(); if (A.quitterTension) A.quitterTension(); if (EQ) EQ.close(); if (RS) RS.close(); $('eqx').hidden = true; A.debout && A.debout();
+  $('bp').hidden = false; $('bpm').hidden = $('bpx').hidden = true;
+  $('stage').classList.toggle('tel', tel);
+  const P = cas.patient || {}; A.profil = profil; A.emotion = P.emotion || PROFIL_EMO[profil] || 'neutre'; A.gesture = null; nReply = 0;
+  const sx = cas.fiche && cas.fiche.sexe; pickVoice(sx);
+  $('avnote').textContent = ''; setButtons();
+  if (A.decouvrir) { A.decouvrir('rhabille'); for (const n of [...(A.porte || [])]) A.porter(n, false); }
+  if (A.effacerPeau) A.effacerPeau();
+  if (A.interieur) { A.interieur(false); $('int').textContent = "Voir l'intérieur"; $('intg').hidden = true; }
+  $('int').hidden = !(A.femme && A.interieur) || tel;
+  explMode = null; window.bilanExpl = null; $('expl').hidden = tel; $('expl').textContent = 'Expliquer au patient';
+  const T = texteCas(cas);
+  mast = A.femme && /mastectomie|ablation du sein|opération du sein|opérée du sein|cancer du sein opéré/.test(T) ? (/(mastectomie|sein)[^.]{0,40}droit|sein droit/.test(T) ? 'droite' : 'gauche') : null;
+  if (A.mastectomie) A.mastectomie(mast);
+  A.asym = cas.visage && cas.visage.side ? { side: cas.visage.side, central: !!cas.visage.central } : null;
+  if (A.alite) await A.alite(!!(cas.pop && cas.pop !== 'officine') && !tel, BASE + 'lit_hopital.glb');   // cas hospitalier : patient couché sur le lit
+  if (A._skin) {                                            // lésions de peau reprises de CorpoAtlas, d'après l'énoncé et la plainte
+    try { await chargerPeau(BASE + 'peau.json'); } catch (e) { console.warn('peau.json', e); }
+    A._peau = A._peau || createPeau(A); A._peau.effacer();
+    const Tp = [cas.enonce, cas.apercu, cas.patient && cas.patient.plainte].join(' '), cle = (cas.peau && cas.peau.maladie) || trouverMaladie(Tp);   // champ « peau » du cas prioritaire : { maladie: 'psoriasis', stade: 0 à 2 }
+    $('obs').hidden = $('j3').hidden = !cle; peauCle = cle; jours = 0;
+    peauStade = cle ? (cas.peau && cas.peau.stade !== undefined ? cas.peau.stade : /étendu|sévère|généralis|chronique|lichénif/i.test(Tp) ? 2 : /début|débutant|léger|discret/i.test(Tp) ? 0 : 1) : 0;
+    if (cle) A._peau.appliquer(cle, peauStade);
+    else if (A.peindre) for (const [re, type, zones] of LESIONS) if (re.test(T)) for (const z of zones) A.peindre(type, z);
+  }
+}
+const texteCas = (c) => [c.enonce, c.apercu, c.fiche_source && c.fiche_source.nom, c.patient && JSON.stringify(c.patient), (c.questions || []).map((q) => q.question + ' ' + q.reponse_modele).join(' ')].join(' ').toLowerCase();
+const LESIONS = [                                          // lésions visibles d'après le texte du cas : [motif, type, zones]
+  [/zona(?!\s*ophtalm)/, 'zona', ['flanc_G']],
+  [/érythème migrant|erytheme migrant|maladie de lyme/, 'erytheme_migrant', ['cuisse_D']],
+  [/piqûre|piqure/, 'piqure', ['avantbras_D']],
+];
+const ZDEC = { jambes: /pantalon|jambes?|cuisses?|mollet|chevilles?/, buste: /haut|t-shirt|tee-shirt|pull|ventre|abdomen|dos|taille|lombaire/, poitrine: /soutien-gorge|poitrine|seins?|torse nu/ };
+function decouvrir(t, txt) {                               // la patiente se découvre quand elle a accepté (balise) ; à défaut, accord explicite à une demande
+  if (!A || !A.decouvrir) return;
+  let z = t.decouvre && ['jambes', 'buste', 'poitrine', 'rhabille'].includes(t.decouvre) ? t.decouvre : null;
+  if (!z) {
+    const q = (window.dernierEleve || '').toLowerCase();
+    const demande = /enlev|retir|découvr|decouvr|soulev|relev|baiss|ôter|oter|déshabill|deshabill/.test(q), accord = /^(oui|d'accord|bien sûr|ok|allez-y|très bien|pas de souci|ça marche)|\b(je l'enlève|je le retire|je me découvre|voilà)\b/i.test(txt.trim());
+    if (demande && accord) z = ZDEC.poitrine.test(q) ? 'poitrine' : ZDEC.jambes.test(q) ? 'jambes' : ZDEC.buste.test(q) ? 'buste' : null;
+    if (/rhabill/.test(q) && accord) z = 'rhabille';
+  }
+  if (z) { A.decouvrir(z); if (z !== 'rhabille' && !A.femme) $('avnote').textContent = ''; }
+}
+function speak(text, isHint) {
+  if (!A || !cas || tel) return;
+  const t = tags(text), txt = clean(text); nReply++;
+  decouvrir(t, txt);
+  const emo = EMOS.includes(t.emo) ? t.emo : guessEmotion(txt, profil);
+  let z = t.zone || guessTouch(txt);
+  if (!z && nReply === 1 && cas.patient && cas.patient.zone) z = { part: cas.patient.zone.partie, side: cas.patient.zone.cote === 'gauche' ? 'Left' : 'Right' };
+  if (z) A.touch(z.part, z.side, 7);
+  A.emotion = emo; A.say(txt, { emotion: emo });
+}
+window.AV = {
+  newCase(c, p) { cas = c; profil = p; window.msgsEleve = []; eleveA = 0; sansExpl = false; if (A) applyCase(); },
+  reply(text, isHint) { if (A) speak(text, isHint); else queue = text; },
+  lock(on) { locked = on; setButtons(); },
+  get api() { return A; },
+};
+$('obs').onclick = () => {                                   // caméra rapprochée sur la lésion, puis retour
+  const r = A && A._peau && A._peau.regard(); if (!r) return; const prev = A.stage.cam;
+  A.stage.cam = { pos: r.pos, look: r.look }; window.geste('observe la lésion de près');
+  clearTimeout(window._obsT); window._obsT = setTimeout(() => { if (A.stage.cam && A.stage.cam.look === r.look) { if (prev) A.stage.cam = prev; else A.debout(); } }, 7000);
+};
+const GRP = [['squelette', 'Squelette'], ['poumons', 'Poumons'], ['vaisseaux', 'Cœur et vaisseaux'], ['digestif', 'Digestif'], ['urinaire', 'Reins et voies urinaires'], ['genital', 'Appareil génital'], ['nerveux', 'Cerveau et moelle']];
+let intSel = GRP.map((g) => g[0]);
+function intChips() {
+  $('intg').innerHTML = GRP.map(([k, l]) => `<label><input type="checkbox" value="${k}" ${intSel.includes(k) ? 'checked' : ''}> ${l}</label>`).join('');
+  $('intg').querySelectorAll('input').forEach((c) => c.onchange = () => { intSel = [...$('intg').querySelectorAll('input:checked')].map((x) => x.value); A.interieur(true, undefined, intSel); });
+}
+$('int').onclick = async () => {                             // vue anatomique : organes de CorpoAtlas dans la patiente (outil pédagogique, hors consultation)
+  if (!A || !A.interieur) return; const on = $('int').textContent.startsWith('Voir');
+  $('int').disabled = true; $('int').textContent = on ? 'Chargement…' : $('int').textContent;
+  const ok = await A.interieur(on, BASE + 'interieur_femme.glb', intSel); $('int').disabled = false;
+  $('int').textContent = ok ? 'Masquer l\'intérieur' : 'Voir l\'intérieur'; $('intg').hidden = !ok; if (ok) intChips();
+};
+window.carteExplication = carteExplication;                 // utilisée aussi par le débriefing (script classique)
+$('expl').onclick = async () => {
+  if (!A || !cas) return;
+  if (!explMode) {
+    explMode = { debut: (window.msgsEleve || []).length, vue: false }; $('expl').textContent = "Fin de l'explication";
+    if (A.femme && A.interieur && $('int').textContent.startsWith('Voir')) { await $('int').onclick(); }
+    explMode.vue = !!(A.femme && $('int').textContent.startsWith('Masquer'));
+    window.situation(`Le pharmacien va maintenant t'expliquer ta maladie et ton traitement${explMode.vue ? ", en te montrant l'intérieur du corps sur un écran" : ''}. Tu ne connais pas le vocabulaire médical : chaque fois qu'il emploie un mot technique sans l'expliquer, demande ce que ça veut dire. Pose une ou deux questions naïves de patient (« et ça, c'est grave ? », « je le prends quand ? »). Réponds court. Commence par dire que tu l'écoutes.`,
+      'Mode explication : expliquez la maladie et le traitement avec des mots simples' + (explMode.vue ? ', en montrant les organes' : '') + '. Cliquez sur « Fin de l\'explication » quand vous avez terminé.');
+    if (window.envoyerSituation) window.envoyerSituation();
+    return;
+  }
+  const msgs = (window.msgsEleve || []).slice(explMode.debut), b = analyserExplication(msgs, explMode.vue || $('int').textContent.startsWith('Masquer')); explMode = null; window.bilanExpl = b;
+  $('expl').textContent = 'Expliquer au patient';
+  window.situation(`Le pharmacien a fini son explication. Reformule en deux ou trois phrases, avec tes mots de patient, ce que tu as compris de ta maladie et de ce que tu dois faire. Si un point était flou ou plein de mots techniques non expliqués${b.nonExpl.length ? ' (par exemple « ' + b.nonExpl.map((e) => e.mot).slice(0, 3).join(' », « ') + ' »)' : ''}, reformule-le de travers ou dis que tu n'as pas compris.`,
+    `Fin de l'explication (${b.nMsg} message${b.nMsg > 1 ? 's' : ''}) : la patiente reformule ce qu'elle a compris.`);
+  pending.push(`(Geste du pharmacien : a terminé l'explication au patient${b.nonExpl.length ? ' ; mots techniques non expliqués : ' + b.nonExpl.map((e) => e.mot).join(', ') : ''})`);
+  $('chat').append(carteExplication(b)); $('chat').lastChild.scrollIntoView({ block: 'end' });
+  if (window.envoyerSituation) window.envoyerSituation();
+};
+$('j3').onclick = () => {                                    // « revenez dans 3 jours » : la lésion passe au stade suivant
+  if (!A || !A._peau || !peauCle) return; const info = infoStades(peauCle) || { L: [], T: [] }, max = Math.max(0, (info.L.length || 3) - 1);
+  const avant = peauStade; peauStade = Math.min(max, peauStade + 1); jours += 3;
+  A.effacerPeau && A.effacerPeau(); A._peau.effacer(); if (mast && A.mastectomie) A.mastectomie(mast); A._peau.appliquer(peauCle, peauStade);
+  const st = info.L[peauStade] ? info.L[peauStade] + (info.T[peauStade] ? ' : ' + info.T[peauStade] : '') : 'lésion plus marquée';
+  const txt = peauStade > avant ? `${jours} jours plus tard, le patient revient. La lésion a évolué (${st}). Joue ce retour : dis ce que tu as fait depuis la dernière visite (conseils suivis ou non), ce qui a changé, ce qui t'inquiète.`
+    : `${jours} jours plus tard, le patient revient. Rien ne s'est amélioré (${st}). Tu t'inquiètes et tu insistes.`;
+  window.situation(txt, `${jours} jours plus tard : le patient revient (${info.L[peauStade] || 'aggravation'})`);
+  A.emotion = 'anxieux'; if (window.envoyerSituation) window.envoyerSituation();
+};
+$('avbtn').onclick = () => { const off = $('stage').classList.toggle('off'); $('avbtn').classList.toggle('on', !off); if (off && A) A.stop(); if (A) A.resize(); };
+$('mute').onclick = () => { if (!A) return; A.muted = !A.muted; if (A.muted) speechSynthesis.cancel(); $('mute').textContent = A.muted ? '🔇 Muet' : '🔊 Voix'; };
+// --- prise de tension : valeurs du cas si disponibles, sinon valeurs normales
+$('bp').onclick = async () => {
+  const k = (cas && cas.constantes) || {}; if (EQ) { EQ.close(); $('eqx').hidden = true; }
+  await A.tension({ sys: k.pas || 124, dia: k.pad || 78, pul: k.pouls || 72 });
+  $('bp').hidden = true; $('bpm').hidden = $('bpx').hidden = false;
+};
+$('bpm').onclick = async () => { $('bpm').disabled = true; const v = await A.mesurer(); $('bpm').disabled = false; if (v) window.geste(`mesure de la tension artérielle au bras gauche, patient assis : ${v.sys}/${v.dia} mmHg, pouls ${v.pul}/min`); };
+$('bpx').onclick = () => { A.quitterTension(); $('bp').hidden = false; $('bpm').hidden = $('bpx').hidden = true; };
+const EXPL = /je vais|on va|je vous propose|vous permettez|permettez|est-ce que je peux|puis-je|je peux vous|pour (prendre|mesurer|vérifier|verifier|poser|mettre|voir|essayer|contrôler|controler)|ça permet|cela permet|ça sert|expliqu|êtes-vous d'accord|vous êtes d'accord|d'accord pour/i;
+const BESOIN = { jambes: "Il faut que j'enlève mon pantalon ? Vous ne m'avez rien demandé…", buste: "Vous voulez que je retire mon haut ? Vous pourriez me demander avant…", poitrine: "Je dois retirer mon haut et mon soutien-gorge ? Ici ? Vous ne m'avez rien demandé…" };
+let nFaux = 0, tReact = 0, explMode = null; const unefois = new Set();
+/* ---------- mode « expliquer au patient » : l'étudiant explique, la patiente pose des questions naïves puis reformule ; analyse des messages ---------- */
+const JARGON = [
+  [/hypertension( artérielle)?|\bHTA\b/i, 'hypertension', 'tension trop élevée'], [/hypotension/i, 'hypotension', 'tension trop basse'],
+  [/posologie/i, 'posologie', 'dose et nombre de prises'], [/contre-indi/i, 'contre-indication', 'situation où il ne faut pas le prendre'],
+  [/effets? (indésirables?|secondaires?)/i, 'effet indésirable', 'effet gênant possible'], [/interactions? (médicamenteuses?)?/i, 'interaction', 'deux médicaments qui ne vont pas ensemble'],
+  [/\bAINS\b|anti-inflammatoires? non stéroïdien/i, 'AINS', 'anti-inflammatoire type ibuprofène'], [/\bIPP\b|inhibiteur de la pompe/i, 'IPP', "médicament qui protège l'estomac"],
+  [/anticoagulant/i, 'anticoagulant', 'médicament qui fluidifie le sang'], [/antiagrégant/i, 'antiagrégant', 'médicament qui empêche les plaquettes de coller'],
+  [/hépatique|hépatotox/i, 'hépatique', 'du foie'], [/néphrotox|\brénale?s?\b/i, 'rénal', 'des reins'], [/insuffisance (rénale|cardiaque|hépatique|veineuse)/i, 'insuffisance', 'organe qui fonctionne moins bien'],
+  [/clairance/i, 'clairance', 'capacité des reins à éliminer'], [/thrombose|thrombus/i, 'thrombose', 'caillot dans une veine'], [/embolie/i, 'embolie', 'caillot qui part bloquer un vaisseau'],
+  [/ischémie|ischémique/i, 'ischémie', 'manque de sang dans un organe'], [/\bœdème|\boedème/i, 'œdème', 'gonflement'], [/érythème/i, 'érythème', 'rougeur'], [/prurit/i, 'prurit', 'démangeaison'],
+  [/dyspnée/i, 'dyspnée', 'essoufflement'], [/asthénie/i, 'asthénie', 'grande fatigue'], [/céphalées?/i, 'céphalée', 'mal de tête'], [/pathologie/i, 'pathologie', 'maladie'],
+  [/chronique/i, 'chronique', 'qui dure longtemps'], [/symptomatique/i, 'symptomatique', 'qui soulage les symptômes'], [/iatrogén/i, 'iatrogénie', 'problème causé par un médicament'],
+  [/observance/i, 'observance', 'prendre son traitement comme prévu'], [/bronchodilat/i, 'bronchodilatateur', 'médicament qui ouvre les bronches'], [/corticoïde|cortico/i, 'corticoïde', 'cortisone'],
+  [/antihistaminique/i, 'antihistaminique', 'anti-allergique'], [/biodisponibilit|demi-vie|pharmacocin|cytochrome|métabolis/i, 'pharmacocinétique', "comment le corps absorbe et élimine le médicament"],
+  [/prophyla/i, 'prophylaxie', 'prévention'], [/\bper os\b|voie orale/i, 'per os', 'par la bouche'], [/sous-cutané|\bSC\b/i, 'sous-cutané', 'sous la peau'], [/intramusculaire|\bIM\b/i, 'intramusculaire', 'dans le muscle'],
+  [/hémoglobine glyquée|HbA1c/i, 'HbA1c', 'moyenne du sucre sur 3 mois'], [/glycémie/i, 'glycémie', 'sucre dans le sang'], [/\bLDL\b|lipid|dyslipid/i, 'dyslipidémie', 'trop de cholestérol'],
+  [/inflammation|inflammatoire/i, 'inflammation', 'réaction qui fait gonfler, rougir et chauffer'], [/vasoconstric|vasodilat/i, 'vasoconstriction', 'vaisseaux qui se resserrent ou s\'élargissent'],
+  [/gastro-?duodén|ulcère/i, 'ulcère', "plaie dans l'estomac"], [/infarctus|\bIDM\b/i, 'infarctus', "crise cardiaque"], [/\bAVC\b|accident vasculaire/i, 'AVC', 'attaque cérébrale'],
+];
+const EXPLIQUE = /c'est-à-dire|c'est a dire|autrement dit|(ça|cela|ce qui) (veut dire|signifie)|en clair|en gros|en d'autres termes|on appelle (ça|cela)|qu'on appelle|\(/i;
+function analyserExplication(msgs, vue) {
+  const txt = msgs.join(' \n '), jar = new Map();
+  for (const m of msgs) for (const [re, mot, simple] of JARGON) if (re.test(m)) { const e = jar.get(mot) || { mot, simple, n: 0, ok: false }; e.n++; if (EXPLIQUE.test(m)) e.ok = true; jar.set(mot, e); }
+  const phrases = txt.split(/[.!?;\n]+/).map((p) => p.trim()).filter((p) => p.split(/\s+/).length > 2), mots = phrases.map((p) => p.split(/\s+/).length);
+  const moy = mots.length ? Math.round(mots.reduce((a, b) => a + b, 0) / mots.length) : 0, longues = mots.filter((n) => n > 25).length;
+  const verif = /vous avez (bien )?compris|c'est clair|(avez-vous|vous avez) des questions|des questions \?|vous pouvez me (redire|répéter|reformuler|dire avec vos mots)|qu'est-ce que vous (en )?(avez )?retenu|redites-moi|dites-moi avec vos mots|reformul/i.test(txt);
+  const image = /comme (un|une|des|si|le|la|les)\b|c'est un peu comme|imaginez|vous voyez (ici|là)|regardez/i.test(txt);
+  const concret = /prenez|prendre|évitez|ne (le|la|les)? ?(prenez|mangez|buvez) pas|matin|soir|midi|au cours du repas|pendant (le|les) repas|fois par jour|pendant \d+ jours|si (ça|cela|vous)|revenez|consultez|appelez/i.test(txt);
+  const nj = [...jar.values()].filter((e) => !e.ok); let note = 10;
+  note -= Math.min(4, nj.length); if (moy > 22) note -= 1; if (longues >= 2) note -= 1; if (!verif) note -= 2; if (!image) note -= 1; if (!concret) note -= 1; if (msgs.length < 2) note -= 2;
+  const forts = [], amelio = [];
+  (verif ? forts : amelio).push(verif ? 'Vous avez vérifié la compréhension de la patiente.' : 'Vérifiez la compréhension : « Pouvez-vous me redire avec vos mots ce que vous allez faire ? »');
+  (image ? forts : amelio).push(image ? 'Vous avez utilisé une image ou montré le schéma.' : 'Appuyez-vous sur une image (« c\'est comme… ») ou montrez l\'organe sur le schéma.');
+  (concret ? forts : amelio).push(concret ? 'Vous avez donné des consignes concrètes (quand, comment, quand revenir).' : 'Terminez par des consignes concrètes : quand prendre, combien de temps, quand revenir ou consulter.');
+  if (moy > 22 || longues >= 2) amelio.push(`Phrases longues (${moy} mots en moyenne${longues ? ', ' + longues + ' de plus de 25 mots' : ''}) : une idée par phrase.`); else if (mots.length) forts.push(`Phrases courtes (${moy} mots en moyenne).`);
+  if (vue) forts.push('Vous avez montré l\'intérieur du corps pendant l\'explication.');
+  return { note: Math.max(0, note), nMsg: msgs.length, jargon: [...jar.values()], nonExpl: nj, forts, amelio };
+}
+function carteExplication(b) {
+  const d = document.createElement('details'); d.className = 'verif'; d.open = true;
+  d.innerHTML = `<summary>Votre explication au patient : ${b.note}/10</summary><p>${b.forts.map((x) => '✔ ' + esc(x)).join('\n')}${b.forts.length && b.amelio.length ? '\n\n' : ''}${b.amelio.map((x) => '→ ' + esc(x)).join('\n')}</p>` +
+    (b.jargon.length ? '<p><b>Mots techniques</b>\n' + b.jargon.map((e) => (e.ok ? '✔ « ' + esc(e.mot) + ' » expliqué' : '✘ « ' + esc(e.mot) + ' » non expliqué : dites plutôt « ' + esc(e.simple) + ' »')).join('\n') + '</p>' : '<p>Aucun mot technique repéré.</p>') +
+    '<p style="font-size:.8rem;color:var(--doux)">Analyse automatique de vos messages pendant l\'explication (mots techniques, longueur des phrases, vérification de la compréhension). La reformulation de la patiente montre ce qu\'elle a vraiment retenu.</p>';
+  return d;
+}
+function reagir(r, side, force) {                         // réaction spontanée de la patiente au geste (une à la fois, pas en appel téléphonique)
+  if (!r || !A || tel) return; const now = performance.now(); if (!force && now - tReact < 2500) return; tReact = now;
+  patientDit(r[0], r[1]); if (r[2] && A.touch) A.touch(r[2], side || 'Left', 3);
+}
+function patientDit(line, emo) { if (!A) return; A.emotion = emo; A.say(line, { emotion: emo }); if (typeof add === 'function') add('m patient', esc(line)); if (typeof hist !== 'undefined') hist.push({ role: 'assistant', content: line }); }
+async function monter(want) {                               // patient homme ou patiente : un modèle à la fois, le module des objets suit
+  if (EQ) EQ.close(); if (A) A.dispose(); A = null; EQ = null; document.querySelectorAll('#stage .eq-ui').forEach((e) => e.remove());
+  $('avnote').textContent = want === 'femme' ? 'Arrivée de la patiente…' : 'Arrivée du patient…'; $('avnote').style.opacity = 1;
+  A = await createAvatar($('stage'), { glb: BASE + (want === 'femme' ? 'patient_femme.glb' : 'patient_homme.glb'), background: BASE + 'decor_pharmacie.webp', tensio: BASE + 'tensiometre-draco.glb', draco: window.AVATAR_DRACO });
+  modele = want; window.A = A;
+  A.onvoices = () => { if (cas) pickVoice(cas.fiche && cas.fiche.sexe); };
+  EQ = createEquip(A, { base: BASE + 'equip/', draco: window.AVATAR_DRACO }); window.EQ = EQ;
+  EQ.on((e) => {
+    const muet = REACTIONS.muets.includes(e.objet), R = REACTIONS;
+    if (e.type === 'depot' && e.ok && !sansExpl && !(window.msgsEleve || []).slice(eleveA).some((m) => EXPL.test(m))) {   // geste sans explication préalable
+      sansExpl = true; patientDit("Euh… vous pouvez m'expliquer ce que vous faites ?", 'surprise'); tReact = performance.now();
+      window.geste(`pose « ${e.pieceLabel} » sans avoir expliqué le geste au patient`);
+    }
+    if (e.type === 'geste') { window.geste(e.texte); const k = e.objet + '.' + e.piece;
+      if (!muet && !(k.endsWith('.metre') && unefois.has(k))) { unefois.add(k); nFaux = 0; reagir(R.ok[k], /_D$/.test(e.zone || '') ? 'Right' : 'Left'); } }
+    if (e.type === 'depot' && !e.ok) { window.geste(`essaie de placer « ${e.pieceLabel} » sur : ${e.zoneLabel.toLowerCase()} (mauvais endroit)`);
+      if (!muet) { const spec = R.faux[e.objet + '.' + e.zone] || R.faux[e.zone]; reagir(nFaux < 2 && spec ? spec : R.generique[Math.min(nFaux, R.generique.length - 1)], null, true); nFaux++; } }
+    if (e.type === 'sans_mesure') { window.geste(`veut poser « ${e.pieceLabel} » sans avoir pris les mesures`); reagir(R.sans_mesure[e.objet] || R.sans_mesure.defaut, null, true); }
+    if (e.type === 'taille' && !e.ok) { const T = R.taille;
+      reagir(e.sens ? (T[e.sens][e.objet] || T[e.sens].defaut) : /sur mesure/i.test(e.choix || '') ? T.surmesure : T.classe, null, true); }
+    if (e.type === 'fermeture') { eleveA = (window.msgsEleve || []).length; sansExpl = false; nFaux = 0; unefois.clear(); }
+    if (e.type === 'besoin') { patientDit(BESOIN[e.need] || 'Vous ne m\'avez rien demandé…', 'gene'); window.geste(`veut poser « ${e.label} » sans avoir demandé au patient de se découvrir`); }
+    if (e.type === 'indispo') { $('avnote').textContent = `« ${e.label} » : geste prévu avec la patiente 3D.`; $('avnote').style.opacity = 1; }
+  });
+  $('avnote').textContent = '';
+}
+try {
+  await monter('homme');
+  $('res').onclick = () => {
+    if (!$('bpx').hidden) $('bpx').click(); EQ.close(); $('eqx').hidden = true; A.stop();
+    RS.open(async (id, it) => {
+      if (id === 'tension') { RS.close(); window.geste('prend le tensiomètre dans la réserve'); $('bp').click(); return; }
+      const ok = pertinent(id, cas) && (!it.pop || !cas || it.pop === cas.pop);
+      if (!ok) {
+        const line = ETONNEMENT[Math.floor(Math.random() * ETONNEMENT.length)];
+        A.emotion = 'doute'; A.say(line, { emotion: 'doute' });
+        const go = await RS.confirm('Le patient : « ' + line + ' »', "Oui, je l'utilise", 'Non, je le repose');
+        window.geste(`prend « ${it.nom} » dans la réserve ; le patient s'étonne (« ${line} ») ; ${go ? 'le pharmacien maintient son choix' : 'le pharmacien repose l\'objet'}`);
+        if (!go) return;
+      } else window.geste(`prend « ${it.nom} » dans la réserve`);
+      RS.close(); const v = valeursDuCas(cas || {});
+      const opened = await EQ.open(id, { ...v, pouls: (cas && cas.constantes && cas.constantes.pouls) || v.pouls, mast: mast || 'gauche', ...(id === 'prothese_mammaire' && mast === 'droite' ? { ok: { prothese: ['sein_D'] } } : {}) });
+      $('eqx').hidden = !opened;
+    });
+  };
+  RS = createReserve($('wrap'), { base: BASE + 'equip/', draco: window.AVATAR_DRACO }); window.RS = RS;
+  $('eqx').onclick = () => { EQ.close(); A.debout(); $('eqx').hidden = true; };
+  $('avnote').textContent = cas ? '' : 'Appelez un patient pour commencer.';
+  if (cas) await applyCase(); if (queue) { speak(queue); queue = null; }
+  window.ficheAtlas = async (k) => { try { await chargerPeau(BASE + 'peau.json'); } catch (e) {} return ficheAtlas(k); };
+  window.dispatchEvent(new Event('avatar-ready'));
+} catch (e) { $('avnote').textContent = 'Patient 3D indisponible (' + e.message + ').'; console.error(e); }
+</script>
+</body>
+</html>

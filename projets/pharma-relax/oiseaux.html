@@ -1,0 +1,46 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Oiseaux — banc d'essai</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;height:100%;background:#26301f;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<style>#ui{position:fixed;left:12px;top:12px;font:14px/1.4 Georgia,serif;color:#f3efe2;background:#1c2417cc;padding:10px 12px;border-radius:8px}#ui select,#ui button{font:13px ui-monospace,monospace;margin:4px 4px 0 0}</style>
+</head><body><div id="ui">Banc d'essai des oiseaux<br><select id="sel"></select><button id="lite"></button><button id="fly">Envol / retour</button><br><small>glisser : tourner · molette : zoom</small></div><script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import * as O from './assets/oiseaux/oiseaux.js';
+const q = new URLSearchParams(location.search);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight); renderer.shadowMap.enabled = !q.has('noshadow');
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(q.get('bg') ? '#'+q.get('bg') : '#5d7350');
+const camera = new THREE.PerspectiveCamera(30, innerWidth/innerHeight, 0.05, 50);
+const az = (+(q.get('az') ?? 35)) * Math.PI/180, el = (+(q.get('el') ?? 8)) * Math.PI/180, dist = +(q.get('d') ?? 4.2);
+const tgt = new THREE.Vector3(0.2, +(q.get('ty') ?? 0.45), 0);
+camera.position.set(tgt.x + dist*Math.sin(az)*Math.cos(el), tgt.y + dist*Math.sin(el), dist*Math.cos(az)*Math.cos(el));
+const ctl = new OrbitControls(camera, renderer.domElement); ctl.target.copy(tgt); ctl.update();
+scene.add(new THREE.HemisphereLight(0xeef2e6, 0x3a3826, 0.9));
+const key = new THREE.DirectionalLight(0xfff4e6, 2.2); key.position.set(-1.3, 3.6, 1.5); key.castShadow = true;
+key.shadow.mapSize.set(2048,2048); Object.assign(key.shadow.camera,{left:-1.5,right:1.5,bottom:-1.5,top:1.5,near:0.5,far:8}); key.shadow.bias=-0.0015; key.shadow.normalBias=0.025;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xf2fae8, 1.0); rim.position.set(1.5,1.8,-2.5); scene.add(rim);
+const stage = await O.createPerch({ lite: q.has('lite'), query: q });
+const u = +(q.get('u') ?? 0);
+const holder = new THREE.Group(); holder.add(stage.group); scene.add(holder);
+const t0 = performance.now(); stage.show(q.get('s') ?? 'rougegorge'); console.log('@build ms', Math.round(performance.now() - t0), 'tris', Math.round((stage.bird.feathers.contour.geometry.index.count + stage.bird.feathers.flight.geometry.index.count) / 3));
+// the test bench looks at the bird in its own units
+const fit = () => { const s = stage.group.children[0].scale.x; holder.scale.setScalar(u ? 1 : 1 / s); holder.position.set(u ? 0 : 0.2, 0, 0); };
+window.__stage = stage; window.__ready = true;
+const sel = document.getElementById('sel');
+for (const b of O.BIRDS) sel.add(new Option(b.common, b.id, false, b.id === (q.get('s') ?? 'rougegorge')));
+const go = (k, v) => { const u = new URLSearchParams(location.search); v === null ? u.delete(k) : u.set(k, v); location.search = u.toString(); };
+sel.onchange = () => go('s', sel.value);
+const lite = document.getElementById('lite'); lite.textContent = q.has('lite') ? 'Version allégée (casque)' : 'Version complète';
+lite.onclick = () => go('lite', q.has('lite') ? null : '1');
+document.getElementById('fly').onclick = () => { stage.away ? stage.arrive() : stage.leave(); };
+if (q.has('quiet')) document.getElementById('ui').style.display = 'none';
+const clock = new THREE.Clock();
+let manual = 0, simT = 0;
+window.__seek = (t) => { manual = 1; while (simT < t) { const dt = Math.min(1/60, t - simT); simT += dt; stage.update(dt); } fit(); renderer.render(scene, camera); return simT; };
+renderer.setAnimationLoop(() => { if (manual) return; const dt = Math.min(clock.getDelta(), 0.05); stage.update(dt); fit(); renderer.render(scene, camera); });
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); });
+</script></body></html>

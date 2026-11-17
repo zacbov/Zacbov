@@ -105,6 +105,7 @@ const STAND = (cam, extra = {}) => ({ seat: 0, arms: handsDown, cam, ...extra })
 const ARM_L_UP = armOnTable(true);
 const faceZone = (key, label) => ({ label, at: (b) => headPt(b, faceFor(b)[key]) });
 const faceAt = (key, tilt = 0) => (b) => { const p = headPt(b, faceFor(b)[key]), n = headDir(b, V3(0, Math.sin(tilt), Math.cos(tilt))); return { p, n, up: headDir(b, V3(0, 1, 0)) }; };
+const boucheOuverte = (tilt, bas) => (b) => { const p = headPt(b, faceFor(b).bouche.clone().add(V3(0, -bas, -0.004))), n = headDir(b, V3(0, Math.sin(tilt), Math.cos(tilt))); return { p, n, up: headDir(b, V3(0, 1, 0)) }; };   // centre de la bouche ouverte (sous la ligne des lèvres) ; n vers l'avant et un peu vers le haut : l'objet entre en appuyant vers le bas
 const woundAt = (lift = 0.03) => (b) => { const F = forearm(b, 'Left', WOUND, lift); return { p: F.p, n: F.n, up: F.ax }; };
 const wristZone = (s, t = 0.1) => ({ label: s === 'Left' ? 'Poignet gauche' : 'Poignet droit', at: (b) => b.W(s + 'Hand').lerp(b.W(s + 'ForeArm'), t) });
 
@@ -131,9 +132,9 @@ const NEW = {
     stage: STAND({ pos: [0.18, 1.62, 0.6], look: [0, 1.56, 0.05] }, { morphs: { MouthOpen: 1, Jaw_Down: 0.8, BoucheOuverte: 1 } }), headLock: true,
     zones: { bouche: faceZone('bouche', 'Bouche'), nez: faceZone('narine', 'Narine') },
     pieces: [
-      { id: 'abaisse', node: 'abaisse', label: 'Abaisse-langue', ok: ['bouche'], pose: { axis: '-y', up: '+z', gap: -0.05 }, at: faceAt('bouche', -0.15),
+      { id: 'abaisse', node: 'abaisse', label: 'Abaisse-langue', ok: ['bouche'], pose: { axis: '-y', up: '+z', gap: -0.055 }, at: boucheOuverte(0.12, 0.016),
         faux: { nez: "L'abaisse-langue se pose sur la langue pour dégager la gorge." }, after: () => ({ geste: 'abaisse la langue avec un abaisse-langue' }) },
-      { id: 'ecouvillon', node: 'ecouvillon', label: 'Écouvillon de gorge', ok: ['bouche'], pose: { axis: '-y', up: '+z', gap: -0.07 }, at: faceAt('bouche', 0.08), spin: { dur: 2, f: 14, a: 0.6 },
+      { id: 'ecouvillon', node: 'ecouvillon', label: 'Écouvillon de gorge', ok: ['bouche'], pose: { axis: '-y', up: '+z', gap: -0.075 }, at: boucheOuverte(-0.05, 0.006), spin: { dur: 2, f: 14, a: 0.6 },
         faux: { nez: "Pour une angine, le prélèvement est pharyngé : on frotte les amygdales et le fond de gorge, pas le nez." },
         after: (ctx) => ({ geste: `prélèvement pharyngé et TROD angine : résultat ${ctx.trod === 'positif' ? 'POSITIF (streptocoque A)' : 'NÉGATIF'}`, badge: `TROD : ${ctx.trod === 'positif' ? 'positif' : 'négatif'}`, msg: 'Prélèvement fait : lecture du test à 5 minutes.' }) },
     ],
@@ -251,24 +252,24 @@ const NEW = {
     ],
   },
   reanimation: {
-    label: 'Réanimation : DAE et insufflations', consigne: "Le patient est inconscient et ne respire pas : torse dénudé (haut et soutien-gorge retirés ou coupés), posez les électrodes du DAE sur la peau sèche, puis le masque du BAVU.", files: ['dae.glb', 'bavu.glb'],
-    multi: { dae: 'dae.glb', bavu: 'bavu.glb' }, hide: ['Shirt', 'SoutienGorge'],
+    label: 'Réanimation : DAE et insufflations', consigne: "Le patient est inconscient et ne respire pas : posez les électrodes du DAE, puis le masque du BAVU.", files: ['dae.glb', 'bavu.glb'],
+    multi: { dae: 'dae.glb', bavu: 'bavu.glb' }, hide: ['Sweatshirt'],
     stage: { seat: 0, lie: 1, arms: (D, s, o) => ({ ...handsDown(D, s, o), w: P(o, D.hx(D.hipsY) + 0.07, D.hipsY + 0.04, -0.1), palm: V3(0, 0, -1) }), cam: { pos: [0.7, 1.35, -0.85], look: [0.05, 0.1, -1.3] } },
     props: [{ id: 'dae_sol', nodes: ['boitier', 'ecran', 'bouton_choc', 'marche', 'haut', 'bas', 'ok', 'voyant'], pose: { axis: '-z', up: '+y', gap: 0 },
       at: (b) => { const p = b.W('LeftArm').add(b.side('Left').multiplyScalar(0.35)); p.y = 0.0; return { p, n: V3(0, 1, 0), up: b.up.clone().setY(0).normalize() }; } }],
-    zones: { sousclav_D: { label: 'Sous la clavicule droite', at: (b) => surfW(b, b.D.bustY != null ? Math.max(b.D.shoulderY - 0.09, b.D.bustY + 0.1) : b.D.shoulderY - 0.09, 0.45, 'Right').c }, flanc_G: { label: 'Sous l\'aisselle gauche', at: (b) => surfW(b, b.D.chestY - 0.05, 1.25, 'Left').c },
+    zones: { sousclav_D: { label: 'Sous la clavicule droite', at: (b) => surfW(b, b.D.bustY != null ? Math.max(b.D.shoulderY - 0.09, b.D.bustY + 0.06) : b.D.shoulderY - 0.09, 0.45, 'Right').c }, flanc_G: { label: 'Sous l\'aisselle gauche', at: (b) => surfW(b, b.D.chestY - 0.05, 1.25, 'Left').c },
       sternum: { label: 'Sternum', at: (b) => surfW(b, b.D.chestY, 0, 'Left').c }, visage: faceZone('nez', 'Visage') },
     pieces: [
-      { id: 'electrode_rouge', node: 'electrode_rouge', label: 'Électrode rouge', ok: ['sousclav_D'], pose: { axis: '-z', up: '+y', gap: -0.001 },
-        at: (b) => { const S = surfW(b, b.D.bustY != null ? Math.max(b.D.shoulderY - 0.09, b.D.bustY + 0.1) : b.D.shoulderY - 0.09, 0.45, 'Right'); return { p: S.c, n: S.n, up: b.up }; },   // sous la clavicule, au-dessus du sein
+      { id: 'electrode_rouge', node: 'electrode_rouge', label: 'Électrode rouge', ok: ['sousclav_D'], pose: { axis: '-z', up: '+y', gap: 0.005 },
+        at: (b) => { const S = surfW(b, b.D.bustY != null ? Math.max(b.D.shoulderY - 0.09, b.D.bustY + 0.06) : b.D.shoulderY - 0.09, 0.45, 'Right'); return { p: S.c, n: S.n, up: b.up }; },   // sous la clavicule, au-dessus du sein
         faux: { flanc_G: "Cette électrode va sous la clavicule droite ; l'autre se colle sur le côté gauche, sous l'aisselle.", sternum: "Pas sur le sternum : une électrode sous la clavicule droite, l'autre sous l'aisselle gauche, pour que le courant traverse le cœur." },
         after: () => ({ geste: 'colle une électrode du DAE sous la clavicule droite' }) },
-      { id: 'electrode_verte', node: 'electrode_verte', label: 'Électrode verte', ok: ['flanc_G'], pose: { axis: '-z', up: '+y', gap: -0.001 },
+      { id: 'electrode_verte', node: 'electrode_verte', label: 'Électrode verte', ok: ['flanc_G'], pose: { axis: '-z', up: '+y', gap: 0.005 },
         at: (b) => { const S = surfW(b, b.D.chestY - 0.05, 1.25, 'Left'); return { p: S.c, n: S.n, up: b.up }; },
         faux: { sousclav_D: "L'électrode verte se colle sur le côté gauche du thorax, sous l'aisselle.", sternum: "Pas sur le sternum : sous l'aisselle gauche." },
         after: () => ({ geste: "colle l'autre électrode sur le côté gauche, sous l'aisselle ; le DAE analyse le rythme", msg: "Ne touchez plus le patient pendant l'analyse ; suivez les consignes vocales du DAE." }) },
-      { id: 'bavu', node: 'bavu', label: 'BAVU (masque et ballon)', ok: ['visage'], pose: { axis: '+z', up: '+y', gap: -0.03 },
-        at: (b) => { const p = headPt(b, faceFor(b).masque); return { p, n: headDir(b, V3(0, 0, 1)), up: headDir(b, V3(0, 1, 0)) }; },
+      { id: 'bavu', node: 'bavu', label: 'BAVU (masque et ballon)', ok: ['visage'], pose: { axis: '-y', up: '-z', c: [0.01, -0.06, -0.2], gap: 0.004 },   // coussin du masque sur le nez et la bouche, pointe du masque vers le front, ballon vers le thorax
+        at: (b) => { const p = headPt(b, faceFor(b).masque.clone().add(V3(0, -0.006, 0))); return { p, n: headDir(b, V3(0, 0.35, 1).normalize()), up: headDir(b, V3(0, 1, -0.35).normalize()) }; },   // masque un peu incliné : le ballon s'écarte du thorax
         faux: { sternum: "Le masque du BAVU se pose sur le nez et la bouche, tête en légère extension.", sousclav_D: "Le masque se pose sur le visage.", flanc_G: "Le masque se pose sur le visage." },
         after: () => ({ geste: 'applique le masque du BAVU sur le nez et la bouche et insuffle', msg: "30 compressions, 2 insufflations ; reprendre le massage sans attendre." }) },
     ],

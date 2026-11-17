@@ -103,10 +103,13 @@ dialog::backdrop{background:#000a}
 <dialog id="zoom" aria-label="Agrandissement du document"><button id="zclose" type="button">Fermer</button><img id="zimg" alt="" title="Cliquer pour passer en taille réelle"></dialog>
 <dialog id="fiche" aria-label="Fiche patient"><div class="dh"><b>Ma fiche patient</b><button class="x" id="fclose" type="button">Fermer</button></div><div id="ff"></div></dialog>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="cas-xlsx.js"></script>
 <script>
 const WORKER = 'https://cas-cliniques.alterpaces1.workers.dev/';
 const SECRET = 'rxtalkcase';             // = secret APP_SECRET du worker
-const DATA = 'cas_cliniques.json';        // à placer à côté de cette page
+const DATA = 'cas_cliniques_complet.xlsx'; // classeur des cas, à placer à côté de cette page (source à trier et corriger dans Excel)
+const DATA_SECOURS = 'cas_cliniques.json'; // utilisé seulement si le classeur est absent
 const $ = (id) => document.getElementById(id);
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
@@ -313,13 +316,18 @@ function fillThemes() {
   if ([...$('theme').options].some((o) => o.value === prev)) $('theme').value = prev;
 }
 
-Promise.all([fetch(DATA).then((r) => r.json()), fetch('cas_qcm_pharma.json').then((r) => (r.ok ? r.json() : null)).catch(() => null)]).then(([d, x]) => {
+function chargerCas() {                     // classeur Excel (SheetJS) ; à défaut, ancien fichier JSON
+  return fetch(DATA).then((r) => { if (!r.ok) throw new Error(DATA + ' : ' + r.status); return r.arrayBuffer(); })
+    .then((buf) => { const d = CasXlsx.lireClasseur(XLSX, buf); if (!d.cas.length) throw new Error('classeur vide'); console.info('Cas lus dans', DATA, ':', d.cas.length, d.meta.ignores.length ? '(' + d.meta.ignores.length + ' désactivés)' : ''); return d; })
+    .catch((e) => { console.warn('Classeur indisponible, repli sur', DATA_SECOURS, e); return fetch(DATA_SECOURS).then((r) => r.json()); });
+}
+Promise.all([chargerCas(), fetch('cas_qcm_pharma.json').then((r) => (r.ok ? r.json() : null)).catch(() => null)]).then(([d, x]) => {
   if (x) { d.cas = d.cas.concat(x.cas); (x.meta.themes || []).forEach((t) => { if (!d.meta.themes.find((u) => u.id === t.id)) d.meta.themes.push({ id: t.id, libelle: t.libelle, nb_cas: 0 }); }); d.meta.themes.forEach((t) => { t.nb_cas = d.cas.filter((c) => c.theme === t.id).length; }); }
   db = d;
   [...$('pop').options].forEach((o) => { o.dataset.l = o.dataset.l || o.textContent; o.textContent = o.dataset.l + ' (' + d.cas.filter((c) => !o.value || c.pop === o.value).length + ')'; });
   fillThemes(); $('pop').onchange = fillThemes;
   lock(false);
-}).catch(() => { $('chat').innerHTML = '<p class="err">Impossible de charger ' + DATA + '. Placez-le à côté de la page et ouvrez la page via un serveur web (pas en file://).</p>'; });
+}).catch(() => { $('chat').innerHTML = '<p class="err">Impossible de charger ' + DATA + ' (ni ' + DATA_SECOURS + '). Placez-le à côté de la page et ouvrez la page via un serveur web (pas en file://).</p>'; });
 </script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
@@ -419,8 +427,8 @@ $('obs').onclick = () => {                                   // caméra rapproch
   A.stage.cam = { pos: r.pos, look: r.look }; window.geste('observe la lésion de près');
   clearTimeout(window._obsT); window._obsT = setTimeout(() => { if (A.stage.cam && A.stage.cam.look === r.look) { if (prev) A.stage.cam = prev; else A.debout(); } }, 7000);
 };
-const GRP = [['squelette', 'Squelette'], ['poumons', 'Poumons'], ['vaisseaux', 'Cœur et vaisseaux'], ['digestif', 'Digestif'], ['urinaire', 'Reins et voies urinaires'], ['genital', 'Appareil génital'], ['nerveux', 'Cerveau et moelle']];
-let intSel = GRP.map((g) => g[0]);
+const GRP = [['squelette', 'Squelette'], ['muscles', 'Muscles'], ['poumons', 'Poumons'], ['vaisseaux', 'Cœur et vaisseaux'], ['digestif', 'Digestif'], ['urinaire', 'Reins et voies urinaires'], ['genital', 'Appareil génital'], ['nerveux', 'Cerveau et moelle'], ['nerfs', 'Nerfs'], ['lymphe', 'Lymphe'], ['glandes', 'Glandes']];
+let intSel = GRP.map((g) => g[0]).filter((g) => !['muscles', 'lymphe'].includes(g));   // muscles et lymphe masqués au départ : ils cachent les organes
 function intChips() {
   $('intg').innerHTML = GRP.map(([k, l]) => `<label><input type="checkbox" value="${k}" ${intSel.includes(k) ? 'checked' : ''}> ${l}</label>`).join('');
   $('intg').querySelectorAll('input').forEach((c) => c.onchange = () => { intSel = [...$('intg').querySelectorAll('input:checked')].map((x) => x.value); A.interieur(true, undefined, intSel); });

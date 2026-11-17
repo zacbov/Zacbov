@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Patient animé : réglage des expressions</title>
+<style>
+:root{--nuit:#0d1613;--panneau:#15221d;--trait:#2a3d35;--texte:#dfe9e3;--doux:#8fa89b;--vert:#37c48f;color-scheme:dark}
+*{box-sizing:border-box}html,body{height:100%;margin:0}body{display:flex;flex-wrap:wrap;background:var(--nuit);color:var(--texte);font:16px/1.45 system-ui,sans-serif}
+#stage{flex:1 1 420px;min-height:70vh;position:relative}aside{flex:0 0 350px;max-width:100%;padding:1rem;background:var(--panneau);border-left:1px solid var(--trait);overflow:auto;max-height:100vh}
+h1{font-size:1.05rem;margin:0 0 .6rem}label{display:block;margin:.6rem 0 .15rem;color:var(--doux);font-size:.85rem}
+textarea,select{width:100%;background:var(--nuit);border:1px solid var(--trait);border-radius:6px;padding:.4rem .5rem;color:inherit;font:inherit}
+button{border:1px solid var(--trait);background:transparent;color:inherit;border-radius:6px;padding:.45rem .8rem;cursor:pointer;font:inherit}button.main{background:var(--vert);border-color:var(--vert);color:#04150e;font-weight:700}
+.row{display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap}.chips button{padding:.25rem .55rem;font-size:.85rem}details{margin-top:.8rem;border:1px solid var(--trait);border-radius:8px;padding:.4rem .7rem}details label{display:flex;justify-content:space-between;gap:.5rem;margin:.3rem 0 0}details input{width:55%}small{color:var(--doux);display:block;margin-top:.8rem}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="stage"></div>
+<aside>
+  <h1>Patient animé : réglage des expressions</h1>
+  <label>Humeur (visage + geste associé)</label><div class="chips row" id="emos"></div>
+  <label for="ges">Geste (remplace celui de l'humeur)</label><select id="ges"></select>
+  <label for="ex">Réplique d'exemple</label>
+  <select id="ex"><option>Bonjour, je voudrais quelque chose pour ma toux, elle ne passe pas.</option><option>J'ai peur, je ne comprends pas pourquoi ça m'arrive à moi.</option><option>J'ai très mal au ventre depuis ce matin, c'est vraiment douloureux.</option><option>Ah bon ? Vraiment ? Je ne savais pas que c'était dangereux.</option><option>Merci beaucoup, je suis vraiment soulagé.</option></select>
+  <label for="txt">Texte prononcé</label><textarea id="txt" rows="3"></textarea>
+  <label for="voice">Voix (voix Windows du navigateur)</label><select id="voice"></select>
+  <label for="rate">Vitesse : <span id="rv">1</span></label><input id="rate" type="range" min="0.6" max="1.4" step="0.05" value="1">
+  <label><input type="checkbox" id="vx" checked> Voix activée (sinon l'avatar parle en silence)</label>
+  <div class="row"><button id="say" class="main">Parler</button><button id="stop">Stop</button><button id="view">Visage / buste</button><button id="flip">Retourner</button></div>
+  <details><summary>Formes du visage (<span id="nm">0</span>)</summary><div id="sl"></div><div class="row"><button id="reset">Réinitialiser</button></div></details>
+  <small id="info">Chargement…</small>
+</aside>
+<script type="module">
+import { createAvatar, EMOTIONS, GESTURES, guessEmotion } from './avatar.js';
+const $ = (id) => document.getElementById(id); let kind = 'buste';
+const A = await createAvatar($('stage'), { glb: 'patient_homme.glb', background: 'decor_pharmacie.webp', interactive: true });
+$('emos').innerHTML = Object.keys(EMOTIONS).map((n) => `<button data-e="${n}">${n}</button>`).join('');
+$('emos').onclick = (e) => { if (e.target.dataset.e) { A.emotion = e.target.dataset.e; A.gesture = null; $('ges').value = ''; } };
+$('ges').innerHTML = '<option value="">(selon l\'humeur)</option>' + Object.keys(GESTURES).map((g) => `<option>${g}</option>`).join(''); $('ges').onchange = () => { A.gesture = $('ges').value || null; };
+$('ex').onchange = () => { $('txt').value = $('ex').value; }; $('txt').value = $('ex').value; $('rate').oninput = () => { A.rate = +$('rate').value; $('rv').textContent = $('rate').value; };
+A.onvoices = (v) => { $('voice').innerHTML = v.map((x, i) => `<option value="${i}">${x.name} (${x.lang})</option>`).join(''); }; if (A.voices) A.onvoices(A.voices); $('voice').onchange = () => { A.voiceIndex = +$('voice').value; };
+$('vx').onchange = () => { A.muted = !$('vx').checked; };
+$('say').onclick = () => { const t = $('txt').value; A.say(t, { emotion: A.emotion === 'neutre' ? guessEmotion(t) : A.emotion }); };
+$('stop').onclick = () => A.stop(); $('flip').onclick = () => A.flip(); $('view').onclick = () => { kind = kind === 'buste' ? 'visage' : 'buste'; A.view(kind); };
+$('nm').textContent = A.names.length; $('sl').innerHTML = A.names.map((n) => `<label>${n}<input type="range" min="0" max="1" step="0.01" data-n="${n}" value="0"></label>`).join('');
+$('sl').oninput = (e) => { A.manual[e.target.dataset.n] = +e.target.value; }; $('reset').onclick = () => { for (const k in A.manual) delete A.manual[k]; document.querySelectorAll('#sl input').forEach((i) => { i.value = 0; }); };
+$('info').textContent = `Os : ${Object.keys(A.rig.bones).length} | formes : ${A.names.length} | humeurs : ${Object.keys(EMOTIONS).length} | gestes : ${Object.keys(GESTURES).length}`;
+</script>
+</body>
+</html>

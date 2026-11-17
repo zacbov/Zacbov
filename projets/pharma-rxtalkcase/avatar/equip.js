@@ -59,9 +59,9 @@ const forearmSkin = (b, api, s, t, extra = 0) => {         // comme forearm, mai
 /* ---------- postures des scènes (repère du modèle, comme les gestes d'avatar.js) ---------- */
 const TABLE_Y = 0.185;
 const armOnTable = (palmUp) => (D, s, o) => s === 'Left'
-  ? (palmUp === 'side' ? { w: P(o, 0.19, D.hipsY + TABLE_Y + 0.03, 0.36), pole: P(o, 0.5, -1, -0.4), fing: V3(-o * 0.15, -0.05, 1), palm: P(o, -1, -0.15, 0), curl: 0.45, thumb: -0.2 }   // main sur le bord cubital, pouce vers le haut
-    : { w: P(o, 0.2, D.hipsY + TABLE_Y, 0.37), pole: P(o, 0.35, -1, -0.45), fing: V3(0, -0.05, 1), palm: V3(0, palmUp ? 1 : -1, 0), curl: palmUp ? 0.3 : 0.15, thumb: 0.1 })
-  : { w: P(o, 0.13, D.hipsY + TABLE_Y, 0.36), pole: P(o, 0.6, -1, -0.3), fing: P(o, -0.4, -0.1, 1), palm: V3(0, -1, 0), curl: 0.3 };
+  ? (palmUp === 'side' ? { w: P(o, 0.19, D.hipsY + TABLE_Y + 0.03, 0.36), pole: P(o, 0.5, -1, -0.4), fing: V3(-o * 0.15, -0.05, 1), palm: P(o, -1, -0.15, 0), curl: 0.3, thumb: 0.05, suit: 0.8, plat: true }   // main sur le bord cubital, pouce vers le haut, poignet dans l'axe
+    : { w: P(o, 0.2, D.hipsY + TABLE_Y, 0.37), pole: P(o, 0.35, -1, -0.45), fing: V3(0, -0.05, 1), palm: V3(0, palmUp ? 1 : -1, 0), curl: palmUp ? 0.22 : 0.15, thumb: palmUp ? 0 : 0.1, suit: 0.85, plat: true })
+  : { w: P(o, 0.13, D.hipsY + TABLE_Y, 0.36), pole: P(o, 0.6, -1, -0.3), fing: P(o, -0.4, -0.1, 1), palm: V3(0, -1, 0), curl: 0.3, suit: 0.6, plat: true };
 const handsDown = (D, s, o) => ({ w: P(o, D.hx(D.hipsY) + 0.06, D.hipsY + 0.02, -0.01), pole: P(o, 0.3, 0, -1), fing: V3(0, -1, 0), palm: P(o, -1, 0, 0), curl: 0.25 });
 const handsOnThighs = (D, s, o) => ({ w: P(o, 0.13, D.hipsY + 0.06, 0.3), pole: P(o, 0.6, -0.4, -0.6), fing: V3(0, -0.3, 1), palm: V3(0, -1, 0), curl: 0.3 });   // assis, mains posées sur les cuisses
 
@@ -110,8 +110,8 @@ export const ITEMS = {
     zones: { cou: { label: 'Cou', at: (b) => b.W('Neck').lerp(b.W('Head'), 0.3) }, tete: { label: 'Tête', at: (b) => b.W('Head').add(b.up.clone().multiplyScalar(0.1)) } },
     pieces: COLLARS.map((k, i) => ({ id: 'collier_' + (i + 1), node: 'collier_' + (i + 1), label: k.nom, ok: ['cou'], taille: i + 1, h: k.h,
       faux: { tete: "Le collier se place autour du cou : appui sous le menton et sur le haut du thorax et des épaules." },
-      obj: { A: V3(k.c[0], k.y[1], k.c[1]), B: V3(k.c[0], k.y[0], k.c[1]), up: V3(Math.cos(k.a * Math.PI / 180), 0, Math.sin(k.a * Math.PI / 180)) },
-      fit: (b, z, api) => { const n = b.W('Neck'), base = b.toW(V3(0, b.D.shoulderY - (api.femme ? 0.011 : 0.026), 0)).setX(n.x).setZ(n.z).add(b.fwd.clone().multiplyScalar(api.femme ? 0.006 : 0.012));   // bas du collier sur le haut du thorax, quel que soit le modèle
+      obj: { A: V3(k.c[0], k.y[0], k.c[1]), B: V3(k.c[0], k.y[1], k.c[1]), up: V3(Math.cos((k.a + 180) * Math.PI / 180), 0, Math.sin((k.a + 180) * Math.PI / 180)) },   // à l'endroit, appui du menton devant (la fente du haut est à l'arrière), côtés hauts vers les oreilles
+      fit: (b, z, api) => { const n = b.W('Neck'), base = b.toW(V3(0, b.D.shoulderY + (api.femme ? 0.014 : -0.002), 0)).setX(n.x).setZ(n.z).add(b.fwd.clone().multiplyScalar(api.femme ? 0.006 : 0.012));   // bas du collier sur le haut du thorax, quel que soit le modèle
         return { A: base, B: base.clone().add(b.up), up: b.fwd }; }, scale: (b, api) => (api.femme ? { s: 0.0088, xz: 0.84 } : { s: 0.01, xz: 0.9 }) })),
     single: true,
   },

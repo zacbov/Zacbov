@@ -46,20 +46,21 @@ export function surf(D, y, ang, o = 1) {                         // point de la 
   return { c: V3(o * rx * Math.sin(ang), y, zc + rz * Math.cos(ang)), n: V3(o * Math.sin(ang) / rx, 0, Math.cos(ang) / rz).normalize() };
 }
 const hip = (D, o) => { const { c, n } = surf(D, D.hipsY + 0.085, 1.85, o); return { c, n, fing: V3(0, -0.5, 1), pole: P(o, 1, 0.05, -0.35), curl: 0.12 }; };   // main posée sur la hanche, doigts vers l'avant, coude écarté
-const hang = (D, o) => ({ w: P(o, D.hx(D.hipsY) + 0.05, D.hipsY + 0.02, 0.03), pole: P(o, 0.15, 0, -1), fing: V3(0, -1, 0.06), palm: P(o, -1, 0, 0.15), curl: 0.28 });   // bras ballant, paume contre la cuisse
+const hang = (D, o) => ({ w: P(o, D.hx(D.hipsY) + 0.045, D.hipsY + 0.03, D.zf(D.hipsY) * 0.35 + 0.035), pole: P(o, 0.35, 0, -1), fing: V3(0, -1, 0.12), palm: P(o, -1, 0, 0.1), curl: 0.32, thumb: 0.15, suit: 0.75 });   // bras ballant, paume contre la cuisse
 export const GESTURES = {
-  repos: (D, s, o) => hip(D, o),                                                                            // mains sur les hanches
-  explique: (D, s, o) => s === 'Right' ? { w: P(o, 0.19, D.chestY - 0.1, D.zf(D.chestY) + 0.2), pole: P(o, 0.6, -1, -0.3), fing: P(o, 0.1, 0.25, 1), palm: P(o, -0.55, 0.8, 0), curl: 0.18 } : hip(D, o),
-  surprise: (D, s, o) => ({ w: P(o, 0.19, D.chestY + 0.02, D.zf(D.chestY) + 0.13), pole: P(o, 0.6, -1, -0.1), fing: P(o, 0.2, 1, 0.15), palm: P(o, -0.15, 0, 1), curl: 0.08 }),   // mains levées, paumes vers l'avant
+  repos: (D, s, o) => hang(D, o),                                                                           // bras détendus le long du corps, coudes à peine pliés (au comptoir)
+  hanches: (D, s, o) => hip(D, o),                                                                          // mains sur les hanches
+  explique: (D, s, o) => s === 'Right' ? { w: P(o, 0.19, D.chestY - 0.1, D.zf(D.chestY) + 0.2), pole: P(o, 0.6, -1, -0.3), fing: P(o, 0.1, 0.25, 1), palm: P(o, -0.55, 0.8, 0), curl: 0.25, thumb: 0.1, suit: 0.35 } : hang(D, o),
+  surprise: (D, s, o) => ({ w: P(o, 0.14, D.chestY - 0.06, D.zf(D.chestY) + 0.11), pole: P(o, 0.45, -1, -0.15), fing: P(o, 0.1, 1, 0.15), palm: P(o, -0.4, 0, 1), curl: 0.3, thumb: 0.15, suit: 0.1 }),   // mains levées, paumes vers l'avant
   abattu: (D, s, o) => ({ ...hang(D, o), curl: 0.35, shrug: -0.2 }),                                       // bras ballants, épaules affaissées
-  ouvert: (D, s, o) => ({ w: P(o, 0.27, D.hipsY + 0.13, D.zf(D.hipsY + 0.1) + 0.2), pole: P(o, 0.6, -1, -0.2), fing: P(o, 0.35, 0.1, 1), palm: V3(0, 1, 0.1), curl: 0.12 }),   // paumes ouvertes vers le haut
-  poings: (D, s, o) => ({ w: P(o, D.hx(D.hipsY) + 0.07, D.hipsY + 0.05, 0.07), pole: P(o, 0.5, 0, -1), fing: V3(0, -1, 0.25), palm: P(o, -1, 0, 0), curl: 1, thumb: 1, shrug: 0.2 }),   // poings serrés le long du corps, bras tendus
-  protege: (D, s, o) => ({ w: P(o, 0.11, D.chestY + (D.bust > 0.012 ? 0.04 : -0.07), D.zf(D.chestY + 0.04) + 0.13), pole: P(o, 0.5, -1, 0), fing: P(o, -0.1, 1, 0.1), palm: P(o, -0.35, 0, 1), curl: 0.35 }),   // mains devant la poitrine, écartées, paumes vers l'avant
+  ouvert: (D, s, o) => ({ w: P(o, 0.22, D.hipsY + 0.14, D.zf(D.hipsY + 0.1) + 0.17), pole: P(o, 0.6, -1, -0.2), fing: P(o, 0.3, 0.1, 1), palm: V3(0, 1, 0.1), curl: 0.25, thumb: 0.05, suit: 0.5 }),   // paumes ouvertes vers le haut
+  poings: (D, s, o) => ({ w: P(o, D.hx(D.hipsY) + 0.07, D.hipsY + 0.05, 0.07), pole: P(o, 0.5, 0, -1), fing: V3(0, -1, 0.25), palm: P(o, -1, 0, 0), curl: 0.9, thumb: 0.6, shrug: 0.2, suit: 0.8 }),   // poings serrés le long du corps, bras tendus
+  protege: (D, s, o) => ({ w: P(o, 0.11, D.chestY + (D.bust > 0.012 ? 0.04 : -0.07), D.zf(D.chestY + 0.04) + 0.13), pole: P(o, 0.5, -1, 0), fing: P(o, -0.1, 1, 0.1), palm: P(o, -0.35, 0, 1), suit: 0.4, curl: 0.35 }),   // mains devant la poitrine, écartées, paumes vers l'avant
   reflexion: (D, s, o) => s === 'Right'
     ? { c: D.chin.clone().add(V3(0, -0.065, 0.005)), n: V3(0, -0.5, 0.85), fing: V3(0, 0.75, 0.66), pole: P(o, 0.3, -1, D.bust > 0.012 ? 0.75 : 0), curl: 0.65, thumb: 0.2 }     // main sous le menton
     : (() => { const { c, n } = surf(D, D.hipsY + 0.2, -0.35, o); return { c, n, fing: P(o, -1, 0.15, 0), pole: P(o, 1, -0.6, 0.1), curl: 0.25 }; })(),   // avant-bras en travers du ventre
   ventre: (D, s, o) => s === 'Right' ? (() => { const { c, n } = surf(D, D.hipsY + 0.12, 0.15, o); return { c, n, fing: V3(-o, -0.35, 0), pole: P(o, 0.9, -0.6, -0.3), curl: 0.15 }; })() : hang(D, o),   // une main sur le ventre, l'autre bras ballant
-  heure: (D, s, o) => s === 'Left' ? { w: P(o, 0.02, D.chestY - 0.04, D.zf(D.chestY) + 0.15), pole: P(o, 0.5, -1, -0.1), fing: P(o, -1, 0.15, 0.2), palm: V3(0, -1, 0), curl: 0.35 } : hip(D, o),   // regarde sa montre (poignet gauche)
+  heure: (D, s, o) => s === 'Left' ? { w: P(o, 0.02, D.chestY - 0.04, D.zf(D.chestY) + 0.15), pole: P(o, 0.5, -1, -0.1), fing: P(o, -1, 0.15, 0.2), palm: V3(0, -1, 0), curl: 0.35 } : hang(D, o),   // regarde sa montre (poignet gauche)
   haussement: (D, s, o) => ({ ...hang(D, o), curl: 0.2, shrug: 1 }),                                     // seules les épaules montent
 };
 /* parties du corps : la paume se pose sur la zone (main opposée pour l'épaule, le bras et la poitrine). Le bras touché est lu sur le squelette, donc la main suit sa position réelle. */
@@ -172,7 +173,7 @@ export class Rig {
   }
   setWorldQ(b, q) { b.quaternion.copy(b.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(q)); b.updateMatrixWorld(true); }
   reset(...names) { for (const n of names) if (this.bones[n]) this.bones[n].quaternion.copy(this.tpose[n]); this.root.updateMatrixWorld(true); }
-  reach(s, wModel, poleModel, shrug = 0, fingModel = null, palmModel = null) {   // cinématique inverse à deux os (poignet sur la cible, coude vers le pôle), puis orientation de la main
+  reach(s, wModel, poleModel, shrug = 0, fingModel = null, palmModel = null, suit = 0, plat = false) {   // suit : 0..1, les doigts prolongent l'avant-bras (poignet droit, naturel au repos)   // cinématique inverse à deux os (poignet sur la cible, coude vers le pôle), puis orientation de la main
     const sh = this.bones[s + 'Shoulder'], A = this.bones[s + 'Arm'], F = this.bones[s + 'ForeArm'], H = this.bones[s + 'Hand']; if (!A || !F || !H) return;
     const M = this.root.matrixWorld; this.reset(s + 'Shoulder', s + 'Arm', s + 'ForeArm', s + 'Hand');
     if (sh) this.aim(sh, A, V3(this.out[s], 0.12 + 0.4 * shrug, 0).transformDirection(M));
@@ -182,13 +183,14 @@ export class Rig {
     this.aim(A, F, E.clone().sub(S)); this.aim(F, H, W.clone().sub(E));
     if (!fingModel || !palmModel) return;
     const ax = W.clone().sub(E).normalize(); let Fw = fingModel.clone().transformDirection(M);
+    if (suit > 0) { const up = V3(0, 1, 0).transformDirection(M), prol = plat ? ax.clone().sub(up.clone().multiplyScalar(ax.dot(up) + 0.04)).normalize() : ax.clone(); Fw.lerp(prol, suit).normalize(); }   // prolonge l'avant-bras, à plat (la main repose sur le plan où est le poignet)
     const cosA = Fw.dot(ax), maxA = 1.25; if (Math.acos(clamp(cosA, -1, 1)) > maxA) {      // le poignet ne plie pas au-delà d'environ 70°
       const perp = Fw.clone().sub(ax.clone().multiplyScalar(cosA)).normalize(); Fw = ax.clone().multiplyScalar(Math.cos(maxA)).add(perp.multiplyScalar(Math.sin(maxA))); }
     const Nw = palmModel.clone().transformDirection(M); Nw.sub(Fw.clone().multiplyScalar(Nw.dot(Fw))).normalize();
     const proj = (v) => v.clone().sub(ax.clone().multiplyScalar(v.dot(ax))).normalize();          // pronation / supination : la moitié par l'avant-bras, le reste par le poignet
     const cur = proj(this.palmL[s].clone().applyQuaternion(H.getWorldQuaternion(new THREE.Quaternion()))), tgt = proj(Nw);
     const roll = Math.atan2(cur.clone().cross(tgt).dot(ax), cur.dot(tgt));
-    this.setWorldQ(F, new THREE.Quaternion().setFromAxisAngle(ax, roll * 0.6).multiply(F.getWorldQuaternion(new THREE.Quaternion())));
+    this.setWorldQ(F, new THREE.Quaternion().setFromAxisAngle(ax, roll * 0.85).multiply(F.getWorldQuaternion(new THREE.Quaternion())));   // la rotation de l'avant-bras porte presque toute la supination : le poignet ne se tord plus
     const hq = H.getWorldQuaternion(new THREE.Quaternion()), fw = this.fingL[s].clone().applyQuaternion(hq), nw = this.palmL[s].clone().applyQuaternion(hq);
     nw.sub(fw.clone().multiplyScalar(nw.dot(fw))).normalize();
     const Mc = new THREE.Matrix4().makeBasis(fw, nw, fw.clone().cross(nw)), Mt = new THREE.Matrix4().makeBasis(Fw, Nw, Fw.clone().cross(Nw));
@@ -381,11 +383,11 @@ export async function createAvatar(el, opts = {}) {
     for (const s of th === 'Left' ? ['Right', 'Left'] : ['Left', 'Right']) {             // la main qui touche est placée en dernier (elle peut viser l'autre bras)
       const raw = SG.arms && SG.arms(D, s, rig.out[s]) ? SG.arms(D, s, rig.out[s]) : s === th ? { ...TOUCH[tch.part](D, tch.side, rig.out[tch.side], rig) } : G(D, s, rig.out[s]), spec = resolveSpec(raw);
       if (!spec.fing) { spec.fing = V3(0, -1, 0); spec.palm = V3(-rig.out[s], 0, 0); }
-      if (!st[s]) st[s] = { w: spec.w.clone(), pole: spec.pole.clone(), fing: spec.fing.clone(), palm: spec.palm.clone(), curl: spec.curl || 0, thumb: spec.thumb || 0, shrug: spec.shrug || 0 };
+      if (!st[s]) st[s] = { w: spec.w.clone(), pole: spec.pole.clone(), fing: spec.fing.clone(), palm: spec.palm.clone(), curl: spec.curl || 0, thumb: spec.thumb || 0, shrug: spec.shrug || 0, suit: spec.suit || 0 };
       const q = st[s], kk = s === th ? 1 - Math.exp(-dt * 7) : k; q.w.lerp(spec.w, kk); q.pole.lerp(spec.pole, kk); q.fing.lerp(spec.fing, kk).normalize(); q.palm.lerp(spec.palm, kk).normalize();
-      for (const key of ['curl', 'thumb', 'shrug']) q[key] += ((spec[key] || 0) - q[key]) * kk;
+      for (const key of ['curl', 'thumb', 'shrug', 'suit']) q[key] = (q[key] || 0) + ((spec[key] || 0) - (q[key] || 0)) * kk;
       const beat = API.speaking && s === 'Right' && gn === 'explique' && s !== th ? Math.sin(t * 4) : 0, w = q.w.clone(); w.y += beat * 0.03; w.z += beat * 0.015;
-      rig.reach(s, w, q.pole, q.shrug, q.fing, q.palm); rig.curl(s, q.curl, q.thumb);
+      q.plat = !!spec.plat; rig.reach(s, w, q.pole, q.shrug, q.fing, q.palm, q.suit, q.plat); rig.curl(s, q.curl, q.thumb);
     }
     if (T && T.cuff.visible) placeCuff();
     for (const fn of API.extras) fn(t, dt);
@@ -608,6 +610,19 @@ export async function createAvatar(el, opts = {}) {
     const toMesh = gltf.scene.matrixWorld.clone().invert().multiply(body.matrixWorld).invert(), parts = [];
     g.updateMatrixWorld(true);
     const meshes = []; g.traverse((m) => { if (m.isMesh) meshes.push(m); });
+    if (meshes.some((m) => m.isSkinnedMesh)) {                // v13 : maillages habillés sur le squelette de la patiente (mêmes os, même pose de repos)
+      const byName = (n) => { const k = n.replace(/^mixamorig[_:]?/, ''); return rig.bones[k] || null; };
+      for (const m of meshes) {
+        if (!m.isSkinnedMesh) continue;
+        const bones = m.skeleton.bones.map((b) => byName(b.name) || rig.bones.Hips);
+        const parent = body.parent; m.removeFromParent(); m.position.copy(body.position); m.quaternion.copy(body.quaternion); m.scale.copy(body.scale); parent.add(m);
+        m.bind(new THREE.Skeleton(bones, m.skeleton.boneInverses), body.bindMatrix);
+        m.frustumCulled = false; m.renderOrder = 2; m.userData.groupe = m.userData.groupe || m.name.replace(/^Int_/, '').replace(/[_.]\d+$/, '');
+        const mt = m.material; if (mt) { mt.side = THREE.DoubleSide; mt.vertexColors = !!m.geometry.attributes.color; mt.needsUpdate = true; }
+        parts.push(m);
+      }
+      return parts;
+    }
     for (const m of meshes) {
       let n = m, os = null, grp = null; while (n && !os) { os = n.userData && n.userData.os; grp = n.userData && n.userData.groupe; n = n.parent; }
       const bone = rig.bones[os] || rig.bones.Hips, bi = sk.bones.indexOf(bone); if (bi < 0) continue;

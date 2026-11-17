@@ -558,6 +558,7 @@ function spawnObj(type,x,z,ry){const d=OBJ[type],g=new THREE.Group();d.mk(g);g.p
  ['panneau',16.1,-62.5,-Math.PI/2],['armoire',12,-70.4,0],['filtre',3.2,-62,Math.PI/2],['projo',14,-60,.5],['casier',8,-52.5,0],['caisson',4.5,-68,0],
  ['caisson',30,-66.5,.3],['projo',21,-53,.5],['casier',27,-56,0]].forEach(a=>spawnObj(a[0],a[1],a[2],a[3]));
 // ===== caméra : dessus / 3e personne =====
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;G.eLock=false;G.hold=null});document.addEventListener('visibilitychange',()=>{for(const k in keys)keys[k]=false});
 var camMode=0,camBlend=0;const WALLM=[],_ray=new THREE.Ray(),_bx=new THREE.Box3(),_v=new THREE.Vector3(),_d=new THREE.Vector3(),_cp=new THREE.Vector3(),_ct=new THREE.Vector3();
 var camYaw=0,camPitch=.28;
 function setCam(m){if(m&&!camMode){camYaw=G.ang;try{R.domElement.requestPointerLock()}catch(e){}}if(!m&&document.pointerLockElement)document.exitPointerLock();camMode=m;plane.constant=m?-1.2:0;$('xh').style.display=m?'block':'none';$('camBtn').textContent=m?'VUE : 3E PERSONNE (V)':'VUE : DESSUS (V)'}
@@ -906,11 +907,11 @@ function findTarget(){const px=P.position.x,pz=P.position.z,d=(a,b)=>Math.hypot(
  let best=null,bd=2.3;for(const c of conts){const dd=d(c.x,c.z);if(dd<bd){bd=dd;best=c}}return best?{k:'cont',c:best,x:best.x,z:best.z,t:'Fouiller'}:null}
 function doAction(t){if(t.k==='hatch'){if(G.tubes>=3)openHatch();else msg('Sas verrouillé : il manque des tubes à vide ('+G.tubes+'/3)')}else if(t.k==='door'){t.dr.open=true;sfx(['ouverturesas','fuitepression'],.7)}else if(t.k==='radio')end(true);else if(t.k==='sasout'){end(true);$('end').innerHTML='ÉVACUATION<br><small>Le sas de décompression s\'ouvre sur la surface… (fin de la démo) — F5 pour rejouer</small>'}else openLoot(t.c)}
 function interact(){if(G.over||G.title)return;if(G.ui&&!G.eLock)closeUI()}
-function holdTick(dt){const tg=(G.ui||G.title||G.over)?null:findTarget(),pr=$('prompt');
+function holdTick(dt){const nw=performance.now(),rdt=Math.min(.3,(nw-(G._ht||nw))/1000);G._ht=nw;const tg=(G.ui||G.title||G.over)?null:findTarget(),pr=$('prompt');
  if(tg){pr.style.display='block';$('ptxt').textContent='Maintenir E : '+tg.t+(tg.k==='hatch'&&G.tubes<3?' (verrouillé '+G.tubes+'/3)':'')}else pr.style.display='none';
  if(!keys.KeyE)G.eLock=false;
  if(tg&&keys.KeyE&&!G.eLock&&!G.reload){const h=G.hold;if(!h||h.tg.k!==tg.k||h.tg.x!==tg.x||h.tg.z!==tg.z){G.aiming=false;G.hold={tg,t:0,ang:Math.atan2(tg.x-P.position.x,tg.z-P.position.z),type:tg.k==='cont'?'search':'door'};sfx(tg.k==='cont'?FOUILLE:ENCL,.6)}
-  G.hold.t+=dt;$('pbar').style.width=Math.min(100,G.hold.t/.85*100)+'%';if(G.hold.t>=.85){const t=G.hold.tg;G.hold=null;G.eLock=true;$('pbar').style.width='0';doAction(t)}}
+  G.hold.t+=rdt;$('pbar').style.width=Math.min(100,G.hold.t/.85*100)+'%';if(G.hold.t>=.85){const t=G.hold.tg;G.hold=null;G.eLock=true;$('pbar').style.width='0';doAction(t)}}
  else if(G.hold){G.hold=null;$('pbar').style.width='0'}}
 // ===== EFFONDREE, QUARTIERS, SAS, ZONES BARRICADEES =====
 [[-34.5,-12.0,-122.5,-102.9],[-34.5,-13.8,-146.5,-124.2],[-45.5,-36.0,-145.5,-126.5],[-43.5,-17.0,-75.5,-50.0]].forEach(r=>WALKS.push(r));
@@ -983,10 +984,177 @@ function hitEnemies(fx,fz,len){let best=null,bt=len;for(const e of EN2){if(e.dea
 mkEnemy('drone',0,-50,[[0,-50],[0,-75]]);mkEnemy('drone',-10,-79.5,[[-10,-79.5],[10,-79.5]]);mkEnemy('drone',-8,-105,[[-8,-105],[8,-120]]);
 mkEnemy('robot',18,-86,[[16,-84],[30,-96]]);mkEnemy('robot',36,-110,[[36,-106],[36,-132]]);mkEnemy('robot',-26,-132,[[-28,-130],[-20,-142]]);mkEnemy('robot',-30,-92,[[-30,-84],[-18,-99]]);
 mkEnemy('turret',12.2,-79,null).ang=Math.PI*1.25;mkEnemy('turret',14.5,-130,null).ang=Math.PI*1.1;mkEnemy('turret',-34,-100,null).ang=Math.PI*.2;
+function bd_supply(g){
+ const {box,shape,rod,stud}=g;
+ // Chamfered load-bearing shell, separate lid and recessed panels on every exposed side.
+ const outline=[[-.72,-.42],[-.62,-.50],[.62,-.50],[.72,-.42],[.72,.36],[.61,.46],[-.61,.46],[-.72,.36]];
+ shape(outline,.85,[0,.55,0],1,.022);
+ box([1.44,.12,.93],[0,1.04,0],0,undefined,.025);
+ for(const x of [-.61,.61])for(const z of [-.35,.35]){
+  box([.23,.15,.24],[x,.095,z],0,undefined,.025);box([.21,.17,.22],[x,.91,z],0,undefined,.023);
+  box([.105,.65,.10],[x+(x<0?-.08:.08),.52,z+(z<0?-.05:.05)],0,undefined,.014);
+ }
+ for(const s of [-1,1]){
+  const z=s*.447;
+  shape([[-.54,-.28],[-.46,-.34],[.46,-.34],[.54,-.28],[.54,.22],[.42,.32],[-.42,.32],[-.54,.22]],.045,[0,.54,z],0,.012);
+  for(const x of [-.43,.43])box([.06,.40,.035],[x,.52,z+s*.038],1,undefined,.006);
+  for(const x of [-.22,.22]){
+   box([.12,.22,.055],[x,.91,s*.487],1,undefined,.009);
+   box([.08,.13,.023],[x,.90,s*.528],0,undefined,.006);
+   rod([x-.032,.945,s*.548],[x+.032,.945,s*.548],.012,1,.012,8);
+  }
+  for(let j=0;j<4;j++)box([.35,.018,.012],[-.08,.38+j*.075,z+s*.029],1,undefined,.002);
+  box([.27,.059,.015],[.19,.72,z+s*.032],1,undefined,.004);
+  for(let j=0;j<4;j++)box([.033,.023,.009],[.10+j*.06,.72,z+s*.045],2,undefined,.001);
+  for(const x of [-.46,.46])for(const y of [.28,.76])stud([x,y,z+s*.037],.019,1,[s*Math.PI/2,0,0]);
+ }
+ for(const s of [-1,1]){
+  box([.038,.54,.58],[s*.737,.56,0],0,undefined,.012);
+  box([.022,.18,.36],[s*.764,.63,0],1,undefined,.012);
+  for(const z of [-.13,.13])rod([s*.783,.60,z],[s*.82,.67,z],.022,0,.022,8);
+  rod([s*.82,.67,-.13],[s*.82,.67,.13],.024,0,.024,10);
+  for(let j=0;j<3;j++)box([.013,.025,.34],[s*.765,.36+j*.06,0],1,undefined,.002);
+  box([.012,.035,.25],[s*.766,.81,0],2,undefined,.003);
+ }
+ box([.99,.025,.59],[0,1.116,0],1,undefined,.012);
+ for(const x of [-.42,.42])box([.065,.04,.70],[x,1.137,0],0,undefined,.008);
+ for(const z of [-.22,.22])box([.72,.026,.04],[0,1.142,z],0,undefined,.004);
+ // Low skids are actual cargo feet, not a preview floor.
+ for(const x of [-.49,.49])box([.15,.085,.71],[x,.044,0],1,undefined,.014);
+}
+function bd_cell(g){
+ const {T,mesh,box,cylinder,torus,lathe,rod,stud}=g;
+ // A serviceable hexagonal cartridge with exposed energy windows between guards.
+ lathe([[0,0],[.16,0],[.21,.035],[.225,.10],[.225,.14],[.195,.17],[0,.17]],[0,0,0],1,24);
+ cylinder(.168,.168,.59,[0,.44,0],1,24);
+ cylinder(.178,.178,.043,[0,.18,0],0,24);
+ cylinder(.178,.178,.043,[0,.72,0],0,24);
+ for(let i=0;i<6;i++){
+  const a=i*Math.PI/3,x=Math.sin(a),z=Math.cos(a);
+  box([.13,.50,.046],[x*.188,.45,z*.188],0,[0,a,0],.014);
+  box([.082,.36,.009],[x*.215,.45,z*.215],1,[0,a,0],.005);
+  box([.022,.275,.008],[x*.222,.45,z*.222],2,[0,a,0],.003);
+  for(const y of [.241,.66])stud([x*.217,y,z*.217],.009,0,[Math.PI/2,a,0]);
+  // Corner standoffs bridge the caps, with small insulating collars.
+  const b=a+Math.PI/6,s=Math.sin(b),c=Math.cos(b);
+  rod([s*.194,.17,c*.194],[s*.194,.725,c*.194],.013,1,.013,8);
+  for(const y of [.21,.68])cylinder(.019,.019,.027,[s*.194,y,c*.194],0,8);
+ }
+ lathe([[0,.725],[.172,.725],[.218,.75],[.22,.79],[.19,.82],[.15,.835],[0,.835]],[0,0,0],0,24);
+ torus(.204,.009,[0,.77,0],1);
+ torus(.213,.008,[0,.106,0],0);
+ // Recessed contacts are visibly isolated from the protective metal cap.
+ cylinder(.113,.113,.032,[0,.841,0],1,20);
+ cylinder(.055,.055,.013,[0,.862,0],0,16);
+ cylinder(.031,.031,.015,[0,.876,0],1,12);
+ for(const a of [0,Math.PI*2/3,Math.PI*4/3]){
+  const x=Math.sin(a)*.088,z=Math.cos(a)*.088;
+  cylinder(.014,.014,.025,[x,.869,z],0,10);
+  cylinder(.008,.008,.008,[x,.887,z],0,10);
+ }
+ for(const s of [-1,1]){
+  rod([s*.16,.80,-.065],[s*.24,.86,-.065],.012,0,.012,6);
+  rod([s*.24,.86,-.065],[s*.24,.86,.065],.017,1,.017,8);
+  rod([s*.24,.86,.065],[s*.16,.80,.065],.012,0,.012,6);
+ }
+ for(let i=0;i<8;i++){const a=i*Math.PI/4;box([.047,.043,.009],[Math.sin(a)*.22,.076,Math.cos(a)*.22],0,[0,a,0],.003);}
+}
+function bd_scan(g){
+ const {shape,box,cylinder,torus,rod,curve,stud}=g;
+ // Grip center is the public origin; the broad scan head sits above the hand.
+ shape([[-.045,-.13],[.043,-.13],[.051,.075],[.037,.13],[-.047,.105]],.074,[0,0,0],1,.009);
+ for(let i=0;i<5;i++)box([.084,.017,.083],[-.001,-.09+i*.035,0],1,[0,0,-.04],.004);
+ box([.094,.035,.09],[0,-.138,0],0,undefined,.008);
+ box([.042,.009,.045],[0,-.16,0],1,undefined,.003);
+ shape([[-.10,.09],[.09,.09],[.136,.16],[.129,.31],[.088,.36],[-.096,.36],[-.132,.31],[-.135,.16]],.105,[0,0,0],0,.012);
+ // The black gasket leaves an intentional seam all around the angled faceplate.
+ shape([[-.095,.15],[.095,.15],[.104,.29],[.071,.328],[-.071,.328],[-.104,.29]],.012,[0,0,.06],1,.004);
+ box([.166,.119,.012],[0,.251,.071],2,undefined,.006);
+ // Physical screen tracery remains legible without an image or font dependency.
+ for(let i=0;i<4;i++)box([.14,.004,.003],[0,.211+i*.025,.078],1,undefined,.0005);
+ for(let i=0;i<4;i++)box([.003,.092,.003],[-.054+i*.036,.251,.078],1,undefined,.0005);
+ torus(.026,.002,[.015,.262,.081],0,[0,0,0]);
+ rod([-.058,.221,.081],[.058,.285,.081],.0018,0,.0018,4);
+ box([.025,.015,.009],[-.058,.17,.072],1,undefined,.003);
+ box([.025,.015,.009],[.058,.17,.072],1,undefined,.003);
+ cylinder(.012,.012,.011,[0,.169,.073],0,12,[Math.PI/2,0,0]);
+ // Paired emitter/receiver apertures share a thick protective top shroud.
+ for(const x of [-.058,.058]){
+  cylinder(.033,.033,.055,[x,.37,-.005],1,14);
+  cylinder(.039,.036,.018,[x,.399,-.005],0,14);
+  cylinder(.024,.024,.006,[x,.412,-.005],1,16);
+  cylinder(.015,.015,.007,[x,.416,-.005],2,16);
+ }
+ for(const side of [-1,1]){
+  for(let i=0;i<4;i++)box([.013,.012,.063],[side*.146,.196+i*.027,-.006],1,undefined,.002);
+  for(const y of [.13,.319])stud([side*.096,y,.067],.006,0);
+ }
+ box([.105,.13,.016],[0,.239,-.064],1,undefined,.009);
+ box([.08,.105,.008],[0,.239,-.077],0,undefined,.005);
+ for(let i=0;i<4;i++)box([.055,.005,.004],[0,.208+i*.02,-.083],1,undefined,.001);
+ // The trigger and lanyard eye are seated against their housings.
+ box([.027,.052,.018],[.045,.059,.031],0,[0,0,-.16],.005);
+ torus(.017,.004,[0,-.163,-.035],1,[0,0,0],Math.PI);
+ curve([[-.027,.095,-.035],[-.041,.13,-.071],[-.038,.17,-.065]],.004,1,8,5);
+}
+function bd_cons(g){
+ const {T,box,shape,rod,cylinder,stud,curve}=g;
+ // A narrow structural spine and a flared toe leave useful leg room below the desk.
+ shape([[-.43,0],[-.49,.09],[-.38,.17],[.37,.17],[.49,.09],[.43,0]],.61,[0,0,-.12],0,.025);
+ shape([[-.2,.12],[-.22,.54],[-.38,.81],[.35,.81],[.21,.52],[.18,.12]],.29,[0,0,-.21],1,.018);
+ shape([[-.14,.2],[-.16,.52],[-.28,.72],[.25,.72],[.14,.5],[.12,.2]],.035,[0,0,-.047],0,.012);
+ for(const x of [-.37,.37]){box([.15,.06,.43],[x,.075,-.07],1,undefined,.014);stud([x,.113,.07],.022,0,[0,0,0]);}
+ box([.05,.28,.014],[0,.39,-.021],2,undefined,.004);
+ const screenCenter=new T.Vector3(0,1.14,-.24),screenRot=new T.Euler(-.22,0,0),screenQ=new T.Quaternion().setFromEuler(screenRot);
+ const screenPoint=(x,y,z)=>new T.Vector3(x,y,z).applyQuaternion(screenQ).add(screenCenter).toArray();
+ const screenBox=(size,p,role,bevel=.006)=>box(size,screenPoint(...p),role,[screenRot.x,0,0],bevel);
+ const shell=shape([[-.58,-.34],[-.64,-.24],[-.64,.24],[-.55,.34],[.55,.34],[.64,.24],[.64,-.24],[.58,-.34]],.16,screenCenter.toArray(),0,.02);shell.quaternion.copy(screenQ);
+ screenBox([1.12,.53,.026],[0,0,.095],1,.014);
+ screenBox([.72,.38,.009],[-.13,.025,.113],2,.002);
+ // Recessed screen bars expose the lit display below; small readouts stay readable at thumbnail size.
+ for(let i=0;i<6;i++)screenBox([.56,.012,.006],[-.15,-.12+i*.055,.121],1,.001);
+ for(let i=0;i<5;i++)screenBox([.016,.33,.006],[-.4+i*.13,.025,.121],1,.001);
+ const trace=[[-.41,-.06],[-.33,-.025],[-.26,-.065],[-.17,.10],[-.08,.025],[.01,.085],[.11,.12]];
+ for(let i=0;i<trace.length-1;i++)rod(screenPoint(...trace[i],.131),screenPoint(...trace[i+1],.131),.009,0,.009,6);
+ for(let i=0;i<6;i++)screenBox([.055,.025+i%3*.009,.009],[.40,-.15+i*.061,.117],i===5?0:2,.002);
+ screenBox([.36,.017,.011],[-.28,-.245,.112],2,.002);
+ for(const x of [-.57,.57])for(const y of [-.25,.25]){const s=stud(screenPoint(x,y,.102),.018,1);s.quaternion.copy(screenQ);s.rotateX(Math.PI/2);}
+ // Back cover, side radiator slots and visible supply connection make the reverse view complete.
+ screenBox([.88,.36,.04],[0,0,-.102],1,.016);
+ for(let i=0;i<7;i++)screenBox([.05,.26,.025],[(i-3)*.095,0,-.131],0,.004);
+ for(const side of [-1,1])for(let i=0;i<4;i++)screenBox([.027,.043,.10],[side*.637,-.1+i*.065,0],1,.003);
+ const deskCenter=new T.Vector3(0,.77,.18),deskQ=new T.Quaternion().setFromEuler(new T.Euler(-1.16,0,0));
+ const deskPoint=(x,y,z)=>new T.Vector3(x,y,z).applyQuaternion(deskQ).add(deskCenter).toArray();
+ const deskBox=(size,p,role,bevel=.006)=>{const m=box(size,deskPoint(...p),role,undefined,bevel);m.quaternion.copy(deskQ);return m;};
+ deskBox([1.23,.46,.11],[0,0,0],0,.024);deskBox([.83,.31,.022],[-.14,0,.066],1,.011);
+ for(let row=0;row<3;row++)for(let col=0;col<9;col++)deskBox([.061,.054,.014],[-.48+col*.082,-.092+row*.082,.085],0,.003);
+ deskBox([.24,.022,.014],[-.18,-.19,.073],2,.002);
+ const dial=cylinder(.076,.081,.018,deskPoint(.47,.035,.08),1,24);dial.quaternion.copy(deskQ);dial.rotateX(Math.PI/2);
+ const knob=cylinder(.052,.058,.03,deskPoint(.47,.035,.097),0,20);knob.quaternion.copy(deskQ);knob.rotateX(Math.PI/2);
+ deskBox([.02,.06,.012],[.47,.051,.115],2,.002);
+ curve([[.18,.23,-.36],[.24,.4,-.43],[.21,.68,-.45],[.14,.91,-.38]],.025,1,16,6);
+ for(const x of [-.35,.35])rod([x,.59,-.28],[x,.73,.23],.022,0,.022,8);
+}
+
+const M_SUPPLY=buildModel(bd_supply,[0x8a7a50,0x2a2d2e,0xffb040]),M_CELL=buildModel(bd_cell,[0x7a7e78,0x2a2d2e,0x5fe090]),M_SCAN=buildModel(bd_scan,[0xa89a6a,0x2a2d2e,0x7dffb0]),M_CONS=buildModel(bd_cons,[0x6b7048,0x26292a,0x30c8c0]);
+function fitModel(m,max){const w=new THREE.Group(),c=m.clone(),bb=new THREE.Box3().setFromObject(c),sz=bb.getSize(new THREE.Vector3()),k=max/Math.max(sz.x,sz.y,sz.z),ct=bb.getCenter(new THREE.Vector3());c.scale.set(k,k,k);c.position.set(-ct.x*k,-bb.min.y*k,-ct.z*k);w.add(c);return w}
+function modelIcon(m,key){const sc=new THREE.Scene();sc.add(new THREE.AmbientLight(0xffffff,.7));const dl=new THREE.DirectionalLight(0xffffff,1.1);dl.position.set(2,3,4);sc.add(dl);const mm=m.clone(),bb=new THREE.Box3().setFromObject(mm),sz=bb.getSize(new THREE.Vector3()),ct=bb.getCenter(new THREE.Vector3());mm.position.sub(ct);sc.add(mm);const r=Math.max(sz.x,sz.y,sz.z),c2=new THREE.PerspectiveCamera(30,1,.05,100);c2.position.set(r*1.4,r*.9,r*1.8);c2.lookAt(0,0,0);
+ const rt=new THREE.WebGLRenderTarget(256,256),oc=R.getClearColor(new THREE.Color()),oa=R.getClearAlpha();R.setClearColor(0,0);R.setRenderTarget(rt);R.clear();R.render(sc,c2);R.setRenderTarget(null);R.setClearColor(oc,oa);
+ const buf=new Uint8Array(256*256*4);R.readRenderTargetPixels(rt,0,0,256,256,buf);const cv2=document.createElement('canvas');cv2.width=cv2.height=256;const cx=cv2.getContext('2d'),id=cx.createImageData(256,256);for(let y=0;y<256;y++)id.data.set(buf.subarray((255-y)*1024,(256-y)*1024),y*1024);cx.putImageData(id,0,0);ICO[key]=cv2.toDataURL('image/png');rt.dispose()}
+try{modelIcon(M_SUPPLY,'m_supply');modelIcon(M_CELL,'m_cell');modelIcon(M_SCAN,'m_scan');modelIcon(M_CONS,'m_cons')}catch(e){console.warn('icones',e)}
+OBJ.supply={t:'CONTENEUR DE RAVITAILLEMENT',ico:'m_supply',o:[1.7,1.7],mk(g){const m=fitModel(M_SUPPLY,1.5);g.add(m)}};
+OBJ.cell={t:'CELLULE DÉNERGIE',ico:'m_cell',o:[1.2,1.2],mk(g){const m=fitModel(M_CELL,.9);g.add(m)}};
+OBJ.scan={t:'SCANNER ANALOGIQUE',ico:'m_scan',o:[.9,.9],mk(g){const t=box(1,.8,.7,pm('#5a5e5a',1,1,.5,.6),0,.4,0),m=fitModel(M_SCAN,.7);m.position.y=.8;g.add(t,m)}};
+OBJ.cons={t:'CONSOLE DE CONTRÔLE',ico:'m_cons',o:[1.6,1.1],mk(g){const m=fitModel(M_CONS,1.5);g.add(m)}};
+[['supply',-8,-98.4,0],['supply',30,-84,Math.PI],['supply',40,-114,-Math.PI/2],['supply',-30,-118,0],
+ ['cell',-4.5,-66,0],['cell',13,-57,0],['cell',34,-59,0],['scan',3.5,-94,Math.PI],['scan',-1.8,-62,Math.PI/2],['scan',9,-103,0],
+ ['cons',-5.3,-85,Math.PI/2],['cons',5.3,-92,-Math.PI/2],['cons',-12.5,-84,Math.PI/2],['cons',12.5,-96,-Math.PI/2]].forEach(a=>spawnObj(a[0],a[1],a[2],a[3]));
 let _lc=0,_lv=new THREE.Vector3();const _bb=new Map();
-function cullLights(dt){_lc-=dt;if(_lc>0)return;_lc=.5;const L=[];S.traverse(o=>{if(!(o.isPointLight||o.isSpotLight))return;let a=o;while(a){if(a===P)return;a=a.parent}o.getWorldPosition(_lv);L.push([Math.hypot(_lv.x-P.position.x,_lv.z-P.position.z),o])});L.sort((a,b)=>a[0]-b[0]);L.forEach((l,k)=>{const v=k<6&&l[0]<30;if(l[1].visible!==v)l[1].visible=v});
+function cullLights(dt){_lc-=dt;if(_lc>0)return;_lc=.5;const L=[];S.traverse(o=>{if(!(o.isPointLight||o.isSpotLight))return;let a=o;while(a){if(a===P)return;a=a.parent}o.getWorldPosition(_lv);L.push([Math.hypot(_lv.x-P.position.x,_lv.z-P.position.z),o])});L.sort((a,b)=>a[0]-b[0]);L.forEach((l,k)=>{const v=k<LMAX&&l[0]<30;if(l[1].visible!==v)l[1].visible=v});
  const px=P.position.x,pz=P.position.z;for(const o of S.children){if(o===P||o===E||o===hp||o.isLight||o.isInstancedMesh||o.isPoints||o.userData.roof||o.userData.dyn)continue;let b=_bb.get(o);if(!b){b=new THREE.Box3().setFromObject(o);_bb.set(o,b)}const dx=Math.max(b.min.x-px,0,px-b.max.x),dz=Math.max(b.min.z-pz,0,pz-b.max.z),v=Math.hypot(dx,dz)<40;if(o.visible!==v)o.visible=v}}
-function zoneTick(dt,T){cullLights(dt);enemyTick(dt);if(steam){const p=steam.geometry.attributes.position;for(let i=0;i<p.count;i++){let y=p.getY(i)+dt*.5;if(y>4)y=0;p.setY(i,y)}p.needsUpdate=true}if(G.open&&G.ot<1){G.ot=Math.min(1,G.ot+dt*.7);hp.rotation.y=-1.6*(1-Math.pow(1-G.ot,2))}
+let _pf=0,_pt=performance.now(),_pa=16,PR=Math.min(devicePixelRatio,2),LMAX=6;
+function perfTick(){const n=performance.now(),d=n-_pt;_pt=n;_pa+=(Math.min(d,200)-_pa)*.05;_pf+=d;if(_pf<2000)return;_pf=0;const mx=Math.min(devicePixelRatio,2);if(_pa>30&&PR>.6){PR=Math.max(.6,PR-.2);R.setPixelRatio(PR);R.setSize(innerWidth,innerHeight)}else if(_pa<18&&PR<mx){PR=Math.min(mx,PR+.1);R.setPixelRatio(PR);R.setSize(innerWidth,innerHeight)}LMAX=_pa>40?3:_pa>30?4:6}
+function zoneTick(dt,T){perfTick();cullLights(dt);enemyTick(dt);if(steam){const p=steam.geometry.attributes.position;for(let i=0;i<p.count;i++){let y=p.getY(i)+dt*.5;if(y>4)y=0;p.setY(i,y)}p.needsUpdate=true}if(G.open&&G.ot<1){G.ot=Math.min(1,G.ot+dt*.7);hp.rotation.y=-1.6*(1-Math.pow(1-G.ot,2))}
  S.fog.density+=((P.position.z<-11?.02:.045)-S.fog.density)*.03;if(pol)pol.rotation.y=T*.03;
  if(amb.length){if(!amb[2])amb[2]=loopSnd('ambience4',0);const tg=P.position.z<-12?[.15,.05,.5]:[.55,.18,0];amb.forEach((a,i)=>{if(a)a.g.gain.value+=(tg[i]-a.g.gain.value)*.02})}
  doorTick(dt);holdTick(dt);roofTick(dt)}

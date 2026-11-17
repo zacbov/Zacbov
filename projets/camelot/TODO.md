@@ -17,3 +17,7 @@
 - [ ] Lot 6 (reste) : vrai relief jouable (hauteurs du terrain), arbres instanciés, animations de villageois plus riches
 
 - [x] Test de fumée sans navigateur (`npm run fumee`)
+- [x] Directives de rendu et de fluidité : socle, budget d'images, procédural, fichier unique (voir README)
+- [ ] Directives : chaîne de lumière, textures procédurales, captures et mesures sur navigateur réel
+- [x] Chaîne de lumière, motifs de surface, vues de capture (à valider sur captures)
+- [ ] Ajuster la lumière d'après les captures (exposition, étalonnage, ombres), puis SSAO et PCSS si utiles

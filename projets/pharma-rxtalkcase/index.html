@@ -15,6 +15,7 @@ header{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;padding:.7rem 1r
 h1{font-size:1.05rem;margin:0 auto 0 0;font-weight:700}
 select,button,textarea{font:inherit;color:inherit}
 select{background:var(--nuit);border:1px solid var(--trait);border-radius:6px;padding:.4rem .5rem;max-width:100%}
+#graine{background:var(--nuit);border:1px solid var(--trait);border-radius:6px;padding:.4rem .5rem;color:inherit;max-width:100%}
 button{border:1px solid var(--trait);background:transparent;border-radius:6px;padding:.45rem .8rem;cursor:pointer}
 button.main{background:var(--vert);border-color:var(--vert);color:#04150e;font-weight:700}
 button:disabled{opacity:.4;cursor:default}
@@ -78,8 +79,9 @@ dialog::backdrop{background:#000a}
 <body>
 <header>
   <h1>Cas cliniques <small id="mdl" title="Modèle utilisé et délai de la dernière réponse"></small></h1>
-  <select id="pop" aria-label="Parcours"><option value="">Tous les parcours</option><option value="officine">Officine</option><option value="hospitalier">Hospitalier</option><option value="industrie_recherche">Industrie et recherche</option></select>
+  <select id="pop" aria-label="Parcours"><option value="">Tous les parcours</option><option value="officine">Officine</option><option value="hospitalier">Hospitalier</option><option value="industrie_recherche">Industrie et recherche</option><option value="medecine">Médecine</option></select>
   <select id="theme" aria-label="Thème"></select>
+  <input id="graine" aria-label="Numéro de cas ou graine" placeholder="Cas (DI004…) ou graine" size="16" autocomplete="off">
   <select id="prof" aria-label="Profil du patient"><option value="">Patient neutre</option><option value="presse">Pressé</option><option value="bavard">Bavard</option><option value="anxieux">Anxieux</option><option value="observance">Suit mal son traitement</option><option value="*">Profil au hasard</option></select>
   <button id="new" class="main" disabled>Patient suivant</button>
   <button id="fichebtn" disabled>Fiche patient</button>
@@ -110,7 +112,7 @@ const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>':
 const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 let pending = [];   // gestes du pharmacien (tension, objets) transmis avec le prochain message
 let db, cas, hist = [], busy = false, over = false, profil = '', points = null, got = new Set(), cv = 0, unlocked = new Set(), notes = {}, fiche = {};
-const POPS = { officine: { ticket: "Un patient entre à l'officine", open: "(Le patient entre à l'officine et prend la parole : dis ta première phrase.)" }, hospitalier: { ticket: "Appel d'un service à la pharmacie hospitalière", open: "(Le téléphone de la pharmacie hospitalière sonne : le soignant prend la parole et expose sa demande en une ou deux phrases.)" }, industrie_recherche: { ticket: 'Sollicitation au laboratoire', open: "(Un collègue vous sollicite : il prend la parole et expose sa demande en une ou deux phrases.)" } };
+const POPS = { officine: { ticket: "Un patient entre à l'officine", open: "(Le patient entre à l'officine et prend la parole : dis ta première phrase.)" }, hospitalier: { ticket: "Appel d'un service à la pharmacie hospitalière", open: "(Le téléphone de la pharmacie hospitalière sonne : le soignant prend la parole et expose sa demande en une ou deux phrases.)" }, medecine: { ticket: "Un patient entre dans le cabinet de consultation", open: "(Le patient entre dans le cabinet et prend la parole : dis ta première phrase.)" }, industrie_recherche: { ticket: 'Sollicitation au laboratoire', open: "(Un collègue vous sollicite : il prend la parole et expose sa demande en une ou deux phrases.)" } };
 const PL = { presse: 'pressé', bavard: 'bavard', anxieux: 'anxieux', observance: 'suit mal son traitement' };
 
 function add(cls, html) { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; $('chat').append(d); d.scrollIntoView({ block: 'end' }); return d; }
@@ -152,9 +154,12 @@ async function turn(mode, cls) {
 function newPatient() {
   const t = $('theme').value;
   const pool = db.cas.filter((c) => t === '*' || (t === '~' ? c.theme !== 'cardiologie_pediatrique' : c.theme === t)).filter((c) => !$('pop').value || c.pop === $('pop').value);
-  if (!pool.length) { $('chat').innerHTML = '<p class="vide">Aucun cas pour ce parcours et ce thème.</p>'; return; }
-  cas = pool[Math.floor(Math.random() * pool.length)]; over = false;
-  const pv = $('prof').value; profil = pv === '*' ? ['presse', 'bavard', 'anxieux', 'observance', ''][Math.floor(Math.random() * 5)] : pv;
+  const g = $('graine').value.trim(), direct = g && db.cas.find((c) => c.id.toLowerCase() === g.toLowerCase());
+  let rng = Math.random; /* numéro de cas : ce cas ; autre texte : tirage reproductible (même graine = même cas et même profil) */
+  if (g && !direct) { let sd = [...g].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7) % 2147483646 + 1; rng = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; }; }
+  if (!pool.length && !direct) { $('chat').innerHTML = '<p class="vide">Aucun cas pour ce parcours et ce thème.</p>'; return; }
+  cas = direct || pool[Math.floor(rng() * pool.length)]; over = false;
+  const pv = $('prof').value; profil = pv === '*' ? ['presse', 'bavard', 'anxieux', 'observance', ''][Math.floor(rng() * 5)] : pv;
   points = null; got = new Set(); unlocked = new Set(); notes = {}; fiche = {}; (cas.documents || []).forEach((d, i) => { if (d.libre) unlocked.add(i); }); setTimeout(() => lock(busy), 0); $('docbtn').classList.remove('ping'); const k = ++cv; gauge();
   setTimeout(() => ask('checklist', document.createElement('div')).then((t) => { const a = arr(t); if (a && k === cv) { points = a.map(String).slice(0, 10); gauge(); } }).catch(() => {}), 0);
   const lib = (db.meta.themes.find((x) => x.id === cas.theme) || {}).libelle || '';
@@ -298,11 +303,21 @@ $('end').onclick = async () => {
   lock(false);
 };
 
+/* Le parcours (officine, hospitalier, industrie et recherche) filtre la liste des thèmes : seuls les thèmes qui ont des cas pour ce parcours apparaissent, avec leur nombre */
+function fillThemes() {
+  const p = $('pop').value, pool = db.cas.filter((c) => !p || c.pop === p), prev = $('theme').value, n = {};
+  pool.forEach((c) => { n[c.theme] = (n[c.theme] || 0) + 1; });
+  const hors = pool.filter((c) => c.theme !== 'cardiologie_pediatrique').length;
+  $('theme').innerHTML = `<option value="~">Au hasard, hors cardio pédiatrique (${hors})</option><option value="*">Au hasard, tous les thèmes (${pool.length})</option>` +
+    db.meta.themes.filter((t) => n[t.id]).map((t) => `<option value="${t.id}">${esc(t.libelle)} (${n[t.id]})</option>`).join('');
+  if ([...$('theme').options].some((o) => o.value === prev)) $('theme').value = prev;
+}
+
 Promise.all([fetch(DATA).then((r) => r.json()), fetch('cas_qcm_pharma.json').then((r) => (r.ok ? r.json() : null)).catch(() => null)]).then(([d, x]) => {
   if (x) { d.cas = d.cas.concat(x.cas); (x.meta.themes || []).forEach((t) => { if (!d.meta.themes.find((u) => u.id === t.id)) d.meta.themes.push({ id: t.id, libelle: t.libelle, nb_cas: 0 }); }); d.meta.themes.forEach((t) => { t.nb_cas = d.cas.filter((c) => c.theme === t.id).length; }); }
   db = d;
-  $('theme').innerHTML = '<option value="~">Au hasard, hors cardio pédiatrique</option><option value="*">Au hasard, tous les thèmes</option>' +
-    d.meta.themes.filter((t) => t.nb_cas).map((t) => `<option value="${t.id}">${esc(t.libelle)} (${t.nb_cas})</option>`).join('');
+  [...$('pop').options].forEach((o) => { o.dataset.l = o.dataset.l || o.textContent; o.textContent = o.dataset.l + ' (' + d.cas.filter((c) => !o.value || c.pop === o.value).length + ')'; });
+  fillThemes(); $('pop').onchange = fillThemes;
   lock(false);
 }).catch(() => { $('chat').innerHTML = '<p class="err">Impossible de charger ' + DATA + '. Placez-le à côté de la page et ouvrez la page via un serveur web (pas en file://).</p>'; });
 </script>
@@ -337,7 +352,7 @@ function setButtons() {
 async function applyCase() {
   if (!A || !cas) return;
   const sx0 = cas.fiche && cas.fiche.sexe, want = sx0 === 'Femme' ? 'femme' : 'homme';
-  tel = !!(cas.pop && cas.pop !== 'officine') && !cas.peau && !cas.visage;
+  tel = !!(cas.pop && !['officine', 'medecine'].includes(cas.pop)) && !cas.peau && !cas.visage;
   if (modele !== want && !tel) { if (!chargement || chargement.want !== want) { chargement = monter(want); chargement.want = want; } const c = chargement; await c; if (chargement === c) chargement = null; if (!A || (cas.fiche && cas.fiche.sexe === 'Femme' ? 'femme' : 'homme') !== modele) return; }
   A.stop(); if (A.quitterTension) A.quitterTension(); if (EQ) EQ.close(); if (RS) RS.close(); $('eqx').hidden = true; A.debout && A.debout();
   $('bp').hidden = false; $('bpm').hidden = $('bpx').hidden = true;
@@ -354,7 +369,7 @@ async function applyCase() {
   mast = A.femme && /mastectomie|ablation du sein|opération du sein|opérée du sein|cancer du sein opéré/.test(T) ? (/(mastectomie|sein)[^.]{0,40}droit|sein droit/.test(T) ? 'droite' : 'gauche') : null;
   if (A.mastectomie) A.mastectomie(mast);
   A.asym = cas.visage && cas.visage.side ? { side: cas.visage.side, central: !!cas.visage.central } : null;
-  if (A.alite) await A.alite(!!(cas.pop && cas.pop !== 'officine') && !tel, BASE + 'lit_hopital.glb');   // cas hospitalier : patient couché sur le lit
+  if (A.alite) await A.alite(!!(cas.pop && !['officine', 'medecine'].includes(cas.pop)) && !tel, BASE + 'lit_hopital.glb');   // cas hospitalier : patient couché sur le lit
   if (A._skin) {                                            // lésions de peau reprises de CorpoAtlas, d'après l'énoncé et la plainte
     try { await chargerPeau(BASE + 'peau.json'); } catch (e) { console.warn('peau.json', e); }
     A._peau = A._peau || createPeau(A); A._peau.effacer();

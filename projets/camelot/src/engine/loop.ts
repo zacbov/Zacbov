@@ -23,7 +23,7 @@ export class GameLoop {
   /** Simulation is paused (menus); rendering continues so UI and backgrounds stay alive. */
   paused = false
   /** Guards against the "spiral of death" after a tab was hidden or the device stalled. */
-  private readonly maxFrameSeconds = 0.25
+  private readonly maxFrameSeconds = 0.05
 
   constructor(private readonly callbacks: LoopCallbacks, stepHz = 60) {
     this.stepSeconds = 1 / stepHz

@@ -11,7 +11,6 @@ téléchargé dans `jeu/vendor/` (connexion requise une fois), puis le jeu fonct
 | Dossier | Rôle |
 | --- | --- |
 | `jeu/` | Racine du mini serveur : `index.html`, `styles/`, `fonts/`, `assets/`, `js/` (généré) |
-| `jeu/assets/models/` | Modèles 3D `.glb` |
 | `jeu/assets/data/evenements.json` | Événements et choix du récit : à éditer sans toucher au code |
 | `src/game/camelot-rules.ts` | Règles pures : grille 16×12, coûts, production, sauvegarde |
 | `src/game/camelot-story.ts` | Moteur d'événements pur : ères, jauges, drapeaux, effets |
@@ -27,10 +26,6 @@ téléchargé dans `jeu/vendor/` (connexion requise une fois), puis le jeu fonct
 2. `node tools/construire.mjs` (Node ≥ 22.13) régénère `jeu/js/`.
 3. Rechargez la page. Pour les tests : `npm install && npm test`.
 
-## Ajouter vos modèles 3D
-Déposez le `.glb` dans `jeu/assets/models/`, puis référencez-le dans `BUILDING_MODELS` (`src/game/camelot-assets.ts`).
-Un modèle `null` utilise un modèle procédural (c'est le cas du donjon pour l'instant).
-Pour un nouveau bâtiment, ajoutez-le dans `BUILDINGS` (`camelot-rules.ts`), `BUILDING_ICONS` et `BUILDING_MODELS`.
 
 ## Ères et récit
 Ère 1 Estoire de Merlin et Estoire del Saint Graal, ère 2 Lancelot (après le donjon), ère 3 Queste, ère 4 Mort le Roi Artu.
@@ -38,8 +33,7 @@ Un événement a une ère, des conditions (`requires`) et des choix aux effets (
 Chaque événement doit garder au moins un choix sans coût (vérifié par les tests).
 
 ## Licences
-Polices ManusCC0 : CC0. three.js : MIT. Textes : écrivez vos propres adaptations (les traductions modernes sont protégées).
-**Les 3 modèles `.glb` fournis dans le brouillon n'ont pas de licence documentée : vérifiez leur provenance avant de publier.**
+Polices ManusCC0 : CC0. three.js : MIT. Tous les bâtiments sont générés par le code (aucun modèle 3D importé, donc aucune question de licence). Textes : adaptations originales.
 
 ## Cité ronde (lot 1)
 - La cité est un cercle autour de la Table Ronde : trois anneaux (le 2e s'ouvre à 6 bâtiments, le 3e à 14), puis les remparts.
@@ -129,3 +123,27 @@ Polices ManusCC0 : CC0. three.js : MIT. Textes : écrivez vos propres adaptation
 ## Écrire de nouveaux événements
 - `jeu/assets/data/evenements.json` contient 100 événements répartis sur les cinq chapitres (dont plusieurs qui dépendent de vos choix précédents). Un événement par ligne, deux choix, chacun avec au moins un choix sans coût. Les tests vérifient les identifiants uniques, les chaînes `seen` et la présence d'un choix gratuit.
 - Pour ajouter un épisode de vos volumes : copiez une ligne, changez `id`, `volume`, `era` (1 à 5), `title`, `text`, `choices`, puis relancez `npm test` (ou simplement le jeu).
+
+## Directives de rendu et de fluidité (document « méthode-rendu-et-fluidité »)
+Livrable : **un seul fichier HTML** sans ressource externe. `npm install && npm run build` produit `dist/camelot.html` (esbuild, Three.js ^0.180 embarqué, CSS, polices en base64 et données du jeu intégrées, vérification de syntaxe, refus de toute référence externe). Pour le développement : `lancer.bat` / `./lancer.sh` (serveur local, sources transpilées par `node tools/construire.mjs`).
+
+| Directive | État |
+| --- | --- |
+| Tout procédural, aucune ressource externe | **Fait** : les trois modèles `.glb` du brouillon sont retirés ; bâtiments en boîtes à arêtes chanfreinées fusionnées en un maillage, couleurs de sommet, variation par graine et rotation par exemplaire (`src/render/`) ; polices et données intégrées au HTML |
+| Bus d'événements, domaines séparés | **Fait** : `engine/events.ts` ; le monde émet, l'interface écoute |
+| Gardes par sous-système, panneau d'erreur à l'écran | **Fait** : `engine/guard.ts`, `engine/fatal.ts` (une erreur est journalisée une fois et n'arrête pas le jeu) |
+| Pas de temps plafonné à 50 ms, pas d'allocation dans la boucle | **Fait** pour la boucle, les villageois et l'ambiance ; le reste des pointeurs reste à auditer |
+| Budget d'images : niveaux de qualité, résolution dynamique | **Fait** (logique testée) : 4 niveaux (low, medium, high, ultra), choix selon l'appareil, 45 images, stabilisation de 3,5 s, seuils 21,5 / 17,4 / 26 ms, plancher 0,6, délai doublant jusqu'à 60 s, rétrogradation après deux passages au plancher |
+| Compilation des shaders pendant le chargement | **Fait** (`renderer.compile`) ; non mesuré sur une vraie carte graphique |
+| Paramètres d'URL de débogage | **Fait** : `?q=low|medium|high|ultra`, `?dyn=0`, `?bloom=0`, `?fps=1`, `?seed=42` |
+| Chaîne de lumière | **Fait, non vérifié à l'image** : ciel procédural (dégradé, soleil, nuages) cuit en éclairage d'environnement (PMREM) ; un soleil ; ombres douces par variance (VSM, dès 2048) à la place du PCSS ; cadre d'ombre recalé sur la ville (il couvrait par erreur 10 × 10 unités) ; ombres de contact sous bâtiments et arbres à la place de l'occlusion ambiante d'écran ; exposition automatique mesurée ; scène en HDR avec anticrénelage ; passe finale (mélange ACES et neutre, étalonnage, aberration, vignette, grain, netteté, tramage) ; repli sur le rendu direct si la chaîne échoue |
+| Scènes de démonstration, captures, mesures | **Prêt, non exécuté** : `?vue=plan|table|foret|lac|remparts|batiments`, `?heure=0..1`, `?saison=0..3` et `npm run captures` (Playwright : captures et temps par image dans `captures/`) |
+| Textures procédurales avec usure | **Fait, non vérifié à l'image** : bruit en coordonnées du monde (herbe, terre, pierre, feuillage), salissure à la base des murs et coulures ; `?tex=0` pour les couper |
+| Sons procéduraux | **Non demandé** : vous aviez exclu l'audio (n° 47) |
+
+Mesure disponible : `npm run fumee` donne le temps de calcul de la logique et de la scène (faux Three.js, sans carte graphique) ; ce n'est pas un temps d'image réel.
+
+## Situer un défaut d'image
+Chaque étape de la chaîne se coupe par l'adresse : `?light=0` (ciel et éclairage d'environnement), `?ao=0` (ombres de contact), `?tex=0` (motifs de surface), `?grade=0` (passe finale), `?exposure=0` (exposition automatique), `?soft=0` (ombres douces), `?bloom=0`, `?dyn=0` (résolution dynamique), `?q=low|medium|high|ultra`. Réglages : `?key=0.25` (gris moyen visé : plus bas = image plus sombre), `?heure=0.3` (0,3 = midi), `?saison=2`. Les captures d'une même vue avec un seul interrupteur à la fois montrent quelle étape est en cause. Un shader qui ne compile pas déclenche un bandeau d'erreur et le repli sur le rendu direct.
+
+Non fait : occlusion ambiante d'écran (SSAO), ombres PCSS à pénombre variable, FXAA, mesures sur carte graphique réelle.

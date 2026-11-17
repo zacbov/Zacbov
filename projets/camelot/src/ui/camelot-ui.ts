@@ -19,13 +19,13 @@ export class CamelotUI {
   constructor(private readonly root: HTMLElement, private readonly city: CamelotCity) {
     this.root.innerHTML = this.template()
     this.root.addEventListener('click', this.handleClick)
-    this.city.onChange = () => this.update()
-    this.city.onToast = (message, tone = 'good') => this.toast(message, tone)
-    this.city.onWin = () => this.update()
-    this.city.onEvent = event => this.showEvent(event)
-    this.city.onHover = (text, x, y) => this.hint(text, x, y)
-    this.city.onDefeat = reason => this.showDefeat(reason)
-    this.city.onEnding = ending => this.showEnding(ending)
+    this.city.bus.on('change', () => this.update())
+    this.city.bus.on('toast', (message: string, tone: 'good' | 'warn' = 'good') => this.toast(message, tone))
+    this.city.bus.on('win', () => this.update())
+    this.city.bus.on('event', (event: StoryEvent) => this.showEvent(event))
+    this.city.bus.on('hover', (text: string | null, x: number, y: number) => this.hint(text, x, y))
+    this.city.bus.on('defeat', (reason: string) => this.showDefeat(reason))
+    this.city.bus.on('ending', (ending: string) => this.showEnding(ending))
     window.addEventListener('keydown', event => {
       if (event.code === 'Space') { event.preventDefault(); this.city.setSpeed(this.city.speed === 0 ? 1 : 0); this.update() }
       else if (event.code === 'Escape') { this.city.setTool('view'); this.update() }

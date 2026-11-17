@@ -1,3 +1,4 @@
+import { readData } from '../engine/data.js';
 export const GRID_WIDTH = 23;
 export const GRID_HEIGHT = 23;
 export const CENTER = 11;
@@ -1380,10 +1381,10 @@ export function loadLaws(list) {
 }
 export async function loadGameData() {
     try {
-        loadBuildings(await (await fetch('assets/data/batiments.json')).json());
+        loadBuildings(await readData('batiments', 'assets/data/batiments.json'));
     } catch  {}
     try {
-        loadLaws(await (await fetch('assets/data/lois.json')).json());
+        loadLaws(await readData('lois', 'assets/data/lois.json'));
     } catch  {}
 }
 export const JOBS = {

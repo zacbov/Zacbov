@@ -34,13 +34,13 @@ export class CamelotUI {
         this.city = city;
         this.root.innerHTML = this.template();
         this.root.addEventListener('click', this.handleClick);
-        this.city.onChange = ()=>this.update();
-        this.city.onToast = (message, tone = 'good')=>this.toast(message, tone);
-        this.city.onWin = ()=>this.update();
-        this.city.onEvent = (event)=>this.showEvent(event);
-        this.city.onHover = (text, x, y)=>this.hint(text, x, y);
-        this.city.onDefeat = (reason)=>this.showDefeat(reason);
-        this.city.onEnding = (ending)=>this.showEnding(ending);
+        this.city.bus.on('change', ()=>this.update());
+        this.city.bus.on('toast', (message, tone = 'good')=>this.toast(message, tone));
+        this.city.bus.on('win', ()=>this.update());
+        this.city.bus.on('event', (event)=>this.showEvent(event));
+        this.city.bus.on('hover', (text, x, y)=>this.hint(text, x, y));
+        this.city.bus.on('defeat', (reason)=>this.showDefeat(reason));
+        this.city.bus.on('ending', (ending)=>this.showEnding(ending));
         window.addEventListener('keydown', (event)=>{
             if (event.code === 'Space') {
                 event.preventDefault();

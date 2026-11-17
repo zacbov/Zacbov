@@ -38,7 +38,7 @@ export function parseSave(raw) {
         muted: data.muted === true,
         sensitivity: typeof data.sensitivity === 'number' && data.sensitivity >= 0.2 && data.sensitivity <= 3 ? data.sensitivity : base.sensitivity,
         invertY: data.invertY === true,
-        quality: data.quality === 'low' || data.quality === 'medium' || data.quality === 'high' ? data.quality : base.quality,
+        quality: data.quality === 'low' || data.quality === 'medium' || data.quality === 'high' || data.quality === 'ultra' ? data.quality : base.quality,
         reducedMotion: data.reducedMotion === true,
         tutorialDone: data.tutorialDone === true,
         playerName: typeof data.playerName === 'string' && data.playerName.trim() ? data.playerName.trim().slice(0, 16) : base.playerName,

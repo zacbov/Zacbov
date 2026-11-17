@@ -1,6 +1,11 @@
 import { ghost } from './ghost.mjs'
 const ctor = () => class { constructor() { return ghost() } }
 export const Box3 = ctor()
+export const WebGLRenderTarget = ctor()
+export const PMREMGenerator = ctor()
+export const ShaderMaterial = ctor()
+export const BufferGeometry = ctor()
+export const Float32BufferAttribute = ctor()
 export const BoxGeometry = ctor()
 export const CanvasTexture = ctor()
 export const CircleGeometry = ctor()
@@ -39,3 +44,4 @@ export const PCFSoftShadowMap = 2
 export const RepeatWrapping = 1000
 export const SRGBColorSpace = "srgb"
 export const DoubleSide = 2
+export const BackSide = 1

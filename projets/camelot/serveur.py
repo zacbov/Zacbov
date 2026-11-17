@@ -4,15 +4,15 @@ Au premier démarrage, télécharge three.js (une seule fois) dans jeu/vendor/, 
 import functools, http.server, os, re, sys, threading, urllib.request, webbrowser
 
 RACINE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jeu")
-SOURCE = "https://cdn.jsdelivr.net/npm/three@0.186.1/"
+SOURCE = "https://cdn.jsdelivr.net/npm/three@0.180.0/"
 DEST = os.path.join(RACINE, "vendor", "three")
 POINTS_ENTREE = [
     "build/three.module.js",
-    "examples/jsm/loaders/GLTFLoader.js",
     "examples/jsm/postprocessing/EffectComposer.js",
     "examples/jsm/postprocessing/RenderPass.js",
     "examples/jsm/postprocessing/UnrealBloomPass.js",
     "examples/jsm/postprocessing/OutputPass.js",
+    "examples/jsm/postprocessing/ShaderPass.js",
 ]
 
 def telecharger(chemin, vus):

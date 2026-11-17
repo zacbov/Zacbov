@@ -22,24 +22,3 @@ export const BUILDING_ICONS: Record<BuildingId, string> = {
   market: icon('<path d="M5 12h22l-2-6H7ZM7 12v14M25 12v14M5 26h22M11 18h10"/>'),
   hall: icon('<path d="M4 12 16 5l12 7ZM7 14v11M13 14v11M19 14v11M25 14v11M4 27h24"/>'),
 }
-
-/** Table des modèles 3D. Déposez un .glb dans jeu/assets/models/ et référencez-le ici (null = modèle procédural). */
-export const BUILDING_MODELS: Record<BuildingId, string | null> = {
-  road: null,
-  cottage: 'assets/models/camelot-cottage.glb',
-  farm: null,
-  warehouse: null,
-  fishery: null,
-  pasture: null,
-  lodge: null,
-  bakery: null,
-  carpentry: null,
-  sawmill: 'assets/models/camelot-sawmill.glb',
-  quarry: 'assets/models/camelot-quarry.glb',
-  ramparts: null,
-  keep: null,
-  cathedral: null,
-  tavern: null,
-  market: null,
-  hall: null,
-}

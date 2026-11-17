@@ -1,3 +1,5 @@
+import { readData } from '../engine/data'
+
 export const GRID_WIDTH = 23
 export const GRID_HEIGHT = 23
 export const CENTER = 11
@@ -619,8 +621,8 @@ export function loadLaws(list: unknown): void {
 }
 /** Charge batiments.json et lois.json ; en cas d'échec, les valeurs par défaut restent en place. */
 export async function loadGameData(): Promise<void> {
-  try { loadBuildings(await (await fetch('assets/data/batiments.json')).json()) } catch { /* valeurs par défaut */ }
-  try { loadLaws(await (await fetch('assets/data/lois.json')).json()) } catch { /* valeurs par défaut */ }
+  try { loadBuildings(await readData('batiments', 'assets/data/batiments.json')) } catch { /* valeurs par défaut */ }
+  try { loadLaws(await readData('lois', 'assets/data/lois.json')) } catch { /* valeurs par défaut */ }
 }
 
 /** Postes à pourvoir par bâtiment productif. */

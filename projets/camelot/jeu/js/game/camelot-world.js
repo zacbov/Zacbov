@@ -1,8 +1,16 @@
 import * as THREE from 'three';
 import { CONFIG } from './camelot-config.js';
-import { Assets } from '../engine/assets.js';
+import { EventBus } from '../engine/events.js';
+import { guard, reportOnce } from '../engine/guard.js';
+import { stepExposure, targetExposure } from '../engine/exposure.js';
+import { flags } from '../render/flags.js';
+import { skyColors } from '../render/palette.js';
+import { SkyRig } from '../render/sky.js';
+import { applySurface } from '../render/surface.js';
+import { readData } from '../engine/data.js';
+import { proceduralModel } from '../render/procedural.js';
 import { createSmoke, smokeAlpha, smokeSize, stepSmoke } from './camelot-fx.js';
-import { AVAILABLE_BUILDINGS, BUILDING_MODELS } from './camelot-assets.js';
+import { AVAILABLE_BUILDINGS } from './camelot-assets.js';
 import { CHAPTERS, advanceChapter, STORY_SAVE_KEY, STORY_TICK_SECONDS, applyChoice, canChoose as storyCanChoose, initialStory, pickEvent, restoreStory } from './camelot-story.js';
 import { BUILDINGS, CITY_SAVE_KEY, ECONOMY_TICK_SECONDS, GRID_HEIGHT, GRID_WIDTH, canAfford, checkPlacement, definition, initialCityState, isUnlocked, placeBuilding, population, produceResources, restoreCityState, LAWS, SEASONS, SPELLS, adoptLaw, applyCityEffects, castSpell as castSpellRule, seasonOf, BUILD_TIME, CENTER, DEPOSITS, fortifyWalls, mendWalls, recruitSoldier, setStance, DESTINATIONS, sendExpedition as sendRule, caravanOpen, checkMove, repairBuilding, repairCost, trade as tradeRule, wearOf, depositAt, efficiency, moveBuilding, moveCost, roadDistances, MAX_LEVEL, accessCell, advanceConstruction, demolishBuilding, isComplete, levelOf, roadPath, upgradeBuilding, upgradeCost, KNIGHTS, RADIUS, ringOf, ringUnlocked, sectorOf, terrainAt } from './camelot-rules.js';
 const CELL = 1.15;
@@ -104,11 +112,6 @@ export class CamelotCity {
     camera = new THREE.PerspectiveCamera(36, 1, 0.1, 200);
     state;
     selectedBuilding = 'sawmill';
-    onChange;
-    onToast;
-    onWin;
-    onEvent;
-    onHover;
     ghost = null;
     ghostKind = null;
     influence = null;
@@ -136,8 +139,6 @@ export class CamelotCity {
     tilesFull = null;
     sectorLabels = [];
     wallMaterial = null;
-    onDefeat;
-    onEnding;
     defeated = false;
     angry = false;
     season = -1;
@@ -148,7 +149,21 @@ export class CamelotCity {
     events = [];
     pendingEvent = null;
     storyClock = 0;
-    assets = new Assets();
+    bus = new EventBus();
+    seed = 1;
+    fixedTime = null;
+    debugSeason = null;
+    exposureKey = 0.32;
+    exposure = 1;
+    exposureTarget = 1;
+    exposureClock = 0;
+    exposureBroken = false;
+    sky = null;
+    environmentClock = 0;
+    bakedLight = -1;
+    blobGeometry = null;
+    blobMaterial = null;
+    scratch = new THREE.Vector3();
     prototypes = new Map();
     placedMeshes = new Map();
     raycaster = new THREE.Raycaster();
@@ -187,8 +202,7 @@ export class CamelotCity {
             tasks.push({
                 label: `Préparation : ${definition.name.toLowerCase()}`,
                 run: async ()=>{
-                    const url = BUILDING_MODELS[definition.id];
-                    const model = url ? (await this.assets.gltf(url)).scene.clone(true) : proceduralModel(definition.id);
+                    const model = proceduralModel(definition.id, this.seed);
                     model.traverse((object)=>{
                         if (object.isMesh) {
                             const mesh = object;
@@ -209,15 +223,20 @@ export class CamelotCity {
             onProgress(finished / tasks.length, task.label);
         }));
         try {
-            this.events = await (await fetch('assets/data/evenements.json')).json();
+            this.events = await readData('evenements', 'assets/data/evenements.json');
         } catch  {
             this.events = [];
         }
         this.ready = true;
         this.syncMeshes();
+        guard('ciel', ()=>{
+            this.updateLight(0);
+            this.sky?.bake(this.scene);
+        });
+        guard('compilation', ()=>this.renderer.gl?.compile(this.scene, this.camera));
         this.updateHover();
         onProgress(1, 'Les portes de la cité sont ouvertes.');
-        this.onChange?.();
+        this.bus.emit('change');
     }
     get buildingCount() {
         return this.state.buildings.filter((building)=>building.kind !== 'road').length;
@@ -249,9 +268,9 @@ export class CamelotCity {
         while(this.checkChapter()){}
         this.pendingEvent = null;
         this.save();
-        this.onToast?.(choice.result, 'good');
-        if (choice.effects.ending && next.story.ending) this.onEnding?.(next.story.ending);
-        this.onChange?.();
+        this.bus.emit('toast', choice.result, 'good');
+        if (choice.effects.ending && next.story.ending) this.bus.emit('ending', next.story.ending);
+        this.bus.emit('change');
     }
     canChoose(kind) {
         return isUnlocked(this.state, kind) && canAfford(this.state, kind);
@@ -266,16 +285,16 @@ export class CamelotCity {
         else if (this.overlay === 'sectors') this.overlay = 'none';
         this.refreshOverlay();
         this.updateHover();
-        this.onChange?.();
+        this.bus.emit('change');
     }
     setSpeed(speed) {
         this.speed = Math.max(0, Math.min(3, Math.round(speed)));
-        this.onChange?.();
+        this.bus.emit('change');
     }
     setOverlay(mode) {
         this.overlay = mode;
         this.refreshOverlay();
-        this.onChange?.();
+        this.bus.emit('change');
     }
     refreshOverlay() {
         for (const child of [
@@ -334,14 +353,15 @@ export class CamelotCity {
             });
         }
     }
-    updateLight() {
+    seasonIndex() {
+        return this.debugSeason ?? seasonOf(this.state);
+    }
+    updateLight(dt) {
         if (!this.sun || !this.hemi) return;
-        const t = (((this.state.tick ?? 0) + this.economyClock / ECONOMY_TICK_SECONDS) % DAY_TICKS / DAY_TICKS + 0.1) % 1;
+        const t = this.fixedTime ?? (((this.state.tick ?? 0) + this.economyClock / ECONOMY_TICK_SECONDS) % DAY_TICKS / DAY_TICKS + 0.1) % 1;
         const u = t / 0.6;
         const day = u <= 1 ? Math.sin(Math.PI * u) : 0;
         const light = Math.min(1, day * 1.6);
-        this.sun.intensity = 0.25 + 2.85 * light;
-        this.hemi.intensity = 0.55 + 1.6 * light;
         if (u <= 1) {
             this.sun.position.set(-20 * Math.cos(Math.PI * u), 6 + 16 * Math.sin(Math.PI * u), 13);
             this.sun.color.set('#ffb36b').lerp(NOON, Math.min(1, day * 2));
@@ -349,9 +369,94 @@ export class CamelotCity {
             this.sun.position.set(0, 14, 10);
             this.sun.color.set('#7f95d6');
         }
-        const sky = SEASON_LOOKS[Math.max(0, this.season)].sky;
-        this.scene.background.set(sky).multiplyScalar(0.18 + 0.82 * light);
-        this.scene.fog?.color.set(sky).multiplyScalar(0.18 + 0.82 * light);
+        const season = this.seasonIndex();
+        const sky = this.sky;
+        if (!sky) {
+            this.sun.intensity = 0.25 + 2.85 * light;
+            this.hemi.intensity = 0.55 + 1.6 * light;
+            const tint = SEASON_LOOKS[season].sky;
+            this.scene.background.set(tint).multiplyScalar(0.18 + 0.82 * light);
+            this.scene.fog?.color.set(tint).multiplyScalar(0.18 + 0.82 * light);
+            return;
+        }
+        this.sun.intensity = 0.15 + 2.7 * light;
+        this.hemi.intensity = 0.25 + 0.45 * light;
+        const palette = skyColors(u <= 1 ? Math.sin(Math.PI * u) * 0.95 - 0.04 : -0.35, season);
+        const direction = this.scratch.copy(this.sun.position).normalize();
+        if (u > 1) direction.set(0, -0.4, 0.3).normalize();
+        sky.update(direction, palette, this.clock);
+        this.scene.fog?.color.setRGB(...palette.horizon);
+        this.scene.environmentIntensity = 0.2 + 0.7 * light;
+        this.environmentClock += dt;
+        if (this.environmentClock > 1.5 && Math.abs(light - this.bakedLight) > 0.06) {
+            this.environmentClock = 0;
+            this.bakedLight = light;
+            sky.bake(this.scene);
+        }
+    }
+    updateExposure(dt) {
+        const renderer = this.renderer;
+        if (!flags.exposure || this.exposureBroken || !renderer.postProcessing) return;
+        this.exposureClock += dt;
+        if (this.exposureClock >= 0.5) {
+            this.exposureClock = 0;
+            try {
+                this.exposureTarget = targetExposure(renderer.measureLuminance(this.scene, this.camera), this.exposureKey);
+            } catch (error) {
+                this.exposureBroken = true;
+                reportOnce('exposition', error);
+            }
+        }
+        this.exposure = stepExposure(this.exposure, this.exposureTarget, dt);
+        renderer.setExposure(this.exposure);
+    }
+    debugView(name) {
+        const views = {
+            plan: [
+                0,
+                0,
+                1.45
+            ],
+            table: [
+                0,
+                0,
+                0.62
+            ],
+            foret: [
+                6.5,
+                4,
+                0.62
+            ],
+            lac: [
+                -8,
+                1.2,
+                0.62
+            ],
+            remparts: [
+                11,
+                0,
+                0.7
+            ],
+            batiments: [
+                0,
+                7,
+                0.95
+            ]
+        };
+        const view = views[name];
+        if (!view) return;
+        this.target.set(view[0], 0, view[1]);
+        this.zoom = view[2];
+        this.updateCamera();
+        if (name === 'batiments') this.showcase();
+    }
+    showcase() {
+        BUILDINGS.forEach((entry, index)=>{
+            const root = this.makeRoot(entry.id);
+            if (!root) return;
+            root.position.set((index - (BUILDINGS.length - 1) / 2) * 1.5, 0.05, 7);
+            this.scene.add(root);
+        });
     }
     setTool(tool) {
         this.tool = tool;
@@ -362,24 +467,24 @@ export class CamelotCity {
             this.refreshOverlay();
         }
         this.updateHover();
-        this.onChange?.();
+        this.bus.emit('change');
     }
     checkChapter() {
         const next = advanceChapter(this.story, this.state);
         if (next.era === this.story.era) return false;
         this.story = next;
         const chapter = CHAPTERS[next.era - 1];
-        this.onToast?.(`Chapitre ${next.era} : ${chapter.volume}. ${chapter.goal}`, 'good');
+        this.bus.emit('toast', `Chapitre ${next.era} : ${chapter.volume}. ${chapter.goal}`, 'good');
         return true;
     }
     castSpell(id) {
         if (this.story.era < 2) {
-            this.onToast?.('Merlin n’est pas encore venu à Camelot.', 'warn');
+            this.bus.emit('toast', 'Merlin n’est pas encore venu à Camelot.', 'warn');
             return;
         }
         const result = castSpellRule(this.state, id);
         if (!result.ok) {
-            this.onToast?.(result.reason === 'gone' ? 'Merlin n’est plus là.' : 'Il faut 15 deniers pour payer l’enchanteur.', 'warn');
+            this.bus.emit('toast', result.reason === 'gone' ? 'Merlin n’est plus là.' : 'Il faut 15 deniers pour payer l’enchanteur.', 'warn');
             return;
         }
         Object.assign(this.state, {
@@ -388,30 +493,33 @@ export class CamelotCity {
             mood: result.state.mood,
             merlin: result.state.merlin
         });
-        this.onToast?.(`${SPELLS[id].name} !`, 'good');
-        if (this.state.merlin === 0) this.onToast?.('Viviane referme son cercle d’air : Merlin ne reviendra pas.', 'warn');
+        this.bus.emit('toast', `${SPELLS[id].name} !`, 'good');
+        if (this.state.merlin === 0) this.bus.emit('toast', 'Viviane referme son cercle d’air : Merlin ne reviendra pas.', 'warn');
         this.save();
-        this.onChange?.();
+        this.bus.emit('change');
     }
     adoptLaw(id) {
         const result = adoptLaw(this.state, id);
         if (!result.ok) {
-            this.onToast?.(result.reason === 'hall' ? 'Le Codex se rédige à l’Hôtel de Ville.' : 'Une loi de ce groupe est déjà adoptée.', 'warn');
+            this.bus.emit('toast', result.reason === 'hall' ? 'Le Codex se rédige à l’Hôtel de Ville.' : 'Une loi de ce groupe est déjà adoptée.', 'warn');
             return;
         }
         this.state.laws = result.state.laws;
-        this.onToast?.(`Loi adoptée : ${LAWS.find((law)=>law.id === id).name}.`, 'good');
+        this.bus.emit('toast', `Loi adoptée : ${LAWS.find((law)=>law.id === id).name}.`, 'good');
         this.save();
-        this.onChange?.();
+        this.bus.emit('change');
     }
     step(dt) {
+        guard('simulation', ()=>this.stepUnsafe(dt));
+    }
+    stepUnsafe(dt) {
         if (!this.ready) return;
         if (this.state.lost) {
             if (!this.defeated) {
                 this.defeated = true;
                 this.pendingEvent = null;
                 this.save();
-                this.onDefeat?.(this.state.lost);
+                this.bus.emit('defeat', this.state.lost);
             }
             return;
         }
@@ -421,7 +529,7 @@ export class CamelotCity {
         if (this.storyClock >= STORY_TICK_SECONDS && !this.pendingEvent) {
             this.storyClock = 0;
             this.pendingEvent = pickEvent(this.events, this.story, this.state);
-            if (this.pendingEvent) this.onEvent?.(this.pendingEvent);
+            if (this.pendingEvent) this.bus.emit('event', this.pendingEvent);
         }
         this.economyClock += scaled;
         if (this.economyClock >= ECONOMY_TICK_SECONDS) {
@@ -431,34 +539,34 @@ export class CamelotCity {
             for (const building of finished){
                 if (building.kind === 'keep') {
                     this.story.era = Math.max(this.story.era, 2);
-                    this.onToast?.('Le donjon est dressé. Camelot peut grandir.', 'good');
-                    this.onWin?.();
+                    this.bus.emit('toast', 'Le donjon est dressé. Camelot peut grandir.', 'good');
+                    this.bus.emit('win');
                 } else {
-                    this.onToast?.(`${definition(building.kind).name} achevé.`, 'good');
+                    this.bus.emit('toast', `${definition(building.kind).name} achevé.`, 'good');
                 }
             }
             const report = this.state.report;
             if (report && this.lastReport) {
-                if (report.season !== this.lastReport.season) this.onToast?.(`${SEASONS[report.season]} : ${SEASON_NOTES[report.season]}`, 'good');
-                if (report.starving && !this.lastReport.starving) this.onToast?.('Famine : les villageois ont faim, la production ralentit.', 'warn');
-                if (report.cold && !this.lastReport.cold) this.onToast?.('Le bois de chauffe manque : le froid ralentit le travail.', 'warn');
-                if (report.unpaid && !this.lastReport.unpaid) this.onToast?.('La caisse est vide : l’entretien n’est plus payé.', 'warn');
-                for (const kind of report.exhausted ?? [])if (!this.lastReport.exhausted?.includes(kind)) this.onToast?.(kind === 'sawmill' ? 'La forêt voisine est épuisée : la scierie chôme.' : 'Le rocher est épuisé : la carrière chôme.', 'warn');
+                if (report.season !== this.lastReport.season) this.bus.emit('toast', `${SEASONS[report.season]} : ${SEASON_NOTES[report.season]}`, 'good');
+                if (report.starving && !this.lastReport.starving) this.bus.emit('toast', 'Famine : les villageois ont faim, la production ralentit.', 'warn');
+                if (report.cold && !this.lastReport.cold) this.bus.emit('toast', 'Le bois de chauffe manque : le froid ralentit le travail.', 'warn');
+                if (report.unpaid && !this.lastReport.unpaid) this.bus.emit('toast', 'La caisse est vide : l’entretien n’est plus payé.', 'warn');
+                for (const kind of report.exhausted ?? [])if (!this.lastReport.exhausted?.includes(kind)) this.bus.emit('toast', kind === 'sawmill' ? 'La forêt voisine est épuisée : la scierie chôme.' : 'Le rocher est épuisé : la carrière chôme.', 'warn');
             }
             if (report?.crisis) {
                 const { kind, repelled } = report.crisis;
-                if (kind === 'raid') this.onToast?.(repelled ? 'Assaut saxon repoussé par vos remparts.' : 'Les remparts cèdent : l’assaut saxon pille la cité !', repelled ? 'good' : 'warn');
-                else this.onToast?.(kind === 'storm' ? 'Grande tempête : une partie des stocks est perdue.' : 'La fièvre noire frappe le peuple.', 'warn');
+                if (kind === 'raid') this.bus.emit('toast', repelled ? 'Assaut saxon repoussé par vos remparts.' : 'Les remparts cèdent : l’assaut saxon pille la cité !', repelled ? 'good' : 'warn');
+                else this.bus.emit('toast', kind === 'storm' ? 'Grande tempête : une partie des stocks est perdue.' : 'La fièvre noire frappe le peuple.', 'warn');
             }
             for (const trip of report?.expeditions ?? []){
                 const name = KNIGHTS.find((entry)=>entry.id === trip.knight).name, place = DESTINATIONS[trip.dest].name.toLowerCase();
-                this.onToast?.(trip.outcome === 'success' ? `${name} revient de l’expédition (${place}) avec du butin.` : trip.outcome === 'wounded' ? `${name} revient blessé de l’expédition (${place}), les mains vides.` : `${name} ne reviendra pas de l’expédition (${place}).`, trip.outcome === 'success' ? 'good' : 'warn');
+                this.bus.emit('toast', trip.outcome === 'success' ? `${name} revient de l’expédition (${place}) avec du butin.` : trip.outcome === 'wounded' ? `${name} revient blessé de l’expédition (${place}), les mains vides.` : `${name} ne reviendra pas de l’expédition (${place}).`, trip.outcome === 'success' ? 'good' : 'warn');
             }
             const angry = this.state.mood.discontent >= 70;
-            if (angry && !this.angry) this.onToast?.('Le peuple gronde : la production baisse.', 'warn');
+            if (angry && !this.angry) this.bus.emit('toast', 'Le peuple gronde : la production baisse.', 'warn');
             this.angry = angry;
             const open = caravanOpen(this.state);
-            if (this.caravan !== null && open !== this.caravan) this.onToast?.(open ? 'Une caravane de marchands s’installe près du marché : le commerce est ouvert.' : 'La caravane repart.', 'good');
+            if (this.caravan !== null && open !== this.caravan) this.bus.emit('toast', open ? 'Une caravane de marchands s’installe près du marché : le commerce est ouvert.' : 'La caravane repart.', 'good');
             this.caravan = open;
             while(this.checkChapter()){}
             this.lastReport = report ?? null;
@@ -466,7 +574,7 @@ export class CamelotCity {
             if (finished.length || produced.wood || produced.stone || produced.food) {
                 this.save();
                 this.updateHover();
-                this.onChange?.();
+                this.bus.emit('change');
             }
         }
         this.saveTimer += dt;
@@ -482,10 +590,12 @@ export class CamelotCity {
             this.target.z -= this.input.move.y * speed;
             this.updateCamera();
         }
-        this.moveVillagers(frameSeconds * this.speed);
-        this.updateLight();
-        this.updateAtmosphere(frameSeconds);
-        this.renderer.render(this.scene, this.camera);
+        guard('villageois', ()=>this.moveVillagers(frameSeconds * this.speed));
+        guard('lumière', ()=>this.updateLight(frameSeconds));
+        guard('ambiance', ()=>this.updateAtmosphere(frameSeconds));
+        guard('exposition', ()=>this.updateExposure(frameSeconds));
+        this.sky?.follow(this.camera.position);
+        this.renderer.render(this.scene, this.camera, frameSeconds);
     }
     reset() {
         this.state.resources = initialCityState().resources;
@@ -510,10 +620,11 @@ export class CamelotCity {
         this.syncMeshes();
         this.save();
         this.updateHover();
-        this.onChange?.();
-        this.onToast?.('Un nouveau plan de ville vous attend.', 'good');
+        this.bus.emit('change');
+        this.bus.emit('toast', 'Un nouveau plan de ville vous attend.', 'good');
     }
     dispose() {
+        this.sky?.dispose();
         this.canvas.removeEventListener('pointermove', this.handlePointerMove);
         this.canvas.removeEventListener('pointermove', this.handleDragMove);
         this.canvas.removeEventListener('click', this.handleCanvasClick);
@@ -525,7 +636,22 @@ export class CamelotCity {
     }
     setupScene() {
         this.scene.background = new THREE.Color('#b9c7a4');
-        this.scene.fog = new THREE.Fog('#b9c7a4', 60, 130);
+        this.scene.fog = new THREE.Fog('#b9c7a4', 62, 118);
+        if (flags.light) {
+            this.sky = new SkyRig(this.renderer.gl);
+            this.scene.add(this.sky.mesh);
+        }
+        if (flags.ao) {
+            this.blobGeometry = new THREE.PlaneGeometry(1, 1);
+            this.blobMaterial = new THREE.MeshBasicMaterial({
+                map: makeBlobTexture(),
+                transparent: true,
+                depthWrite: false,
+                opacity: 0.55,
+                polygonOffset: true,
+                polygonOffsetFactor: -2
+            });
+        }
         this.hemi = new THREE.HemisphereLight('#f9eed2', '#52674a', 2.15);
         this.scene.add(this.hemi, this.overlayGroup);
         const sun = new THREE.DirectionalLight('#fff2d2', 3.1);
@@ -533,31 +659,37 @@ export class CamelotCity {
         sun.position.set(-11, 22, 13);
         sun.castShadow = true;
         sun.shadow.mapSize.set(this.renderer.shadowMapSize, this.renderer.shadowMapSize);
-        sun.shadow.camera.left = -18;
-        sun.shadow.camera.right = 18;
-        sun.shadow.camera.top = 18;
-        sun.shadow.camera.bottom = -18;
-        sun.shadow.bias = -0.00035;
+        sun.shadow.camera.left = -14;
+        sun.shadow.camera.right = 14;
+        sun.shadow.camera.top = 14;
+        sun.shadow.camera.bottom = -14;
+        sun.shadow.camera.near = 1;
+        sun.shadow.camera.far = 70;
+        sun.shadow.camera.updateProjectionMatrix();
+        sun.shadow.bias = -0.00012;
+        sun.shadow.normalBias = 0.02;
+        sun.shadow.radius = 4;
+        sun.shadow.blurSamples = 16;
         this.scene.add(sun);
         const boardWidth = GRID_WIDTH * CELL;
         const boardHeight = GRID_HEIGHT * CELL;
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(boardWidth + 24, boardHeight + 24), new THREE.MeshStandardMaterial({
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(boardWidth + 24, boardHeight + 24), applySurface(new THREE.MeshStandardMaterial({
             color: '#718d60',
             roughness: 1
-        }));
+        }), 'ground'));
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = -0.08;
         ground.receiveShadow = true;
         this.scene.add(ground);
         const tileGeometry = new THREE.BoxGeometry(CELL - 0.035, 0.075, CELL - 0.035);
-        const tiles = new THREE.InstancedMesh(tileGeometry, new THREE.MeshStandardMaterial({
+        const tiles = new THREE.InstancedMesh(tileGeometry, applySurface(new THREE.MeshStandardMaterial({
             color: '#ffffff',
             roughness: 1
-        }), GRID_WIDTH * GRID_HEIGHT);
-        const full = new THREE.InstancedMesh(new THREE.BoxGeometry(CELL, 0.075, CELL), new THREE.MeshStandardMaterial({
+        }), 'ground'), GRID_WIDTH * GRID_HEIGHT);
+        const full = new THREE.InstancedMesh(new THREE.BoxGeometry(CELL, 0.075, CELL), applySurface(new THREE.MeshStandardMaterial({
             color: '#ffffff',
             roughness: 1
-        }), GRID_WIDTH * GRID_HEIGHT);
+        }), 'ground'), GRID_WIDTH * GRID_HEIGHT);
         const matrix = new THREE.Matrix4(), color = new THREE.Color();
         const base = {
             plain: '#8da477',
@@ -569,7 +701,7 @@ export class CamelotCity {
         for(let z = 0; z < GRID_HEIGHT; z += 1){
             for(let x = 0; x < GRID_WIDTH; x += 1){
                 const ring = ringOf(x, z);
-                if (ring < 0) continue;
+                if (ring < 0 || ring === 4 && Math.hypot(x - CENTER, z - CENTER) > 10.45) continue;
                 const terrain = terrainAt(x, z);
                 matrix.makeTranslation((x + 0.5 - GRID_WIDTH / 2) * CELL, terrain === 'water' ? -0.09 : -0.035, (z + 0.5 - GRID_HEIGHT / 2) * CELL);
                 tiles.setMatrixAt(instance, matrix);
@@ -598,18 +730,18 @@ export class CamelotCity {
         this.buildAtmosphere();
     }
     plantBorderTrees() {
-        const trunkMaterial = new THREE.MeshStandardMaterial({
+        const trunkMaterial = applySurface(new THREE.MeshStandardMaterial({
             color: '#73563c',
             roughness: 1
-        });
+        }), 'foliage');
         const leafMaterials = [
             '#375940',
             '#486b48',
             '#587a4e'
-        ].map((color)=>new THREE.MeshStandardMaterial({
+        ].map((color)=>applySurface(new THREE.MeshStandardMaterial({
                 color,
                 roughness: 1
-            }));
+            }), 'foliage'));
         let seed = 9147;
         const random = ()=>{
             seed = seed * 16807 % 2147483647;
@@ -630,14 +762,21 @@ export class CamelotCity {
             }
             tree.position.set(x, 0, z);
             tree.scale.setScalar(size);
+            if (this.blobMaterial && this.blobGeometry) {
+                const blob = new THREE.Mesh(this.blobGeometry, this.blobMaterial);
+                blob.rotation.x = -Math.PI / 2;
+                blob.scale.setScalar(1.3);
+                blob.position.y = 0.03;
+                tree.add(blob);
+            }
             this.scene.add(tree);
             return tree;
         };
-        const rockMaterial = new THREE.MeshStandardMaterial({
+        const rockMaterial = applySurface(new THREE.MeshStandardMaterial({
             color: '#8b8a84',
             roughness: 1,
             flatShading: true
-        });
+        }), 'stone');
         for(let z = 0; z < GRID_HEIGHT; z += 1){
             for(let x = 0; x < GRID_WIDTH; x += 1){
                 if (ringOf(x, z) < 0) continue;
@@ -706,16 +845,16 @@ export class CamelotCity {
                 this.scene.add(water);
             }
         }
-        const hillMaterial = new THREE.MeshStandardMaterial({
-            color: '#6b8a5a',
+        const hillMaterial = applySurface(new THREE.MeshStandardMaterial({
+            color: '#71906a',
             roughness: 1,
             flatShading: true
-        });
-        for(let i = 0; i < 14; i += 1){
-            const angle = i / 14 * Math.PI * 2 + i % 3 * 0.11, reach = (17.5 + i % 4 * 1.6) * CELL, size = 3.2 + i % 5 * 0.9;
+        }), 'foliage');
+        for(let i = 0; i < 20; i += 1){
+            const angle = i / 20 * Math.PI * 2 + i % 3 * 0.11, reach = (19.5 + i % 4 * 2.2) * CELL, size = 1.5 + i % 5 * 0.45;
             const hill = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), hillMaterial);
-            hill.scale.set(size * 1.6, size * 0.7, size * 1.3);
-            hill.position.set(Math.cos(angle) * reach, -size * 0.25, Math.sin(angle) * reach);
+            hill.scale.set(size * 1.7, size * 0.55, size * 1.4);
+            hill.position.set(Math.cos(angle) * reach, -size * 0.18, Math.sin(angle) * reach);
             hill.rotation.y = i;
             hill.receiveShadow = true;
             this.scene.add(hill);
@@ -739,19 +878,19 @@ export class CamelotCity {
         }
     }
     buildCircle() {
-        const wallMaterial = new THREE.MeshStandardMaterial({
+        const wallMaterial = applySurface(new THREE.MeshStandardMaterial({
             color: '#a9a499',
             roughness: 1
-        });
+        }), 'wall');
         this.wallMaterial = wallMaterial;
-        const towerMaterial = new THREE.MeshStandardMaterial({
+        const towerMaterial = applySurface(new THREE.MeshStandardMaterial({
             color: '#8f8a7f',
             roughness: 1
-        });
-        const capMaterial = new THREE.MeshStandardMaterial({
+        }), 'wall');
+        const capMaterial = applySurface(new THREE.MeshStandardMaterial({
             color: '#7b3f3a',
             roughness: 1
-        });
+        }), 'wall');
         const reach = 10.3 * CELL, segments = 56;
         const segment = new THREE.BoxGeometry(2 * Math.PI * reach / segments * 1.03, 0.9, 0.34);
         for(let i = 0; i < segments; i += 1){
@@ -848,17 +987,17 @@ export class CamelotCity {
         if (this.moveSource === null) {
             const target = this.buildingAt(cell.x, cell.z);
             if (!target || target.kind === 'keep' || target.kind === 'road' || !isComplete(target)) {
-                this.onToast?.('Choisissez un bâtiment achevé (ni route, ni donjon).', 'warn');
+                this.bus.emit('toast', 'Choisissez un bâtiment achevé (ni route, ni donjon).', 'warn');
                 return;
             }
             this.moveSource = target.id;
-            this.onToast?.(`${definition(target.kind).name} : choisissez la nouvelle parcelle (${costText(moveCost(target))}).`, 'good');
+            this.bus.emit('toast', `${definition(target.kind).name} : choisissez la nouvelle parcelle (${costText(moveCost(target))}).`, 'good');
             this.updateHover();
             return;
         }
         const result = moveBuilding(this.state, this.moveSource, cell.x, cell.z);
         if (!result.result.ok) {
-            this.onToast?.(describe(result.result), 'warn');
+            this.bus.emit('toast', describe(result.result), 'warn');
             return;
         }
         const old = this.placedMeshes.get(this.moveSource);
@@ -869,22 +1008,22 @@ export class CamelotCity {
         this.state.resources = result.state.resources;
         this.state.buildings = result.state.buildings;
         this.moveSource = null;
-        this.onToast?.('Le chantier de déménagement commence.', 'good');
+        this.bus.emit('toast', 'Le chantier de déménagement commence.', 'good');
         this.syncMeshes();
         this.save();
         this.updateHover();
-        this.onChange?.();
+        this.bus.emit('change');
     }
     sendExpedition(knight, dest) {
         const result = sendRule(this.state, knight, dest);
         if (!result.ok) {
-            this.onToast?.(result.reason === 'dead' ? 'Ce chevalier n’est plus.' : result.reason === 'loyalty' ? 'Sa loyauté est trop faible pour qu’il accepte.' : 'Il est déjà parti.', 'warn');
+            this.bus.emit('toast', result.reason === 'dead' ? 'Ce chevalier n’est plus.' : result.reason === 'loyalty' ? 'Sa loyauté est trop faible pour qu’il accepte.' : 'Il est déjà parti.', 'warn');
             return;
         }
         this.state.expeditions = result.state.expeditions;
-        this.onToast?.(`${KNIGHTS.find((entry)=>entry.id === knight).name} part : ${DESTINATIONS[dest].name.toLowerCase()}.`, 'good');
+        this.bus.emit('toast', `${KNIGHTS.find((entry)=>entry.id === knight).name} part : ${DESTINATIONS[dest].name.toLowerCase()}.`, 'good');
         this.save();
-        this.onChange?.();
+        this.bus.emit('change');
     }
     defend(action) {
         const result = action === 'recruit' ? recruitSoldier(this.state) : action === 'fortify' ? fortifyWalls(this.state) : action === 'mend' ? mendWalls(this.state) : {
@@ -900,7 +1039,7 @@ export class CamelotCity {
                 max: 'Les murs ont atteint leur niveau maximal.',
                 fine: 'Les murs sont intacts.'
             };
-            this.onToast?.(reasons[result.reason ?? 'resources'], 'warn');
+            this.bus.emit('toast', reasons[result.reason ?? 'resources'], 'warn');
             return;
         }
         Object.assign(this.state, {
@@ -911,12 +1050,12 @@ export class CamelotCity {
         });
         this.syncMeshes();
         this.save();
-        this.onChange?.();
+        this.bus.emit('change');
     }
     cyclePriority(category) {
         this.state.priorities[category] = (this.state.priorities[category] + 1) % 3;
         this.save();
-        this.onChange?.();
+        this.bus.emit('change');
     }
     trade(action, resource) {
         const result = tradeRule(this.state, action, resource);
@@ -927,17 +1066,17 @@ export class CamelotCity {
                 stock: 'Pas assez de stock à vendre.',
                 cap: 'Vos entrepôts sont pleins.'
             };
-            this.onToast?.(reasons[result.reason ?? 'closed'], 'warn');
+            this.bus.emit('toast', reasons[result.reason ?? 'closed'], 'warn');
             return;
         }
         this.state.resources = result.state.resources;
         this.save();
-        this.onChange?.();
+        this.bus.emit('change');
     }
     setBuilderShare(share) {
         this.state.builderShare = Math.max(0.25, Math.min(0.75, share));
         this.save();
-        this.onChange?.();
+        this.bus.emit('change');
     }
     useTool(cell) {
         if (this.tool === 'move') {
@@ -946,28 +1085,28 @@ export class CamelotCity {
         }
         const target = this.buildingAt(cell.x, cell.z);
         if (!target) {
-            this.onToast?.('Aucun bâtiment sur cette parcelle.', 'warn');
+            this.bus.emit('toast', 'Aucun bâtiment sur cette parcelle.', 'warn');
             return;
         }
         const name = definition(target.kind).name;
         if (this.tool === 'repair') {
             const result = repairBuilding(this.state, target.id);
             if (!result.ok) {
-                this.onToast?.(result.reason === 'site' ? 'Le chantier n’est pas terminé.' : result.reason === 'fine' ? 'Ce bâtiment est en bon état.' : 'Les réserves sont insuffisantes.', 'warn');
+                this.bus.emit('toast', result.reason === 'site' ? 'Le chantier n’est pas terminé.' : result.reason === 'fine' ? 'Ce bâtiment est en bon état.' : 'Les réserves sont insuffisantes.', 'warn');
                 return;
             }
             this.state.resources = result.state.resources;
             this.state.buildings = result.state.buildings;
-            this.onToast?.(`${name} réparé.`, 'good');
+            this.bus.emit('toast', `${name} réparé.`, 'good');
         } else if (this.tool === 'demolish') {
             const result = demolishBuilding(this.state, target.id);
             if (!result.ok) {
-                this.onToast?.('Ce bâtiment ne peut pas être démoli.', 'warn');
+                this.bus.emit('toast', 'Ce bâtiment ne peut pas être démoli.', 'warn');
                 return;
             }
             this.state.resources = result.state.resources;
             this.state.buildings = result.state.buildings;
-            this.onToast?.(`${name} démoli : la moitié des matériaux est récupérée.`, 'good');
+            this.bus.emit('toast', `${name} démoli : la moitié des matériaux est récupérée.`, 'good');
         } else {
             const result = upgradeBuilding(this.state, target.id);
             if (!result.ok) {
@@ -977,18 +1116,18 @@ export class CamelotCity {
                     kind: 'Une route ne s’améliore pas.',
                     resources: 'Les réserves sont insuffisantes.'
                 };
-                this.onToast?.(reasons[result.reason ?? 'resources'], 'warn');
+                this.bus.emit('toast', reasons[result.reason ?? 'resources'], 'warn');
                 return;
             }
             this.state.resources = result.state.resources;
             this.state.buildings = result.state.buildings;
             this.state.walls = result.state.walls;
-            this.onToast?.(`${name} améliorée : niveau ${levelOf(this.buildingAt(cell.x, cell.z))}.`, 'good');
+            this.bus.emit('toast', `${name} améliorée : niveau ${levelOf(this.buildingAt(cell.x, cell.z))}.`, 'good');
         }
         this.syncMeshes();
         this.save();
         this.updateHover();
-        this.onChange?.();
+        this.bus.emit('change');
     }
     syncMeshes() {
         const ids = new Set(this.state.buildings.map((building)=>building.id));
@@ -1011,7 +1150,7 @@ export class CamelotCity {
             deposit.object.visible = ratio > 0.02;
             deposit.object.scale.setScalar(deposit.base * (0.35 + 0.65 * ratio));
         }
-        const cold = seasonOf(this.state) >= 2;
+        const cold = this.seasonIndex() >= 2;
         this.smokeSources = this.state.buildings.filter((building)=>isComplete(building) && (building.kind === 'bakery' || building.kind === 'lodge' || cold && (building.kind === 'cottage' || building.kind === 'tavern'))).map((building)=>{
             const center = this.cellCenter(building.x, building.z, definition(building.kind).footprint);
             return {
@@ -1026,7 +1165,7 @@ export class CamelotCity {
         this.refreshOverlay();
     }
     applySeason() {
-        const season = seasonOf(this.state);
+        const season = this.seasonIndex();
         if (season === this.season || !this.tiles) return;
         this.season = season;
         const look = SEASON_LOOKS[season];
@@ -1114,7 +1253,7 @@ export class CamelotCity {
                 this.assignVillager(villager);
                 continue;
             }
-            const delta = next.clone().sub(villager.mesh.position);
+            const delta = this.scratch.copy(next).sub(villager.mesh.position);
             delta.y = 0;
             const step = 1.1 * dt;
             if (delta.length() <= step) {
@@ -1140,6 +1279,7 @@ export class CamelotCity {
         if (!root) return;
         const size = definition(building.kind).footprint;
         root.position.copy(this.cellCenter(building.x, building.z, size)).setY(0.015);
+        if (building.kind !== 'road') root.rotation.y = (Math.imul(building.id, 2654435761) >>> 0) % 4 * (Math.PI / 2);
         root.userData.base = root.children[0].scale.clone();
         const frame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(size * CELL * 0.9, 1.9, size * CELL * 0.9)), new THREE.LineBasicMaterial({
             color: '#d9a441'
@@ -1147,6 +1287,13 @@ export class CamelotCity {
         frame.position.y = 0.95;
         root.userData.frame = frame;
         root.add(frame);
+        if (this.blobMaterial && this.blobGeometry && building.kind !== 'road') {
+            const blob = new THREE.Mesh(this.blobGeometry, this.blobMaterial);
+            blob.rotation.x = -Math.PI / 2;
+            blob.scale.setScalar(size * CELL * 1.5);
+            blob.position.y = 0.01;
+            root.add(blob);
+        }
         this.scene.add(root);
         this.placedMeshes.set(building.id, root);
     }
@@ -1166,7 +1313,7 @@ export class CamelotCity {
             } : null;
         }
         this.updateHover();
-        this.onHover?.(this.tool !== 'build' && !(this.tool === 'move' && this.moveSource !== null) ? this.toolHint : this.ghostCheck.ok ? this.ghostInfo : describe(this.ghostCheck), event.clientX, event.clientY);
+        this.bus.emit('hover', this.tool !== 'build' && !(this.tool === 'move' && this.moveSource !== null) ? this.toolHint : this.ghostCheck.ok ? this.ghostInfo : describe(this.ghostCheck), event.clientX, event.clientY);
     };
     handleCanvasClick = (event)=>{
         if (!this.ready || event.button !== 0 || !this.hoverCell || this.state.lost || this.tool === 'view') return;
@@ -1177,7 +1324,7 @@ export class CamelotCity {
         }
         const result = placeBuilding(this.state, this.selectedBuilding, cell.x, cell.z);
         if (!result.result.ok) {
-            this.onToast?.(describe(result.result), 'warn');
+            this.bus.emit('toast', describe(result.result), 'warn');
             return;
         }
         const built = result.state.buildings[result.state.buildings.length - 1];
@@ -1185,10 +1332,10 @@ export class CamelotCity {
         this.state.buildings = result.state.buildings;
         this.state.won = result.state.won;
         this.syncMeshes();
-        this.onToast?.(built.kind === 'road' ? 'Route tracée.' : `${definition(built.kind).name} : le chantier commence.`, 'good');
+        this.bus.emit('toast', built.kind === 'road' ? 'Route tracée.' : `${definition(built.kind).name} : le chantier commence.`, 'good');
         this.save();
         this.updateHover();
-        this.onChange?.();
+        this.bus.emit('change');
     };
     handleWheel = (event)=>{
         event.preventDefault();
@@ -1373,125 +1520,6 @@ function safeRead(key) {
         return null;
     }
 }
-const LOOKS = {
-    road: {
-        w: 1,
-        h: 0.05,
-        wall: '#b99b6a'
-    },
-    warehouse: {
-        w: 1,
-        h: 0.6,
-        wall: '#9c7a52',
-        roof: '#5b4636'
-    },
-    fishery: {
-        w: 1,
-        h: 0.5,
-        wall: '#7f9aa8',
-        roof: '#4a5f7a'
-    },
-    pasture: {
-        w: 1,
-        h: 0.4,
-        wall: '#b6a06c',
-        roof: '#7a6a45'
-    },
-    lodge: {
-        w: 1,
-        h: 0.5,
-        wall: '#8a6a45',
-        roof: '#5a3f2a'
-    },
-    bakery: {
-        w: 1,
-        h: 0.6,
-        wall: '#c9a273',
-        roof: '#8c4b32'
-    },
-    carpentry: {
-        w: 1,
-        h: 0.6,
-        wall: '#a07a4f',
-        roof: '#5f4a3a'
-    },
-    farm: {
-        w: 1,
-        h: 0.35,
-        wall: '#c9a35b',
-        roof: '#8a6a3a'
-    },
-    ramparts: {
-        w: 0.9,
-        h: 1.7,
-        wall: '#a9a499',
-        roof: '#7b3f3a'
-    },
-    keep: {
-        w: 2,
-        h: 1.4,
-        wall: '#a8a39a',
-        roof: '#7b3f3a',
-        towers: 4
-    },
-    cathedral: {
-        w: 2,
-        h: 1.2,
-        wall: '#e3dccb',
-        roof: '#4a5f7a',
-        spire: 3.2
-    },
-    tavern: {
-        w: 1,
-        h: 0.7,
-        wall: '#a8744a',
-        roof: '#6d3f33'
-    },
-    market: {
-        w: 1,
-        h: 0.4,
-        wall: '#d8c28a',
-        roof: '#b4503f'
-    },
-    hall: {
-        w: 2,
-        h: 1.1,
-        wall: '#c2b79a',
-        roof: '#6b4a3a',
-        towers: 2
-    }
-};
-function proceduralModel(kind) {
-    const look = LOOKS[kind] ?? LOOKS.farm;
-    const paint = (color)=>new THREE.MeshStandardMaterial({
-            color,
-            roughness: 1
-        });
-    const group = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(look.w, look.h, look.w), paint(look.wall));
-    body.position.y = look.h / 2;
-    group.add(body);
-    if (look.roof && !look.towers) {
-        const roof = new THREE.Mesh(new THREE.ConeGeometry(look.w * 0.78, look.w * 0.5, 4), paint(look.roof));
-        roof.position.y = look.h + look.w * 0.25;
-        roof.rotation.y = Math.PI / 4;
-        group.add(roof);
-    }
-    for(let i = 0; i < (look.towers ?? 0); i += 1){
-        const angle = i / look.towers * Math.PI * 2 + Math.PI / 4;
-        const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, look.h + 0.7, 10), paint(look.wall));
-        tower.position.set(Math.cos(angle) * look.w * 0.5, (look.h + 0.7) / 2, Math.sin(angle) * look.w * 0.5);
-        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.5, 10), paint(look.roof ?? '#7b3f3a'));
-        cap.position.set(tower.position.x, look.h + 0.95, tower.position.z);
-        group.add(tower, cap);
-    }
-    if (look.spire) {
-        const spire = new THREE.Mesh(new THREE.ConeGeometry(0.34, look.spire, 8), paint(look.roof ?? '#4a5f7a'));
-        spire.position.set(0, look.h + look.spire / 2, 0);
-        group.add(spire);
-    }
-    return group;
-}
 function makeVillager() {
     const paint = (color)=>new THREE.MeshStandardMaterial({
             color,
@@ -1536,4 +1564,17 @@ function makeLabel(text, color) {
     sprite.scale.set(4.4, 1.1, 1);
     sprite.renderOrder = 10;
     return sprite;
+}
+function makeBlobTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const context = canvas.getContext('2d');
+    const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.9)');
+    gradient.addColorStop(0.55, 'rgba(0, 0, 0, 0.35)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(canvas);
 }

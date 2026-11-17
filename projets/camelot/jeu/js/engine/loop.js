@@ -6,7 +6,7 @@ export class GameLoop {
     handle = 0;
     running = false;
     paused = false;
-    maxFrameSeconds = 0.25;
+    maxFrameSeconds = 0.05;
     constructor(callbacks, stepHz = 60){
         this.callbacks = callbacks;
         this.stepSeconds = 1 / stepHz;

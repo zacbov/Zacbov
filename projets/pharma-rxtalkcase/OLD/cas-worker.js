@@ -14,6 +14,7 @@ const CORS = {
 };
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } });
 const cut = (s, n) => String(s || '').slice(0, n);
+const untag = (s) => String(s || '').replace(/\[(?:EMO|ZONE|DECOUVRE):[^\]]*\]/g, '');
 const HINT = '(indice demandé)';
 const CADRES = {
   officine: { role: "UN PATIENT (ou son accompagnant si la situation concerne un enfant ou une personne dépendante) face à un étudiant en pharmacie qui joue le pharmacien d'officine", ton: "Sans vocabulaire médical qu'un patient ne connaîtrait pas : décris les symptômes avec tes mots.", lieu: "Le cadre est un entretien au comptoir de l'officine : adapte la situation même si elle décrit un service hospitalier. Tu t'adresses au pharmacien." },
@@ -40,7 +41,10 @@ const LIGHT = (mode, cas, hist) => mode === 'checklist'
   ? `Situation :\n${cut(cas.enonce, 12000)}\n\nRéponses attendues :\n${(cas.questions || []).slice(0, 12).map((q) => cut(q.reponse_modele, 1500)).join('\n')}${INT(cas.interactions)}\n\nListe 6 à 10 informations clés que le pharmacien doit obtenir du patient en l'interrogeant (symptômes, antécédents, traitements, allergies, contexte), jamais des conclusions ni le diagnostic. Réponds uniquement par un tableau JSON de chaînes courtes.`
   : `POINTS :\n${(cas.points || []).map((p, i) => (i + 1) + '. ' + cut(p, 200)).join('\n')}\n\nCONVERSATION :\n${hist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? 'Pharmacien : ' : (cas.pop && cas.pop !== 'officine' ? 'Interlocuteur : ' : 'Patient : ')) + m.content).join('\n')}\n\nRéponds uniquement par un tableau JSON des numéros des points dont l'information a clairement été obtenue (question du pharmacien ou indice demandé).`;
 
-const PATIENT = (enonce, hint, docs, profil, pop, fiche) => `Tu joues ${(CADRES[pop] || CADRES.officine).role}. L'étudiant s'entraîne : laisse-le mener l'entretien.
+const AVATAR = "\n- Tu es aussi incarné par un avatar 3D. Termine CHAQUE réplique par la balise [EMO:x] où x décrit ton état à ce moment, parmi : neutre, douleur, anxieux, peur, tristesse, fatigue, gene, doute, surprise, colere, joie, presse. Si tu montres où tu as mal, ajoute aussi [ZONE:partie-côté] avec partie parmi front, gorge, poitrine, ventre, epaule, bras, reins, cuisse et côté gauche ou droite (ex. [ZONE:epaule-gauche]). Pas d'autre balise de ce type." +
+  "\n- Si le pharmacien te demande de te découvrir (retirer le pantalon, le haut, le soutien-gorge) : accepte seulement s'il t'a expliqué pourquoi et ce qu'il va faire, et s'il te demande ton accord. Pour la poitrine, tu peux être gênée et demander un endroit à l'abri des regards (espace de confidentialité) ; accepte s'il est respectueux. S'il ne t'a rien expliqué ou ne t'a pas demandé, tu hésites ou tu refuses et tu demandes pourquoi. Quand tu acceptes et te découvres, ajoute la balise [DECOUVRE:jambes] (pantalon), [DECOUVRE:buste] (haut, tu gardes le soutien-gorge) ou [DECOUVRE:poitrine] (haut et soutien-gorge) ; quand il te dit de te rhabiller, ajoute [DECOUVRE:rhabille]." +
+  "\n- Si un geste est fait « sans avoir expliqué le geste » ou « sans avoir demandé », réagis : surprise, gêne, tu demandes ce qu'il fait.";
+const PATIENT = (enonce, hint, docs, profil, pop, fiche, avatar) => `Tu joues ${(CADRES[pop] || CADRES.officine).role}. L'étudiant s'entraîne : laisse-le mener l'entretien.
 Règles :
 - Reste dans le rôle, en français, 1 à 3 phrases. ${(CADRES[pop] || CADRES.officine).ton}
 - ${(CADRES[pop] || CADRES.officine).lieu}
@@ -48,6 +52,8 @@ Règles :
 - Ne donne une information (antécédents, traitements, allergies, durée, résultats) que si l'étudiant la demande ; à une question vague, réponds vaguement. Si on te demande ton ordonnance ou ton bilan, donne le traitement ou les valeurs exactement comme dans la situation.
 - N'invente aucune donnée clinique, biologique ou médicamenteuse absente de la situation. Pour un détail de vie banal (prénom, métier), tu peux improviser. Si tu ne sais pas : « je ne sais pas ».
 - Ne révèle jamais le diagnostic, ne corrige pas l'étudiant, ne sors pas du rôle, ne suggère pas ce qu'il devrait demander. S'il te donne un conseil faux ou dangereux, réagis comme un patient (doute, incompréhension) sans le reprendre.${docs && docs.length ? "\n- Tu as sur toi ces documents : " + docs.join(', ') + ". Tu peux dire de vive voix ce qu'ils contiennent si on te le demande, mais tu ne les tends que si l'étudiant te les demande explicitement (le dossier pharmaceutique ne s'ouvre que si l'étudiant te demande ton accord pour l'ouvrir). Quand tu en tends un, termine ta phrase par la balise [DOC:nom exact] (exemples : [DOC:Hémogramme], [DOC:Ordonnance]). Sans demande explicite, n'ajoute jamais de balise." : "\n- Tu n'as aucun document sur toi. Si on te demande ton ordonnance ou des résultats, dis ce que tu en sais de vive voix sans prétendre tendre un papier. N'invente aucun nom de médicament ni aucune valeur absents de la situation : si l'énoncé n'en cite pas, dis que tu ne t'en souviens pas."}${PROFILS[profil] ? '\n- PROFIL (comportement uniquement, sans changer les faits de la situation) : ' + PROFILS[profil] : ''}${FICHE(fiche)}
+- Les passages « (Geste du pharmacien : …) » décrivent ce que fait le pharmacien (mesure, objet qu'il te montre ou te pose) : réagis-y comme un patient, sans commenter la technique.
+- Les passages « (Situation : …) » décrivent un changement de situation (temps écoulé, retour du patient, évolution des symptômes) : joue-le comme réel, en restant cohérent avec ce qui précède.${avatar && (!pop || pop === 'officine') ? AVATAR : ''}
 
 SITUATION (connue de toi seul) :
 ${enonce}${hint ? `\n\nINDICE DEMANDÉ (n°${hint}) : l'étudiant est bloqué. Dans ta prochaine réponse uniquement, lâche spontanément UNE information de la situation qu'il n'a pas encore obtenue (symptôme, antécédent, traitement, détail de l'ordonnance ou du bilan…), comme un patient qui y repense, en 1 à 2 phrases. Indice n°1 : très indirect ; n°2 : plus net ; n°3 et suivants : net. Ne nomme jamais le diagnostic ni la solution.` : ''}`;
@@ -89,14 +95,15 @@ export default {
     const cas = b.cas || {}; cas.pop = b.pop;
     const hist = (Array.isArray(b.messages) ? b.messages : []).slice(-40)
       .map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: cut(m.content, 2000) }));
+    const plainHist = hist.map((m) => ({ ...m, content: untag(m.content) }));
     if (!cas.enonce || !hist.length) return json({ error: 'Cas ou messages manquants' }, 400);
 
     const evaluate = b.mode === 'eval';
     const light = b.mode === 'cover' || b.mode === 'checklist';
-    const messages = light ? [{ role: 'user', content: LIGHT(b.mode, cas, hist) }] : evaluate
+    const messages = light ? [{ role: 'user', content: LIGHT(b.mode, cas, plainHist) }] : evaluate
       ? [{ role: 'user', content: EVAL({ enonce: cut(cas.enonce, 12000), points: (cas.points || []).slice(0, 12).map((p) => cut(p, 200)), interactions: (cas.interactions || []).slice(0, 8), fiche_saisie: cas.fiche_saisie || null, fiche_ref: cas.fiche_ref || null, notes: (cas.notes || []).slice(0, 12).map((n) => ({ doc: cut(n.doc, 60), texte: cut(n.texte, 1500) })), docs_etat: (cas.docs_etat || []).slice(0, 20).map((d) => ({ titre: cut(d.titre, 60), ouvert: !!d.ouvert })), questions: (cas.questions || []).slice(0, 12).map((q) => ({ ...q, reponse_modele: cut(q.reponse_modele, 2500) })) },
-          hist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? 'Pharmacien : ' : (cas.pop && cas.pop !== 'officine' ? 'Interlocuteur : ' : 'Patient : ')) + m.content).join('\n')) }]
-      : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0, Array.isArray(cas.docs) ? cas.docs.slice(0, 12).map((d) => cut(d, 60)) : [], b.profil, b.pop, cas.fiche) }, ...hist];
+          plainHist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? 'Pharmacien : ' : (cas.pop && cas.pop !== 'officine' ? 'Interlocuteur : ' : 'Patient : ')) + m.content).join('\n')) }]
+      : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0, Array.isArray(cas.docs) ? cas.docs.slice(0, 12).map((d) => cut(d, 60)) : [], b.profil, b.pop, cas.fiche, !!b.avatar) }, ...hist];
 
     const chain = env.MODELS ? env.MODELS.split(',').map((s) => s.trim().split(/:(.+)/).slice(0, 2)) : light ? [CHAIN[4], CHAIN[3]] : CHAIN;
     const errs = [];

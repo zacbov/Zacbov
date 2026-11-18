@@ -126,7 +126,7 @@ export default {
           plainHist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? (cas.pop === 'medecine' ? 'Médecin : ' : 'Pharmacien : ') : (cas.pop && !['officine', 'medecine'].includes(cas.pop) ? 'Interlocuteur : ' : 'Patient : ')) + m.content).join('\n')) }]
       : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0, Array.isArray(cas.docs) ? cas.docs.slice(0, 12).map((d) => cut(d, 60)) : [], b.profil, b.pop, cas.fiche, !!b.avatar) }, ...hist];
 
-    const chain = env.MODELS ? env.MODELS.split(',').map((s) => s.trim().split(/:(.+)/).slice(0, 2)) : light ? [CHAIN[4], CHAIN[3]] : CHAIN;
+    const chain = env.MODELS ? env.MODELS.split(',').map((s) => s.trim().split(/:(.+)/).slice(0, 2)) : light ? [CHAIN[4], CHAIN[3], CHAIN[1], CHAIN[2], CHAIN[0]] : CHAIN;   // gemma d'abord (quota séparé), puis repli sur les autres
     const errs = [], t0 = Date.now();
     for (const [p, model] of chain) {
       const api = API[p]; const key = api && api.keys.map((k) => env[k]).find(Boolean);
@@ -137,14 +137,19 @@ export default {
         messages: /gemma/i.test(model) ? mergeSystem(messages) : messages,
       };
       if (/gemma-4/i.test(model)) body.reasoning_effort = 'none';
-      else if (p === 'google' && !evaluate && !light) body.reasoning_effort = 'minimal';   // réplique de patient : réflexion minimale = premier mot plus rapide (repli sans ce paramètre si refusé)
-      const send = () => fetch(api.url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key }, body: JSON.stringify(body) });
+      else if (p === 'google' && !evaluate && !light) body.reasoning_effort = 'low';   // comme avant la v14 (« minimal » ralentissait : refusé puis renvoyé)
+      const dernier = model === chain[chain.length - 1][1];
+      const send = async () => {                 // délai d'attente du premier octet : au-delà, on passe au modèle suivant (sauf le dernier)
+        const ac = new AbortController(), tm = dernier ? null : setTimeout(() => ac.abort(new Error('délai dépassé')), light ? 15000 : 12000);
+        try { return await fetch(api.url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key }, body: JSON.stringify(body), signal: ac.signal }); }
+        finally { clearTimeout(tm); }
+      };
       try {
         let r = await send();
-        if (r.status === 400 && body.reasoning_effort) { delete body.reasoning_effort; r = await send(); }
+        if (r.status === 400 && body.reasoning_effort) { errs.push(`${model}: 400 avec reasoning_effort, renvoi sans`); delete body.reasoning_effort; r = await send(); }
         if (r.ok) return new Response(r.body, { headers: { ...CORS, 'Content-Type': r.headers.get('Content-Type') || 'text/event-stream', 'X-Model': model, 'X-Essais': (errs.length ? errs.join(' ; ') + ' ; ' : '') + `${model}: ok en ${Date.now() - t0} ms` } });
         errs.push(`${model}: ${r.status} après ${Date.now() - t0} ms`);
-      } catch (e) { errs.push(`${model}: ${e.message}`); }
+      } catch (e) { errs.push(`${model}: ${e.message} après ${Date.now() - t0} ms`); }
     }
     return json({ error: 'Aucun modèle disponible', details: errs }, 503);
   },

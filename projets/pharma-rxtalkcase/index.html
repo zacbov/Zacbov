@@ -62,7 +62,7 @@ dialog::backdrop{background:#000a}
 .feuille img[data-zoom]{cursor:zoom-in}
 #wrap{flex:1;display:flex;min-height:0;position:relative}
 #col{flex:1;display:flex;flex-direction:column;min-width:0}
-#stage{position:relative;flex:0 0 44%;max-width:640px;border-right:1px solid var(--trait);background:#13201b;overflow:hidden}
+#stage{position:relative;flex:0 0 50%;max-width:none;border-right:1px solid var(--trait);background:#13201b;overflow:hidden}
 #stage.off{display:none}
 #stage .tools{position:absolute;right:.6rem;top:.6rem;display:flex;flex-direction:column;gap:.4rem;z-index:5}
 #stage .tools button{background:#0d1613cc;color:var(--texte);font-size:.85rem;padding:.35rem .6rem;backdrop-filter:blur(4px)}
@@ -103,7 +103,6 @@ dialog::backdrop{background:#000a}
 <dialog id="zoom" aria-label="Agrandissement du document"><button id="zclose" type="button">Fermer</button><img id="zimg" alt="" title="Cliquer pour passer en taille réelle"></dialog>
 <dialog id="fiche" aria-label="Fiche patient"><div class="dh"><b>Ma fiche patient</b><button class="x" id="fclose" type="button">Fermer</button></div><div id="ff"></div></dialog>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="cas-xlsx.js"></script>
 <script src="bdpm.js"></script>
 <script src="voix/voix-locale.js"></script>
@@ -322,9 +321,22 @@ function fillThemes() {
   if ([...$('theme').options].some((o) => o.value === prev)) $('theme').value = prev;
 }
 
+const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+const scriptCharge = (src) => new Promise((ok, ko) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => ko(new Error(src)); document.head.append(s); });
+function lireDansWorker() {                 // analyse dans un worker + mémoire IndexedDB (voir cas-xlsx-worker.js)
+  return new Promise((ok, ko) => {
+    const w = new Worker('cas-xlsx-worker.js');
+    w.onmessage = ({ data: m }) => { w.terminate(); m.ok ? (console.info('Classeur', m.memoire ? '(mémoire, inchangé)' : '(analysé)', 'en', m.ms, 'ms'), ok(m.d)) : ko(new Error(m.erreur)); };
+    w.onerror = (e) => { w.terminate(); ko(new Error(e.message || 'worker')); };
+    w.postMessage({ url: new URL(DATA, location.href).href, xlsx: XLSX_URL, lecteur: new URL('cas-xlsx.js', location.href).href });
+  });
+}
 function chargerCas() {                     // classeur Excel (SheetJS) ; à défaut, ancien fichier JSON
-  return fetch(DATA).then((r) => { if (!r.ok) throw new Error(DATA + ' : ' + r.status); return r.arrayBuffer(); })
-    .then((buf) => { const d = CasXlsx.lireClasseur(XLSX, buf); if (!d.cas.length) throw new Error('classeur vide'); console.info('Cas lus dans', DATA, ':', d.cas.length, d.meta.ignores.length ? '(' + d.meta.ignores.length + ' désactivés)' : ''); return d; })
+  const fini = (d) => { if (!d.cas.length) throw new Error('classeur vide'); console.info('Cas lus dans', DATA, ':', d.cas.length, d.meta.ignores.length ? '(' + d.meta.ignores.length + ' désactivés)' : ''); return d; };
+  return lireDansWorker().then(fini)
+    .catch((e) => { console.warn('Lecture en arrière-plan impossible, lecture directe', e);
+      return Promise.all([fetch(DATA).then((r) => { if (!r.ok) throw new Error(DATA + ' : ' + r.status); return r.arrayBuffer(); }), window.XLSX ? null : scriptCharge(XLSX_URL)])
+        .then(([buf]) => fini(CasXlsx.lireClasseur(XLSX, buf))); })
     .catch((e) => { console.warn('Classeur indisponible, repli sur', DATA_SECOURS, e); return fetch(DATA_SECOURS).then((r) => r.json()); });
 }
 Promise.all([chargerCas(), fetch('cas_qcm_pharma.json').then((r) => (r.ok ? r.json() : null)).catch(() => null)]).then(([d, x]) => {

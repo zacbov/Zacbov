@@ -1,0 +1,35 @@
+Compléments anatomiques de CorpoAtlas — za_complements.glb, za_meta.json, za_flow.json, za_nerves.json (version v30)
+
+Source : Z-Anatomy - The open source atlas of anatomy, de Lluís Vinent Juanico
+(https://github.com/LluisV/Z-Anatomy).
+Licence de la source : Creative Commons Attribution - Partage dans les mêmes conditions 4.0
+International (CC BY-SA 4.0) — https://creativecommons.org/licenses/by-sa/4.0/deed.fr
+
+Composants de Z-Anatomy présents dans ces fichiers, et leurs crédits :
+- BodyParts3D © The Database Center for Life Science (DBCLS), licence CC BY-SA 2.1 Japon
+  (https://creativecommons.org/licenses/by-sa/2.1/jp/) — base de la plupart des maillages.
+- Cranial Nerves and Foramina, University of Dundee, CAHID (Centre for Anatomy and Human
+  Identification), réalisé par Sophia Lappe, licence CC BY 4.0
+  (https://creativecommons.org/licenses/by/4.0/deed.fr), lui-même fondé sur BodyParts3D
+  (© DBCLS, CC BY-SA 2.1 Japon) — nerfs crâniens.
+
+Composants de Z-Anatomy volontairement absents de ces fichiers (vérifié sur les noms des
+3 350 objets) : l'oreille interne de l'University of Dundee (CC BY-NC-SA 4.0), le rein de
+lissiecowley (CC BY-NC 4.0) et les surfaces de substance blanche (Brain for Blender).
+
+Modifications apportées pour CorpoAtlas :
+- sélection des structures absentes du modèle HRA VH_F (côtes, sternum, cartilages costaux,
+  ceinture scapulaire et membres supérieurs, crâne et face, os du pied, disques intervertébraux,
+  muscles, nerfs périphériques, vaisseaux, nœuds lymphatiques, surrénales, hypophyse,
+  quelques viscères) ;
+- simplification des maillages ;
+- recalage géométrique sur le modèle féminin HRA VH_F (spline plaque mince calculée sur les
+  structures communes aux deux modèles, puis « skinning » par segment des membres supérieurs et,
+  depuis la v30, réorientation de chaque doigt sur le doigt de peau correspondant) ;
+- correction des interpénétrations (les maillages sont ramenés sous la peau et hors des organes
+  et des os du modèle HRA) ;
+- noms français ajoutés ;
+- compression Draco.
+
+Ces fichiers adaptés sont diffusés sous la même licence CC BY-SA 4.0.
+Le reste de CorpoAtlas n'est pas concerné par cette licence.

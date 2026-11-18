@@ -184,13 +184,19 @@ export class Rig {
     if (!fingModel || !palmModel) return;
     const ax = W.clone().sub(E).normalize(); let Fw = fingModel.clone().transformDirection(M);
     if (suit > 0) { const up = V3(0, 1, 0).transformDirection(M), prol = plat ? ax.clone().sub(up.clone().multiplyScalar(ax.dot(up) + 0.04)).normalize() : ax.clone(); Fw.lerp(prol, suit).normalize(); }   // prolonge l'avant-bras, à plat (la main repose sur le plan où est le poignet)
-    const cosA = Fw.dot(ax), maxA = 1.25; if (Math.acos(clamp(cosA, -1, 1)) > maxA) {      // le poignet ne plie pas au-delà d'environ 70°
-      const perp = Fw.clone().sub(ax.clone().multiplyScalar(cosA)).normalize(); Fw = ax.clone().multiplyScalar(Math.cos(maxA)).add(perp.multiplyScalar(Math.sin(maxA))); }
+    {                                                                                   // butées du poignet : flexion 70°, extension 60°, inclinaisons 25°
+      const n0 = palmModel.clone().transformDirection(M); n0.sub(ax.clone().multiplyScalar(n0.dot(ax)));
+      if (n0.lengthSq() > 1e-6) {
+        n0.normalize(); const r = ax.clone().cross(n0), x = Fw.dot(ax), y = Fw.dot(n0), z = Fw.dot(r);
+        const fl = clamp(Math.atan2(y, Math.max(x, 1e-3)), -1.05, 1.22), dv = clamp(Math.atan2(z, Math.max(x, 1e-3)), -0.44, 0.44);
+        Fw = ax.clone().add(n0.multiplyScalar(Math.tan(fl))).add(r.multiplyScalar(Math.tan(dv))).normalize();
+      }
+    }
     const Nw = palmModel.clone().transformDirection(M); Nw.sub(Fw.clone().multiplyScalar(Nw.dot(Fw))).normalize();
     const proj = (v) => v.clone().sub(ax.clone().multiplyScalar(v.dot(ax))).normalize();          // pronation / supination : la moitié par l'avant-bras, le reste par le poignet
     const cur = proj(this.palmL[s].clone().applyQuaternion(H.getWorldQuaternion(new THREE.Quaternion()))), tgt = proj(Nw);
     const roll = Math.atan2(cur.clone().cross(tgt).dot(ax), cur.dot(tgt));
-    this.setWorldQ(F, new THREE.Quaternion().setFromAxisAngle(ax, roll * 0.85).multiply(F.getWorldQuaternion(new THREE.Quaternion())));   // la rotation de l'avant-bras porte presque toute la supination : le poignet ne se tord plus
+    this.setWorldQ(F, new THREE.Quaternion().setFromAxisAngle(ax, clamp(roll * 0.85, -1.6, 1.6)).multiply(F.getWorldQuaternion(new THREE.Quaternion())));   // la rotation de l'avant-bras porte presque toute la supination : le poignet ne se tord plus
     const hq = H.getWorldQuaternion(new THREE.Quaternion()), fw = this.fingL[s].clone().applyQuaternion(hq), nw = this.palmL[s].clone().applyQuaternion(hq);
     nw.sub(fw.clone().multiplyScalar(nw.dot(fw))).normalize();
     const Mc = new THREE.Matrix4().makeBasis(fw, nw, fw.clone().cross(nw)), Mt = new THREE.Matrix4().makeBasis(Fw, Nw, Fw.clone().cross(Nw));
@@ -251,7 +257,7 @@ export async function createAvatar(el, opts = {}) {
   }
   view();
   // --- voix du navigateur (voix Windows) ---
-  let voices = [], VQ = [], charPos = 0, cps = 14, lastB = null;
+  let voices = [], VQ = [], charPos = 0, cps = 14, lastB = null, ext = null;   // ext : lecture en cours par une voix locale (voix-locale.js)
   const hasTTS = typeof speechSynthesis !== 'undefined';
   const loadVoices = () => { if (!hasTTS) return; const all = speechSynthesis.getVoices(); voices = all.filter((v) => v.lang.toLowerCase().startsWith('fr')); if (!voices.length) voices = all; API.voices = voices; API.onvoices && API.onvoices(voices); };
   if (hasTTS) { speechSynthesis.onvoiceschanged = loadVoices; loadVoices(); }
@@ -261,13 +267,20 @@ export async function createAvatar(el, opts = {}) {
     const txt = (text || '').trim(); if (!txt) return resolve();
     if (opt.emotion) API.emotion = opt.emotion; VQ = visemes(txt); charPos = 0; cps = 14 * API.rate; lastB = null;
     const end = () => { API.speaking = false; resolve(); };
+    const V = API.voixExterne;                                    // voix locale (Piper) : audio synthétisé dans la page, lèvres sur l'enveloppe du son
+    if (V && !API.muted && V.active()) {
+      if (hasTTS) speechSynthesis.cancel(); if (ext) ext.stop();
+      API.speaking = true; const e = ext = V.parler(txt, { sexe: API.voixSexe, vitesse: API.rate });
+      e.fin.then(() => { if (ext === e) { ext = null; end(); } }, (err) => { console.warn('Voix locale indisponible, repli sur la voix du navigateur', err); if (ext === e) ext = null; V.desactiver && V.desactiver(); API.speaking = false; API.say(txt).then(resolve); });
+      return;
+    }
     if (API.muted || !hasTTS) { API.speaking = true; setTimeout(end, Math.min(20000, txt.length / cps * 1000)); return; }   // sans voix : l'avatar parle quand même
     speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(txt); u.lang = 'fr-FR'; if (voices[API.voiceIndex]) u.voice = voices[API.voiceIndex]; u.rate = API.rate;
     u.onstart = () => { API.speaking = true; }; u.onend = u.onerror = end;
     u.onboundary = (e) => { const now = performance.now(); if (lastB && e.charIndex > lastB.i && now > lastB.t) cps = clamp((e.charIndex - lastB.i) / ((now - lastB.t) / 1000), 5, 40); charPos = e.charIndex; lastB = { i: e.charIndex, t: now }; };
     speechSynthesis.speak(u);
   });
-  API.stop = () => { if (hasTTS) speechSynthesis.cancel(); API.speaking = false; touchState = null; };
+  API.stop = () => { if (hasTTS) speechSynthesis.cancel(); if (ext) { ext.stop(); ext = null; } API.speaking = false; touchState = null; };
   API.view = view; API.canvas = canvas; API.root = gltf.scene; API.renderer = renderer; API.flip = () => { gltf.scene.rotation.y += Math.PI; }; API.resize = fit;
   API.dispose = () => { renderer.setAnimationLoop(null); ro.disconnect(); API.stop(); renderer.dispose(); canvas.remove(); };
   // --- prise de tension : patient assis, brassard sur le haut du bras gauche, tensiomètre au premier plan ---
@@ -348,7 +361,10 @@ export async function createAvatar(el, opts = {}) {
     const t = ms / 1000, dt = Math.min(0.1, t - last || 0.016); last = t; const E = EMOTIONS[API.emotion] || EMOTIONS.neutre, neg = NEG.has(API.emotion);
     if (rig.body) {                                                                      // visage
       const tw = {}, add = (obj, kk = 1) => { for (const n in obj) tw[n] = (tw[n] || 0) + obj[n] * kk * (neg && n.startsWith('Smile_') ? 0.25 : 1); };
-      if (API.speaking) { charPos += cps * dt; const i = Math.floor(charPos), f = charPos - i; add(VIS[VQ[i] || '_'], 1 - f); add(VIS[VQ[i + 1] || '_'], f); if (i > VQ.length + 2) API.speaking = false; }
+      if (API.speaking && ext) {                                        // voix locale : position réelle dans le texte, ouverture selon le volume
+        charPos = ext.position() * VQ.length; const a = Math.min(1, 0.1 + 1.3 * ext.amp()), i = Math.floor(charPos), f = charPos - i;
+        add(VIS[VQ[i] || '_'], (1 - f) * a); add(VIS[VQ[i + 1] || '_'], f * a);
+      } else if (API.speaking) { charPos += cps * dt; const i = Math.floor(charPos), f = charPos - i; add(VIS[VQ[i] || '_'], 1 - f); add(VIS[VQ[i + 1] || '_'], f); if (i > VQ.length + 2) API.speaking = false; }
       for (const n of new Set([...Object.keys(E.face), ...Object.keys(emoW)])) emoW[n] = (emoW[n] || 0) + ((E.face[n] || 0) - (emoW[n] || 0)) * (1 - Math.exp(-dt * 6));
       for (const n in emoW) tw[n] = (tw[n] || 0) + emoW[n] * (API.speaking && MOUTH.test(n) ? 0.45 : 1);
       if (t > nextBlink) { blinkT = t; nextBlink = t + (2.5 + Math.random() * 3) / (E.blink || 1); }
@@ -602,7 +618,7 @@ export async function createAvatar(el, opts = {}) {
     }
   };
   API.effacerPeau = () => { for (const [mat, r] of canv) { r.g.drawImage(r.img, 0, 0); r.tx.needsUpdate = true; } };
-  /* ---------- voir l'intérieur : organes de CorpoAtlas (Visible Human femme), recalés sur la patiente et accrochés à ses os ---------- */
+  /* ---------- voir l'intérieur : organes de CorpoAtlas (Visible Human ; calque Homme pour le patient), recalés et accrochés aux os ---------- */
   let inter = null, interOn = false;
   async function chargerInterieur(url) {
     const g = (await new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath(o.draco || 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/')).loadAsync(url)).scene;
@@ -634,7 +650,7 @@ export async function createAvatar(el, opts = {}) {
     return parts;
   }
   const VOILE = [];
-  API.interieur = async (on = !interOn, url = o.interieur || 'avatar/interieur_femme.glb', groupes = null) => {
+  API.interieur = async (on = !interOn, url = o.interieur || (API.femme ? 'avatar/interieur_femme.glb' : 'avatar/interieur_homme.glb'), groupes = null) => {
     if (on && !inter) { try { inter = await chargerInterieur(url); } catch (e) { console.warn('intérieur', e); return false; } }
     interOn = on;
     if (inter) for (const m of inter) m.visible = on && (!groupes || groupes.includes(m.userData.groupe));

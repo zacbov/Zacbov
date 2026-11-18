@@ -17027,6 +17027,16 @@ renderWithModeGhost=function(){
     for(let i=n-4;i>=0;i-=4){ const mat=buf[i]; mat.opacity=buf[i+1]; mat.transparent=buf[i+2]; mat.depthWrite=buf[i+3]; buf[i]=null; }
   }
 };
+/* v28 — crochets de rendu : la version ci-dessus remplace le rendu ; on la renvoie
+   dans PRE_RENDER / POST_RENDER (atlas cérébral, cœur battant, radio, coupes) */
+(function(){
+  const core=renderWithModeGhost;
+  renderWithModeGhost=function(){
+    for(let i=0;i<PRE_RENDER.length;i++){ try{ PRE_RENDER[i](); }catch(e){ console.warn('[pre-render]',e); } }
+    try{ core(); }
+    finally{ for(let i=POST_RENDER.length-1;i>=0;i--){ try{ POST_RENDER[i](); }catch(e){ console.warn('[post-render]',e); } } }
+  };
+})();
 
 /* ── 46.3 Particules de flux (vaisseaux, nerfs, lymphe) ── */
 /* Nuanceur des particules (points ronds, taille en perspective) */

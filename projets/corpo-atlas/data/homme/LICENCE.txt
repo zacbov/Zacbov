@@ -1,0 +1,23 @@
+Calque « Homme » de CorpoAtlas — homme.glb, homme_meta.json (version v31)
+
+1) Structures du modèle masculin HRA VH_M (Human Reference Atlas, NIH HuBMAP — 3D Reference Organs,
+   11e version ; d'après le Visible Human Project, NLM), licence Creative Commons Attribution 4.0
+   International (CC BY 4.0) — https://creativecommons.org/licenses/by/4.0/deed.fr
+   Peau, prostate (apex, base, zones centrale, périphérique et de transition, stroma fibromusculaire
+   antérieur, canaux prostatiques), utricule prostatique, colliculus séminal, vésicules séminales,
+   conduits éjaculateurs, urètre prostatique, membraneux et spongieux.
+2) Z-Anatomy (Lluís Vinent Juanico, d'après BodyParts3D © DBCLS), licence CC BY-SA 4.0 :
+   testicules, épididymes, conduits déférents, corps caverneux et spongieux, gland, artères et veines
+   du pénis et des testicules. Ces maillages adaptés sont diffusés sous la même licence CC BY-SA 4.0.
+
+Modifications apportées pour CorpoAtlas :
+- recalage du modèle masculin sur le modèle féminin HRA VH_F de l'atlas : similitudes par structure
+  commune (vertèbres, sacrum, os coxaux, membres inférieurs, vessie, reins, cœur, aorte, poumons,
+  foie, rate, encéphale, yeux) puis spline plaque mince ; peau des membres supérieurs, de la tête et
+  des pieds recalée par régions, et sur les pointes des doigts ;
+- peau simplifiée (414 594 → 186 568 sommets), puis élargie localement (≥ 2 mm, déplacements lissés)
+  pour envelopper les structures internes communes ;
+- structures Z-Anatomy recalées comme les autres compléments, verge orientée sur l'urètre HRA,
+  organes génitaux externes ramenés dans la peau (translation, réduction ≤ 15 %) ;
+- noms français ajoutés ; compression Draco.
+Le reste du corps affiché en mode Homme est le modèle féminin de référence (os, viscères, muscles…).

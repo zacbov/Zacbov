@@ -463,6 +463,7 @@ kbd{font-size:14px;font-family:monospace;background:var(--bg5);border:.5px solid
         <button class="tbtn" id="btlymphsys" onclick="toggleLymphSys();closeDropdowns()" title="Système lymphatique : nœuds, drainage, canal thoracique">🟢 <span>Lymphe<span class="tb-sub">Nœuds, drainage, canal thoracique</span></span></button>
         <button class="tbtn" id="btheart" onclick="toggleHeartbeat();closeDropdowns()" title="Cœur battant : cycle cardiaque, ECG, Wiggers, pharmacologie">💓 <span>Cœur<span class="tb-sub">Cycle cardiaque, ECG, Wiggers</span></span></button>
         <button class="tbtn" id="btbrain" onclick="toggleBrainAtlas();closeDropdowns()" title="Cerveau et système nerveux central : atlas coloré (Allen, 141 structures) + coupes">🧠 <span>Cerveau (SNC)<span class="tb-sub">Atlas Allen, 141 structures, coupes</span></span></button>
+        <button class="tbtn" id="btwalk" onclick="toggleWalk();closeDropdowns()" title="Marche : squelette articulé animé par une marche réelle mesurée (capture 100 Hz), angles de hanche, genou et cheville">🚶 <span>Marche<span class="tb-sub">Squelette articulé, marche réelle mesurée</span></span></button>
       </div>
     </div>
     <div class="tb-dd" id="tb-overflow">
@@ -3989,6 +3990,7 @@ kbd{font-size:14px;font-family:monospace;background:var(--bg5);border:.5px solid
     </div>
     <div class="cell-hd">
       <strong id="vhd-model">🫀 Visible Human Female</strong>
+      <span id="sex-seg" style="display:inline-flex;gap:3px;margin-left:8px" title="Modèle féminin ou masculin"><button class="dpre on" data-s="F" onclick="setSex('F')">♀ Femme</button><button class="dpre" data-s="M" onclick="setSex('M')">♂ Homme</button></span>
       <span id="vhd-sub">— 888 meshes · 5475k vertices</span>
       <span style="margin-left:auto;font-size:14px;color:var(--text3)">Clic · Scroll · Drag</span>
     </div>
@@ -5975,6 +5977,7 @@ function loadGLB() {
       glbScene.scale.setScalar(scale);
       scene.add(glbScene);
       if (typeof _zaAttach === 'function') { try { _zaAttach(glbScene); } catch(e){ console.warn('[za]', e); } }
+      if (typeof _hmAttach === 'function') { try { _hmAttach(glbScene); } catch(e){ console.warn('[homme]', e); } }
 
       // Initialize system containers
       SYSTEM_KEYS.forEach(k => { systemMeshes[k] = []; });
@@ -6044,7 +6047,7 @@ function loadGLB() {
       systemMeshes['other'] = systemMeshes['unknown'] || [];
       populateSidebarSystem('other');
 
-      document.getElementById('vhd-model').textContent = '🫀 Visible Human Female';
+      document.getElementById('vhd-model').textContent = (typeof ATLAS_SEX!=='undefined' && ATLAS_SEX==='M') ? '🧍‍♂️ Modèle masculin' : '🫀 Visible Human Female';
       document.getElementById('vhd-sub').textContent = `— ${allMeshes.length} meshes · ${(verts/1000).toFixed(0)}k vertices`;
       document.getElementById('minfo').textContent = `${allMeshes.length} meshes · ${(verts/1000000).toFixed(1)}M verts`;
     }),
@@ -8035,7 +8038,8 @@ function renderInfo(rawName) {
       <a href="https://www.ncbi.nlm.nih.gov/books/NBK279162/" target="_blank" class="ref-link">↗ Gray's Anatomy (NCBI)</a>
     </div></div>`;
 
-  if (/^ZA_/.test(rawName||'') && typeof zaCreditHTML==='function') h += zaCreditHTML();
+  if (/^ZA_/.test(rawName||'') && typeof zaCreditHTML==='function') h += zaCreditHTML(rawName);
+  if (/^VH_M_/.test(rawName||'') && typeof hmCreditHTML==='function') h += hmCreditHTML(rawName);
   document.getElementById('scont').innerHTML = h;
 }
 
@@ -9130,7 +9134,7 @@ const _lmCache = new Map(), _lmVerts = new Map();
 
 function _lmFrame(){
   if(_lmF) return _lmF;
-  const m = (typeof meshByName==='object') ? meshByName['VH_F_skin'] : null;
+  const m = window._lmSkinRef || ((typeof meshByName==='object') ? meshByName['VH_F_skin'] : null);
   if(!m || !m.geometry) return { s:1, o:new THREE.Vector3(0,0,0) };
   m.updateWorldMatrix(true,false);
   const b = new THREE.Box3().expandByObject(m);
@@ -12487,15 +12491,15 @@ POST_RENDER.push(function(){
    calculés à chaque image ; la déformation 3D et les tracés en dérivent.
 ══════════════════════════════════════════════════════ */
 const HB_PRESETS={
-  repos:{ cat:'Physiologie', label:'Repos', hr:70, ef:0.60, edv:120, kick:0.22, rvs:17.5,
+  repos:{ cat:'Physiologie', label:'Repos', hr:70, ef:0.60, edv:120, kick:0.23, rvs:17.5,
     desc:'Cœur au repos : FC ≈ 70/min, FE ≈ 60 %. La systole occupe environ un tiers du cycle et la diastole deux tiers (remplissage rapide, diastasis, puis contraction auriculaire ≈ 20 % du remplissage).' },
   effort:{ cat:'Physiologie', label:'Effort', hr:140, ef:0.74, edv:128, kick:0.30, rvs:8.5, sys:0.85,
     desc:'Effort : stimulation sympathique β1 → FC ↑ et contractilité ↑. La diastole se raccourcit bien plus que la systole ; la vasodilatation musculaire fait chuter les résistances (RVS ↓) : débit × 2 à 3.' },
-  bb:{ cat:'Médicaments', label:'β-bloquant', hr:55, ef:0.54, edv:124, kick:0.22, rvs:20.5, pr:0.21,
+  bb:{ cat:'Médicaments', label:'β-bloquant', hr:55, ef:0.54, edv:124, kick:0.23, rvs:20.5, pr:0.21,
     desc:'Bêta-bloquant (bisoprolol, métoprolol…) : antagoniste β1 → chronotrope, inotrope et dromotrope négatifs (PR allongé). Réduit la consommation d’O₂ : angor, post-infarctus, IC à FE réduite (titration lente).' },
-  ivab:{ cat:'Médicaments', label:'Ivabradine', hr:55, ef:0.60, edv:126, kick:0.22, rvs:19.5,
+  ivab:{ cat:'Médicaments', label:'Ivabradine', hr:55, ef:0.60, edv:126, kick:0.23, rvs:19.5,
     desc:'Ivabradine : bloque le courant If du nœud sinusal → ralentit la FC SANS effet inotrope ni dromotrope (contractilité et PR inchangés, à la différence des β-bloquants). IC à FE réduite en rythme sinusal avec FC ≥ 70/min.' },
-  digo:{ cat:'Médicaments', label:'Digoxine', hr:60, ef:0.65, edv:120, kick:0.22, rvs:17.5, pr:0.21, ecg:'cupule',
+  digo:{ cat:'Médicaments', label:'Digoxine', hr:60, ef:0.65, edv:120, kick:0.23, rvs:17.5, pr:0.21, ecg:'cupule',
     desc:'Digoxine : inhibe la Na⁺/K⁺-ATPase → Ca²⁺ intracellulaire ↑ (inotrope +) ; effet vagal → FC ↓ et conduction AV ralentie. ECG : cupule digitalique (sous-décalage ST « en cuillère »). Marge thérapeutique étroite, toxicité majorée par l’hypokaliémie.' },
   dobu:{ cat:'Médicaments', label:'Dobutamine', hr:96, ef:0.74, edv:118, kick:0.24, rvs:11,
     desc:'Dobutamine (IV) : agoniste β1 → inotrope positif puissant, FC ↑ modérée. Choc cardiogénique, bas débit ; échocardiographie de stress.' },
@@ -12516,9 +12520,17 @@ const HB_PRESETS={
 const HB={ on:false, t:0, beat0:0, rr:0.857, beat:0, paused:false, speed:1, preset:'repos', hr:70, p:HB_PRESETS.repos,
   sound:false, walls:false, cut:false, o2:true, lastNow:0, hist:[], S:{}, rnd:null };
 
+/* Volume du VG mesuré (25 phases, normalisé : 0 = télédiastole, 1 = télésystole) — biv-me, cohorte CARDIOHANCE.
+   Le modèle ci-dessous est calé dessus (écart quadratique 3,0 % du VES contre 4,1 % auparavant). */
+const HB_MEAS={ shift:0.04, v:[0.0491,0.0941,0.1943,0.3539,0.5223,0.6793,0.8002,0.9025,0.9652,0.9965,1.0,0.9532,0.8526,0.6949,0.5237,0.3784,0.301,0.269,0.2581,0.2646,0.2726,0.2539,0.1737,0.0558,0.0] };
+function hbMeasVol(tb,rr,S){
+  if(HB.preset!=='repos' || HB.p.af || HB.hr<55 || HB.hr>90) return null;
+  const n=HB_MEAS.v.length, f=(((tb/rr-HB_MEAS.shift)%1)+1)%1*n, i=Math.floor(f)%n, u=f-Math.floor(f), m=HB_MEAS.v[i]*(1-u)+HB_MEAS.v[(i+1)%n]*u;
+  return S.edv-S.sv*m;
+}
 function hbTimeline(rr,p){
-  const tej=Math.max(0.15,Math.min(0.34,0.27*Math.sqrt(rr/0.857)*(p.sys||1)));
-  const b1=0.035, ivc=0.05, ao=b1+ivc, b2=ao+tej, mo=b2+0.065;
+  const tej=Math.max(0.15,Math.min(0.34,0.29*Math.sqrt(rr/0.857)*(p.sys||1)));
+  const b1=0.035, ivc=0.04, ao=b1+ivc, b2=ao+tej, mo=b2+0.065;
   const pr=p.pr||0.16;
   const aE=rr-0.005, aS=Math.max(mo+0.03, rr-pr+0.06);
   return { b1, ao, tej, b2, mo, aS, aE, pr };
@@ -12536,7 +12548,7 @@ function hbState(tb,rr,p,tAbs,carry){
   // ── volume VG
   let V, ej=0;
   if(tb<T.ao) V=edv;
-  else if(tb<T.b2){ const x=(tb-T.ao)/T.tej; V=edv-sv*(1-Math.pow(1-x,1.8)); ej=1.8*Math.pow(1-x,0.8)/T.tej; }
+  else if(tb<T.b2){ const x=(tb-T.ao)/T.tej; V=edv-sv*(1-Math.pow(1-x,1.9)); ej=1.9*Math.pow(1-x,0.9)/T.tej; }
   else if(tb<T.mo) V=esv;
   else {
     const end=kick>0?T.aS:rr;
@@ -12621,7 +12633,7 @@ function hbStep(dt){
   if(!HB._b2Done && tb>=S.T.b2){ HB._b2Done=true; HB.tB2=HB.beat0+S.T.b2; hbSoundEvent(2); }
   HB.S=S;
   if(HB.t===t0 && HB.hist.length) return S;
-  const h=HB.hist; h.push([HB.t,S.ecg,S.plv,S.pao,S.pla,S.V,S.sys?1:0]);
+  const h=HB.hist; h.push([HB.t,S.ecg,S.plv,S.pao,S.pla,S.V,S.sys?1:0,hbMeasVol(tb,HB.rr,S)]);
   while(h.length && h[0][0]<HB.t-3.2) h.shift();
   if(h.length>1200) h.splice(0,h.length-1200);
   return S;
@@ -12930,7 +12942,7 @@ function buildHeartPanel(){
     </div>
     ${Object.entries(cats).map(([c,b])=>`<div class="ca-lbl">${c}</div><div class="ca-seg hb-presets">${b.join('')}</div>`).join('')}
     <div class="ca-info" id="hb-desc"></div>
-    <div class="ca-credit">Modèle pédagogique : cinématique et pressions schématiques calées sur le diagramme de Wiggers, appliquées aux meshes réels du cœur (HRA). L’IVA, absente du modèle, est tracée dans le sillon interventriculaire antérieur.</div>
+    <div class="ca-credit">Modèle pédagogique : cinématique et pressions schématiques calées sur le diagramme de Wiggers, appliquées aux meshes réels du cœur (HRA). L’IVA, absente du modèle, est tracée dans le sillon interventriculaire antérieur. Courbe de volume calée sur un ventricule gauche mesuré en IRM (maillages biv-me, Apache-2.0, cohorte CARDIOHANCE ; Dillon et al., <i>Med Image Anal</i> 2026;114:104252) : écart de 3 % du volume d’éjection ; tracé blanc pointillé au repos.</div>
   </div>`;
   const v3d=document.getElementById('viewer3d'); if(v3d) v3d.appendChild(el);
   heartPanel=el;
@@ -12997,6 +13009,11 @@ function hbDrawChart(){
   trace(3,pY,'#ffb703',1.6);
   trace(2,pY,'#ff4d5e',1.8);
   trace(5,vY,'#f1e05a',1.6);
+  let hasM=false;
+  ctx.save(); ctx.setLineDash([3,3]); ctx.strokeStyle='rgba(255,255,255,.75)'; ctx.lineWidth=1.2; ctx.beginPath();
+  { let px=null; for(let i=0;i<h.length;i++){ const s=h[i]; if(!live(s) || s[7]==null){ px=null; continue; } hasM=true; const x=X(s[0]), y=vY(s[7]);
+      if(px===null || x<px) ctx.moveTo(x,y); else ctx.lineTo(x,y); px=x; } }
+  ctx.stroke(); ctx.restore();
   // balayage
   const sx=X(t); ctx.fillStyle='rgba(255,255,255,.75)'; ctx.fillRect(sx-1,0,2,Hc);
   // libellés
@@ -13006,6 +13023,7 @@ function hbDrawChart(){
   [40,80,120].forEach(v=>{ ctx.fillText(String(v),Wc-20,pY(v)-11); });
   ctx.fillStyle='#ff4d5e'; ctx.fillText('VG',40,yP0+1); ctx.fillStyle='#ffb703'; ctx.fillText('Aorte',60,yP0+1); ctx.fillStyle='#5aa9ff'; ctx.fillText('OG',96,yP0+1);
   ctx.fillStyle='#f1e05a'; ctx.fillText('Volume VG (mL)',4,yV0+1);
+  if(hasM){ ctx.fillStyle='rgba(255,255,255,.7)'; ctx.fillText('┄ VG mesuré (IRM)',98,yV0+1); }
   ctx.fillStyle='rgba(241,224,90,.6)'; ctx.fillText('VTD '+Math.round(edv),Wc-62,vY(edv)-1); ctx.fillText('VTS '+Math.round(esv),Wc-62,vY(esv)-10);
 }
 function hbUIFrame(S){
@@ -13109,6 +13127,359 @@ const HB_GHOST={ base:0.08, skin:0.03, keep:[] };
   if(typeof MODE_BTNS!=='undefined') MODE_BTNS.push('btbrain','btheart');
 })();
 
+
+/* ══════════════════════════════════════════════════════
+   🚶 MODE « MARCHE » — squelette articulé, marche réelle mesurée
+   Mouvement : segmenta-gait-data (CC BY 4.0), participant IDA01,
+   capture Theia3D à 100 Hz. Chaque os suit la rotation de son segment
+   (une transformation rigide par os), chaînée depuis le bassin ;
+   rachis lombaire et cervical interpolés entre leurs voisins.
+══════════════════════════════════════════════════════ */
+let walkMode=false, walkPanel=null, _wkUiT=0;
+const WK={ data:null, loading:null, rig:null, t:0, speed:1, paused:false, lastNow:0, side:'r', floorOn:true, floor:null, keep:new Set(), err:null };
+const WK_URL='data/lot5/marche.json';
+const WK_PARENT={ torso:'pelvis', head:'torso', l_thigh:'pelvis', l_shank:'l_thigh', l_foot:'l_shank', l_toes:'l_foot',
+  r_thigh:'pelvis', r_shank:'r_thigh', r_foot:'r_shank', r_toes:'r_foot', l_uarm:'torso', l_larm:'l_uarm', l_hand:'l_larm',
+  r_uarm:'torso', r_larm:'r_uarm', r_hand:'r_larm' };
+const WK_ORDER=['pelvis','torso','head','l_thigh','l_shank','l_foot','l_toes','r_thigh','r_shank','r_foot','r_toes','l_uarm','l_larm','l_hand','r_uarm','r_larm','r_hand'];
+
+function wkLoad(){
+  if(WK.data) return Promise.resolve(WK.data);
+  if(WK.loading) return WK.loading;
+  WK.loading=fetch(WK_URL).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }).then(d=>{
+    d.Q={}; WK_ORDER.forEach(s=>{ d.Q[s]=(d.q[s]||[]).map(a=>new THREE.Quaternion(a[0],a[1],a[2],a[3])); });
+    d.T=(d.trans||[]).map(a=>new THREE.Vector3(a[0],a[1],a[2]));
+    WK.data=d; return d;
+  }).catch(e=>{ WK.loading=null; throw e; });
+  return WK.loading;
+}
+
+/* Os → segment (ou interpolation rachidienne) d'après le nom du mesh */
+function wkSegOf(r){
+  if(!/^(VH_F_|ZA_)/.test(r)) return null;
+  const sd=/(_R$|(^|_)right(_|$))/.test(r)?'r':(/(_L$|(^|_)left(_|$))/.test(r)?'l':null);
+  if(/lumbar_vertebra_\d|intervertebral_disc_(t12_l1|l\d_l\d|l5_s1)$/.test(r)) return { blend:'lum' };
+  if(/cervical_vertebra_\d|intervertebral_disc_c\d_(c\d|t1)$/.test(r)) return { blend:'cer' };
+  if(/(ilium|ischium|pubis)_(compact|spongy)_bone|^VH_F_sacrum$|^VH_F_coccyx$|interpubic_disc$/.test(r)) return { seg:'pelvis' };
+  if(/thoracic_vertebra_\d|intervertebral_disc_t\d+_t\d+$|^ZA_\w+_rib_[LR]$|costal_cartilage_of_\w+_rib|sternum$|^ZA_xiphoid_process$|^ZA_clavicle_[LR]$|^ZA_scapula_[LR]$/.test(r)) return { seg:'torso' };
+  if(/^ZA_(frontal_bone|parietal_bone_[LR]|occipital_bone|temporal_bone_[LR]|sphenoid_bone|ethmoid_bone|nasal_bone_[LR]|lacrimal_bone_[LR]|zygomatic_bone_[LR]|maxilla_[LR]|palatine_bone_[LR]|vomer|inferior_nasal_concha_bone_[LR]|mandible|hyoid_bone)$|^ZA_(upper|lower)_\w*(incisor|canine|premolar|molar_tooth)_[LR]$/.test(r)) return { seg:'head' };
+  if(!sd) return null;
+  if(/^VH_F_(femur|articular_cartilage_of_knee|intercondylar_fossa|distal_most_point_of_medial_condyle|(lateral|medial)_epicondylar_enthesis|lateral_condyle_of_femur_(sup|inf|frontal))_[LR]$|^VH_F_medial_condyle_of_(left|right)_femur_(sup|inf)$/.test(r)) return { seg:sd+'_thigh' };
+  // rotule : glisse dans la trochlée, entre fémur et tibia 
+  if(/^VH_F_patella_[LR]$/.test(r)) return { pair:[sd+'_thigh',sd+'_shank'], w:0.35 };
+  if(/^VH_F_(tibia|fibula|meniscus)_[LR]$/.test(r)) return { seg:sd+'_shank' };
+  if(/^ZA_(talus|calcaneus|navicular_bone|cuboid_bone|(medial|intermediate|lateral)_cuneiform_bone|\w+_metatarsal_bone|sesamoid_bones_of_foot)_[LR]$/.test(r)) return { seg:sd+'_foot' };
+  if(/^ZA_\w+_phalanx_of_\w+_finger_of_foot_[LR]$/.test(r)) return { seg:sd+'_toes' };
+  if(/^ZA_humerus_[LR]$/.test(r)) return { seg:sd+'_uarm' };
+  if(/^ZA_(radius|ulna)_[LR]$/.test(r)) return { seg:sd+'_larm' };
+  if(/^ZA_(scaphoid|lunate|triquetrum|pisiform|trapezium|trapezoid|capitate|hamate)_bone_[LR]$|^ZA_\w+_metacarpal_bone_[LR]$|^ZA_\w+_phalanx_of_\w+_finger_of_hand_[LR]$/.test(r)) return { seg:sd+'_hand' };
+  return null;
+}
+
+/* ── Géométrie : points monde, centres articulaires ── */
+function wkVerts(m){
+  if(!m || !m.geometry || !m.geometry.attributes.position) return [];
+  m.updateWorldMatrix(true,false);
+  const pa=m.geometry.attributes.position, st=Math.max(1,Math.floor(pa.count/3000)), out=[];
+  for(let i=0;i<pa.count;i+=st) out.push(new THREE.Vector3().fromBufferAttribute(pa,i).applyMatrix4(m.matrixWorld));
+  return out;
+}
+function wkMean(P){ const c=new THREE.Vector3(); if(!P||!P.length) return null; P.forEach(p=>c.add(p)); return c.divideScalar(P.length); }
+/* points situés dans la fraction haute (top) ou basse de l'étendue le long d'un axe */
+function wkSlab(P, ax, frac, top){
+  let lo=Infinity, hi=-Infinity; P.forEach(p=>{ const h=p.dot(ax); if(h<lo) lo=h; if(h>hi) hi=h; });
+  const L=hi-lo; return P.filter(p=>{ const h=p.dot(ax); return top ? h>=hi-frac*L : h<=lo+frac*L; });
+}
+/* sphère des moindres carrés (algébrique, points centrés) */
+function wkSphere(P){
+  const m=wkMean(P); if(!m || P.length<12) return null;
+  const A=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]], b=[0,0,0,0];
+  P.forEach(q=>{ const x=q.x-m.x, y=q.y-m.y, z=q.z-m.z, r=[2*x,2*y,2*z,1], v=x*x+y*y+z*z;
+    for(let i=0;i<4;i++){ b[i]+=r[i]*v; for(let j=0;j<4;j++) A[i][j]+=r[i]*r[j]; } });
+  for(let i=0;i<4;i++){
+    let pv=i; for(let k=i+1;k<4;k++) if(Math.abs(A[k][i])>Math.abs(A[pv][i])) pv=k;
+    [A[i],A[pv]]=[A[pv],A[i]]; [b[i],b[pv]]=[b[pv],b[i]];
+    if(Math.abs(A[i][i])<1e-12) return null;
+    for(let k=i+1;k<4;k++){ const f=A[k][i]/A[i][i]; for(let j=i;j<4;j++) A[k][j]-=f*A[i][j]; b[k]-=f*b[i]; }
+  }
+  const s=[0,0,0,0]; for(let i=3;i>=0;i--){ let v=b[i]; for(let j=i+1;j<4;j++) v-=A[i][j]*s[j]; s[i]=v/A[i][i]; }
+  const c=new THREE.Vector3(s[0],s[1],s[2]); const r=Math.sqrt(Math.max(0,s[3]+c.lengthSq()));
+  return { c:c.add(m), r };
+}
+/* tête d'un os long (fémur, humérus) : sphère ajustée sur la partie haute et médiale */
+function wkHead(P, up, right, x0){
+  let S=wkSlab(P, up, 0.09, true); if(S.length<12) return wkMean(S)||wkMean(P);
+  const d=S.map(p=>Math.abs(p.dot(right)-x0)).sort((a,b)=>a-b), med=d[d.length>>1];
+  const M=S.filter(p=>Math.abs(p.dot(right)-x0)<=med);
+  const L=(()=>{ let lo=Infinity,hi=-Infinity; P.forEach(p=>{ const h=p.dot(up); lo=Math.min(lo,h); hi=Math.max(hi,h); }); return hi-lo; })();
+  const f=wkSphere(M);
+  if(f && f.r>0.02*L && f.r<0.2*L) return f.c;
+  return wkMean(M);
+}
+
+function wkBuild(){
+  if(WK.rig) return true;
+  if(typeof allMeshes==='undefined' || !allMeshes.length) return false;
+  const by={}, items=[];
+  allMeshes.forEach(m=>{ const r=(m.userData&&m.userData.rawName)||m.name||''; by[r]=m; const a=wkSegOf(r); if(a) items.push(Object.assign({ m, r }, a)); });
+  const need=['VH_F_femur_L','VH_F_femur_R','VH_F_tibia_L','VH_F_tibia_R','ZA_calcaneus_L','ZA_calcaneus_R','ZA_frontal_bone','ZA_humerus_L','ZA_humerus_R','VH_F_lumbar_vertebra_3','VH_F_cervical_vertebra_1','VH_F_sacrum'];
+  if(need.some(n=>!by[n])){ console.warn('[marche] os manquants', need.filter(n=>!by[n])); return false; }
+  const V=n=>wkVerts(by[n]), C=n=>wkMean(V(n));
+  // ── axes du sujet dans la scène
+  const heel=C('ZA_calcaneus_L').add(C('ZA_calcaneus_R')).multiplyScalar(0.5);
+  const up=C('ZA_frontal_bone').sub(heel).normalize();
+  const right=C('VH_F_femur_R').sub(C('VH_F_femur_L')); right.addScaledVector(up,-right.dot(up)).normalize();
+  const fwd=new THREE.Vector3().crossVectors(up,right).normalize();
+  const x0=C('VH_F_sacrum').dot(right);
+  const side=s=>s==='l'?'L':'R';
+  const J={};
+  ['l','r'].forEach(s=>{
+    const S=side(s), fem=V('VH_F_femur_'+S), tib=V('VH_F_tibia_'+S), hum=V('ZA_humerus_'+S);
+    J[s+'_thigh']=wkHead(fem, up, right, x0);
+    J[s+'_shank']=wkMean(wkSlab(fem,up,0.03,false)).add(wkMean(wkSlab(tib,up,0.03,true))).multiplyScalar(0.5);
+    const tal=by['ZA_talus_'+S]?C('ZA_talus_'+S):C('ZA_calcaneus_'+S);
+    J[s+'_foot']=wkMean(wkSlab(tib,up,0.04,false)).add(tal).multiplyScalar(0.5);
+    const mts=['first','second','third','fourth','fifth'].map(k=>by['ZA_'+k+'_metatarsal_bone_'+S]).filter(Boolean)
+      .map(m=>wkMean(wkSlab(wkVerts(m),fwd,0.1,true)));
+    J[s+'_toes']=mts.length?wkMean(mts):J[s+'_foot'].clone().addScaledVector(fwd,15);
+    J[s+'_uarm']=wkHead(hum, up, right, x0);
+    const hb=wkMean(wkSlab(hum,up,0.04,false));
+    const fa=['ZA_ulna_'+S,'ZA_radius_'+S].filter(n=>by[n]).map(n=>wkMean(wkSlab(V(n),up,0.04,true)));
+    J[s+'_larm']=fa.length?hb.clone().add(wkMean(fa)).multiplyScalar(0.5):hb;
+    const rb=by['ZA_radius_'+S]?wkMean(wkSlab(V('ZA_radius_'+S),up,0.04,false)):null, lun=by['ZA_lunate_bone_'+S]?C('ZA_lunate_bone_'+S):null;
+    J[s+'_hand']=(rb&&lun)?rb.add(lun).multiplyScalar(0.5):(rb||lun||J[s+'_larm'].clone().addScaledVector(up,-25));
+  });
+  J.pelvis=J.l_thigh.clone().add(J.r_thigh).multiplyScalar(0.5);
+  J.torso=C('VH_F_lumbar_vertebra_3');
+  J.head=C('VH_F_cervical_vertebra_1');
+  // ── sol (plante des pieds) et échelle données → scène
+  let sole=Infinity; items.filter(it=>/_(foot|toes)$/.test(it.seg||'')).forEach(it=>wkVerts(it.m).forEach(p=>{ sole=Math.min(sole,p.dot(up)); }));
+  const hipH=J.pelvis.dot(up)-sole;
+  let top=-Infinity; V('ZA_frontal_bone').forEach(p=>{ top=Math.max(top,p.dot(up)); });
+  // ── interpolation rachidienne (hauteur relative entre les deux segments voisins)
+  const hOf=p=>p.dot(up);
+  const lum0=Math.max(...V('VH_F_sacrum').map(hOf)), lum1=by['VH_F_thoracic_vertebra_12']?hOf(C('VH_F_thoracic_vertebra_12')):hOf(J.torso)+10;
+  const cer0=by['VH_F_thoracic_vertebra_1']?hOf(C('VH_F_thoracic_vertebra_1')):hOf(J.head)-12, cer1=hOf(J.head);
+  const q=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(right,fwd,up));
+  items.forEach(it=>{
+    it.m.updateWorldMatrix(true,false);
+    it.rest=it.m.matrixWorld.clone(); it.local=it.m.matrix.clone();
+    it.pinv=it.m.parent?new THREE.Matrix4().copy(it.m.parent.matrixWorld).invert():new THREE.Matrix4();
+    if(it.pair){ it.c=wkMean(wkVerts(it.m)); it.a=it.pair[0]; it.b=it.pair[1]; it.blend='pair'; }
+    else if(it.blend){
+      it.c=wkMean(wkVerts(it.m)); const h=hOf(it.c);
+      it.w=it.blend==='lum'?Math.max(0,Math.min(1,(h-lum0)/(lum1-lum0))):Math.max(0,Math.min(1,(h-cer0)/(cer1-cer0)));
+      it.a=it.blend==='lum'?'pelvis':'torso'; it.b=it.blend==='lum'?'torso':'head';
+    }
+  });
+  const byM=new Map(items.map(it=>[it.m,it])); items.forEach(it=>{ it.pItem=byM.get(it.m.parent)||null; });
+  WK.keep=new Set(items.map(it=>it.r));
+  const W={}; WK_ORDER.forEach(s=>{ W[s]=new THREE.Matrix4(); });
+  WK.rig={ items, J, up, right, fwd, q, qi:q.clone().invert(), sole, hipH, height:top-sole, W, A:{} };
+  WK_ORDER.forEach(s=>{ WK.rig.A[s]=new THREE.Quaternion(); });
+  return true;
+}
+
+/* ── Pose à la phase φ (0–1, cycle de la jambe droite) ── */
+const _wkV=new THREE.Vector3(), _wkV2=new THREE.Vector3(), _wkQ=new THREE.Quaternion(), _wkM=new THREE.Matrix4();
+function wkPose(ph){
+  const d=WK.data, R=WK.rig, n=d.n, f=((ph%1)+1)%1*(n-1), i=Math.floor(f), u=f-i, j=Math.min(n-1,i+1);
+  const s=R.hipH/(d.hauteur_bassin||0.87);
+  WK_ORDER.forEach(seg=>{
+    const Qs=d.Q[seg], A=R.A[seg], Wm=R.W[seg], Jp=R.J[seg];
+    if(!Qs||!Qs.length){ A.copy(R.A[WK_PARENT[seg]]||new THREE.Quaternion()); }
+    else { _wkQ.copy(Qs[i]).slerp(Qs[j],u); A.copy(R.q).multiply(_wkQ).multiply(R.qi); }
+    // position du pivot : bassin = pivot + translation mesurée ; sinon pivot transporté par le parent
+    if(seg==='pelvis'){
+      _wkV.copy(d.T[i]).lerp(d.T[j],u);
+      _wkV2.set(0,0,0).addScaledVector(R.right,_wkV.x*s).addScaledVector(R.fwd,_wkV.y*s).addScaledVector(R.up,_wkV.z*s).add(Jp);
+    } else _wkV2.copy(Jp).applyMatrix4(R.W[WK_PARENT[seg]]);
+    Wm.makeRotationFromQuaternion(A);
+    _wkV.copy(Jp).applyQuaternion(A);
+    Wm.setPosition(_wkV2.x-_wkV.x, _wkV2.y-_wkV.y, _wkV2.z-_wkV.z);
+  });
+}
+const _wkTa=new THREE.Vector3(), _wkTb=new THREE.Vector3(), _wkBQ=new THREE.Quaternion(), _wkBM=new THREE.Matrix4();
+function wkApply(){
+  const R=WK.rig;
+  R.items.forEach(it=>{
+    const m=it.m;
+    let Wm;
+    if(it.blend){
+      _wkTa.copy(it.c).applyMatrix4(R.W[it.a]); _wkTb.copy(it.c).applyMatrix4(R.W[it.b]); _wkTa.lerp(_wkTb,it.w);
+      _wkBQ.copy(R.A[it.a]).slerp(R.A[it.b],it.w);
+      _wkBM.makeRotationFromQuaternion(_wkBQ); _wkTb.copy(it.c).applyQuaternion(_wkBQ);
+      _wkBM.setPosition(_wkTa.x-_wkTb.x,_wkTa.y-_wkTb.y,_wkTa.z-_wkTb.z); Wm=_wkBM;
+    } else Wm=R.W[it.seg];
+    m.matrixAutoUpdate=false;
+    m.matrixWorld.multiplyMatrices(Wm,it.rest);
+  });
+  // repère local : relatif au parent tel qu'il sera rendu (un os peut être l'enfant d'un autre os animé)
+  R.items.forEach(it=>{
+    const m=it.m;
+    if(it.pItem){ _wkBM.copy(it.pItem.m.matrixWorld).invert(); m.matrix.multiplyMatrices(_wkBM,m.matrixWorld); }
+    else m.matrix.multiplyMatrices(it.pinv,m.matrixWorld);
+    m.matrixWorldNeedsUpdate=true;
+  });
+}
+function wkRestore(){
+  if(!WK.rig) return;
+  WK.rig.items.forEach(it=>{ const m=it.m; m.matrixAutoUpdate=true; m.matrix.copy(it.local); m.matrixWorld.copy(it.rest); m.matrixWorldNeedsUpdate=true; });
+}
+
+/* ── Sol à bandes défilantes (tapis) ── */
+function wkFloor(){
+  const R=WK.rig; if(WK.floor) return WK.floor;
+  const cv=document.createElement('canvas'); cv.width=64; cv.height=64; const g=cv.getContext('2d');
+  g.fillStyle='rgba(120,140,170,0.16)'; g.fillRect(0,0,64,64); g.fillStyle='rgba(190,205,230,0.55)'; g.fillRect(0,0,64,5);
+  const tex=new THREE.CanvasTexture(cv); tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+  const L=R.height*0.9, Wd=R.height*0.32, sp=R.height*0.06; tex.repeat.set(1,L/sp);
+  const geo=new THREE.PlaneGeometry(Wd,L);
+  const mat=new THREE.MeshBasicMaterial({ map:tex, transparent:true, depthWrite:false, side:THREE.DoubleSide });
+  const mesh=new THREE.Mesh(geo,mat); mesh.name='walk-floor'; mesh.renderOrder=-1;
+  mesh.matrixAutoUpdate=false;
+  const M=new THREE.Matrix4().makeBasis(R.right,R.fwd,R.up);
+  const c=R.J.pelvis.clone().addScaledVector(R.up,-(R.J.pelvis.dot(R.up)-R.sole)-0.15);
+  M.setPosition(c); mesh.matrix.copy(M);
+  WK.floor={ mesh, tex, sp };
+  return WK.floor;
+}
+
+/* ── Événements et sous-phases (Perry) pour la jambe choisie ── */
+function wkEvents(sd){
+  const E=WK.data.evenements, o=sd==='r'?'l':'r';
+  const ic=sd==='r'?0:E.l.contact[0], rel=x=>(((x-ic)%100)+100)%100;
+  const to=rel(E[sd].decollement[0]), oto=rel(E[o].decollement[0]), oic=rel(o==='r'?0:E.l.contact[0]);
+  return { ic, to, oto, oic };
+}
+function wkSubPhase(p, ev){
+  if(p<ev.oto) return ['Appui','Mise en charge'];
+  if(p<(ev.oto+ev.oic)/2) return ['Appui','Appui intermédiaire'];
+  if(p<ev.oic) return ['Appui','Appui terminal'];
+  if(p<ev.to) return ['Appui','Pré-oscillation'];
+  const sw=100-ev.to;
+  if(p<ev.to+sw/3) return ['Oscillation','Oscillation initiale'];
+  if(p<ev.to+2*sw/3) return ['Oscillation','Oscillation moyenne'];
+  return ['Oscillation','Oscillation terminale'];
+}
+
+/* ── Panneau ── */
+function buildWalkPanel(){
+  if(walkPanel) return;
+  const el=document.createElement('div');
+  el.id='walk-panel'; el.className='ca-panel';
+  el.style.cssText='right:8px;bottom:44px;width:336px;--ca-acc:#2a9d8f';
+  el.innerHTML=`
+  <div class="ca-hd"><span style="font-size:18px">🚶</span>
+    <div><h4>Marche</h4><div class="ca-sub" id="wk-sub">Squelette articulé · marche réelle mesurée</div></div>
+    <button class="ca-min" onclick="this.closest('.ca-panel').classList.toggle('collapsed')" title="Réduire">–</button></div>
+  <div class="ca-bd">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center" id="wk-read">
+      ${['Vitesse|m/s','Cadence|pas/min','Cycle|s','Appui|% du cycle'].map((s,i)=>{ const [a,b]=s.split('|'); return `<div style="background:rgba(255,255,255,.035);border:1px solid var(--border);border-radius:6px;padding:4px 2px">
+        <div class="ca-mono" style="font-size:10.5px;color:var(--text4)">${a}</div><div id="wk-r${i}" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;color:var(--text);font-weight:600">–</div><div style="font-size:9.5px;color:var(--text4)">${b}</div></div>`; }).join('')}
+    </div>
+    <div class="ca-seg" id="wk-side" style="margin-top:7px"><button data-s="r" class="on" onclick="wkSetSide('r')">Jambe droite</button><button data-s="l" onclick="wkSetSide('l')">Jambe gauche</button></div>
+    <canvas id="wk-chart" style="width:100%;height:178px;display:block;margin-top:5px;border-radius:6px;border:1px solid var(--border)"></canvas>
+    <div class="ca-row" style="font-size:12px;gap:8px">
+      <span id="wk-phase" style="font-size:11.5px;padding:2px 8px;border-radius:10px;background:rgba(42,157,143,.18);color:#7fd8cc;white-space:nowrap;font-family:ui-monospace,Menlo,Consolas,monospace">—</span>
+      <span id="wk-sub2" style="margin-left:auto;color:var(--text3);white-space:nowrap">—</span></div>
+    <div class="ca-row">
+      <button class="ca-btn" id="wk-play" onclick="wkTogglePause()" title="Pause / lecture">⏸</button>
+      <span class="ca-seg" id="wk-speed"><button data-s="1" class="on" onclick="wkSetSpeed(1)">×1</button><button data-s="0.5" onclick="wkSetSpeed(0.5)">×½</button><button data-s="0.25" onclick="wkSetSpeed(0.25)">×¼</button></span>
+      <label style="margin-left:auto;cursor:pointer;display:flex;align-items:center;gap:4px"><input type="checkbox" checked onchange="wkSetFloor(this.checked)" style="accent-color:#2a9d8f"> Tapis</label>
+    </div>
+    <div class="ca-info" id="wk-desc">Un cycle va d’un contact du talon au suivant, du même côté. Le pied reste au sol pendant l’<b>appui</b> (environ 60 %), puis avance pendant l’<b>oscillation</b>. Les deux pieds touchent le sol ensemble deux fois par cycle : c’est le <b>double appui</b>, qui disparaît à la course.</div>
+    <div class="ca-credit">Mouvement réel mesuré : participant IDA01 (35 ans, 1,69 m) de segmenta-gait-data v1.0.0 (Robalino, Sagawa, Vilas-Boas, Goethel, 2026), CC BY 4.0 — capture sans marqueurs Theia3D, 100 Hz ; une transformation rigide par os, marche sur place ; muscles et organes masqués.</div>
+  </div>`;
+  const v3d=document.getElementById('viewer3d'); if(v3d) v3d.appendChild(el);
+  walkPanel=el;
+}
+function wkSetSide(s){ WK.side=s; document.querySelectorAll('#wk-side button').forEach(b=>b.classList.toggle('on',b.dataset.s===s)); _wkUiT=0; }
+function wkSetSpeed(s){ WK.speed=s; document.querySelectorAll('#wk-speed button').forEach(b=>b.classList.toggle('on',+b.dataset.s===s)); }
+function wkTogglePause(){ WK.paused=!WK.paused; const b=document.getElementById('wk-play'); if(b) b.textContent=WK.paused?'▶':'⏸'; }
+function wkSetFloor(on){ WK.floorOn=on; if(WK.floor) WK.floor.mesh.visible=on; }
+
+function wkDrawChart(ph){
+  const c=document.getElementById('wk-chart'); if(!c || !walkPanel || walkPanel.classList.contains('collapsed')) return;
+  const d=WK.data, sd=WK.side, ev=wkEvents(sd);
+  const dpr=Math.min(2,window.devicePixelRatio||1), Wc=c.clientWidth||300, Hc=c.clientHeight||178;
+  if(c.width!==Math.round(Wc*dpr) || c.height!==Math.round(Hc*dpr)){ c.width=Math.round(Wc*dpr); c.height=Math.round(Hc*dpr); }
+  const ctx=c.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle='#06080b'; ctx.fillRect(0,0,Wc,Hc);
+  const x0=26, x1=Wc-6, y0=16, y1=Hc-18, X=p=>x0+(p/100)*(x1-x0), lo=-25, hi=72, Y=v=>y1-(v-lo)/(hi-lo)*(y1-y0);
+  // appui (bande) et double appui
+  ctx.fillStyle='rgba(42,157,143,.13)'; ctx.fillRect(X(0),y0,X(ev.to)-X(0),y1-y0);
+  ctx.fillStyle='rgba(42,157,143,.13)'; [[0,ev.oto],[ev.oic,ev.to]].forEach(([a,b])=>{ if(b>a) ctx.fillRect(X(a),y0,X(b)-X(a),y1-y0); });
+  ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1;
+  [-20,0,20,40,60].forEach(v=>{ ctx.beginPath(); ctx.moveTo(x0,Y(v)); ctx.lineTo(x1,Y(v)); ctx.stroke(); });
+  ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.beginPath(); ctx.moveTo(x0,Y(0)); ctx.lineTo(x1,Y(0)); ctx.stroke();
+  const n=d.n, off=ev.ic/100*(n-1);
+  const at=(arr,p)=>{ const f=((off+p/100*(n-1))%(n-1)+(n-1))%(n-1), i=Math.floor(f), u=f-i; return arr[i]*(1-u)+arr[Math.min(n-1,i+1)]*u; };
+  const S=[['hanche','#ff8a5b'],['genou','#5aa9ff'],['cheville','#3ddc84']];
+  S.forEach(([k,col])=>{ const arr=d.angles[sd+'_'+k]; if(!arr) return; ctx.strokeStyle=col; ctx.lineWidth=1.7; ctx.beginPath();
+    for(let p=0;p<=100;p+=1){ const x=X(p), y=Y(at(arr,p)); if(!p) ctx.moveTo(x,y); else ctx.lineTo(x,y); } ctx.stroke(); });
+  // curseur
+  const pc=((ph*100-ev.ic)%100+100)%100; ctx.fillStyle='rgba(255,255,255,.8)'; ctx.fillRect(X(pc)-1,y0,2,y1-y0);
+  S.forEach(([k,col])=>{ const arr=d.angles[sd+'_'+k]; if(!arr) return; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(X(pc),Y(at(arr,pc)),3,0,6.3); ctx.fill(); });
+  ctx.font='10px ui-monospace,Menlo,Consolas,monospace'; ctx.textBaseline='top';
+  ctx.fillStyle='rgba(255,255,255,.5)'; [-20,0,20,40,60].forEach(v=>ctx.fillText(String(v),2,Y(v)-5));
+  ctx.fillText('degrés · % du cycle',x0,2);
+  let lx=x0+112; S.forEach(([k,col])=>{ ctx.fillStyle=col; ctx.fillText(k,lx,2); lx+=ctx.measureText(k).width+8; });
+  ctx.fillStyle='rgba(127,216,204,.8)'; ctx.fillText('appui',X(2),y1+4); ctx.fillText('oscillation',X(ev.to+2),y1+4);
+}
+function wkUIFrame(ph){
+  wkDrawChart(ph);
+  const now=performance.now(); if(now-_wkUiT<120) return; _wkUiT=now;
+  const d=WK.data, ev=wkEvents(WK.side), set=(i,v)=>{ const e=document.getElementById('wk-r'+i); if(e) e.textContent=v; };
+  set(0,d.vitesse.toFixed(2).replace('.',',')); set(1,Math.round(d.cadence)); set(2,d.duree.toFixed(2).replace('.',',')); set(3,Math.round(ev.to));
+  const pc=((ph*100-ev.ic)%100+100)%100, sp=wkSubPhase(pc,ev);
+  const e1=document.getElementById('wk-phase'); if(e1){ e1.textContent=sp[0]+' · '+Math.round(pc)+' %'; const st=sp[0]==='Appui'; e1.style.background=st?'rgba(42,157,143,.18)':'rgba(255,183,3,.15)'; e1.style.color=st?'#7fd8cc':'#ffd27a'; }
+  const e2=document.getElementById('wk-sub2'); if(e2) e2.textContent=sp[1]+((pc<ev.oto||(pc>=ev.oic&&pc<ev.to))?' · double appui':'');
+}
+
+const _wkOn={ v:false };
+PRE_RENDER.push(function(){
+  _wkOn.v=false;
+  if(!walkMode || !WK.rig || !WK.data) return;
+  const now=performance.now(); let dt=WK.lastNow?(now-WK.lastNow)/1000:0; WK.lastNow=now; dt=Math.min(dt,0.1);
+  if(!WK.paused) WK.t+=dt*WK.speed;
+  const d=WK.data, ph=(WK.t/d.duree)%1;
+  wkPose(ph); wkApply(); _wkOn.v=true;
+  if(WK.floor && !WK.paused){ WK.floor.tex.offset.y-=dt*WK.speed*d.vitesse*(WK.rig.hipH/(d.hauteur_bassin||0.87))/WK.floor.sp; }
+  try{ wkUIFrame(ph); }catch(e){}
+});
+POST_RENDER.push(function(){ if(_wkOn.v){ wkRestore(); _wkOn.v=false; } });
+
+function toggleWalk(){
+  walkMode=!walkMode;
+  const btn=document.getElementById('btwalk'); if(btn) btn.classList.toggle('on',walkMode);
+  if(walkMode){
+    if(!wkBuild()){ walkMode=false; if(btn) btn.classList.remove('on'); console.warn('[marche] squelette introuvable'); return; }
+    buildWalkPanel(); walkPanel.style.display='flex';
+    const fl=wkFloor(); fl.mesh.visible=WK.floorOn; if(!fl.mesh.parent) scene.add(fl.mesh);
+    WK.lastNow=0;
+    if(!WK.data){
+      const s=document.getElementById('wk-sub'); if(s) s.textContent='Chargement du mouvement…';
+      wkLoad().then(()=>{ const s2=document.getElementById('wk-sub'); if(s2) s2.textContent='Squelette articulé · marche réelle mesurée'; WK.lastNow=0; })
+        .catch(e=>{ const s2=document.getElementById('wk-sub'); if(s2) s2.textContent='Mouvement indisponible ('+e.message+')'; });
+    }
+  } else {
+    wkRestore();
+    if(WK.floor && WK.floor.mesh.parent) scene.remove(WK.floor.mesh);
+    if(walkPanel) walkPanel.style.display='none';
+  }
+}
+function wkFrameCam(){
+  const R=WK.rig; if(!R) return null;
+  const c=R.J.pelvis.clone().addScaledVector(R.up,(R.sole+R.height*0.5)-R.J.pelvis.dot(R.up));
+  const dir=R.right.clone().multiplyScalar(1).addScaledVector(R.fwd,0.35).addScaledVector(R.up,0.08);
+  return caFrame(c, R.height*1.08, dir, 'right', walkPanel&&walkPanel.offsetWidth?walkPanel.offsetWidth:336);
+}
+(function(){
+  registerModeCtx('toggleWalk',{ on:()=>walkMode, focus:()=>wkFrameCam(),
+    ghost:{ base:0, skin:0, keep:[[{test:r=>walkMode && WK.keep.has(r)},1.0]] } });
+  if(typeof MODE_BTNS!=='undefined') MODE_BTNS.push('btwalk');
+})();
 
 /* ─── Pulse animation sur activation bouton ─── */
 function pulseTbtn(id){
@@ -16814,7 +17185,7 @@ window._zaPromise = (async () => {
 function _zaWait(fn){
   let done=false; const go=()=>{ if(!done){ done=true; try{ fn(); }catch(e){ console.error(e); } } };
   if(!window._zaPromise) return go();
-  window._zaPromise.then(go, go); setTimeout(go, 30000);
+  Promise.allSettled([window._zaPromise, window._hmPromise || Promise.resolve()]).then(go); setTimeout(go, 30000);
 }
 /* Rattache les maillages Z-Anatomy à la scène HRA (même repère brut → même normalisation) */
 const ZA_HIDDEN = /muscle|tendon|diaphragm|pleura|omentum|platysma|aponeurosis|^ZA_(levator|depressor|zygomaticus|risorius|mentalis|orbicularis|procerus|nasalis|corrugator|bucinator|masseter|temporalis)/i;
@@ -16831,9 +17202,142 @@ function _zaAttach(glbScene){
   });
   return meshes.length;
 }
-function zaCreditHTML(){
+const ZA_DUNDEE=/nerve/;
+const ZA_DUNDEE_N=/_nerve_(i{1,3}|iv|vi{0,3}|ix|xi{0,2})(_|$)|trigeminal|ophthalmic_nerve|maxillary_nerve|mandibular_nerve|buccal_nerve|alveolar_nerve|lingual_nerve|mental_nerve|nerve_to_mylohyoid/;
+/* ══════════════════════════════════════════════════════
+   ♂ / ♀ MODÈLE HOMME — v31
+   Les modèles HRA VH_F et VH_M sont deux corps différents (1,68 m / 1,82 m) :
+   plutôt que dupliquer tout l'atlas, le mode Homme garde le corps de
+   référence et n'échange que ce qui diffère. Structures masculines
+   (data/homme/homme.glb, recalées sur le modèle féminin par spline plaque
+   mince) : peau masculine, prostate et ses zones, vésicules séminales,
+   conduits éjaculateurs, urètre masculin (HRA VH_M, CC BY 4.0) ; testicules,
+   épididymes, conduits déférents, pénis et ses vaisseaux (Z-Anatomy,
+   CC BY-SA 4.0). Les structures propres au modèle féminin (seins, utérus,
+   annexes, placenta…) sont masquées.
+══════════════════════════════════════════════════════ */
+let ATLAS_SEX = 'F';
+try { if (localStorage.getItem('ca-sexe') === 'M') ATLAS_SEX = 'M'; } catch (e) {}
+window._hmData = null;
+window._hmPromise = (async () => {
+  try {
+    const r = await fetch('data/homme/homme_meta.json'); if (!r.ok) return null;
+    const meta = await r.json();
+    const gltf = await new Promise((res, rej) => _zaLoader().load('data/homme/homme.glb', res, undefined, rej));
+    Object.entries(meta.items || {}).forEach(([k, v]) => { ZA_SYS[k] = v.sys; ZA_FR[k] = v.fr; if (v.g) ZA_GRP[k] = v.g; });
+    window._hmData = { meta, gltf };
+    return window._hmData;
+  } catch (e) { console.warn('[homme] calque indisponible', e); return null; }
+})();
+function _hmAttach(glbScene) {
+  const z = window._hmData; if (!z || !z.gltf) return 0;
+  const meshes = []; z.gltf.scene.traverse(o => { if (o.isMesh) meshes.push(o); });
+  meshes.forEach(m => {
+    let nm = m.name || ''; if (!z.meta.items[nm] && m.parent && z.meta.items[m.parent.name]) nm = m.parent.name;
+    m.name = nm; m.position.set(0, 0, 0); m.rotation.set(0, 0, 0); m.scale.set(1, 1, 1);
+    m.userData.hm = true; m.userData.sex = 'M'; m.userData.src = (z.meta.items[nm] || {}).src;
+    if (m.geometry && !m.geometry.attributes.normal) m.geometry.computeVertexNormals();
+    m.visible = false;
+    glbScene.add(m);
+  });
+  return meshes.length;
+}
+/* noms des structures propres au modèle féminin (motif fourni par homme_meta.json) */
+let _hmFemRx = null, _hmSexed = [], _hmSysAll = null, _hmSkinF = null, _hmSkinM = null;
+function _hmPrepare() {
+  if (_hmSysAll) return true;
+  if (typeof allMeshes === 'undefined' || !allMeshes.length) return false;
+  const z = window._hmData;
+  _hmFemRx = new RegExp(z && z.meta && z.meta.femme_seule ? z.meta.femme_seule : '^VH_F_(skin|uterus|ovary|vagina|cervix)$');
+  allMeshes.forEach(m => {
+    const raw = (m.userData && m.userData.rawName) || m.name || '';
+    if (!m.userData.sex && _hmFemRx.test(raw)) m.userData.sex = 'F';
+    if (m.userData.sex) _hmSexed.push(m);
+    if (raw === 'VH_F_skin') _hmSkinF = m;
+    if (raw === 'VH_M_skin') _hmSkinM = m;
+  });
+  _hmSexed.forEach(m => { if (m.userData._hmVis === undefined) m.userData._hmVis = m.userData.sex === 'M' ? true : m.visible; });
+  _hmSysAll = {}; Object.keys(systemMeshes).forEach(k => { _hmSysAll[k] = systemMeshes[k].slice(); });
+  window._lmSkinRef = _hmSkinF;            // repère des points d'ancrage : toujours la peau de référence
+  return true;
+}
+function _hmOk(m) { return !m.userData || !m.userData.sex || m.userData.sex === ATLAS_SEX; }
+function setSex(s, opts) {
+  s = s === 'M' ? 'M' : 'F';
+  if (!_hmPrepare()) { ATLAS_SEX = s; return; }
+  if (s === 'M' && !(window._hmData && _hmSkinM)) { _hmToast('Modèle masculin indisponible (data/homme/homme.glb)'); s = 'F'; }
+  const changed = s !== ATLAS_SEX; ATLAS_SEX = s;
+  try { localStorage.setItem('ca-sexe', s); } catch (e) {}
+  // visibilité : on mémorise l'état de l'autre sexe et on restaure celui-ci
+  _hmSexed.forEach(m => {
+    if (m.userData.sex === s) m.visible = m.userData._hmVis !== false && !m.userData.hiddenByDefault;
+    else { if (changed) m.userData._hmVis = m.visible; m.visible = false; }
+  });
+  // la peau du sexe affiché porte le nom de référence « VH_F_skin » (fiches, lésions cutanées, coupes…)
+  if (_hmSkinF && _hmSkinM) {
+    const cur = s === 'M' ? _hmSkinM : _hmSkinF, other = s === 'M' ? _hmSkinF : _hmSkinM;
+    other.userData.rawName = other === _hmSkinF ? 'VH_F_skin__femme' : 'VH_M_skin';
+    cur.userData.rawName = 'VH_F_skin';
+    meshByName['VH_F_skin'] = cur; meshByName[other.userData.rawName] = other;
+    if (s === 'M') meshByName['VH_M_skin'] = _hmSkinM;
+  }
+  // listes latérales et systèmes : seulement les structures du sexe affiché
+  Object.keys(_hmSysAll).forEach(k => { systemMeshes[k] = _hmSysAll[k].filter(_hmOk); });
+  if ((changed || (opts && opts.force)) && typeof populateSidebarSystem === 'function') {
+    Object.keys(systemMeshes).forEach(k => { try { populateSidebarSystem(k); } catch (e) {} });
+  }
+  if (typeof lmReset === 'function') lmReset();
+  const t = document.getElementById('vhd-model');
+  if (t) t.textContent = s === 'M' ? '🧍‍♂️ Modèle masculin' : '🫀 Visible Human Female';
+  document.querySelectorAll('#sex-seg button').forEach(b => b.classList.toggle('on', b.dataset.s === s));
+  if (changed && !(opts && opts.silent)) _hmToast(s === 'M'
+    ? '♂ Modèle masculin : peau, prostate, voies spermatiques, testicules et pénis ; le reste du corps est commun'
+    : '♀ Modèle féminin');
+}
+function _hmToast(msg) {
+  let el = document.getElementById('hm-toast');
+  if (!el) { el = document.createElement('div'); el.id = 'hm-toast';
+    el.style.cssText = 'position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:40;background:rgba(12,16,22,.92);border:1px solid var(--border);color:var(--text2);padding:6px 12px;border-radius:8px;font-size:13px;pointer-events:none;transition:opacity .4s;max-width:80%;text-align:center';
+    (document.getElementById('canvas-wrap') || document.body).appendChild(el); }
+  el.textContent = msg; el.style.opacity = '1'; clearTimeout(el._t); el._t = setTimeout(() => { el.style.opacity = '0'; }, 3200);
+}
+/* garde-fou : aucun mode ni bouton « tout afficher » ne doit montrer l'autre sexe */
+PRE_RENDER.push(function () { for (let i = 0; i < _hmSexed.length; i++) { const m = _hmSexed[i]; if (m.visible && m.userData.sex !== ATLAS_SEX) m.visible = false; } });
+/* organes propres à un sexe → bascule automatique (maladies, médicaments, recherche d'organe) */
+const HM_ORG_M = new Set(['prostate', 'testicules']), HM_ORG_F = new Set(['uterus', 'ovaires', 'trompes', 'placenta', 'vagin', 'sein']);
+function hmSexForOrgans(keys) {
+  const k = [...keys]; const m = k.some(o => HM_ORG_M.has(o)), f = k.some(o => HM_ORG_F.has(o));
+  if (m && !f && ATLAS_SEX !== 'M') setSex('M'); else if (f && !m && ATLAS_SEX !== 'F') setSex('F');
+}
+function hmSexForRaw(raw) {
+  const m = typeof meshByName === 'object' ? meshByName[raw] : null;
+  if (m && m.userData && m.userData.sex && m.userData.sex !== ATLAS_SEX) setSex(m.userData.sex);
+}
+function hmInit() {
+  if (!_hmPrepare()) { setTimeout(hmInit, 500); return; }
+  setSex(ATLAS_SEX, { silent: true, force: true });
+  if (typeof highlightOrgans === 'function' && !highlightOrgans._hm) {
+    const f = highlightOrgans; window.highlightOrgans = highlightOrgans = function (spec) { try { hmSexForOrgans(Object.keys(spec || {})); } catch (e) {} return f.apply(this, arguments); }; highlightOrgans._hm = true;
+  }
+  if (typeof malResolve === 'function' && !malResolve._hm) {
+    const f = malResolve; window.malResolve = malResolve = function (it) { try { hmSexForOrgans((it && it.o) || []); } catch (e) {} return f.apply(this, arguments); }; malResolve._hm = true;
+  }
+  if (typeof selectMesh === 'function' && !selectMesh._hm) {
+    const f = selectMesh; window.selectMesh = selectMesh = function (raw) { try { hmSexForRaw(raw); } catch (e) {} return f.apply(this, arguments); }; selectMesh._hm = true;
+  }
+}
+function hmCreditHTML(raw) {
   return `<div class="isec"><div class="ist">Modèle de cette structure</div><div style="font-size:12.5px;color:var(--text3);line-height:1.6">
-    Z-Anatomy (L. Vinent Juanico, d’après BodyParts3D © DBCLS), licence <b>CC BY-SA 4.0</b>. Maillage simplifié et recalé sur le modèle féminin HRA (VH_F) ; cette adaptation est diffusée sous la même licence. Position indicative : recalage automatique entre deux sujets différents, corrigé pour ne traverser ni la peau ni les organes du modèle.</div></div>`;
+    Modèle masculin HRA <b>VH_M</b> (Human Reference Atlas, NIH HuBMAP ; Visible Human Project, NLM), licence <b>CC BY 4.0</b>.
+    Recalé sur le modèle féminin de l’atlas (spline plaque mince sur les os, organes pelviens et viscères communs) ; peau localement élargie pour envelopper les structures internes.</div></div>`;
+}
+
+setTimeout(hmInit, 800);
+
+function zaCreditHTML(raw){
+  const dundee=ZA_DUNDEE.test(raw||'') && ZA_DUNDEE_N.test(raw||'');
+  return `<div class="isec"><div class="ist">Modèle de cette structure</div><div style="font-size:12.5px;color:var(--text3);line-height:1.6">
+    Z-Anatomy (L. Vinent Juanico, d’après BodyParts3D © DBCLS), licence <b>CC BY-SA 4.0</b>. Maillage simplifié et recalé sur le modèle féminin HRA (VH_F) ; cette adaptation est diffusée sous la même licence. Position indicative : recalage automatique entre deux sujets différents, corrigé pour ne traverser ni la peau ni les organes du modèle.${dundee?'<br>Nerf crânien : « Cranial Nerves and Foramina », University of Dundee, CAHID (Centre for Anatomy and Human Identification), réalisé par Sophia Lappe, licence <b>CC BY 4.0</b>, lui-même fondé sur BodyParts3D.':''}</div></div>`;
 }
 
 
@@ -18106,7 +18610,7 @@ function malStagePanel(){
   else { const lab=L[ME.stage]; const ti=sp.t==='malin'?({'N+':4,'M+':5}[lab]!=null?{'N+':4,'M+':5}[lab]:ME.stage):ME.stage;
     txt=(MAL_STAGE_TXT[sp.t]||MAL_STAGE_TXT.benin)[ti]||'';
     if(sp.t==='malin'&&lab==='M+') txt+=(sp.m&&sp.m.length?sp.m.map(m=>MAL_MET_LBL[m]||m).join(', '):'rares pour cette tumeur')+'.'; }
-  if(ME.fam===4&&!ME.tumSite&&sp.t!=='hemato') txt='Organe absent du modèle féminin : seule l’extension (nœuds, métastases) est montrée. '+txt;
+  if(ME.fam===4&&!ME.tumSite&&sp.t!=='hemato'&&!(typeof ATLAS_SEX!=='undefined'&&ATLAS_SEX==='M')) txt='Organe absent du modèle féminin : seule l’extension (nœuds, métastases) est montrée. '+txt;
   let h='<div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;margin-bottom:5px"><span style="font-size:12.5px;margin-right:4px">Stade</span>'+
     L.map((s,i)=>'<button class="pbtn '+(i===ME.stage?'on':'')+'" onclick="malEmphStage('+i+')" style="font-size:12.5px;padding:1px 7px">'+s+'</button>').join('')+'</div>';
   h+='<div style="font-size:12.5px;color:var(--acc2);line-height:1.45;margin-bottom:5px">'+_malE(txt)+'</div>';
@@ -18172,7 +18676,7 @@ function malTint(raws, col, s, op, pulse){ const set=new Set(raws); ME.xRules.pu
 /* ── Famille 4 ── */
 function malBuildTumour(){
   const sp=ME.tum, K=lmK(), st=ME.stage, rnd=lmRng(malSeed(st*7+1));
-  const prim=ME.byOrgan[0]&&ME.byOrgan[0].o==='_loc'?ME.byOrgan[0]:null;
+  const prim=ME.byOrgan[0]&&(ME.byOrgan[0].o==='_loc'||(MAL_ORG_ABSENT[ME.byOrgan[0].o]&&typeof ATLAS_SEX!=='undefined'&&ATLAS_SEX==='M'))?ME.byOrgan[0]:null;
   const site=prim?prim.raws.filter(r=>!/skin$/.test(r)||prim.raws.length===1):[];
   ME.tumSite=site.length>0; ME.legend=[];
   const zf=malZoneFilter(prim&&prim.zone), of=site.length&&!(prim&&prim.zone)?malOrganFactor(site):1;
@@ -18276,7 +18780,7 @@ function malBuildHemato(sp){
 /* ── Famille 5 ── */
 function malBuildVolume(){
   const sp=ME.vol, K=lmK(), st=ME.stage, f=st/3;
-  const prim=ME.byOrgan[0]&&ME.byOrgan[0].o==='_loc'?ME.byOrgan[0]:null;
+  const prim=ME.byOrgan[0]&&(ME.byOrgan[0].o==='_loc'||(MAL_ORG_ABSENT[ME.byOrgan[0].o]&&typeof ATLAS_SEX!=='undefined'&&ATLAS_SEX==='M'))?ME.byOrgan[0]:null;
   const site=prim?prim.raws:[];
   ME.legend=[];
   if(!site.length&&!/^(pale|myelo)$/.test(sp.t)) return;

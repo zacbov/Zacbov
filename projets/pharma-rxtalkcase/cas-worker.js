@@ -10,7 +10,7 @@ const CHAIN = [
 ];
 const CORS = {
   'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-App-Secret', 'Access-Control-Expose-Headers': 'X-Model',
+  'Access-Control-Allow-Headers': 'Content-Type, X-App-Secret', 'Access-Control-Expose-Headers': 'X-Model, X-Essais',
 };
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } });
 const cut = (s, n) => String(s || '').slice(0, n);
@@ -85,6 +85,25 @@ const mergeSystem = (m) => {
   return rest;
 };
 
+/* RCP / notice d'une spécialité : relais vers medicaments-api (giygas, données ANSM, licence Etalab 2.0),
+   qui n'envoie pas d'en-têtes CORS ; réponse mise en cache 7 jours au bord de Cloudflare. Variable facultative
+   MEDOC_API pour pointer vers une autre instance (auto-hébergée). */
+async function rcp(b, env) {
+  const cis = String(b.cis || '').replace(/\D/g, ''), type = b.type === 'notice' ? 'notice' : 'rcp';
+  if (cis.length !== 8) return json({ error: 'Code CIS invalide' }, 400);
+  const url = (env.MEDOC_API || 'https://medicaments-api.giygas.dev') + `/v1/medicaments/${cis}/${type}`;
+  const cache = caches.default, cle = new Request(url);
+  let r = await cache.match(cle);
+  if (!r) {
+    try { r = await fetch(url, { headers: { Accept: 'application/json' }, cf: { cacheTtl: 604800 } }); }
+    catch (e) { return json({ error: 'Service RCP injoignable : ' + e.message }, 502); }
+    if (!r.ok) return json({ error: r.status === 404 ? 'Document non disponible pour ce CIS' : 'Service RCP : ' + r.status }, r.status === 404 ? 404 : 502);
+    r = new Response(await r.text(), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=604800' } });
+    await cache.put(cle, r.clone());
+  }
+  return new Response(r.body, { headers: { ...CORS, 'Content-Type': 'application/json' } });
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -93,6 +112,7 @@ export default {
 
     let b;
     try { b = await request.json(); } catch { return json({ error: 'JSON invalide' }, 400); }
+    if (b.mode === 'rcp') return rcp(b, env);
     const cas = b.cas || {}; cas.pop = b.pop;
     const hist = (Array.isArray(b.messages) ? b.messages : []).slice(-40)
       .map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: cut(m.content, 2000) }));
@@ -107,7 +127,7 @@ export default {
       : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0, Array.isArray(cas.docs) ? cas.docs.slice(0, 12).map((d) => cut(d, 60)) : [], b.profil, b.pop, cas.fiche, !!b.avatar) }, ...hist];
 
     const chain = env.MODELS ? env.MODELS.split(',').map((s) => s.trim().split(/:(.+)/).slice(0, 2)) : light ? [CHAIN[4], CHAIN[3]] : CHAIN;
-    const errs = [];
+    const errs = [], t0 = Date.now();
     for (const [p, model] of chain) {
       const api = API[p]; const key = api && api.keys.map((k) => env[k]).find(Boolean);
       if (!key) { errs.push(`${model}: pas de clé`); continue; }
@@ -117,13 +137,13 @@ export default {
         messages: /gemma/i.test(model) ? mergeSystem(messages) : messages,
       };
       if (/gemma-4/i.test(model)) body.reasoning_effort = 'none';
-      else if (p === 'google' && !evaluate && !light) body.reasoning_effort = 'low';
+      else if (p === 'google' && !evaluate && !light) body.reasoning_effort = 'minimal';   // réplique de patient : réflexion minimale = premier mot plus rapide (repli sans ce paramètre si refusé)
       const send = () => fetch(api.url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key }, body: JSON.stringify(body) });
       try {
         let r = await send();
         if (r.status === 400 && body.reasoning_effort) { delete body.reasoning_effort; r = await send(); }
-        if (r.ok) return new Response(r.body, { headers: { ...CORS, 'Content-Type': r.headers.get('Content-Type') || 'text/event-stream', 'X-Model': model } });
-        errs.push(`${model}: ${r.status}`);
+        if (r.ok) return new Response(r.body, { headers: { ...CORS, 'Content-Type': r.headers.get('Content-Type') || 'text/event-stream', 'X-Model': model, 'X-Essais': (errs.length ? errs.join(' ; ') + ' ; ' : '') + `${model}: ok en ${Date.now() - t0} ms` } });
+        errs.push(`${model}: ${r.status} après ${Date.now() - t0} ms`);
       } catch (e) { errs.push(`${model}: ${e.message}`); }
     }
     return json({ error: 'Aucun modèle disponible', details: errs }, 503);

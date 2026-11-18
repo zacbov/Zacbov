@@ -117,3 +117,29 @@ v13
 - Mains : bras détendus le long du corps au repos (plus de mains sur les hanches), surprise mains à hauteur de poitrine,
   poignets dans l'axe de l'avant-bras sur la table.
 - BAVU : masque sur le nez et la bouche, ballon et réservoir au-dessus du thorax.
+
+v14
+- Cas Synthea : 70 nouveaux cas d'officine (SY001 à SY070) générés à partir de patients synthétiques Synthea
+  (Apache 2.0), traduits en médicaments commercialisés en France (noms vérifiés dans la BDPM). Ils sont dans le classeur
+  avec actif = FAUX et a_valider = VRAI : à relire, puis passer actif à VRAI pour les publier.
+- Base des médicaments : Outils > « Base des médicaments (BDPM, ANSM) » (et bouton BDPM sur chaque ligne d'ordonnance).
+  bdpm.json (8 Mo, 1,1 Mo compressé par GitHub Pages, chargé seulement à l'ouverture) : 13 516 spécialités commercialisées,
+  composition, présentations (taux, prix), groupe générique, SMR/ASMR, conditions de délivrance, tensions et ruptures.
+  Données issues de Gizmo091/fr.gouv.medicaments.rest (extraction de juillet 2025) : lancer une fois l'action
+  « Base des médicaments » (onglet Actions du dépôt) pour récupérer la base du mois ; ensuite elle se met à jour le 3
+  de chaque mois. Script : outils/bdpm_build.py ; action : .github/workflows/bdpm.yml.
+- RCP et notice : demandés au worker (nouveau mode « rcp »), qui relaie medicaments-api (giygas) et met en cache 7 jours.
+  REDÉPLOYER cas-worker.js (le mode rcp et l'en-tête X-Essais sont nouveaux). Variable facultative MEDOC_API.
+- Voix locales : voir LISEZMOI_voix.txt.
+- Mains : butées anatomiques du poignet (flexion 70°, extension 60°, inclinaisons 25°) et de la rotation de l'avant-bras.
+
+v15
+- Patient (homme) : bouton « Voir l'intérieur » disponible, avec avatar/interieur_homme.glb (4,5 Mo), construit à partir du
+  calque Homme de CorpoAtlas v31 : prostate et ses zones, vésicules séminales, conduits éjaculateurs, urètre masculin
+  (HRA VH_M, CC BY 4.0), testicules, épididymes, conduits déférents, corps caverneux et spongieux, gland et vaisseaux
+  (Z-Anatomy, CC BY-SA 4.0). Les structures propres à la femme sont retirées (même liste que l'atlas) ; le reste du corps
+  est le modèle de référence de l'atlas, comme en mode Homme de CorpoAtlas (bassin compris).
+  Recalage : tronc entre la peau masculine de l'atlas et les vêtements du patient (son modèle n'a pas de peau sous les
+  vêtements), bras et jambes segment par segment sur ses articulations ; les organes suivent toutes ses postures.
+- La page choisit interieur_femme.glb ou interieur_homme.glb selon le sexe de l'avatar ; « Expliquer au patient » montre
+  aussi l'intérieur chez l'homme.

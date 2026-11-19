@@ -303,6 +303,7 @@
   <div class="grp">
     <button class="btn ghost" id="btnOpen" title="Ouvrir un projet .recit.json">Ouvrir</button>
     <button class="btn ghost" id="btnSave" title="Enregistrer le projet et ses médias">Enregistrer</button>
+    <button class="btn ghost" id="btnScript" title="Créer les chapitres depuis un script Excel (.xlsx) ou CSV">Importer un script</button>
   </div>
   <button class="btn" id="btnFull" title="Ouvrir la page entière dans un onglet">Prévisualiser</button>
   <button class="btn primary" id="btnExport">Exporter</button>
@@ -492,7 +493,7 @@ function blankStory(){
     title:'Herbier d\u2019un jardin',
     theme:{ bg:'#0E1210', ink:'#EDEAE0', accent:'#A8B87F',
       display:'Fraunces', body:'Archivo', dispWeight:300, dispTrack:-2,
-      bodyWeight:300, bodyTrack:0 },
+      bodyWeight:300, bodyTrack:0, smooth:true, smoothLerp:0.1 },
     music:{ asset:null, volume:0.35, duck:0.35, fade:1.5 },
     shapes:{},
     sfxRoute:'',
@@ -1400,8 +1401,7 @@ function goTo(target, newTab) {
   }
   let i = target === 'next' ? currentIndex() + 1 : S.chapters.findIndex(c => c.id === target);
   if (i < 0) i = currentIndex() + 1;
-  const n = document.getElementById('anchor-' + i);
-  if (n) n.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
+  scrollToEl(document.getElementById('anchor-' + i));
 }
 function goToChapter(id) { goTo(id); }
 
@@ -1558,7 +1558,8 @@ function buildRail() {
     const f = Math.max(0, Math.min(1, (y - r.top) / r.height));
     const total = spacer.scrollHeight - innerHeight;
     if (total <= 0) return;
-    if (smooth && !still) { scrollTo({ top: f * total, behavior: 'smooth' }); return; }
+    if (smooth) { scrollToY(f * total, true); return; }
+    if (lenis) { scrollToY(f * total, false); return; }
     /* la page défile en douceur par défaut : pendant un glissé, la position
        doit suivre le geste sans retard */
     const html = document.documentElement, was = html.style.scrollBehavior;
@@ -1594,8 +1595,43 @@ function buildRail() {
   document.body.appendChild(nav);
 }
 function goChapter(i) {
-  const n = document.getElementById('anchor-' + i);
-  if (n) n.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
+  scrollToEl(document.getElementById('anchor-' + i));
+}
+
+/* Défilement doux (Lenis) : la molette glisse avec inertie au lieu d'avancer
+   par crans, ce qui rend aussi les vidéos défilées plus régulières. Le doigt
+   garde le défilement natif du téléphone. Sans connexion, ou si le visiteur
+   demande moins d'animations, le défilement reste celui du navigateur. */
+let lenis = null, lenisLoading = false;
+async function syncSmooth() {
+  const want = !still && S.theme && S.theme.smooth !== false;
+  if (!want) {
+    if (lenis) { lenis.destroy(); lenis = null; document.documentElement.classList.remove('lenis'); }
+    return;
+  }
+  if (lenis) { lenis.options.lerp = +S.theme.smoothLerp || 0.1; return; }
+  if (lenisLoading) return;
+  lenisLoading = true;
+  try {
+    const L = (await import('lenis')).default;
+    if (!lenis && !still && S.theme.smooth !== false) {
+      lenis = new L({ autoRaf: true, lerp: +S.theme.smoothLerp || 0.1, smoothWheel: true });
+      lenis.on('scroll', request);
+    }
+  } catch (e) { console.warn('[Récit] défilement doux indisponible', e); }
+  lenisLoading = false;
+}
+function scrollToY(y, smooth) {
+  if (lenis) { lenis.scrollTo(y, { immediate: !smooth || still, force: true }); return; }
+  const html = document.documentElement, was = html.style.scrollBehavior;
+  if (!smooth || still) html.style.scrollBehavior = 'auto';
+  if (smooth && !still) scrollTo({ top: y, behavior: 'smooth' }); else scrollTo(0, y);
+  html.style.scrollBehavior = was;
+}
+function scrollToEl(n) {
+  if (!n) return;
+  if (lenis) { lenis.scrollTo(n, { immediate: still, force: true }); return; }
+  n.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
 }
 /* position et nom des pastilles : recalculés à chaque retouche du récit */
 function layoutRail() {
@@ -2096,6 +2132,7 @@ function applyChapterSettings() {
     if (a) a.style.height = ch.len + 'dvh';
   });
   layoutRail();
+  syncSmooth();
 }
 
 /* Reconstruire un ornement ou un bouton coupe net l'animation en cours.
@@ -2147,7 +2184,7 @@ addEventListener('message', e => {
     let acc = 0;
     for (let i = 0; i < S.chapters.length; i++) {
       const len = (S.chapters[i].len / 100) * innerHeight;
-      if (S.chapters[i].id === m.chapter) { scrollTo({ top: acc + len * (m.at + 0.03), behavior: 'auto' }); break; }
+      if (S.chapters[i].id === m.chapter) { scrollToY(acc + len * (m.at + 0.03), false); break; }
       acc += len;
     }
   }
@@ -2811,7 +2848,8 @@ addEventListener('unhandledrejection', e => console.error('[Récit]', e.reason))
 const IMPORTMAP = {imports:{
   'three':'https://unpkg.com/three@0.160.0/build/three.module.js',
   'three/addons/':'https://unpkg.com/three@0.160.0/examples/jsm/',
-  'gaussian-splats-3d':'https://unpkg.com/@mkkellogg/gaussian-splats-3d@0.4.6/build/gaussian-splats-3d.module.js'
+  'gaussian-splats-3d':'https://unpkg.com/@mkkellogg/gaussian-splats-3d@0.4.6/build/gaussian-splats-3d.module.js',
+  'lenis':'https://cdn.jsdelivr.net/npm/lenis@1.3.27/+esm'
 }};
 
 /* Les médias en data: coûtent cher à recopier. On garde la dernière charge
@@ -2854,6 +2892,7 @@ function buildPayload(mode){
       delete b.voice;
       delete b.voiceId;   /* le choix de voix ne sert qu'à l'éditeur */
     });
+    delete o.brief;
     return o;
   });
   const music = Object.assign({},story.theme && {}, story.music||{});
@@ -2902,6 +2941,10 @@ function pageCSS(t){
   return `
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
+html.lenis,html.lenis body{height:auto}
+.lenis.lenis-smooth{scroll-behavior:auto!important}
+.lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}
+.lenis.lenis-stopped{overflow:hidden}
 body{margin:0;background:${t.bg};color:${t.ink};
   font-family:'${t.body}',system-ui,sans-serif;-webkit-font-smoothing:antialiased;
   --f-display:'${t.display}',Georgia,serif; --f-body:'${t.body}',system-ui,sans-serif; --fs:1}
@@ -3571,6 +3614,11 @@ function guard(name,fn){
 
 function buildMediaTab(ch){
   field(inspBody,'Nom du chapitre',txt(ch,'name'));
+  if(ch.brief){
+    const br=document.createElement('textarea'); br.className='in'; br.rows=4; br.value=ch.brief;
+    br.addEventListener('input',()=>{ ch.brief=br.value; });
+    field(inspBody,'Note du script',br,'Reprise du script importé. Elle reste dans l\u2019éditeur et ne paraît pas sur la page.');
+  }
   if(ch.type!=='text') buildAsset(inspBody,ch);
   const ry=document.createElement('div');
   ry.appendChild(labelled('Longueur de défilement',range(ch,'len',80,600,10,v=>v+' vh')));
@@ -3767,8 +3815,8 @@ function buildAsset(parent,ch){
     hh.textContent = !webcodecsSupport()
       ? 'Ce navigateur ne sait pas encoder la vidéo image par image. Utilisez Chrome ou Edge.'
       : forScrub
-      ? 'Chaque image est conservée et une image-clé est placée toutes les 6 : la vidéo suit le geste sans à-coup. Le fichier est plus lourd, c’est le prix de la fluidité. La vidéo est lue une fois pendant l’encodage : gardez l’onglet au premier plan.'
-      : 'La vidéo est lue une fois pendant l’encodage : gardez l’onglet au premier plan.';
+      ? 'Chaque image est conservée et une image-clé est placée toutes les 6 : la vidéo suit le geste sans à-coup. Le fichier est plus lourd, c’est le prix de la fluidité. La conversion va plus vite que la lecture ; hors connexion, la vidéo est lue une fois : gardez alors l’onglet au premier plan.'
+      : 'La conversion va plus vite que la lecture ; hors connexion, la vidéo est lue une fois : gardez alors l’onglet au premier plan.';
     conv.appendChild(hh);
     wrap.appendChild(conv);
   }
@@ -4824,6 +4872,13 @@ function buildElevenVoice(parent,V){
 }
 
 function buildTheme(parent){
+  if(!themeSnap) snapTheme();
+  /* les champs du thème rappellent themeSync après leur propre mise à jour */
+  if(!parent._themeHook){
+    parent._themeHook=true;
+    parent.addEventListener('input',themeSync);
+    parent.addEventListener('change',themeSync);
+  }
   const t=story.theme;
   const nav=document.createElement('div'); nav.className='tabs';
   [['couleurs','Couleurs'],['typo','Typographie'],
@@ -4837,6 +4892,12 @@ function buildTheme(parent){
   parent.appendChild(nav);
 
   if(themeTab==='couleurs'){
+  /* --- défilement --- */
+  const sm=document.createElement('div');
+  sm.appendChild(check(t,'smooth','Défilement doux'));
+  if(t.smooth!==false) sm.appendChild(labelled('Inertie',range(t,'smoothLerp',0.04,0.25,0.01,
+    v=>v<=0.07?'longue':v>=0.16?'courte':'moyenne')));
+  field(parent,'Défilement',sm,'La molette glisse avec inertie (bibliothèque Lenis). Le doigt garde le défilement du téléphone ; les visiteurs qui demandent moins d\u2019animations gardent le défilement normal.');
   const g=document.createElement('div'); g.className='three';
   g.appendChild(labelled('Fond',color(t,'bg')));
   g.appendChild(labelled('Texte',color(t,'ink')));
@@ -5105,6 +5166,41 @@ let themeTab='couleurs';
 /* Une ambiance ne vaut que si les chapitres déjà créés la reprennent.
    On remplace les couleurs restées identiques à l'ancien thème ; celles que
    vous avez personnalisées ne bougent pas. */
+/* Ambiance réglée champ par champ : chaque retouche du thème est reportée
+   sur tous les chapitres, pas seulement sur ceux créés ensuite. Les couleurs
+   personnalisées (différentes de l'ancienne valeur du thème) sont gardées ;
+   les polices suivent partout, comme pour un accord typographique. */
+let themeSnap=null;
+function snapTheme(){ themeSnap=JSON.parse(JSON.stringify(story.theme)); }
+function themeSync(){
+  const t=story.theme, o=themeSnap;
+  if(!o){ snapTheme(); return; }
+  const swap=(v,from,to)=>(v&&from&&v.toLowerCase()===String(from).toLowerCase())?to:v;
+  let changed=false;
+  ['bg','ink','accent'].forEach(k=>{ if(o[k]!==t[k]) changed=true; });
+  const fontsChanged=['display','dispWeight','dispTrack','body','bodyWeight','bodyTrack'].some(k=>o[k]!==t[k]);
+  if(!changed&&!fontsChanged) return;
+  story.chapters.forEach(c=>{
+    if(o.bg!==t.bg) c.bg=swap(c.bg,o.bg,t.bg);
+    (c.spots||[]).forEach(sp=>{ sp.color=swap(sp.color,o.accent,t.accent); if(fontsChanged) sp.font=t.body; });
+    (c.buttons||[]).forEach(b=>{
+      b.color=swap(b.color,o.ink,t.ink); b.borderC=swap(b.borderC,o.accent,t.accent);
+      b.hoverBg=swap(b.hoverBg,o.accent,t.accent); b.hoverColor=swap(b.hoverColor,o.bg,t.bg);
+      if(fontsChanged) b.font=t.body;
+    });
+    (c.beats||[]).forEach(b=>{
+      b.color=swap(b.color,o.ink,t.ink); b.glowC=swap(b.glowC,o.accent,t.accent);
+      b.grad1=swap(b.grad1,o.ink,t.ink); b.grad2=swap(b.grad2,o.accent,t.accent);
+      if(fontsChanged){
+        if(b.kind==='title'){ b.font=t.display; b.weight=t.dispWeight; b.tracking=t.dispTrack; }
+        else { b.font=t.body; b.weight=t.bodyWeight; b.tracking=t.bodyTrack; }
+      }
+    });
+  });
+  snapTheme();
+  syncPreview();
+}
+
 function applyPalette(P){
   const t=story.theme, old={bg:t.bg,ink:t.ink,accent:t.accent};
   t.bg=P.bg; t.ink=P.ink; t.accent=P.accent;
@@ -5125,6 +5221,7 @@ function applyPalette(P){
       b.grad2=swap(b.grad2,old.accent,P.accent);
     });
   });
+  snapTheme();
   renderAll(true);
   toast('Palette « '+P.name+' » appliquée à tout le récit');
 }
@@ -5143,6 +5240,7 @@ function applyPair(p){
     (c.buttons||[]).forEach(b=>{ b.font=t.body; });
     (c.spots||[]).forEach(sp=>{ sp.font=t.body; });
   });
+  snapTheme();
   renderAll(true);
   toast('Accord « '+p.name+' » appliqué à tout le récit');
 }
@@ -5797,7 +5895,68 @@ function encodePass(v,rate,o){
   });
 }
 
+/* Conversion rapide (Mediabunny) : le fichier est décodé puis réencodé
+   directement, image par image, sans être lu à l'écran. Plus rapide que le
+   temps réel, exacte à l'image près, et l'onglet peut passer au second plan.
+   Si la bibliothèque manque (hors ligne) ou bute sur le fichier, on retombe
+   sur la conversion par lecture, plus lente mais éprouvée. */
+const MEDIABUNNY_URL='https://cdn.jsdelivr.net/npm/mediabunny@1.66.0/+esm';
+let mbMod=null;
+async function loadMediabunny(){
+  if(mbMod) return mbMod;
+  mbMod=await import(MEDIABUNNY_URL);
+  if(!mbMod.Conversion) { mbMod=null; throw new Error('Mediabunny incomplet'); }
+  return mbMod;
+}
+async function convertFast(bytes,mime,opts,ui){
+  const MB=await loadMediabunny();
+  const input=new MB.Input({ source:new MB.BlobSource(new Blob([bytes],{type:mime})), formats:MB.ALL_FORMATS });
+  const vt=await input.getPrimaryVideoTrack();
+  if(!vt) throw new Error('Aucune piste vidéo');
+  const srcW=vt.displayWidth, srcH=vt.displayHeight;
+  let fps=30;
+  try{ const st=await vt.computePacketStats(120); if(st.averagePacketRate>1) fps=st.averagePacketRate; }catch(e){}
+  const maxW=opts.maxW||1920;
+  const W=srcW>maxW ? Math.round(maxW/2)*2 : Math.round(srcW/2)*2;
+  const H=Math.round(srcH*W/srcW/2)*2;
+  const bitrate=Math.round((opts.mbps||2.2)*1e6*(opts.scrub?1.8:1));
+  const keyEvery=opts.scrub?6:48;
+  let codec=null;
+  for(const c of ['vp9','vp8']){
+    try{ if(await MB.canEncodeVideo(c,{width:W,height:H,bitrate:bitrate})){ codec=c; break; } }catch(e){}
+  }
+  if(!codec) throw new Error('Aucun encodeur VP9 ni VP8');
+  const keepAudio=opts.keepAudio&&!opts.scrub;
+  const output=new MB.Output({ format:new MB.WebMOutputFormat(), target:new MB.BufferTarget() });
+  const conv=await MB.Conversion.init({ input, output, showWarnings:false,
+    video:{ codec, bitrate, width:W, height:H, fit:'fill', forceTranscode:true,
+            keyFrameInterval:keyEvery/fps },
+    audio: keepAudio ? { codec:'opus', bitrate:128000 } : { discard:true } });
+  if(!conv.isValid) throw new Error('Conversion impossible : '+conv.discardedTracks.map(t=>t.reason).join(', '));
+  const audio=keepAudio && conv.discardedTracks.every(t=>t.track.type!=='audio') && !!(await input.getPrimaryAudioTrack());
+  ui.label='';
+  ui.status('Conversion rapide…');
+  let frames=0;
+  conv.onProgress=(k)=>{ frames=Math.round((vt.duration||0)*fps*k);
+    ui.progress(Math.min(1,k),frames); if(ui.cancelled()) conv.cancel(); };
+  const tick=setInterval(()=>{ if(ui.cancelled()) conv.cancel(); },250);
+  try{ await conv.execute(); }
+  finally{ clearInterval(tick); }
+  if(ui.cancelled()) throw new Error('Conversion annulée.');
+  const out=new Uint8Array(output.target.buffer);
+  let n=frames; try{ n=videoReport(out).frames||frames; }catch(e){}
+  return { bytes:out, frames:n, lost:0, keyEvery, W, H, codec:codec.toUpperCase(), audio, fast:true };
+}
 async function convertToWebm(bytes,mime,opts,ui){
+  try{ return await convertFast(bytes,mime,opts,ui); }
+  catch(e){
+    if(ui.cancelled()) throw e;
+    console.warn('[Récit] conversion rapide indisponible, passage à la lecture :',e);
+    ui.status('Conversion par lecture…');
+  }
+  return convertRealtime(bytes,mime,opts,ui);
+}
+async function convertRealtime(bytes,mime,opts,ui){
   if(!webcodecsSupport()) throw new Error('Ce navigateur ne propose pas WebCodecs : utilisez Chrome ou Edge.');
   const M=await loadMuxer();
   const url=URL.createObjectURL(new Blob([bytes],{type:mime}));
@@ -5845,7 +6004,7 @@ function convPanel(){
     box.innerHTML='<video muted playsinline></video><div class="cb-body">'+
       '<b>Conversion en WebM</b><span class="cb-stat"></span>'+
       '<div class="cb-bar"><i></i></div>'+
-      '<span class="cb-note">Gardez cet onglet au premier plan.</span></div>'+
+      '<span class="cb-note">Conversion rapide ; en cas de repli sur la lecture, gardez l\u2019onglet au premier plan.</span></div>'+
       '<button class="btn ghost cb-x">Annuler</button>';
     document.body.appendChild(box);
   }
@@ -6491,8 +6650,163 @@ function loadProject(j){
   document.getElementById('storyTitle').value=story.title;
   selId=story.chapters.length?story.chapters[0].id:null;
   selBeatId=null; spotSel=-1; openBeat=null; openGroup=null; insTab='media';
+  snapTheme();
   return up.stats;
 }
+
+
+/* ---------------------------------------------------------------
+   IMPORT D'UN SCRIPT (Excel ou CSV)
+   Une ligne par élément. Colonnes reconnues par leur titre : « Type »,
+   « Contenu / Script », « Partie / Section », « N° », « Note ».
+   VISUEL → chapitre vidéo · VOIX OFF, FACE CAMÉRA → chapitre texte ·
+   AUDIO → ignoré.
+   --------------------------------------------------------------- */
+async function unzipEntries(bytes){
+  try{
+    const F=await loadFflate();
+    const all=F.unzipSync(bytes,{ filter:f=>/\.xml$|\.rels$/.test(f.name) });
+    const td=new TextDecoder();
+    return { names:Object.keys(all), read:async n=>all[n]?td.decode(all[n]):null };
+  }catch(e){ console.warn('[Récit] lecture fflate impossible, lecteur intégré :',e); }
+  return unzipEntriesBuiltin(bytes);
+}
+async function unzipEntriesBuiltin(bytes){
+  const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  let e=bytes.length-22;
+  while(e>=0 && dv.getUint32(e,true)!==0x06054b50) e--;
+  if(e<0) throw new Error('Fichier Excel illisible (archive introuvable).');
+  const n=dv.getUint16(e+10,true); let o=dv.getUint32(e+16,true);
+  const out={}, td=new TextDecoder();
+  for(let i=0;i<n;i++){
+    const method=dv.getUint16(o+10,true), csize=dv.getUint32(o+20,true);
+    const nl=dv.getUint16(o+28,true), xl=dv.getUint16(o+30,true), cl=dv.getUint16(o+32,true);
+    const lo=dv.getUint32(o+42,true);
+    const name=td.decode(bytes.subarray(o+46,o+46+nl));
+    out[name]={method,csize,lo};
+    o+=46+nl+xl+cl;
+  }
+  const read=async name=>{
+    const f=out[name]; if(!f) return null;
+    const lnl=dv.getUint16(f.lo+26,true), lxl=dv.getUint16(f.lo+28,true);
+    const data=bytes.subarray(f.lo+30+lnl+lxl, f.lo+30+lnl+lxl+f.csize);
+    if(f.method===0) return td.decode(data);
+    if(typeof DecompressionStream==='undefined') throw new Error('Ce navigateur ne sait pas lire les fichiers Excel : enregistrez le script en CSV.');
+    const ds=new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return await new Response(ds).text();
+  };
+  return {names:Object.keys(out),read};
+}
+async function readXlsx(bytes){
+  const z=await unzipEntries(bytes);
+  const P=new DOMParser(), x=t=>P.parseFromString(t,'application/xml');
+  const shared=[];
+  const ss=await z.read('xl/sharedStrings.xml');
+  if(ss) x(ss).querySelectorAll('si').forEach(si=>{
+    shared.push([...si.getElementsByTagName('t')].map(t=>t.textContent).join(''));
+  });
+  /* première feuille du classeur */
+  const sheetName=z.names.filter(n=>/^xl\/worksheets\/sheet\d+\.xml$/.test(n))
+    .sort((a,b)=>parseInt(a.match(/\d+/)[0])-parseInt(b.match(/\d+/)[0]))[0];
+  if(!sheetName) throw new Error('Aucune feuille dans ce classeur.');
+  let title='';
+  const wb=await z.read('xl/workbook.xml');
+  if(wb){ const sh=x(wb).getElementsByTagName('sheet')[0]; if(sh) title=sh.getAttribute('name')||''; }
+  const doc=x(await z.read(sheetName));
+  const col=ref=>{ let n=0; for(const ch of ref.replace(/\d+/g,'')) n=n*26+ch.charCodeAt(0)-64; return n-1; };
+  const rows=[];
+  [...doc.getElementsByTagName('row')].forEach(r=>{
+    const row=[];
+    [...r.getElementsByTagName('c')].forEach(c=>{
+      const t=c.getAttribute('t'), v=c.getElementsByTagName('v')[0];
+      let val='';
+      if(t==='s') val=shared[+(v&&v.textContent)]||'';
+      else if(t==='inlineStr') val=[...c.getElementsByTagName('t')].map(q=>q.textContent).join('');
+      else val=v?v.textContent:'';
+      row[col(c.getAttribute('r')||'A')]=val;
+    });
+    rows.push(row.map(v=>v==null?'':String(v)));
+  });
+  return {rows,title};
+}
+function readCsv(text){
+  const sep=(text.split('\n')[0].match(/;/g)||[]).length>(text.split('\n')[0].match(/,/g)||[]).length?';':',';
+  const rows=[]; let row=[], cur='', q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){ if(ch==='"'&&text[i+1]==='"'){cur+='"';i++;} else if(ch==='"') q=false; else cur+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===sep){ row.push(cur); cur=''; }
+    else if(ch==='\n'){ row.push(cur.replace(/\r$/,'')); rows.push(row); row=[]; cur=''; }
+    else cur+=ch;
+  }
+  if(cur||row.length){ row.push(cur); rows.push(row); }
+  return {rows,title:''};
+}
+function scriptChapters(rows){
+  const norm=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().trim();
+  const hi=rows.findIndex(r=>r.some(c=>/^TYPE$/.test(norm(c))));
+  if(hi<0) throw new Error('Colonne « Type » introuvable dans le script.');
+  const H=rows[hi].map(norm);
+  const find=re=>H.findIndex(h=>re.test(h));
+  const cT=find(/^TYPE$/), cC=find(/CONTENU|SCRIPT/), cS=find(/PARTIE|SECTION|SEQUENCE/), cN=find(/NOTE|INTENTION/);
+  if(cC<0) throw new Error('Colonne « Contenu » introuvable dans le script.');
+  const out=[], stats={video:0,text:0,skip:0};
+  let section='', lastSection=null;
+  rows.slice(hi+1).forEach(r=>{
+    const type=norm(r[cT]), content=String(r[cC]||'').trim();
+    if(cS>=0 && String(r[cS]||'').trim()) section=String(r[cS]).trim();
+    if(!type||!content){ return; }
+    if(/^AUDIO/.test(type)){ stats.skip++; return; }
+    const isVideo=/^VISUEL/.test(type), isText=/VOIX OFF|FACE CAMERA/.test(type);
+    if(!isVideo&&!isText){ stats.skip++; return; }
+    const sec=section.replace(/^[^:–-]*[:–-]\s*/,'')||section;   /* « INTRO : La fleur… » → « La fleur… » */
+    const ch=newChapter(isVideo?'video':'text');
+    const note=cN>=0?String(r[cN]||'').trim():'';
+    if(isVideo){
+      ch.name=(section.split(/[:–-]/)[0].trim()||'Visuel')+' · visuel';
+      ch.beats=[];                         /* la description du plan n'a pas à s'afficher */
+      ch.brief=content+(note?'\n\n'+note:'');
+      stats.video++;
+    }else{
+      const face=/FACE CAMERA/.test(type);
+      ch.name=(section.split(/[:–-]/)[0].trim()||'Texte')+' · '+(face?'face caméra':'voix off');
+      const beats=[];
+      if(section!==lastSection && sec) beats.push(newBeat({kind:'title',text:sec,at:0.08,posY:30,span:0.5}));
+      beats.push(newBeat({text:content,at:beats.length?0.25:0.12,posY:beats.length?58:50,span:0.7}));
+      ch.beats=beats;
+      lastSection=section;
+      const jeu=(String(r[cT]).match(/\(([^)]+)\)/)||[])[1];
+      if(jeu||note) ch.brief=[jeu?'Jeu : '+jeu:'',note].filter(Boolean).join('\n');
+      stats.text++;
+    }
+    out.push(ch);
+  });
+  return {chapters:out,stats};
+}
+document.getElementById('btnScript').addEventListener('click',()=>{
+  const i=document.createElement('input'); i.type='file'; i.accept='.xlsx,.csv,text/csv';
+  i.addEventListener('change',async()=>{
+    const f=i.files[0]; if(!f) return;
+    try{
+      toast('Lecture du script…');
+      const bytes=await readFile(f);
+      const sheet=/\.csv$/i.test(f.name) ? readCsv(new TextDecoder().decode(bytes)) : await readXlsx(bytes);
+      const {chapters,stats}=scriptChapters(sheet.rows);
+      if(!chapters.length) throw new Error('Aucune ligne VISUEL, VOIX OFF ou FACE CAMÉRA dans ce script.');
+      const replace=!story.chapters.length ||
+        confirm('Remplacer les '+story.chapters.length+' chapitres actuels par ceux du script ?\nAnnuler : les ajouter à la suite.');
+      if(replace){ story.chapters.forEach(c=>{ if(c.asset) dropAsset(c.asset); }); story.chapters=[]; }
+      if(sheet.title && (replace||!story.title)){ story.title=sheet.title; document.getElementById('storyTitle').value=sheet.title; }
+      story.chapters.push(...chapters);
+      selId=chapters[0].id;
+      renderAll(true);
+      toast(chapters.length+' chapitres créés : '+stats.video+' vidéo, '+stats.text+' texte'+
+        (stats.skip?' · '+stats.skip+' lignes audio ignorées':''));
+    }catch(e){ console.error('[Récit] script',e); toast(e.message,'bad'); }
+  });
+  i.click();
+});
 
 document.getElementById('btnOpen').addEventListener('click',()=>{
   const i=document.createElement('input'); i.type='file'; i.accept='.json';
@@ -6538,6 +6852,28 @@ function dosTime(d){
 }
 function dosDate(d){
   return (((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate())&0xFFFF;
+}
+/* Archive compressée (fflate) : les fichiers déjà compressés (vidéo, son,
+   images) sont rangés tels quels, le reste (page, modèles 3D, splats) est
+   compressé. Hors ligne, l'ancienne archive non compressée prend le relais. */
+const FFLATE_URL='https://cdn.jsdelivr.net/npm/fflate@0.8.3/+esm';
+let fflateMod=null;
+async function loadFflate(){
+  if(!fflateMod) fflateMod=await import(FFLATE_URL);
+  return fflateMod;
+}
+async function makeZipBest(files){
+  try{
+    const F=await loadFflate();
+    const packed=/\.(mp4|m4v|webm|mov|ogv|mp3|m4a|ogg|opus|wav|aac|jpe?g|png|webp|gif|avif|spz|sog|ksplat)$/i;
+    const tree={};
+    files.forEach(f=>{ tree[f.name]=[f.data,{ level: packed.test(f.name)?0:6 }]; });
+    const out=await new Promise((res,rej)=>F.zip(tree,{},(err,data)=>err?rej(err):res(data)));
+    return { blob:new Blob([out],{type:'application/zip'}), compressed:true };
+  }catch(e){
+    console.warn('[Récit] fflate indisponible, archive non compressée :',e);
+    return { blob:makeZip(files), compressed:false };
+  }
 }
 function makeZip(files){
   const enc=new TextEncoder(), now=new Date();
@@ -6627,7 +6963,7 @@ document.querySelectorAll('input[name=expmode]').forEach(r=>{
     document.querySelectorAll('.opt').forEach(o=>o.classList.toggle('sel',o.querySelector('input').checked));
   });
 });
-document.getElementById('expGo').addEventListener('click',()=>{
+document.getElementById('expGo').addEventListener('click',async()=>{
   const mode=document.querySelector('input[name=expmode]:checked').value;
   expModal.classList.remove('on');
   try{
@@ -6640,9 +6976,12 @@ document.getElementById('expGo').addEventListener('click',()=>{
       const files=[{name:'index.html',data:enc.encode(buildHTML('folder'))}];
       for(const [k,a] of ASSETS)
         files.push({name:'assets/'+k+'_'+a.name,data:a.bytes});
-      const zip=makeZip(files);
+      toast('Préparation de l\u2019archive\u2026');
+      const raw=files.reduce((n,f)=>n+f.data.length,0);
+      const {blob:zip,compressed}=await makeZipBest(files);
       download(zip,slug(story.title)+'.zip');
       toast('Archive prête — '+files.length+' fichiers, '+fmtBytes(zip.size)+
+            (compressed&&raw>zip.size?' (au lieu de '+fmtBytes(raw)+')':'')+
             '. Déposez-la telle quelle sur Netlify Drop.');
     }
   }catch(e){ console.error(e); toast('Export impossible : '+e.message,'bad'); }

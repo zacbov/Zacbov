@@ -1,0 +1,2814 @@
+/* ==========================================================================================
+   FABRIQUE — matériaux procéduraux et objets pour Three.js (r128 et suivants)
+   ------------------------------------------------------------------------------------------
+   Aucune image, aucun modèle : tout est calculé. Un seul fichier, à inclure après three.js.
+
+     const fab = FAB.creer(THREE);
+     scene.environment = fab.environnement(renderer, 'bunker');      // reflets des métaux
+     const casier = fab.objet('casier', { graine: 3, etat: .6 });    // un objet du catalogue
+     scene.add(casier);
+     const m = fab.mat('peinture', { couleur: '#7c2e22', usure: .6 }); // un matériau seul
+     // dans la boucle : fab.maj(tempsEnSecondes)  (scintillement des tubes et des écrans)
+
+   Trois idées portent le rendu :
+   1. La surface est calculée dans le shader à la position réelle du point (en mètres) : écailles,
+      rouille, coulures, saleté, rayures. La caméra peut s'approcher sans voir de pixel de texture.
+   2. La rugosité et le relief varient avec l'usure : une arête frottée brille, un creux sale est mat.
+   3. Les formes sont chanfreinées et fusionnées par matériau : peu d'appels de dessin, des arêtes
+      qui accrochent la lumière.
+   ========================================================================================== */
+(function (root) {
+'use strict';
+const FAB = { version: '1.0' };
+
+/* ------------------------------------------------------------------ utilitaires */
+function alea(g) { let a = (g | 0) + 0x6D2B79F5 | 0; return function () { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function lin(c) { // couleur '#rrggbb' ou 0xrrggbb -> [r,v,b] en lumière linéaire, identique sous toutes les versions de three
+  if (Array.isArray(c)) return c;
+  if (typeof c === 'string') c = parseInt(c.replace('#', ''), 16);
+  const f = v => { v /= 255; return v <= .04045 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+  return [f(c >> 16 & 255), f(c >> 8 & 255), f(c & 255)];
+}
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const VERS = { 'y+': [0, 0, 0], 'y-': [Math.PI, 0, 0], 'z+': [Math.PI / 2, 0, 0], 'z-': [-Math.PI / 2, 0, 0], 'x+': [0, 0, -Math.PI / 2], 'x-': [0, 0, Math.PI / 2] };
+
+/* ------------------------------------------------------------------ GLSL commun */
+const VS_DECL = `
+attribute vec3 aFab;
+varying vec3 vFabP; varying vec3 vFabN; varying vec3 vFabA;`;
+const VS_MAIN = `
+vFabA = aFab; vFabN = normal;
+{ vec3 fabO = vec3(aFab.z * 57.3, aFab.z * 31.7, aFab.z * 83.9);
+#ifdef USE_INSTANCING
+  fabO += fract(instanceMatrix[3].xyz * .137) * 40.;
+#endif
+#ifdef FAB_MONDE
+  #ifdef USE_INSTANCING
+  vFabP = (modelMatrix * instanceMatrix * vec4(position, 1.)).xyz; vFabN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * normal);
+  #else
+  vFabP = (modelMatrix * vec4(position, 1.)).xyz; vFabN = normalize(mat3(modelMatrix) * normal);
+  #endif
+#else
+  vFabP = position + fabO;
+#endif
+}`;
+const FS_COMMUN = `
+varying vec3 vFabP; varying vec3 vFabN; varying vec3 vFabA;
+uniform vec4 uFabA; uniform vec4 uFabB; uniform vec3 uFabC; uniform vec3 uFabD; uniform float uFabT;
+vec3 fabCol; vec3 fabEmis; float fabRough; float fabMetal; float fabH; float fabOcc; float fabPx; float fabAlpha;
+float fH(vec3 p){ p = fract(p * .1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
+float fN(vec3 x){ vec3 i = floor(x), f = fract(x); f = f * f * (3. - 2. * f);
+  return mix(mix(mix(fH(i), fH(i + vec3(1,0,0)), f.x), mix(fH(i + vec3(0,1,0)), fH(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(fH(i + vec3(0,0,1)), fH(i + vec3(1,0,1)), f.x), mix(fH(i + vec3(0,1,1)), fH(i + vec3(1,1,1)), f.x), f.y), f.z); }
+// bruit fractal, recentré et étiré pour couvrir 0..1
+const mat3 FAB_M = mat3(0., .8, .6, -.8, .36, -.48, -.6, -.48, .64);
+float fF(vec3 p){ float s = 0., a = .5; p = FAB_M * p; for (int i = 0; i < FAB_OCT; i++) { s += a * fN(p); p = FAB_M * p * 2.07 + vec3(13.1, 7.7, 5.3); a *= .5; }
+  return clamp((s / FAB_NORM - .5) * 1.75 + .5, 0., 1.); }
+float fF2(vec3 p){ p = FAB_M * p; return clamp((fN(p) * .667 + fN(FAB_M * p * 2.07 + vec3(13.1, 7.7, 5.3)) * .333 - .5) * 1.5 + .5, 0., 1.); }
+// un détail de fréquence f (cycles par mètre) s'efface avant de scintiller
+float fFade(float f){ return 1. - smoothstep(.22, .55, fabPx * f); }
+// coordonnées planes de la face dominante : (horizontale, verticale) sur un mur, (x, z) sur un dessus
+vec2 fUV(vec3 p, vec3 n){ vec3 a = abs(n); return a.y > max(a.x, a.z) ? p.xz : (a.x > a.z ? p.zy : p.xy); }
+vec3 fV2(vec2 x){ vec2 i = floor(x), f = fract(x); float d1 = 9., d2 = 9., id = 0.;
+  for (int j = -1; j <= 1; j++) for (int k = -1; k <= 1; k++) { vec2 g = vec2(float(k), float(j)); vec3 h = vec3(i + g, 7.);
+    vec2 r = g + vec2(fH(h), fH(h.yxz + 3.1)) - f; float d = dot(r, r);
+    if (d < d1) { d2 = d1; d1 = d; id = fH(h + 11.); } else if (d < d2) d2 = d; }
+  return vec3(sqrt(d1), sqrt(d2), id); }
+// rayures longues et fines, dans deux directions
+float fScr(vec2 u, float f, float dens){ float s = 0.;
+  for (int i = 0; i < 2; i++) { float a = float(i) * 1.9 + .35; vec2 r = vec2(cos(a) * u.x - sin(a) * u.y, sin(a) * u.x + cos(a) * u.y);
+    float n = fN(vec3(r.x * f * .05, r.y * f, float(i) * 7.3)); s = max(s, smoothstep(1. - .16 * dens, 1. - .05 * dens, n)); }
+  return s * fFade(f); }
+const vec3 FAB_R0 = vec3(.050, .019, .009), FAB_R1 = vec3(.235, .072, .020), FAB_R2 = vec3(.44, .16, .038);
+vec3 fRust(float t){ return t < .5 ? mix(FAB_R0, FAB_R1, t * 2.) : mix(FAB_R1, FAB_R2, t * 2. - 1.); }
+// poussière déposée sur ce qui regarde vers le haut
+void fDust(vec3 n, float amt, vec3 tint){ float up = smoothstep(.5, .97, n.y); float g = fF2(vFabP * 6.3 + 3.);
+  float k = amt * up * (.35 + .65 * g); fabCol = mix(fabCol, tint, k * .75); fabRough = mix(fabRough, .96, k); fabMetal *= 1. - k * .85; }
+// humidité : forte sur le dessus, en traînées sur les faces verticales, nulle par-dessous
+void fWet(vec3 n){ float w = uFabA.w; if (w <= .001) return;
+  float st = fN(vec3(vFabP.x * 28., vFabP.y * 1.2, vFabP.z * 28.)); float bl = fF2(vFabP * 2.1 + 9.);
+  float k = w * clamp(mix(smoothstep(.62 - .5 * w, .9 - .5 * w, st * .6 + bl * .4), .55 + .45 * bl, smoothstep(.1, .9, n.y)) * step(-.35, n.y) + fabOcc * .6, 0., 1.);
+  fabCol *= 1. - .42 * k * (1. - fabMetal); fabRough = mix(fabRough, .07, k * .9); }
+vec3 fabBump(vec3 N, vec3 vp, float h){ vec3 dpx = dFdx(vp), dpy = dFdy(vp), r1 = cross(dpy, N), r2 = cross(N, dpx);
+  float det = dot(dpx, r1); vec3 g = sign(det) * (dFdx(h) * r1 + dFdy(h) * r2); return normalize(abs(det) * N - g); }
+`;
+
+/* ------------------------------------------------------------------ GLSL des familles
+   Chaque famille définit fabSurf(couleur de base, rugosité de base, métal de base) et remplit
+   fabCol, fabRough, fabMetal, fabH (relief en mètres), fabEmis. uFabA = (usure, rouille, saleté, humidité). */
+const FS_FAMILLES = `
+#if FAB_F == 0
+// ---- peinture sur métal : écailles groupées, auréole d'oxyde, coulures sous les dégâts, film de saleté
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN); vec2 u = fUV(p, n);
+  float us = uFabA.x, ro = uFabA.y, sa = uFabA.z, e = vFabA.x, side = 1. - abs(n.y);
+  float m = fF(p * 1.9 + 2.3), d = fF(p * 17. + 9.1);
+  float fl = fN(vec3(p.x * 46., p.y * 23., p.z * 46.));                    // écailles étirées vers le bas
+  float field = m * .55 + d * .27 + fl * .18 + e * (.06 + .34 * us) + fabOcc * .05;
+  float T = mix(.93, .56, us);
+  float chip = smoothstep(T, T + .022, field);
+  float halo = smoothstep(T - .09, T, field) * (1. - chip);
+  float rn = fF(p * 29. + 4.);
+  float rust = smoothstep(.85 - .75 * ro, 1.05 - .75 * ro, rn * .55 + m * .45);
+  vec3 steel = vec3(.19, .195, .20) * (.75 + .5 * d);
+  vec3 rustC = fRust(rn);
+  vec3 sub = mix(steel, rustC, rust);
+  vec3 col = base * (.88 + .24 * fF2(p * .8 + 7.));
+  col = mix(col, vec3(dot(col, vec3(.3333))) * 1.08, .16 * us);              // peinture délavée
+  float gr = fF(p * 3.3 + 5.5);
+  float wash = fN(vec3(p.x * 36., p.y * 2.1, p.z * 36.));
+  float dirt = sa * clamp(smoothstep(.42, .85, gr) * .7 + wash * wash * .4 * side + fabOcc * .85, 0., 1.);
+  col = mix(col, col * vec3(.30, .26, .22), dirt);
+  col = mix(col, rustC * 1.1, halo * ro * .75);
+  float run = 0.;
+#if FAB_Q > 0
+  float st = fN(vec3(p.x * 64., p.y * 1.5, p.z * 64.));
+  float mUp = fF((p + vec3(0., .14 + .26 * st, 0.)) * 1.9 + 2.3);
+  run = smoothstep(T - .17, T - .03, mUp * .55 + d * .27 + .10) * st * st * side * ro * (1. - chip);
+  col = mix(col, FAB_R1 * .8, run * .7);
+  float sc = fScr(u, 520., us) * (1. - chip);
+  col = mix(col, col * 1.45 + .04, sc * .5);
+#else
+  float sc = 0.;
+#endif
+  fabCol = mix(col, sub, chip);
+  float pr = r0 + .22 * dirt + .28 * run - .10 * sc - .14 * e * us + .05 * (gr - .5);
+  fabRough = mix(pr, mix(.36, .94, rust), chip);
+  fabMetal = mix(m0, 1. - rust, chip);
+  float micro = (fN(p * 850.) - .5) * fFade(850.) * .00003;                 // peau d'orange
+  fabH = (1. - chip) * .0004 + micro + chip * rust * (rn - .5) * .0007;
+  fDust(n, sa * .8, vec3(.105, .092, .075)); fWet(n);
+}
+#endif
+#if FAB_F == 1
+// ---- acier nu : sens de brossage, film gras, piqûres et plaques de rouille, arêtes polies ; uFabB.w = grain de fonderie
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN); vec2 u = fUV(p, n);
+  float us = uFabA.x, ro = uFabA.y, sa = uFabA.z, e = vFabA.x, grain = uFabB.w;
+  float lay = fN(vec3(u.x * 9., u.y * 640., 3.)) * fFade(640.) + .5 * (1. - fFade(640.));
+  float lay2 = fN(vec3(u.x * 2.2, u.y * 85., 9.));
+  float m = fF(p * 2.1 + 1.7), d = fF(p * 19. + 3.);
+  vec3 col = base * (.84 + .18 * lay2 + .12 * (lay - .5) * (1. - grain));
+  float oil = smoothstep(.48, .8, fF(p * 4.3 + 8.));
+  col *= 1. - .38 * oil * sa;
+  float T = mix(1.02, .50, ro);
+  float rust = smoothstep(T, T + .13, m * .5 + d * .5 + fabOcc * .22 + e * .05);
+  float speck = smoothstep(.72, .86, fN(p * 310.) * fN(p * 120. + 7.) * 2.2) * smoothstep(.05, .35, ro) * fFade(310.);
+  rust = max(rust, speck);
+  float sc = fScr(u, 620., .4 + us);
+  col = mix(col, col * 1.3 + .04, clamp(sc * .6 + e * us * .55, 0., 1.));
+  fabCol = mix(col, fRust(d * .8 + .1), rust);
+  fabRough = mix(r0 + .12 * (lay - .5) + .26 * oil * sa - .10 * sc - .12 * e * us + .22 * grain, .94, rust);
+  fabMetal = mix(m0, .04, rust);
+  float fnd = (fN(p * 240.) * .6 + fN(p * 510.) * .4 - .5) * grain * .0009 * fFade(240.);
+  fabH = fnd + rust * (d - .5) * .0010 + (lay - .5) * .00002;
+  fDust(n, sa * .9, vec3(.095, .085, .07)); fWet(n);
+}
+#endif
+#if FAB_F == 2
+// ---- acier galvanisé : fleurage du zinc, rouille blanche, rouille rouge aux arêtes
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN); vec2 u = fUV(p, n);
+  float us = uFabA.x, ro = uFabA.y, sa = uFabA.z, e = vFabA.x;
+  float fd = fFade(60.); vec3 v = fV2(u * 60.); float sp = mix(.5, v.z, fd);
+  float m = fF(p * 2.4 + 6.), d = fF(p * 21. + 2.);
+  vec3 col = base * (.95 + .09 * (sp - .5) + .06 * (m - .5));
+  col *= 1. - .10 * smoothstep(.06, .0, v.y - v.x) * fd;                   // joints de cristaux
+  float wr = sa * smoothstep(.45, .85, m * .6 + d * .4 + fabOcc * .3);       // rouille blanche
+  col = mix(col, vec3(.40, .41, .40), wr * .5);
+  float T = mix(1.05, .52, ro);
+  float rust = smoothstep(T, T + .10, m * .45 + d * .4 + e * .3 * (.3 + us) + fabOcc * .15);
+  fabCol = mix(col, fRust(d), rust);
+  fabRough = mix(r0 + (sp - .5) * .16 + wr * .38 - .10 * e * us, .93, rust);
+  fabMetal = mix(m0 * (1. - wr * .6), .05, rust);
+  fabH = rust * (d - .5) * .0008 + wr * (d - .5) * .0002;
+  fDust(n, sa * .9, vec3(.10, .09, .075)); fWet(n);
+}
+#endif
+#if FAB_F == 3
+// ---- laiton, cuivre, bronze : ternissure brune, vert-de-gris dans les creux, arêtes polies ; uFabC = patine
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN); vec2 u = fUV(p, n);
+  float us = uFabA.x, ro = uFabA.y, sa = uFabA.z, e = vFabA.x;
+  float m = fF(p * 2.6 + 4.), d = fF(p * 23. + 1.);
+  float lay = fN(vec3(u.x * 12., u.y * 700., 5.)) * fFade(700.) + .5 * (1. - fFade(700.));
+  float pol = clamp(e * (.3 + .7 * us) + us * smoothstep(.55, .85, m) * .6, 0., 1.);   // zones frottées
+  float tar = sa * smoothstep(.25, .8, m * .6 + d * .4 + fabOcc * .5) * (1. - pol);
+  vec3 col = base * (.90 + .12 * (lay - .5));
+  col = mix(col, base * vec3(.34, .23, .15), tar * .85);
+  col = mix(col, base * 1.12 + .03, pol * .5);
+  float T = mix(1.04, .46, ro);
+  float pat = smoothstep(T, T + .14, m * .4 + d * .6 + fabOcc * .5 - pol * .35);
+  float fing = smoothstep(.6, .9, fN(p * 55.)) * fFade(55.);
+  fabCol = mix(col, uFabC * (.75 + .5 * d), pat);
+  fabRough = mix(r0 + .30 * tar + .08 * fing - .14 * pol + .06 * (lay - .5), .92, pat);
+  fabMetal = mix(m0, .0, pat);
+  fabH = pat * (d - .3) * .0006;
+  fDust(n, sa * .7, vec3(.10, .09, .075)); fWet(n);
+}
+#endif
+#if FAB_F == 4
+// ---- fer très rouillé : rouille en plusieurs tons, calamine qui s'écaille, restes de peinture (couleur de base)
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN);
+  float us = uFabA.x, sa = uFabA.z, e = vFabA.x;
+  float a = fF(p * 3.1 + 1.), b = fF(p * 13. + 6.), c = fN(p * 90.) * fFade(90.) + .5 * (1. - fFade(90.));
+  vec3 col = fRust(clamp(a * .50 + b * .40 + (c - .5) * .3 - .08, 0., 1.)) * .82;
+  col = mix(col, vec3(.030, .019, .014), smoothstep(.50, .80, fF(p * 5.7 + 14.)) * .7);   // plaques sombres
+  float ridge = 1. - abs(2. * fN(p * 22. + a * 3.) - 1.);
+  float flake = smoothstep(.72, .86, ridge * .6 + a * .4);                                // calamine soulevée
+  float bare = smoothstep(.80, .92, fN(p * 9. + 3.) * .6 + b * .4) * .8;                  // acier sombre mis à nu
+  col = mix(col, vec3(.06, .058, .06), bare);
+  float T = mix(1.02, .22, us);
+  float paint = 1. - smoothstep(T - .03, T, fF(p * 2.2 + 21.) * .6 + b * .4 + e * .25);
+  vec3 pc = base * (.6 + .5 * a);
+  fabCol = mix(col, pc, paint);
+  fabRough = mix(mix(r0, .55, bare) + .06 * (c - .5), .6, paint * .8);
+  fabMetal = bare * .7 * (1. - paint);
+  fabH = (b - .5) * .0016 + (c - .5) * .0005 + flake * .0006 + paint * .0005;
+  fDust(n, sa * .9, vec3(.10, .085, .065)); fWet(n);
+}
+#endif
+#if FAB_F == 5
+// ---- bois en planches : fibres, veines, nœuds, joints, grisaillement ; FAB_AXE = sens du fil, uFabB.z = largeur de planche
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN);
+  float us = uFabA.x, sa = uFabA.z, e = vFabA.x;
+#if FAB_AXE == 0
+  vec3 q = p.xyz; vec3 nq = abs(n.xyz);
+#elif FAB_AXE == 1
+  vec3 q = p.yxz; vec3 nq = abs(n.yxz);
+#else
+  vec3 q = p.zyx; vec3 nq = abs(n.zyx);
+#endif
+  float W = uFabB.z; float bout = smoothstep(.7, .9, nq.x);                 // bois de bout
+  float ac = nq.y > nq.z ? q.z : q.y;                                       // travers du fil, dans le plan de la face
+  float id = floor(ac / W), fy = fract(ac / W);
+  float h1 = fH(vec3(id, 3., 7.)), h2 = fH(vec3(id, 9., 1.));
+  float l = q.x + h1 * 5.;
+  vec2 kc = vec2((fract(l * .41 + h2) - .5) / .41, (fy - (.25 + .5 * h1)) * W);
+  float kd = length(kc * vec2(.5, 1.));
+  float warp = fN(vec3(l * 1.3, ac * 5., id)) * .9 + .9 / (1. + kd * kd * 3000.);
+  float g1 = fN(vec3(l * 2.4, (ac + warp * .012) * 120., id * 3.1)) * fFade(120.) + .5 * (1. - fFade(120.));
+  float vein = smoothstep(.15, 1., sin(ac * 52. + warp * 5. + h2 * 6.283) * .5 + .5) * fFade(16.);
+  float rings = smoothstep(.2, .9, sin(length(q.yz - vec2(h1, h2) * .08) * 420.) * .5 + .5);
+  vein = mix(vein, rings, bout);
+  float kn = smoothstep(.018, .007, kd) * (1. - bout);
+  float g2 = fN(vec3(l * 1.1, (ac + warp * .01) * 26., id * 1.7)), g3 = fN(vec3(l * 3.5, (ac + warp * .012) * 310., id)) * fFade(310.) + .5 * (1. - fFade(310.));
+  vec3 col = base * (.78 + .42 * (h1 - .5)) * (.80 + .22 * g1 + .20 * (g2 - .5)) * (.90 + .20 * g3);
+  col = mix(col, col * .58, vein * .5);
+  col = mix(col, col * .22, kn);
+  float gw = max(.03, fabPx / W * 1.3), gk = .03 / gw;
+  float gap = 1. - (1. - smoothstep(0., gw, fy) * smoothstep(1., 1. - gw, fy)) * gk;
+  gap = mix(gap, 1., bout);
+  float gy = fF(p * 2.2 + 3.);
+  float grey = us * smoothstep(.25, .75, gy + e * .4);                      // bois grisé par le temps
+  col = mix(col, vec3(dot(col, vec3(.3333))) * vec3(1.25, 1.2, 1.1) + .02, grey * .65);
+  float dirt = sa * clamp(smoothstep(.45, .85, fF(p * 3.7 + 11.)) * .7 + fabOcc * .8 + (1. - gap) * .5, 0., 1.);
+  col = mix(col, col * vec3(.28, .24, .20), dirt);
+  col *= .22 + .78 * gap;
+  col = mix(col, col * 1.25 + .02, e * us * .6);                            // arêtes usées, plus claires
+  fabCol = col;
+  fabRough = clamp(r0 + .12 * grey - .22 * dirt * (1. - grey) + .06 * (g1 - .5), .3, 1.);
+  fabMetal = 0.;
+  fabH = (g1 - .5) * .00035 * (1. + us) - vein * .00025 - (1. - gap) * .0025 * gk + kn * .0004;
+  fDust(n, sa * .8, vec3(.11, .095, .075)); fWet(n);
+}
+#endif
+#if FAB_F == 6
+// ---- polymères : caoutchouc, bakélite, plastique, cuir ; uFabB.w = marbrure (bakélite), uFabC = seconde teinte
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN); vec2 u = fUV(p, n);
+  float us = uFabA.x, sa = uFabA.z, e = vFabA.x, mb = uFabB.w;
+  float m = fF(p * 2.4 + 3.), d = fF(p * 21. + 2.);
+  float sw = fF(vec3(p.x * 4. + m * 3., p.y * 4. - m * 2., p.z * 4. + d));
+  float band = sin(sw * 17.) * .5 + .5;
+  vec3 col = mix(base, uFabC, mb * band * band * .42) * (.9 + .2 * m);
+  float bloom = sa * smoothstep(.42, .85, m * .5 + d * .5 + fabOcc * .35);  // voile blanchâtre des vieux caoutchoucs
+  col = mix(col, col * .6 + vec3(.05, .047, .042), bloom * .55);
+  float shine = clamp(us * (e * .9 + smoothstep(.55, .85, m) * .6), 0., 1.);
+  float sc = fScr(u, 480., .3 + us);
+  col = mix(col, col * 1.6 + .03, sc * .35);
+  fabCol = col;
+  fabRough = clamp(r0 + .28 * bloom - .32 * shine + .12 * sc, .06, 1.);
+  fabMetal = m0;
+  fabH = (fN(p * 700.) - .5) * fFade(700.) * .00005 * (1. - mb) - sc * .00008;
+  fDust(n, sa * .8, vec3(.10, .09, .075)); fWet(n);
+}
+#endif
+#if FAB_F == 7
+// ---- béton : granulats, lignes de coffrage, bullage, coulures, fissures, pied humide
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN); vec2 u = fUV(p, n);
+  float us = uFabA.x, ro = uFabA.y, sa = uFabA.z, side = 1. - abs(n.y);
+  float a = fF(p * 1.3 + 2.), b = fF(p * 9. + 5.);
+  float c = fN(p * 210.) * fFade(210.) + .5 * (1. - fFade(210.));
+  vec3 col = base * (.78 + .34 * a) * (.90 + .20 * c);
+  col = mix(col, vec3(.30, .29, .27), smoothstep(.74, .9, fN(p * 190.) * fN(p * 77. + 3.) * 2.) * fFade(190.) * .3);
+  float fy = fract(p.y / .6 + .13); float ln = mix(1., smoothstep(0., .012, fy) * smoothstep(1., .988, fy), side * fFade(60.));
+  float hole = smoothstep(.84, .92, fN(p * 48. + b * 2.)) * fFade(48.);
+  float st = fN(vec3(p.x * 8., p.y * .6, p.z * 8.));
+  float streak = sa * smoothstep(.45, .85, st * .7 + b * .3) * side;
+  vec3 v = fV2(u * 1.9 + a * .7);
+  float crack = smoothstep(.012 + .03 * us, .0, v.y - v.x) * smoothstep(.25, .6, us + (b - .5) * .4) * (.35 + .65 * fFade(110.));
+  float rb = ro * smoothstep(.72, .9, fN(vec3(p.x * 5., p.y * .9, p.z * 5.)) * .7 + b * .3) * side;
+  col *= (.80 + .20 * ln) * (1. - .45 * streak) * (1. - .55 * hole) * (1. - .75 * crack);
+  col = mix(col, FAB_R1 * .9, rb * .6);
+  col *= 1. - .40 * fabOcc * (.5 + sa);
+  fabCol = col;
+  fabRough = clamp(r0 - .10 * streak + .05 * (c - .5), .3, 1.);
+  fabMetal = 0.;
+  fabH = (c - .5) * .0004 + (b - .5) * .0010 - (1. - ln) * .0015 - hole * .0020 - crack * .0030;
+  fDust(n, sa * .7, vec3(.12, .11, .095)); fWet(n);
+}
+#endif
+#if FAB_F == 8
+// ---- carrelage : émail brillant, joints, éclats, carreaux tombés ; uFabB.z = côté du carreau, uFabB.w = pose décalée
+// uFabC = joint, uFabD = terre cuite
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN); vec2 u = fUV(p, n);
+  float us = uFabA.x, ro = uFabA.y, sa = uFabA.z, side = 1. - abs(n.y);
+  float S = uFabB.z; vec2 t = u / S; t.x += .5 * uFabB.w * floor(t.y);
+  vec2 id = floor(t), f = fract(t);
+  float j = min(min(f.x, 1. - f.x), min(f.y, 1. - f.y)); float J = max(.0028 / S, fabPx / S * .7), jk = .0028 / S / J;
+  float tile = 1. - (1. - smoothstep(J, J * 2.0, j)) * jk;
+  float h1 = fH(vec3(id, 5.)), h2 = fH(vec3(id, 17.));
+  float miss = step(h2, (us - .5) * .55);
+  float cf = fF(vec3(u * 34., h1 * 9.));
+  float T = mix(1.08, .60, us);
+  float chip = smoothstep(T, T + .03, cf * .6 + (1. - smoothstep(0., .16, j)) * .42 + h1 * .1);
+  float g = fF(p * 4. + h1 * 3.);
+  float wash = fN(vec3(p.x * 30., p.y * 1.8, p.z * 30.));
+  float dirt = sa * clamp(smoothstep(.45, .85, g) * .55 + (1. - smoothstep(0., .22, j)) * .45 + wash * wash * .35 * side + fabOcc * .8, 0., 1.);
+  vec3 glaze = base * (.90 + .18 * (h1 - .5)) * (.96 + .08 * fN(p * 60.));
+  float craze = smoothstep(.05, .0, fV2(u * 90. + h1 * 20.).y - fV2(u * 90. + h1 * 20.).x) * fFade(90.) * us;   // faïençage
+  glaze *= 1. - .25 * craze;
+  glaze = mix(glaze, glaze * vec3(.34, .30, .25), dirt);
+  float rs = ro * smoothstep(.70, .92, fN(vec3(p.x * 6., p.y * .8, p.z * 6.)) * .7 + g * .3) * side;
+  glaze = mix(glaze, FAB_R1, rs * .6);
+  vec3 body = uFabD * (.8 + .4 * cf);
+  vec3 mortar = uFabC * (.75 + .5 * fN(p * 140.)) * (1. - .6 * sa * (.4 + .6 * g));
+  float on = tile * (1. - miss);
+  fabCol = mix(mortar, mix(glaze, body, chip), on);
+  fabRough = mix(.95, mix(r0 + .45 * dirt + .2 * rs, .88, chip), on);
+  fabMetal = 0.;
+  fabH = on * (smoothstep(J, J * 5., j) * .0014 * jk - chip * .0006) + (1. - on) * (fN(p * 140.) - .5) * .0005;
+  fDust(n, sa * .6, vec3(.12, .11, .095)); fWet(n);
+}
+#endif
+#if FAB_F == 9
+// ---- toile : armure du tissu, plis, taches auréolées, trame usée ; uFabB.w = rayures (matelas), uFabB.z = pas, uFabC = rayure
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN); vec2 u = fUV(p, n);
+  float us = uFabA.x, sa = uFabA.z, e = vFabA.x;
+  float fd = fFade(900.);
+  float wv = sin(u.x * 5650.) * sin(u.y * 5650.) * fd;
+  float th = (fN(vec3(u.x * 40., u.y * 900., 1.)) + fN(vec3(u.x * 900., u.y * 40., 2.)) - 1.) * fd;   // fils irréguliers
+  float fo = fF(p * 5. + 1.), fo2 = fF(p * 13. + 4.);
+  vec3 col = base * (.92 + .08 * wv + .10 * th);
+  float per = uFabB.z; float sx = abs(fract(u.x / per) - .5);
+  float stripe = smoothstep(.34, .36, sx) * uFabB.w;
+  col = mix(col, uFabC * (.92 + .1 * th), stripe);
+  float bl = fF(p * 3.4 + 9.);
+  float stain = sa * (smoothstep(.52, .60, bl) * .55 + (smoothstep(.50, .54, bl) - smoothstep(.56, .62, bl)) * .5 + fabOcc * .7);
+  col = mix(col, col * vec3(.40, .33, .24), clamp(stain, 0., 1.));
+  float worn = us * smoothstep(.45, .8, fo2 * .6 + e * .7);
+  col = mix(col, col * 1.25 + .04, worn * .5);
+  fabCol = col;
+  fabRough = clamp(r0 - .1 * worn, .5, 1.);
+  fabMetal = 0.;
+  fabH = (fo - .5) * .010 + (fo2 - .5) * .0030 + wv * .00012;
+  fDust(n, sa * .5, vec3(.11, .10, .085)); fWet(n);
+}
+#endif
+#if FAB_F == 10
+// ---- verre : teinte légère, poussière et traces, reflets conservés malgré la transparence
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN);
+  float sa = uFabA.z;
+  float g = fF(p * 5. + 2.), d = fF(p * 31. + 6.);
+  float smear = sa * smoothstep(.35, .9, g * .7 + d * .3 + fabOcc * .4 + smoothstep(.3, 1., n.y) * .4);
+  fabCol = mix(base * .35, vec3(.11, .10, .085), smear * .8);
+  fabRough = r0 + .5 * smear;
+  fabMetal = 0.; fabH = 0.;
+  fabAlpha = 1. + smear * 3.;
+}
+#endif
+#if FAB_F == 11
+// ---- lueur : matière émissive (filament, voyant, ampoule) ; uFabA = (intensité, scintillement, vitesse, -)
+void fabSurf(vec3 base, float r0, float m0){
+  float fl = 1. + uFabA.y * (sin(uFabT * (9. + uFabA.z * 14.) + vFabA.z * 40.) * .5 + (fN(vec3(uFabT * 6.3, vFabA.z * 9., 1.)) - .5));
+  fabCol = base * .04; fabRough = r0; fabMetal = 0.; fabH = 0.;
+  fabEmis = base * uFabA.x * max(fl, 0.);
+}
+#endif
+#if FAB_F == 12
+// ---- inscription posée sur une surface : s'écaille et se salit avec elle
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN);
+  float us = uFabA.x, sa = uFabA.z;
+  float f = fF(p * 21. + 3.) * .6 + fN(p * 85.) * .4;
+  float T = mix(1.02, .50, us);
+  float chip = smoothstep(T, T + .05, f) * uFabB.w;
+  float dirt = sa * smoothstep(.4, .85, fF(p * 3.3 + 5.5));
+  fabCol = mix(base, base * vec3(.32, .28, .23), dirt);
+  fabRough = r0 + .25 * dirt; fabMetal = m0; fabH = .0002 * (1. - chip);
+  fabAlpha = 1. - chip;
+  fDust(n, sa * .6, vec3(.105, .092, .075)); fWet(n);
+}
+#endif
+#if FAB_F == 13
+// ---- écran cathodique : l'image vient de la texture émissive, le shader ajoute lignes de balayage et scintillement
+void fabSurf(vec3 base, float r0, float m0){ fabCol = base; fabRough = r0; fabMetal = 0.; fabH = 0.; }
+#endif
+`;
+const FS_SURF = `
+fabPx = max(length(dFdx(vFabP)), length(dFdy(vFabP))); fabEmis = vec3(0.); fabH = 0.; fabAlpha = 1.; fabOcc = vFabA.y;
+fabSurf(diffuseColor.rgb, roughness, metalness);
+diffuseColor.rgb = fabCol; diffuseColor.a = clamp(diffuseColor.a * fabAlpha, 0., 1.);`;
+const FS_EMIS = `
+#if FAB_F == 13
+totalEmissiveRadiance *= (.70 + .30 * sin(vFabP.y * uFabB.z * 6.2832)) * (.94 + .06 * sin(uFabT * 47. + vFabP.y * 40.)) * uFabA.x;
+#else
+totalEmissiveRadiance += fabEmis;
+#endif`;
+const FS_AO = `
+{ float fabK = 1. - fabOcc * .72; reflectedLight.indirectDiffuse *= fabK; reflectedLight.indirectSpecular *= fabK; reflectedLight.directDiffuse *= 1. - fabOcc * .30; }`;
+const FS_FIN = `
+#if FAB_F == 10 || FAB_F == 18
+{ float fabFr = pow(1. - abs(dot(normalize(normal), normalize(vViewPosition))), 3.);
+  gl_FragColor.a = clamp(max(gl_FragColor.a, dot(gl_FragColor.rgb, vec3(.3, .6, .1)) * 1.6) + fabFr * .5, 0., 1.); }
+#endif`;
+
+/* ------------------------------------------------------------------ familles et matériaux nommés */
+const FAMILLES = {
+  peinture:  { id: 0, def: { couleur: '#4d6b55', rugosite: .50, metal: 0, usure: .40, rouille: .40, salete: .40 } },
+  acier:     { id: 1, def: { couleur: '#a9adb0', rugosite: .36, metal: 1, usure: .40, rouille: .15, salete: .30, grain: 0 }, p4: 'grain' },
+  galva:     { id: 2, def: { couleur: '#b4babb', rugosite: .40, metal: 1, usure: .30, rouille: .12, salete: .30 } },
+  laiton:    { id: 3, def: { couleur: '#d6b25c', rugosite: .28, metal: 1, usure: .40, rouille: .15, salete: .40, couleur2: '#5fa892' } },
+  rouille:   { id: 4, def: { couleur: '#56675a', rugosite: .90, metal: 0, usure: .80, rouille: 1, salete: .30 } },
+  bois:      { id: 5, def: { couleur: '#9a6b3c', rugosite: .78, metal: 0, usure: .40, rouille: 0, salete: .40, axe: 'x', planche: .11 }, p3: 'planche' },
+  polymere:  { id: 6, def: { couleur: '#232322', rugosite: .62, metal: 0, usure: .40, rouille: 0, salete: .40, marbrure: 0, couleur2: '#6b3416' }, p4: 'marbrure' },
+  beton:     { id: 7, def: { couleur: '#a3a199', rugosite: .90, metal: 0, usure: .40, rouille: .20, salete: .45 } },
+  carrelage: { id: 8, def: { couleur: '#dcd8c8', rugosite: .13, metal: 0, usure: .35, rouille: .20, salete: .45, carreau: .15, decale: 0, couleur2: '#7c776d', couleur3: '#a0694a' }, p3: 'carreau', p4: 'decale' },
+  toile:     { id: 9, def: { couleur: '#8d8769', rugosite: .95, metal: 0, usure: .40, rouille: 0, salete: .40, pas: .06, rayure: 0, couleur2: '#3d4c66' }, p3: 'pas', p4: 'rayure' },
+  verre:     { id: 10, def: { couleur: '#cfe6dd', rugosite: .04, metal: 0, usure: 0, rouille: 0, salete: .30, opacite: .14 } },
+  lueur:     { id: 11, def: { couleur: '#ff9a3a', rugosite: .4, metal: 0, intensite: 2.5, scintille: .15, vitesse: .3 } }
+};
+const NOMS = {
+  peinture_verte: ['peinture', { couleur: '#4d6b55' }], peinture_grise: ['peinture', { couleur: '#66737a' }], peinture_creme: ['peinture', { couleur: '#c9bc98' }],
+  peinture_rouge: ['peinture', { couleur: '#8a2c20' }], peinture_jaune: ['peinture', { couleur: '#c2941c' }], peinture_bleue: ['peinture', { couleur: '#2f5560' }],
+  peinture_kaki: ['peinture', { couleur: '#5d5a3a' }], peinture_noire: ['peinture', { couleur: '#232424', rugosite: .42 }],
+  email: ['peinture', { couleur: '#dedbcd', rugosite: .15, rouille: .55 }],
+  acier_poli: ['acier', { couleur: '#c4c7c9', rugosite: .14, usure: .25, salete: .12, rouille: .03 }],
+  acier_noir: ['acier', { couleur: '#4a4d50', rugosite: .48 }],
+  fonte: ['acier', { couleur: '#3d4043', rugosite: .50, grain: 1, rouille: .22 }],
+  cuivre: ['laiton', { couleur: '#d08a5e', couleur2: '#58a890' }], bronze: ['laiton', { couleur: '#9a7440', rugosite: .36 }],
+  bois_sombre: ['bois', { couleur: '#5a3c22' }], bois_clair: ['bois', { couleur: '#b98f5a' }],
+  caoutchouc: ['polymere', { couleur: '#1a1a1a', rugosite: .78 }],
+  bakelite: ['polymere', { couleur: '#34180c', rugosite: .20, marbrure: .85, couleur2: '#5e2c12', salete: .2 }],
+  bakelite_noire: ['polymere', { couleur: '#121212', rugosite: .22, marbrure: .3, couleur2: '#2a2422', salete: .2 }],
+  plastique: ['polymere', { couleur: '#c9c2ad', rugosite: .42 }], cuir: ['polymere', { couleur: '#4a2a17', rugosite: .52 }],
+  carrelage_vert: ['carrelage', { couleur: '#8fb3a2' }], carrelage_sol: ['carrelage', { couleur: '#b8ad94', carreau: .2, rugosite: .3 }],
+  toile_rayee: ['toile', { couleur: '#cfc8b4', rayure: 1, pas: .055, couleur2: '#40506c' }], toile_blanche: ['toile', { couleur: '#cfcabb' }],
+  toile_kaki: ['toile', { couleur: '#5c5a3c' }], corde: ['toile', { couleur: '#a08a5c', salete: .5 }],
+  verre_brun: ['verre', { couleur: '#7a4a1c', opacite: .55 }], verre_depoli: ['verre', { couleur: '#e6e2d2', opacite: .45, rugosite: .45 }],
+  lueur_ambre: ['lueur', { couleur: '#ff9a3a' }], lueur_verte: ['lueur', { couleur: '#52ff8a', intensite: 2 }],
+  lueur_rouge: ['lueur', { couleur: '#ff3a22', intensite: 2.2 }], lueur_blanche: ['lueur', { couleur: '#fff0d0', intensite: 3, scintille: .04 }]
+};
+
+FAB._ext = { FAMILLES, NOMS, glsl: [] };   // d'autres fichiers y ajoutent leurs familles de matériaux
+
+/* ==========================================================================================
+   creer(THREE, options) -> la fabrique
+   ========================================================================================== */
+FAB.creer = function (THREE, opts) {
+  const O = Object.assign({ qualite: 'haute', atlas: 2048 }, opts);
+  const fab = { THREE, temps: { value: 0 }, qualite: O.qualite, familles: FAMILLES, noms: NOMS, catalogue: {} };
+  const cache = new Map();
+  const srgb = t => { if ('colorSpace' in t && THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace; else if (THREE.sRGBEncoding !== undefined) t.encoding = THREE.sRGBEncoding; return t; };
+
+  function injecter(sh, u) {
+    sh.uniforms.uFabA = u.A; sh.uniforms.uFabB = u.B; sh.uniforms.uFabC = u.C; sh.uniforms.uFabD = u.D; sh.uniforms.uFabT = fab.temps;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + VS_DECL).replace('#include <begin_vertex>', '#include <begin_vertex>\n' + VS_MAIN);
+    let f = sh.fragmentShader;
+    f = f.replace('#include <common>', '#include <common>\n' + FS_COMMUN + FS_FAMILLES + FAB._ext.glsl.join('\n'));
+    f = f.replace('#include <color_fragment>', '#include <color_fragment>\n' + FS_SURF);
+    f = f.replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = clamp(fabRough, .035, 1.);');
+    f = f.replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = clamp(fabMetal, 0., 1.);');
+    f = f.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = fabBump(normal, -vViewPosition, fabH * uFabB.y);');
+    f = f.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n' + FS_EMIS);
+    f = f.replace('#include <aomap_fragment>', '#include <aomap_fragment>\n' + FS_AO);
+    f = f.replace('#include <tonemapping_fragment>', FS_FIN + '\n#include <tonemapping_fragment>');
+    sh.fragmentShader = f;
+  }
+  function habiller(m, id, u, extra) {
+    const hq = fab.qualite !== 'basse';
+    m.defines = Object.assign({}, m.defines, { FAB_F: id, FAB_Q: hq ? 1 : 0, FAB_OCT: hq ? 4 : 3, FAB_NORM: hq ? '.9375' : '.875', FAB_AXE: 0, FAB_MODE: 0 }, extra);
+    m.extensions = Object.assign({}, m.extensions, { derivatives: true });
+    m.userData.fab = u;
+    m.onBeforeCompile = sh => injecter(sh, u);
+    const cle = 'fab' + id + '|' + JSON.stringify(m.defines);
+    m.customProgramCacheKey = () => cle;
+    return m;
+  }
+  const U = (a, b, c, d) => ({ A: { value: new THREE.Vector4(a[0], a[1], a[2], a[3]) }, B: { value: new THREE.Vector4(b[0], b[1], b[2], b[3]) },
+    C: { value: new THREE.Color().setRGB(c[0], c[1], c[2]) }, D: { value: new THREE.Color().setRGB(d[0], d[1], d[2]) } });
+
+  /* mat(nom, options) : matériau partagé. nom = une famille ('peinture') ou un matériau nommé ('laiton', 'email'...).
+     options : couleur, usure, rouille, salete, humide (0..1), etat (0 neuf .. 1 ruine, multiplie usure/rouille/saleté),
+               echelle, relief, rugosite, metal, espace:'monde' (décor fixe non construit par la fabrique), et les réglages propres à la famille. */
+  fab.mat = function (nom, o) {
+    let fam = nom, pre = {};
+    if (NOMS[nom]) { fam = NOMS[nom][0]; pre = NOMS[nom][1]; }
+    const F = FAMILLES[fam]; if (!F) throw new Error('FABRIQUE : matériau inconnu « ' + nom + ' »');
+    const p = Object.assign({ humide: 0, echelle: 1, relief: 1, etat: .5 }, F.def, pre, o);
+    const cle = fam + JSON.stringify(p); if (cache.has(cle)) return cache.get(cle);
+    const k = p.etat * 2, c = lin(p.couleur);
+    const m = new THREE.MeshStandardMaterial({ roughness: p.rugosite, metalness: p.metal });
+    m.color.setRGB(c[0], c[1], c[2]); m.name = 'fab_' + nom;
+    let A = [clamp01((p.usure || 0) * k), clamp01((p.rouille || 0) * k), clamp01((p.salete || 0) * k), p.humide];
+    if (fam === 'lueur') { A = [p.intensite, p.scintille, p.vitesse, 0]; m.userData.fabSansOmbre = true; }
+    const B = [p.echelle, p.relief * 1.6, F.p3 ? p[F.p3] : 0, F.p4 ? p[F.p4] : 0];
+    const u = U(A, B, lin(p.couleur2 || '#808080'), lin(p.couleur3 || '#808080'));
+    const extra = { FAB_AXE: p.axe === 'y' ? 1 : p.axe === 'z' ? 2 : 0 }; if (p.espace === 'monde') extra.FAB_MONDE = '';
+    if (F.modes) extra.FAB_MODE = Math.max(0, F.modes.indexOf(p.mode)); if (p.rayon > 0) extra.FAB_CYL = '';
+    if (p._peau) m.skinning = true;      // three r128 : un matériau ne peut pas servir à la fois à un maillage déformable et à un maillage rigide
+    if (fam === 'verre' || fam === 'eau') { m.transparent = true; m.opacity = p.opacite; m.depthWrite = false; m.userData.fabSansOmbre = true; m.side = THREE.DoubleSide; }
+    habiller(m, F.id, u, extra);
+    m.userData.fabParams = p; m.userData.fabFamille = fam; m.userData.fabNom = nom; m.userData.fabOpts = o;
+    cache.set(cle, m); return m;
+  };
+  fab.maj = function (t) { fab.temps.value = t; };
+
+  /* ---------------------------------------------------------------- atlas d'inscriptions (plaques, pochoirs, cadrans, écrans) */
+  const AT = { c: null, g: null, tex: null, x: 4, y: 4, rh: 0, map: new Map(), W: O.atlas, H: O.atlas };
+  function atlas() {
+    if (AT.c) return AT;
+    AT.c = document.createElement('canvas'); AT.c.width = AT.W; AT.c.height = AT.H; AT.g = AT.c.getContext('2d');
+    AT.tex = srgb(new THREE.CanvasTexture(AT.c)); AT.tex.anisotropy = 4; return AT;
+  }
+  const POLICE = '"Arial Narrow","Roboto Condensed","Helvetica Neue",Arial,sans-serif', MONO = '"Courier New",Courier,monospace';
+  function ajuster(g, t, w, h, police, gras) { let px = h; g.font = (gras ? 'bold ' : '') + px + 'px ' + police; const m = g.measureText(t).width; if (m > w) { px *= w / m; g.font = (gras ? 'bold ' : '') + px + 'px ' + police; } return px; }
+  const STYLES = {
+    pochoir(g, w, h, s) { // lettres peintes au pochoir, avec leurs ponts
+      const t = String(s.t); g.fillStyle = s.couleur || '#e6dfc8'; g.textBaseline = 'middle'; g.textAlign = 'left';
+      const px = ajuster(g, t, w * .96, h * .92, POLICE, true); const tw = g.measureText(t).width; let x = (w - tw) / 2;
+      g.fillText(t, x, h / 2 + px * .04);
+      g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000';
+      for (const ch of t) { const cw = g.measureText(ch).width; if (/[A-HJ-Z02-9À-Ü]/i.test(ch)) g.fillRect(x + cw * .5 - px * .022, 0, px * .044, h); x += cw; }
+      g.globalCompositeOperation = 'source-over';
+    },
+    plaque(g, w, h, s) { // plaque constructeur gravée et rivetée
+      const alu = s.metal === 'alu'; const gr = g.createLinearGradient(0, 0, w, h);
+      gr.addColorStop(0, alu ? '#c9cccd' : '#c9a85a'); gr.addColorStop(.5, alu ? '#a9adaf' : '#a8873e'); gr.addColorStop(1, alu ? '#bfc2c3' : '#bf9c4e');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      g.strokeStyle = 'rgba(20,14,4,.75)'; g.lineWidth = Math.max(2, h * .025); g.strokeRect(h * .07, h * .07, w - h * .14, h - h * .14);
+      const L = String(s.t).split('\n'); g.fillStyle = '#1c1508'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      const lh = (h * .70) / L.length;
+      L.forEach((t, i) => { ajuster(g, t, w * .72, lh * (i ? .62 : .8), i ? MONO : POLICE, true); g.fillText(t, w / 2, h * .16 + lh * (i + .5)); });
+      g.fillStyle = 'rgba(30,22,8,.85)'; const r = h * .035; for (const [x, y] of [[.11, .5], [.89, .5]]) { g.beginPath(); g.arc(Math.min(Math.max(w * x, h * .16), w - h * .16) , h * y, r, 0, 7); g.fill(); }
+    },
+    etiquette(g, w, h, s) { // étiquette papier tapée à la machine
+      g.fillStyle = '#d6cfb6'; g.fillRect(0, 0, w, h); g.fillStyle = s.couleur || '#a03a2a'; g.fillRect(0, 0, w, h * .2);
+      const L = String(s.t).split('\n'); g.fillStyle = '#211c16'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      const lh = (h * .72) / L.length; L.forEach((t, i) => { ajuster(g, t, w * .88, lh * .78, MONO, true); g.fillText(t, w / 2, h * .25 + lh * (i + .5)); });
+    },
+    danger(g, w, h, s) { // bandes jaunes et noires, texte facultatif
+      g.fillStyle = '#d5a116'; g.fillRect(0, 0, w, h); g.fillStyle = '#17150f'; const k = h * .55;
+      for (let x = -h; x < w + h; x += k * 2) { g.beginPath(); g.moveTo(x, h); g.lineTo(x + k, h); g.lineTo(x + k + h, 0); g.lineTo(x + h, 0); g.fill(); }
+      if (s.t) { g.textAlign = 'center'; g.textBaseline = 'middle'; const px = ajuster(g, s.t, w * .7, h * .56, POLICE, true); const tw = g.measureText(s.t).width;
+        g.fillStyle = '#17150f'; g.fillRect((w - tw) / 2 - px * .3, h * .14, tw + px * .6, h * .72); g.fillStyle = '#e2b42a'; g.fillText(s.t, w / 2, h / 2 + px * .04); }
+    },
+    cadran(g, w, h, s) { // cadran à aiguille : s.t = unité, s.v = position 0..1, s.max = graduation maximale
+      const R = Math.min(w, h) / 2, cx = w / 2, cy = h / 2; g.fillStyle = s.fond || '#e7e1cd'; g.beginPath(); g.arc(cx, cy, R * .98, 0, 7); g.fill();
+      const a0 = Math.PI * .75, a1 = Math.PI * 2.25, mx = s.max || 10;
+      g.strokeStyle = '#a62a1a'; g.lineWidth = R * .07; g.beginPath(); g.arc(cx, cy, R * .78, a0 + (a1 - a0) * .8, a1); g.stroke();
+      g.strokeStyle = '#17140f'; g.fillStyle = '#17140f'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold ' + R * .2 + 'px ' + POLICE;
+      for (let i = 0; i <= 20; i++) { const a = a0 + (a1 - a0) * i / 20, big = i % 4 === 0; g.lineWidth = R * (big ? .035 : .018);
+        g.beginPath(); g.moveTo(cx + Math.cos(a) * R * .86, cy + Math.sin(a) * R * .86); g.lineTo(cx + Math.cos(a) * R * (big ? .68 : .76), cy + Math.sin(a) * R * (big ? .68 : .76)); g.stroke();
+        if (big) g.fillText(String(Math.round(mx * i / 20)), cx + Math.cos(a) * R * .5, cy + Math.sin(a) * R * .5); }
+      if (s.t) { g.font = 'bold ' + R * .17 + 'px ' + POLICE; g.fillText(s.t, cx, cy + R * .52); }
+      const a = a0 + (a1 - a0) * (s.v === undefined ? .4 : s.v); g.lineWidth = R * .04; g.beginPath(); g.moveTo(cx - Math.cos(a) * R * .15, cy - Math.sin(a) * R * .15); g.lineTo(cx + Math.cos(a) * R * .74, cy + Math.sin(a) * R * .74); g.stroke();
+      g.beginPath(); g.arc(cx, cy, R * .09, 0, 7); g.fill();
+    },
+    bandeau(g, w, h, s) { // échelle linéaire d'un poste radio
+      g.fillStyle = '#e3dcc4'; g.fillRect(0, 0, w, h); g.fillStyle = '#1a1712'; g.strokeStyle = '#1a1712'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold ' + h * .26 + 'px ' + POLICE;
+      for (let i = 0; i <= 40; i++) { const x = w * (.05 + .9 * i / 40), big = i % 5 === 0; g.lineWidth = big ? h * .035 : h * .018; g.beginPath(); g.moveTo(x, h * .12); g.lineTo(x, h * (big ? .42 : .3)); g.stroke(); if (big) g.fillText(String(60 + i * 2), x, h * .66); }
+      g.strokeStyle = '#b0281a'; g.lineWidth = h * .045; const x = w * (.05 + .9 * (s.v === undefined ? .37 : s.v)); g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke();
+    },
+    croix(g, w, h, s) { const R = Math.min(w, h) / 2; g.fillStyle = '#e4dfd0'; g.beginPath(); g.arc(w / 2, h / 2, R * .98, 0, 7); g.fill(); g.fillStyle = s.couleur || '#a8281c'; g.fillRect(w / 2 - R * .2, h / 2 - R * .66, R * .4, R * 1.32); g.fillRect(w / 2 - R * .66, h / 2 - R * .2, R * 1.32, R * .4); },
+    eclair(g, w, h) { const R = Math.min(w, h); g.fillStyle = '#d5a116'; g.strokeStyle = '#17150f'; g.lineWidth = R * .06; g.lineJoin = 'round'; g.beginPath(); g.moveTo(w / 2, h * .06); g.lineTo(w * .95, h * .92); g.lineTo(w * .05, h * .92); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#17150f'; g.beginPath(); g.moveTo(w * .54, h * .30); g.lineTo(w * .40, h * .58); g.lineTo(w * .50, h * .58); g.lineTo(w * .44, h * .84); g.lineTo(w * .62, h * .52); g.lineTo(w * .52, h * .52); g.closePath(); g.fill(); },
+    fleche(g, w, h, s) { g.fillStyle = s.couleur || '#e6dfc8'; g.beginPath(); g.moveTo(w * .04, h * .36); g.lineTo(w * .62, h * .36); g.lineTo(w * .62, h * .1); g.lineTo(w * .97, h * .5); g.lineTo(w * .62, h * .9); g.lineTo(w * .62, h * .64); g.lineTo(w * .04, h * .64); g.closePath(); g.fill(); },
+    ecran(g, w, h, s) { // image d'un tube cathodique : lignes de texte, courbe facultative
+      g.fillStyle = '#020604'; g.fillRect(0, 0, w, h); const c = s.couleur || '#58ff8c'; g.fillStyle = c; g.strokeStyle = c; g.shadowColor = c; g.shadowBlur = h * .03;
+      const L = String(s.t || '').split('\n'); const lh = h * .1; g.font = 'bold ' + lh * .9 + 'px ' + MONO; g.textAlign = 'left'; g.textBaseline = 'top';
+      L.forEach((t, i) => g.fillText(t, w * .06, h * .07 + i * lh * 1.12));
+      if (s.onde) { g.lineWidth = h * .012; g.beginPath(); for (let i = 0; i <= 120; i++) { const x = w * (.06 + .88 * i / 120), k = (i % 30) / 30; const y = h * (.74 - (k > .42 && k < .5 ? .2 : k >= .5 && k < .56 ? -.09 : Math.sin(i * .21) * .012)); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+      g.fillRect(w * .06, h * .9, w * .03, h * .045); g.shadowBlur = 0;
+    }
+  };
+  const HAUT = { pochoir: 96, plaque: 128, etiquette: 128, danger: 72, cadran: 200, bandeau: 96, croix: 128, eclair: 128, fleche: 64, ecran: 300 };
+  function rect(spec, ratio, h) { // la définition suit la taille réelle : 2,6 pixels par millimètre, plafonnée par style
+    const A = atlas(); const cle = JSON.stringify(spec) + '|' + ratio.toFixed(2) + '|' + h.toFixed(3); if (A.map.has(cle)) return A.map.get(cle);
+    let ph = Math.min(HAUT[spec.style] || 96, Math.max(40, Math.round(h * 2600))), pw = Math.round(ph * ratio); if (pw > 720) { ph = Math.round(ph * 720 / pw); pw = 720; }
+    if (A.x + pw + 6 > A.W) { A.x = 4; A.y += A.rh + 8; A.rh = 0; }
+    if (A.y + ph + 4 > A.H) { console.warn('FABRIQUE : atlas d\'inscriptions plein'); A.x = 4; A.y = 4; A.rh = 0; }
+    const g = A.g; g.save(); g.translate(A.x, A.y); g.beginPath(); g.rect(0, 0, pw, ph); g.clip(); g.clearRect(0, 0, pw, ph);
+    (STYLES[spec.style] || STYLES.pochoir)(g, pw, ph, spec); g.restore();
+    const r = { u0: A.x / A.W, u1: (A.x + pw) / A.W, v1: 1 - A.y / A.H, v0: 1 - (A.y + ph) / A.H };
+    A.x += pw + 8; A.rh = Math.max(A.rh, ph); A.tex.needsUpdate = true; A.map.set(cle, r); return r;
+  }
+  fab.styles = STYLES; fab.stylesHaut = HAUT;
+  function matInscription(genre, etat, peau) { // 'peint' | 'metal' | 'ecran'
+    const e = Math.round(clamp01(etat) * 10) / 10, cle = '§' + genre + e + (peau ? 'p' : ''); if (cache.has(cle)) return cache.get(cle);
+    const A = atlas(); let m;
+    if (genre === 'ecran') {
+      m = new THREE.MeshStandardMaterial({ color: 0x030504, roughness: .25, metalness: 0, emissive: 0xffffff, emissiveMap: A.tex });
+      habiller(m, 13, U([1.5, 0, 0, 0], [1, 0, 420, 0], [0, 0, 0], [0, 0, 0])); m.userData.fabSansOmbre = true;
+    } else {
+      m = new THREE.MeshStandardMaterial({ map: A.tex, transparent: true, depthWrite: false, roughness: genre === 'metal' ? .34 : .62, metalness: genre === 'metal' ? .9 : 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
+      habiller(m, 12, U([clamp01(.45 * e * 2), 0, clamp01(.4 * e * 2), 0], [1, 1, 0, genre === 'metal' ? 0 : 1], [0, 0, 0], [0, 0, 0])); m.userData.fabSansOmbre = true;
+    }
+    m.userData.fabUV = true; m.userData.fabInscription = [genre, etat]; if (peau) m.skinning = true; m.name = 'fab_inscription_' + genre; cache.set(cle, m); return m;
+  }
+
+  /* ---------------------------------------------------------------- constructeur de formes
+     Toutes les cotes sont en mètres. Chaque forme est ajoutée au lot de son matériau ; fin() fusionne
+     chaque lot en un seul maillage. Les arêtes vives reçoivent une bande de normales adoucies (chanfrein
+     visuel) et un marquage « arête » que les matériaux utilisent pour l'usure. */
+  function Constructeur(graine, etat) {
+    this.g = graine | 0; this.alea = alea(this.g * 7919 + 13); this.s = (this.g * .61803398875 + .11) % 1; this.etat = etat === undefined ? .5 : etat;
+    this.lots = new Map(); this.cols = []; this.parties = {}; this.pivot = [0, 0, 0]; this.lumieres = [];
+    this.M = new THREE.Matrix4(); this.N = new THREE.Matrix3(); this.pile = []; this._t = new THREE.Vector3(); this.sol = true;
+    this.os = null; this.lien = [0, 0, 0]; this.enfants = [];
+  }
+  const P = Constructeur.prototype;
+  P.hasard = function (a, b) { const r = this.alea(); return a === undefined ? r : a + (b - a) * r; };
+  P.entier = function (n) { return Math.floor(this.alea() * n); };
+  P.choix = function (t) { return t[Math.floor(this.alea() * t.length)]; };
+  function jumeau(mat) { const u = mat.userData; if (mat.skinning === true) return mat; if (u.fabJumeau) return u.fabJumeau;
+    let j; if (u.fabNom) j = fab.mat(u.fabNom, Object.assign({}, u.fabOpts, { _peau: 1 })); else if (u.fabInscription) j = matInscription(u.fabInscription[0], u.fabInscription[1], true); else { j = mat.clone(); j.skinning = true; }
+    return (u.fabJumeau = j); }
+  P._lot = function (mat) { if (this.os) mat = jumeau(mat); let l = this.lots.get(mat.uuid); if (!l) { l = { mat, P: [], N: [], A: [], U: [], I: [], S: [], n: 0, uv: !!mat.userData.fabUV }; this.lots.set(mat.uuid, l); } return l; };
+  P._v = function (l, x, y, z, nx, ny, nz, e, ao, u, v) { const t = this._t; t.set(x, y, z).applyMatrix4(this.M); l.P.push(t.x, t.y, t.z);
+    t.set(nx, ny, nz).applyMatrix3(this.N).normalize(); l.N.push(t.x, t.y, t.z); l.A.push(e, ao); if (l.uv) l.U.push(u || 0, v || 0); if (this.os) l.S.push(this.lien[0], this.lien[1], this.lien[2]); return l.n++; };
+  const _e = new THREE.Euler(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
+  P._tr = function (x, y, z, o) { this.pile.push(this.M.clone()); o = o || {};
+    _q.identity(); if (o.rot) _q.setFromEuler(_e.set(o.rot[0], o.rot[1], o.rot[2]));
+    const v = o.vers || (o.axe === 'x' ? 'x+' : o.axe === 'z' ? 'z+' : null); if (v && v !== 'y+') { const r = VERS[v]; _q.multiply(_q2.setFromEuler(_e.set(r[0], r[1], r[2]))); }
+    const s = o.s; _m.compose(_p.set(x || 0, y || 0, z || 0), _q, s ? _s.set(s[0], s[1], s[2]) : _s.set(1, 1, 1));
+    this.M.multiply(_m); this.N.getNormalMatrix(this.M); };
+  P._fin = function () { this.M.copy(this.pile.pop()); this.N.getNormalMatrix(this.M); };
+  /* groupe(position, rotation ou 'z+', fonction, échelle) : tout ce qui est construit dans la fonction est placé dans ce repère */
+  P.groupe = function (p, r, fn, s) { this._tr(p[0], p[1], p[2], typeof r === 'string' ? { vers: r, s } : { rot: r, s }); fn(this); this._fin(); return this; };
+
+  /* boite(mat, largeur, hauteur, profondeur, x, y, z, {r: chanfrein, rot, ao, sans:'y-'}) — x,y,z = centre */
+  const FACES = [[0, 1, 2, 1, 'x+'], [0, 2, 1, -1, 'x-'], [1, 2, 0, 1, 'y+'], [1, 0, 2, -1, 'y-'], [2, 0, 1, 1, 'z+'], [2, 1, 0, -1, 'z-']];
+  P.boite = function (mat, w, h, d, x, y, z, o) {
+    o = o || {}; const l = this._lot(mat), H = [w / 2, h / 2, d / 2], mn = Math.min(w, h, d);
+    let r = o.r === undefined ? Math.min(.006, mn * .22) : o.r; if (mn < r * 2.6) r = 0;
+    const ao = o.ao || 0, pos = [0, 0, 0], nor = [0, 0, 0]; this._tr(x, y, z, o);
+    for (const [a, u, v, s, nom] of FACES) {
+      if (o.sans && o.sans.indexOf(nom) >= 0) continue;
+      const cu = r ? [-H[u], -H[u] + r, H[u] - r, H[u]] : [-H[u], H[u]], cv = r ? [-H[v], -H[v] + r, H[v] - r, H[v]] : [-H[v], H[v]], n = cu.length, base = l.n;
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+        pos[a] = s * H[a]; pos[u] = cu[i]; pos[v] = cv[j]; let e = 0;
+        if (r) { let L = 0; for (let k = 0; k < 3; k++) { const c = Math.max(-(H[k] - r), Math.min(H[k] - r, pos[k])); nor[k] = pos[k] - c; L += nor[k] * nor[k]; } L = Math.sqrt(L) || 1; nor[0] /= L; nor[1] /= L; nor[2] /= L; e = (i === 0 || i === n - 1 || j === 0 || j === n - 1) ? 1 : 0; }
+        else { nor[0] = nor[1] = nor[2] = 0; nor[a] = s; }
+        this._v(l, pos[0], pos[1], pos[2], nor[0], nor[1], nor[2], e, ao);
+      }
+      for (let j = 0; j < n - 1; j++) for (let i = 0; i < n - 1; i++) { const A = base + j * n + i, B = A + 1, C = A + n + 1, D = A + n; l.I.push(A, B, C, A, C, D); }
+    }
+    this._fin(); return this;
+  };
+
+  /* tour(mat, profil [[rayon, y], ...], x, y, z, {seg, ch: chanfrein, lisse, ferme, vers:'z+', a0, a1, ao})
+     Le profil se lit de bas en haut le long de l'extérieur. Les angles vifs sont adoucis automatiquement. */
+  P.tour = function (mat, prof, x, y, z, o) {
+    o = o || {}; const l = this._lot(mat), n = prof.length, ch = o.ch === undefined ? .004 : o.ch, ao = o.ao || 0;
+    let rm = 0; for (const p of prof) rm = Math.max(rm, p[0]);
+    const seg = o.seg || Math.max(8, Math.min(32, Math.round(rm * 130) + 8));
+    const sn = (a, b) => { const tx = b[0] - a[0], ty = b[1] - a[1], L = Math.hypot(tx, ty) || 1; return [ty / L, -tx / L]; };
+    const pts = [], F = !!o.ferme;
+    for (let i = 0; i < n; i++) {
+      const p = prof[i], a = F ? prof[(i - 1 + n) % n] : prof[i - 1], c = F ? prof[(i + 1) % n] : prof[i + 1];
+      const n0 = a ? sn(a, p) : null, n1 = c ? sn(p, c) : null;
+      if (!n0 || !n1) { const q = n0 || n1; pts.push([p[0], p[1], q[0], q[1], 0, 0]); continue; }
+      const dot = n0[0] * n1[0] + n0[1] * n1[1]; let mx = n0[0] + n1[0], my = n0[1] + n1[1]; const L = Math.hypot(mx, my) || 1; mx /= L; my /= L;
+      if (o.lisse || dot > .92) { pts.push([p[0], p[1], mx, my, 0, 0]); continue; }
+      const convexe = n0[0] * n1[1] - n0[1] * n1[0] > 0, la = Math.hypot(p[0] - a[0], p[1] - a[1]), lc = Math.hypot(c[0] - p[0], c[1] - p[1]);
+      const ca = Math.min(ch, la * .4), cc = Math.min(ch, lc * .4);
+      if (ca < 1e-5 || cc < 1e-5) { pts.push([p[0], p[1], n0[0], n0[1], 0, 0], [p[0], p[1], n1[0], n1[1], 0, 0]); continue; }
+      pts.push([p[0] + (a[0] - p[0]) / la * ca, p[1] + (a[1] - p[1]) / la * ca, n0[0], n0[1], 0, 0]);
+      pts.push([p[0], p[1], mx, my, convexe ? 1 : 0, convexe ? 0 : .55]);
+      pts.push([p[0] + (c[0] - p[0]) / lc * cc, p[1] + (c[1] - p[1]) / lc * cc, n1[0], n1[1], 0, 0]);
+    }
+    if (F) pts.push(pts[0]);
+    const a0 = o.a0 || 0, a1 = o.a1 === undefined ? Math.PI * 2 : o.a1, base = l.n, m = pts.length; this._tr(x, y, z, o);
+    for (let i = 0; i < m; i++) { const q = pts[i]; for (let j = 0; j <= seg; j++) { const t = a0 + (a1 - a0) * j / seg, c = Math.cos(t), s = Math.sin(t); this._v(l, q[0] * c, q[1], q[0] * s, q[2] * c, q[3], q[2] * s, q[4], Math.min(1, q[5] + ao)); } }
+    for (let i = 0; i < m - 1; i++) { const r0 = pts[i][0], r1 = pts[i + 1][0];
+      if ((r0 < 1e-6 && r1 < 1e-6) || (Math.abs(r0 - r1) < 1e-7 && Math.abs(pts[i][1] - pts[i + 1][1]) < 1e-7)) continue;
+      for (let j = 0; j < seg; j++) { const A = base + i * (seg + 1) + j, B = A + seg + 1, C = B + 1, D = A + 1;
+        if (r0 < 1e-6) l.I.push(A, B, C); else if (r1 < 1e-6) l.I.push(A, B, D); else l.I.push(A, B, C, A, C, D); } }
+    this._fin(); return this;
+  };
+  /* cyl(mat, rayon, hauteur, x, y, z, {r2: rayon haut, vers, seg, ch, ouvert}) — x,y,z = centre */
+  P.cyl = function (mat, r, h, x, y, z, o) { o = o || {}; const r2 = o.r2 === undefined ? r : o.r2;
+    return this.tour(mat, o.ouvert ? [[r, -h / 2], [r2, h / 2]] : [[0, -h / 2], [r, -h / 2], [r2, h / 2], [0, h / 2]], x, y, z, o); };
+  /* bague(mat, rayon extérieur, rayon intérieur, hauteur, x, y, z, {vers}) : anneau ou tube épais */
+  P.bague = function (mat, r, ri, h, x, y, z, o) { return this.tour(mat, [[ri, -h / 2], [r, -h / 2], [r, h / 2], [ri, h / 2]], x, y, z, Object.assign({ ferme: true, ch: Math.min(.003, (r - ri) * .3) }, o)); };
+  /* sphere(mat, rayon, x, y, z, {s: [sx,sy,sz], phi0, phi1}) — phi de 0 (bas) à PI (haut) */
+  P.sphere = function (mat, r, x, y, z, o) { o = o || {}; const k = o.seg2 || 8, f0 = o.phi0 || 0, f1 = o.phi1 === undefined ? Math.PI : o.phi1, pr = [];
+    for (let i = 0; i <= k; i++) { const f = f0 + (f1 - f0) * i / k; pr.push([Math.max(0, r * Math.sin(f)), -r * Math.cos(f)]); }
+    return this.tour(mat, pr, x, y, z, Object.assign({ lisse: true, seg: 14 }, o)); };
+  /* tore(mat, grand rayon, petit rayon, x, y, z, {vers, a0, a1}) */
+  P.tore = function (mat, R, r, x, y, z, o) { o = o || {}; const k = o.seg2 || 8, pr = [];
+    for (let i = 0; i < k; i++) { const a = -Math.PI + Math.PI * 2 * i / k; pr.push([R + r * Math.cos(a), r * Math.sin(a)]); }
+    return this.tour(mat, pr, x, y, z, Object.assign({ lisse: true, ferme: true, seg: Math.max(10, Math.min(28, Math.round(R * 120) + 10)) }, o)); };
+  /* tuyau(mat, points [[x,y,z], ...], rayon, {coude: rayon des coudes, seg, bouts}) : tube le long d'un tracé */
+  P.tuyau = function (mat, pts, r, o) {
+    let r1 = r; if (Array.isArray(r)) { r1 = r[1]; r = r[0]; }
+    o = o || {}; const l = this._lot(mat), seg = o.seg || Math.max(6, Math.min(14, Math.round(r * 220) + 5)), cd = o.coude === undefined ? r * 2.4 : o.coude, K = o.pas || 5, V = THREE.Vector3, path = [], n = pts.length;
+    const P3 = pts.map(p => new V(p[0], p[1], p[2]));
+    for (let i = 0; i < n; i++) {
+      if (i === 0 || i === n - 1 || cd <= 0) { path.push(P3[i].clone()); continue; }
+      const A = P3[i - 1], B = P3[i], C = P3[i + 1], dA = B.distanceTo(A), dC = B.distanceTo(C), t = Math.min(cd, dA * .45, dC * .45);
+      const p0 = B.clone().lerp(A, t / dA), p2 = B.clone().lerp(C, t / dC);
+      for (let k = 0; k <= K; k++) { const s = k / K; path.push(new V().addScaledVector(p0, (1 - s) * (1 - s)).addScaledVector(B, 2 * s * (1 - s)).addScaledVector(p2, s * s)); }
+    }
+    const m = path.length, T = [], nrm = new V(), bn = new V(), tmp = new V(), base = l.n; this.pile.push(this.M.clone());
+    for (let i = 0; i < m; i++) T.push(new V().subVectors(path[Math.min(m - 1, i + 1)], path[Math.max(0, i - 1)]).normalize());
+    nrm.set(0, 1, 0); if (Math.abs(T[0].y) > .9) nrm.set(1, 0, 0); nrm.addScaledVector(T[0], -nrm.dot(T[0])).normalize();
+    for (let i = 0; i < m; i++) { const t = T[i], ri = r + (r1 - r) * i / (m - 1); nrm.addScaledVector(t, -nrm.dot(t)).normalize(); bn.crossVectors(nrm, t);
+      for (let j = 0; j <= seg; j++) { const a = Math.PI * 2 * j / seg, c = Math.cos(a), s = Math.sin(a); tmp.set(0, 0, 0).addScaledVector(nrm, c).addScaledVector(bn, s);
+        this._v(l, path[i].x + tmp.x * ri, path[i].y + tmp.y * ri, path[i].z + tmp.z * ri, tmp.x, tmp.y, tmp.z, 0, o.ao || 0); } }
+    for (let i = 0; i < m - 1; i++) for (let j = 0; j < seg; j++) { const A = base + i * (seg + 1) + j, B = A + seg + 1, C = B + 1, D = A + 1; l.I.push(A, B, C, A, C, D); }
+    if (o.bouts !== false) for (const [i, sg] of [[0, -1], [m - 1, 1]]) { if (i) r = r1; const t = T[i], c0 = this._v(l, path[i].x, path[i].y, path[i].z, t.x * sg, t.y * sg, t.z * sg, 0, 0), b0 = l.n;
+      nrm.set(0, 1, 0); if (Math.abs(t.y) > .9) nrm.set(1, 0, 0); nrm.addScaledVector(t, -nrm.dot(t)).normalize(); bn.crossVectors(nrm, t);
+      for (let j = 0; j <= seg; j++) { const a = Math.PI * 2 * j / seg; tmp.set(0, 0, 0).addScaledVector(nrm, Math.cos(a) * r).addScaledVector(bn, Math.sin(a) * r); this._v(l, path[i].x + tmp.x, path[i].y + tmp.y, path[i].z + tmp.z, t.x * sg, t.y * sg, t.z * sg, 1, 0); }
+      for (let j = 0; j < seg; j++) sg > 0 ? l.I.push(c0, b0 + j + 1, b0 + j) : l.I.push(c0, b0 + j, b0 + j + 1); }
+    this.M.copy(this.pile.pop()); return this;
+  };
+  /* rivets(mat, positions, rayon, vers) : têtes bombées ; vers = 'z+' par défaut (normale de la face qui les porte) */
+  P.rivets = function (mat, liste, r, vers) { r = r || .006; const pr = [[r, 0], [r * .82, r * .42], [r * .45, r * .68], [0, r * .75]];
+    for (const p of liste) this.tour(mat, pr, p[0], p[1], p[2], { seg: 6, lisse: true, vers: vers || 'z+' }); return this; };
+  /* plaque(inscription, largeur, hauteur, x, y, z, {vers ou rot, courbe: rayon})
+     inscription = { t:'TEXTE', style:'pochoir'|'plaque'|'etiquette'|'danger'|'cadran'|'bandeau'|'croix'|'eclair'|'fleche'|'ecran', ... }
+     La plaque regarde vers +z ; courbe la plie autour d'un cylindre vertical de ce rayon, courbeV autour d'un tuyau horizontal. */
+  P.plaque = function (spec, w, h, x, y, z, o) {
+    o = o || {}; if (typeof spec === 'string') spec = { t: spec, style: 'pochoir' };
+    if (spec.v !== undefined) spec = Object.assign({}, spec, { v: Math.round(spec.v * 10) / 10 });   // peu de variantes : l'atlas est partagé
+    const R = rect(spec, w / h, h), genre = spec.style === 'ecran' ? 'ecran' : spec.style === 'plaque' ? 'metal' : 'peint';
+    const l = this._lot(matInscription(genre, this.etat)), c = o.courbe, cv = o.courbeV, nb = c ? 8 : 1, nr = cv ? 6 : 1, base = l.n;
+    this._tr(x, y, z, o.vers ? { rot: ({ 'z+': [0, 0, 0], 'z-': [0, Math.PI, 0], 'x+': [0, Math.PI / 2, 0], 'x-': [0, -Math.PI / 2, 0], 'y+': [-Math.PI / 2, 0, 0], 'y-': [Math.PI / 2, 0, 0] })[o.vers], s: o.s } : o);
+    for (let j = 0; j <= nr; j++) for (let i = 0; i <= nb; i++) { const t = i / nb, v = j / nr; let px = (t - .5) * w, py = (v - .5) * h, pz = 0, nx = 0, ny = 0, nz = 1;
+      if (c) { const a = (t - .5) * w / c; px = Math.sin(a) * c; pz = Math.cos(a) * c - c; nx = Math.sin(a); nz = Math.cos(a); }
+      else if (cv) { const a = (v - .5) * h / cv; py = Math.sin(a) * cv; pz = Math.cos(a) * cv - cv; ny = Math.sin(a); nz = Math.cos(a); }
+      this._v(l, px, py, pz, nx, ny, nz, 0, 0, R.u0 + (R.u1 - R.u0) * t, R.v0 + (R.v1 - R.v0) * v); }
+    for (let j = 0; j < nr; j++) for (let i = 0; i < nb; i++) { const A = base + j * (nb + 1) + i, B = A + 1, C = A + nb + 2, D = A + nb + 1; l.I.push(A, B, C, A, C, D); }
+    this._fin(); return this;
+  };
+  /* geo(mat, géométrie three, x, y, z, {rot, s}) : importe une BufferGeometry quelconque */
+  P.geo = function (mat, g, x, y, z, o) { const l = this._lot(mat), pa = g.attributes.position, na = g.attributes.normal, base = l.n; this._tr(x, y, z, o);
+    for (let i = 0; i < pa.count; i++) this._v(l, pa.getX(i), pa.getY(i), pa.getZ(i), na ? na.getX(i) : 0, na ? na.getY(i) : 1, na ? na.getZ(i) : 0, 0, 0);
+    if (g.index) for (let i = 0; i < g.index.count; i++) l.I.push(base + g.index.getX(i)); else for (let i = 0; i < pa.count; i++) l.I.push(base + i);
+    this._fin(); return this; };
+  /* partie(nom, pivot, fonction, axe) : sous-ensemble mobile (porte, volant, hélice), construit autour de son pivot.
+     L'objet fini les expose dans userData.parties ; axe ('x', 'y' ou 'z') indique autour de quoi la pièce tourne. */
+  P.partie = function (nom, pivot, fn, axe) { const c = new Constructeur(this.g, this.etat); c.s = this.s; c.alea = this.alea; c.pivot = pivot; c.sol = false; c.axe = axe || 'y'; fn(c); this.parties[nom] = c; return c; };
+  P.collision = function (x0, y0, z0, x1, y1, z1) { this.cols.push({ min: [x0, y0, z0], max: [x1, y1, z1] }); return this; };
+  P.lumiere = function (x, y, z, couleur, intensite, portee) { this.lumieres.push({ pos: [x, y, z], couleur, intensite, portee }); return this; };
+  /* fin(nom, {surface}) -> THREE.Group : un maillage par matériau, les parties mobiles en sous-groupes */
+  P.fin = function (nom, meta) {
+    const G = new THREE.Group(); G.name = nom; let tris = 0, appels = 0; const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+    let squelette = null;
+    if (this.os) { const os = {}, liste = this.os.map(d => { const b = new THREE.Bone(); b.name = d[0]; os[d[0]] = b; return b; });
+      this.os.forEach((d, i) => { const par = d[1] ? this.os[this.osIndex[d[1]]] : null; liste[i].position.set(d[2] - (par ? par[2] : 0), d[3] - (par ? par[3] : 0), d[4] - (par ? par[4] : 0)); (par ? os[d[1]] : G).add(liste[i]); });
+      G.updateMatrixWorld(true); squelette = new THREE.Skeleton(liste); G.userData.os = os; G.userData.squelette = squelette; }
+    const monter = (c, parent, off) => { const oy = off[1];
+      c.lots.forEach(l => { if (!l.I.length) return; const g = new THREE.BufferGeometry(), n = l.n, A = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) { const yy = l.P[i * 3 + 1] + oy, sol = c.sol ? Math.max(0, 1 - Math.max(0, yy) / .07) : 0; A[i * 3] = l.A[i * 2]; A[i * 3 + 1] = Math.min(1, l.A[i * 2 + 1] + sol * sol * .75); A[i * 3 + 2] = c.s;
+          for (let k = 0; k < 3; k++) { const v = l.P[i * 3 + k] + off[k]; if (v < mn[k]) mn[k] = v; if (v > mx[k]) mx[k] = v; } }
+        g.setAttribute('position', new THREE.Float32BufferAttribute(l.P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(l.N, 3)); g.setAttribute('aFab', new THREE.BufferAttribute(A, 3));
+        if (l.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(l.U, 2));
+        g.setIndex(l.I); g.computeBoundingSphere(); g.computeBoundingBox();
+        let m;
+        if (squelette && c === this) { const SI = new Uint16Array(n * 4), SW = new Float32Array(n * 4);
+          for (let i = 0; i < n; i++) { SI[i * 4] = l.S[i * 3]; SI[i * 4 + 1] = l.S[i * 3 + 1]; SW[i * 4] = 1 - l.S[i * 3 + 2]; SW[i * 4 + 1] = l.S[i * 3 + 2]; }
+          g.setAttribute('skinIndex', new THREE.BufferAttribute(SI, 4)); g.setAttribute('skinWeight', new THREE.BufferAttribute(SW, 4));
+          g.boundingSphere.radius *= 1.7; m = new THREE.SkinnedMesh(g, l.mat); m.bind(squelette, new THREE.Matrix4()); }
+        else m = new THREE.Mesh(g, l.mat);
+        m.castShadow = !l.mat.userData.fabSansOmbre; m.receiveShadow = true; if (l.mat.transparent) m.renderOrder = l.mat.userData.fabUV ? 2 : 3;
+        parent.add(m); tris += l.I.length / 3; appels++; });
+      for (const k in c.parties) { const s = c.parties[k], pg = new THREE.Group(); pg.name = k; pg.userData.axe = s.axe; pg.userData.repos = [s.pivot[0], s.pivot[1], s.pivot[2]]; pg.position.set(s.pivot[0], s.pivot[1], s.pivot[2]); monter(s, pg, [off[0] + s.pivot[0], off[1] + s.pivot[1], off[2] + s.pivot[2]]); parent.add(pg); (G.userData.parties = G.userData.parties || {})[k] = pg; }
+    };
+    monter(this, G, [0, 0, 0]);
+    for (const e of this.enfants) G.add(e);
+    if (mn[0] > mx[0]) { mn[0] = mn[2] = -.5; mn[1] = 0; mx[0] = mx[2] = .5; mx[1] = 1; }      // objet fait seulement d'effets
+    meta = meta || {};
+    G.userData.fab = nom; G.userData.taille = [mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]].map(v => Math.round(v * 1000) / 1000); G.userData.boite = { min: mn, max: mx };
+    G.userData.colliders = this.cols.length ? this.cols : [{ min: mn.slice(), max: mx.slice() }]; G.userData.surface = meta.surface || 'metal';
+    G.userData.triangles = tris; G.userData.appels = appels; G.userData.lumieres = this.lumieres;
+    return G;
+  };
+  fab.Constructeur = Constructeur;
+  /* constructeur(graine, etat) : pour bâtir ses propres objets */
+  fab.constructeur = function (graine, etat) { return new Constructeur(graine === undefined ? 1 : graine, etat); };
+
+  /* ---------------------------------------------------------------- catalogue */
+  /* enregistrer(nom, {titre, groupe, surface, note}, fonction(b, options, m)) : ajoute un objet au catalogue.
+     m(nom, options) donne un matériau déjà réglé sur l'état et l'humidité demandés. */
+  fab.enregistrer = function (nom, meta, fn) { fab.catalogue[nom] = Object.assign({ nom, fn }, meta); };
+  /* objet(nom, {graine, etat, couleur, humide, ...}) -> THREE.Group posé au sol, face avant vers +z */
+  fab.objet = function (nom, o) {
+    const C = fab.catalogue[nom]; if (!C) throw new Error('FABRIQUE : objet inconnu « ' + nom + ' »');
+    o = Object.assign({ graine: 1, etat: .5, humide: 0 }, o);
+    const b = new Constructeur(o.graine, o.etat), m = (n, mo) => fab.mat(n, Object.assign({ etat: o.etat, humide: o.humide }, mo));
+    C.fn(b, o, m); const G = b.fin(nom, C); G.userData.options = o; if (C.apres) C.apres(G, o, b); return G;
+  };
+
+  /* ---------------------------------------------------------------- environnement
+     environnement(renderer, 'bunker' | 'atelier' | 'studio') -> texture à poser dans scene.environment.
+     Sans elle, les métaux n'ont rien à refléter et restent plats. */
+  fab.environnement = function (renderer, genre) {
+    const es = new THREE.Scene(), bm = (r, g, b) => { const m = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }); m.color.setRGB(r, g, b); return m; };
+    const add = (w, h, d, x, y, z, m) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); es.add(o); };
+    const k = genre === 'studio' ? 1 : genre === 'atelier' ? .42 : .2, f = genre === 'studio' ? .30 : genre === 'atelier' ? .08 : .012;
+    const room = new THREE.Mesh(new THREE.BoxGeometry(24, 10, 24), bm(f * .9, f, f * 1.05)); room.material.side = THREE.BackSide; es.add(room);
+    add(24, .1, 24, 0, -4.9, 0, bm(f * .5, f * .45, f * .4));
+    add(8, .1, 3, -2, 4.9, 1, bm(5 * k, 5.2 * k, 5.4 * k)); add(3, .1, 7, 6, 4.9, -4, bm(3 * k, 3.2 * k, 3.4 * k));          // plafonniers
+    add(.1, 3, 6, -11.9, 1.5, -2, bm(4.5 * k, 2.6 * k, 1.0 * k)); add(5, 2.4, .1, 6, 1, 11.9, bm(2.2 * k, 2.6 * k, 3.0 * k)); // une source chaude, une froide
+    add(3, 1.6, .1, -6, .5, -11.9, bm(.9 * k, 2.2 * k, 1.5 * k));
+    const pg = new THREE.PMREMGenerator(renderer), rt = pg.fromScene(es, .03); pg.dispose(); return rt.texture;
+  };
+  FAB._objets.forEach(f => f(fab));
+  return fab;
+};
+FAB._objets = [];
+FAB.lin = lin; FAB.alea = alea;
+root.FAB = FAB; if (typeof module !== 'undefined' && module.exports) module.exports = FAB;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+/* ==========================================================================================
+   FABRIQUE — matières des univers anciens et du vivant : pierre, corps, écorce, feuillage, eau
+   ========================================================================================== */
+Object.assign(FAB._ext.FAMILLES, {
+  pierre:    { id: 14, def: { couleur: '#8d8a80', rugosite: .92, metal: 0, usure: .45, rouille: 0, salete: .45, assise: .28, rayon: 0, mode: 'appareil', couleur2: '#6f6a5e', couleur3: '#4a5a2c' }, p3: 'assise', p4: 'rayon', modes: ['appareil', 'roche'] },
+  organique: { id: 15, def: { couleur: '#c49a7a', rugosite: .55, metal: 0, usure: .2, rouille: 0, salete: .2, mode: 'peau', couleur2: '#7d8468', couleur3: '#4a0f0c' }, modes: ['peau', 'os', 'cheveux'] },
+  ecorce:    { id: 16, def: { couleur: '#5a4634', rugosite: .9, metal: 0, usure: .4, rouille: 0, salete: .4, couleur3: '#4f6a2a' } },
+  feuillage: { id: 17, def: { couleur: '#3f6a2a', rugosite: .62, metal: 0, usure: .15, rouille: 0, salete: 0, couleur2: '#b08a2a' } },
+  eau:       { id: 18, def: { couleur: '#0f2a2c', rugosite: .04, metal: 0, usure: 0, rouille: 0, salete: 0, opacite: .72, agitation: 1 }, p4: 'agitation' }
+});
+Object.assign(FAB._ext.NOMS, {
+  pierre_claire: ['pierre', { couleur: '#aaa595' }], pierre_sombre: ['pierre', { couleur: '#5e5c58', couleur2: '#45423c' }],
+  roche: ['pierre', { mode: 'roche', couleur: '#77736a' }], ardoise: ['pierre', { couleur: '#3f4650', assise: .16, rugosite: .6, salete: .2, couleur2: '#2a2e33' }],
+  dallage: ['pierre', { couleur: '#7b786f', assise: .45 }],
+  peau: ['organique', {}], peau_claire: ['organique', { couleur: '#d8b094' }], peau_mate: ['organique', { couleur: '#b07c56' }], peau_brune: ['organique', { couleur: '#7a4f34' }],
+  peau_morte: ['organique', { couleur: '#9a9a82', rouille: .75, salete: .5 }],
+  os: ['organique', { mode: 'os', couleur: '#d8cdb0', rugosite: .6, salete: .5, usure: .4 }],
+  cheveux: ['organique', { mode: 'cheveux', couleur: '#3a2a1c', rugosite: .5 }],
+  feuillage_automne: ['feuillage', { couleur: '#6a6a24', couleur2: '#b0541c', usure: .8 }], sapin: ['feuillage', { couleur: '#24402a', couleur2: '#3a4a22' }],
+  eau_trouble: ['eau', { couleur: '#2a2c18', opacite: .9 }],
+  or: ['laiton', { couleur: '#e8c25a', rugosite: .22, salete: .2, rouille: 0 }], fer_forge: ['acier', { couleur: '#35373a', rugosite: .55, grain: .6, rouille: .25 }],
+  velours: ['toile', { couleur: '#6a1420', relief: .5 }], lin: ['toile', { couleur: '#b8ad90' }], laine: ['toile', { couleur: '#6a5a44', relief: 1.4 }],
+  parchemin: ['toile', { couleur: '#d9c79a', relief: .15, salete: .5 }],
+  cire: ['polymere', { couleur: '#e6dcc0', rugosite: .5, salete: .25 }],
+  lueur_flamme: ['lueur', { couleur: '#ffb04a', intensite: 4, scintille: .35, vitesse: .6 }]
+});
+FAB._ext.glsl.push(`
+#if FAB_F == 14
+// ---- pierre : maçonnerie appareillée (mode 0) ou roche naturelle (mode 1)
+// uFabB.z = hauteur d'assise, uFabB.w = rayon d'une tour (pose en anneau), uFabC = mortier, uFabD = mousse
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN); vec2 u = fUV(p, n);
+  float us = uFabA.x, sa = uFabA.z, up = smoothstep(.3, .95, n.y), side = 1. - abs(n.y);
+#ifdef FAB_CYL
+  if (abs(n.y) < .7) { vec3 q = vFabP - vec3(vFabA.z * 57.3, vFabA.z * 31.7, vFabA.z * 83.9); u = vec2(atan(q.x, q.z) * uFabB.w, p.y); }
+#endif
+  float a = fF(p * 1.1 + 3.), b = fF(p * 7. + 1.), c = fN(p * 150.) * fFade(150.) + .5 * (1. - fFade(150.));
+  float h = 0., joint = 0., tone = .5, chip = 0.;
+#if FAB_MODE == 0
+  float H = uFabB.z, row = floor(u.y / H), fy = fract(u.y / H);
+  float L = H * (1.7 + 1.3 * fH(vec3(row, 3., 1.)));
+  float x = u.x / L + fH(vec3(row, 7., 2.)) * 7.;
+  float c0 = floor(x), cell = c0;
+  float jl = (fH(vec3(c0, row, 4.)) - .5) * .5, jr = (fH(vec3(c0 + 1., row, 4.)) - .5) * .5;   // chaque pierre a sa longueur
+  if (x < c0 + jl) { cell = c0 - 1.; jr = jl; jl = (fH(vec3(cell, row, 4.)) - .5) * .5; }
+  else if (x > c0 + 1. + jr) { cell = c0 + 1.; jl = jr; jr = (fH(vec3(cell + 1., row, 4.)) - .5) * .5; }
+  float d = min(min(x - cell - jl, cell + 1. + jr - x) * L, min(fy, 1. - fy) * H);              // distance au joint, en mètres
+  tone = fH(vec3(cell, row, 9.));
+  float j0 = .007 + .006 * us, jw = max(j0, fabPx * .8);
+  joint = (1. - smoothstep(jw, jw * 2.2, d)) * j0 / jw;
+  float rnd = smoothstep(0., .025 + .06 * us, d);                                                // arêtes arrondies par le temps
+  chip = us * smoothstep(.62, .8, fF(vec3(u * 7., tone * 9.)) * .7 + (1. - smoothstep(0., .07, d)) * .35);
+  h = rnd * .014 + (b - .5) * .007 * (1. + tone) - chip * .010;
+#else
+  float st = fN(vec3(p.x * .8, p.y * 7. + a * 5., p.z * .8));
+  vec3 v = fV2(u * 1.6 + a * 1.2);
+  float crack = smoothstep(.05, .0, v.y - v.x) * fFade(40.);
+  tone = v.z * .5 + st * .5;
+  h = (a - .5) * .05 + (b - .5) * .016 + (st - .5) * .008 - crack * .008;
+  joint = crack * .32;
+#endif
+  vec3 col = base * (.70 + .55 * tone) * (.84 + .32 * a) * (.90 + .20 * c);
+  col = mix(col, col * 1.25 + .02, chip * .7);
+  col = mix(col, uFabC * (.75 + .5 * c) * (.8 + .3 * b), joint);
+  float streak = fN(vec3(p.x * 7., p.y * .5, p.z * 7.));
+  float soot = sa * clamp(smoothstep(.45, .85, streak * .6 + a * .4) * .7 * side + fabOcc * .8, 0., 1.);
+  col *= 1. - .55 * soot;
+  float moss = smoothstep(.58, .82, fF(p * 2.3 + 8.) * .55 + joint * .25 + up * .35 + fabOcc * .3 + uFabA.w * .3) * clamp(sa * .9 + uFabA.w * .8, 0., 1.);
+  col = mix(col, uFabD * (.55 + .9 * b), moss * .9);
+  fabCol = col; fabRough = clamp(r0 - .06 * moss + .04 * (c - .5), .3, 1.); fabMetal = 0.;
+  fabH = h + (c - .5) * .0012 - joint * .012 + moss * .004;
+  fWet(n);
+}
+#endif
+#if FAB_F == 15
+// ---- matières du corps : peau (mode 0), os (mode 1), cheveux (mode 2)
+// peau : uFabA.y = décomposition (mort-vivant), uFabC = teinte morte, uFabD = plaies
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN);
+  float us = uFabA.x, ro = uFabA.y, sa = uFabA.z;
+  float a = fF(p * 6. + 2.), b = fF(p * 31. + 5.), c = fN(p * 420.) * fFade(420.) + .5 * (1. - fFade(420.));
+#if FAB_MODE == 0
+  vec3 col = base * (.92 + .16 * a);
+  col = mix(col, col * vec3(1.12, .86, .82), smoothstep(.5, .9, b) * .35);
+  float veins = smoothstep(.86, .97, 1. - abs(2. * fN(p * 17. + a * 2.) - 1.)) * ro;
+  float decomp = smoothstep(.75 - .7 * ro, 1.05 - .7 * ro, a * .6 + b * .4) * step(.001, ro);
+  col = mix(col, uFabC * (.8 + .4 * b), decomp * .85);
+  col = mix(col, uFabC * .45, veins * .6);
+  float wound = smoothstep(.80, .86, fF(p * 9. + 17.) * .7 + b * .3) * smoothstep(.25, .6, ro);
+  col = mix(col, uFabD * (.5 + .8 * b), wound);
+  float dirt = sa * smoothstep(.45, .85, fF(p * 4.1 + 9.) + fabOcc * .5);
+  col = mix(col, col * vec3(.38, .32, .26), dirt);
+  fabCol = col; fabRough = clamp(r0 + .2 * decomp + .2 * dirt - .25 * wound, .15, 1.); fabMetal = 0.;
+  fabH = (c - .5) * .00012 - wound * .0012 + veins * .0004;
+#elif FAB_MODE == 1
+  vec3 col = base * (.88 + .2 * a);
+  float stain = clamp(sa * (smoothstep(.35, .8, a * .6 + b * .4) * .7 + fabOcc * .9), 0., 1.);
+  col = mix(col, col * vec3(.50, .36, .20), stain);
+  float pore = smoothstep(.72, .9, fN(p * 260.) * fN(p * 90. + 3.) * 2.2) * fFade(260.);
+  col *= 1. - .5 * pore;
+  vec3 vv = fV2(fUV(p, n) * 22.);
+  float crack = smoothstep(.03, .0, vv.y - vv.x) * us * fFade(22.);
+  col *= 1. - .5 * crack;
+  fabCol = col; fabRough = r0 + .2 * stain; fabMetal = 0.; fabH = -pore * .0006 - crack * .0008 + (b - .5) * .0006;
+#else
+  float g = fN(vec3(p.x * 240., p.y * 9., p.z * 240.)) * fFade(240.) + .5 * (1. - fFade(240.));
+  float g2 = fN(vec3(p.x * 60., p.y * 4., p.z * 60.));
+  vec3 col = base * (.55 + .5 * g + .4 * (g2 - .5));
+  col = mix(col, vec3(.42, .42, .40) * (.6 + .6 * g), us * smoothstep(.3, .7, a));
+  fabCol = col; fabRough = r0 - .15 * g; fabMetal = 0.; fabH = (g - .5) * .0012 + (g2 - .5) * .002;
+#endif
+  fDust(n, sa * .4, vec3(.10, .09, .075)); fWet(n);
+}
+#endif
+#if FAB_F == 16
+// ---- écorce : crevasses verticales, mousse (uFabD) sur un côté et sur le dessus
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN);
+  float sa = uFabA.z;
+  float a = fF(p * 2.3 + 1.), w = fN(p * 5.) * .6;
+  float r1 = 1. - abs(2. * fN(vec3(p.x * 19. + w, p.y * 2.4, p.z * 19. + w)) - 1.);
+  float r2 = 1. - abs(2. * fN(vec3(p.x * 47., p.y * 7., p.z * 47.) + 9.) - 1.);
+  float ridge = r1 * .7 + r2 * .3;
+  float fis = smoothstep(.72, .95, ridge);
+  float c = fN(p * 170.) * fFade(170.) + .5 * (1. - fFade(170.));
+  vec3 col = base * (.62 + .6 * (1. - ridge)) * (.85 + .3 * a) * (.9 + .2 * c);
+  col *= 1. - .6 * fis;
+  float moss = smoothstep(.5, .8, fF(p * 3.1 + 6.) * .6 + n.x * .25 + smoothstep(.2, 1., n.y) * .4 + fabOcc * .3) * clamp(sa + uFabA.w, 0., 1.);
+  col = mix(col, uFabD * (.6 + .8 * c), moss * .85);
+  fabCol = col; fabRough = clamp(r0 - .05 * moss, .4, 1.); fabMetal = 0.;
+  fabH = -ridge * ridge * .012 + (c - .5) * .001 + moss * .003;
+  fWet(n);
+}
+#endif
+#if FAB_F == 17
+// ---- feuillage : chaque cellule est une feuille ; uFabC = seconde teinte, uFabA.x = part de feuilles passées
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN); vec2 u = fUV(p, n);
+  float us = uFabA.x, fd = fFade(15.);
+  vec3 v = fV2(u * 15. + p.y * 2.);
+  float leaf = smoothstep(.0, .3, v.y - v.x);
+  float a = fF(p * 1.3 + 4.), b = fF(p * 5. + 2.);
+  vec3 col = mix(base, uFabC, smoothstep(1. - us * 1.1, 1.05 - us * .6, v.z * .6 + a * .4) * mix(.5, 1., fd));
+  col *= mix(1., .72 + .5 * v.z, fd) * (.7 + .6 * a) * (.85 + .3 * b);
+  col *= mix(1., .8 + .2 * leaf, fd);
+  col *= (.5 + .5 * smoothstep(-.7, .5, n.y)) * (1. - .5 * fabOcc);        // le dessous des masses de feuilles reste dans l'ombre
+  fabCol = col; fabRough = r0; fabMetal = 0.;
+  fabH = (v.z - .5) * .012 * fd + leaf * .004 * fd + (a - .5) * .05 + (b - .5) * .02;
+}
+#endif
+#if FAB_F == 18
+// ---- eau : surface animée ; uFabB.w = agitation ; la couleur est celle du fond
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; float t = uFabT;
+  float w1 = fN(vec3(p.x * 2.1 + t * .35, p.z * 2.1 - t * .22, t * .25));
+  float w2 = fN(vec3(p.x * 5.3 - t * .5, p.z * 5.3 + t * .41, t * .4 + 7.));
+  float w3 = fN(vec3(p.x * 13. + t * .8, p.z * 13. + t * .6, t * .7 + 3.)) * fFade(13.);
+  fabCol = base * (.6 + .5 * w1); fabRough = r0; fabMetal = 0.;
+  fabH = (w1 * .030 + w2 * .012 + w3 * .004) * uFabB.w;
+}
+#endif
+`);
+/* ==========================================================================================
+   FABRIQUE — matières des jeux : brique, marbre, herbe et terre, papier peint à motif, vitrail
+   ========================================================================================== */
+Object.assign(FAB._ext.FAMILLES, {
+  brique:  { id: 19, def: { couleur: '#8a4a36', rugosite: .86, metal: 0, usure: .4, rouille: 0, salete: .4, assise: .075, couleur2: '#aaa294', couleur3: '#3d2a26' }, p3: 'assise' },
+  marbre:  { id: 20, def: { couleur: '#d8d4cc', rugosite: .18, metal: 0, usure: .3, rouille: 0, salete: .3, veine: 1, couleur2: '#6a6a70', couleur3: '#b89a5a' }, p3: 'veine' },
+  herbe:   { id: 21, def: { couleur: '#3f7a2e', rugosite: .9, metal: 0, usure: .2, rouille: 0, salete: 0, tonte: 0, couleur2: '#5a4630', couleur3: '#7a9a3a' }, p3: 'tonte' },
+  damas:   { id: 22, def: { couleur: '#3d5a48', rugosite: .8, metal: 0, usure: .3, rouille: 0, salete: .3, motif: .32, couleur2: '#6f8a5e' }, p3: 'motif' },
+  vitrail: { id: 23, def: { couleur: '#a03a2a', rugosite: .2, metal: 0, usure: .2, rouille: 0, salete: .3, intensite: 1.1, carreau: .09, couleur2: '#2a4a9a', couleur3: '#c9a12a' }, p3: 'intensite', p4: 'carreau' }
+});
+Object.assign(FAB._ext.NOMS, {
+  brique_sombre: ['brique', { couleur: '#5a3a30', couleur2: '#77726a' }], brique_jaune: ['brique', { couleur: '#a08a5a', couleur2: '#8a8478' }],
+  tuile: ['pierre', { couleur: '#9a5236', assise: .14, couleur2: '#6a3a28', salete: .3, rugosite: .8 }],
+  marbre_noir: ['marbre', { couleur: '#1c1d20', couleur2: '#c8c8c8', couleur3: '#8a7a4a' }], marbre_vert: ['marbre', { couleur: '#2f5a48', couleur2: '#d0d8cc' }], marbre_rouge: ['marbre', { couleur: '#7a2f2a', couleur2: '#e0d0c8' }],
+  pelouse: ['herbe', { tonte: 5.5, usure: .1 }], herbe_rouge: ['herbe', { couleur: '#8a1c1c', couleur3: '#c23a2a', couleur2: '#3a2420' }],
+  terre: ['herbe', { couleur: '#4a3a2a', couleur3: '#5a4632', couleur2: '#3a2c20', rugosite: .95 }],
+  papier_peint: ['damas', {}], tenture_rouge: ['damas', { couleur: '#5e1420', couleur2: '#8a2a30', motif: .5 }], papier_peint_bleu: ['damas', { couleur: '#2f3f5a', couleur2: '#5a6f8f' }],
+  argent: ['acier', { couleur: '#d8d8d4', rugosite: .2, rouille: 0 }], etain: ['acier', { couleur: '#9a9a94', rugosite: .42, rouille: 0 }],
+  chair: ['organique', { couleur: '#9a4a44', rugosite: .35, rouille: .2, couleur2: '#6a2a2a' }],
+  carton: ['toile', { couleur: '#b89a6a', relief: .2 }], papier: ['toile', { couleur: '#e8e2d0', relief: .1, salete: .2 }],
+  lueur_violette: ['lueur', { couleur: '#b48aff', intensite: 4, scintille: .6, vitesse: 1 }], lueur_bleue: ['lueur', { couleur: '#6ab0ff', intensite: 3, scintille: .1, vitesse: .3 }]
+});
+FAB._ext.glsl.push(`
+#if FAB_F == 19
+// ---- brique : rangs décalés d'une demi-brique ; uFabB.z = hauteur d'un rang, uFabC = mortier, uFabD = briques surcuites
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN); vec2 u = fUV(p, n);
+  float us = uFabA.x, sa = uFabA.z, H = uFabB.z, L = H * 3.;
+  float row = floor(u.y / H), fy = fract(u.y / H), x = u.x / L + .5 * mod(row, 2.), cx = floor(x), fx = fract(x);
+  float d = min(min(fx, 1. - fx) * L, min(fy, 1. - fy) * H);
+  float tone = fH(vec3(cx, row, 5.)), a = fF(p * 1.3 + 2.), b = fF(p * 9. + 4.), gr = fN(p * 190.) * fFade(190.) + .5 * (1. - fFade(190.));
+  float j0 = .005 + .003 * us, jw = max(j0, fabPx * .8), joint = (1. - smoothstep(jw, jw * 2., d)) * j0 / jw;
+  float chip = us * smoothstep(.6, .8, fF(vec3(u * 9., tone * 7.)) * .7 + (1. - smoothstep(0., .03, d)) * .4);
+  vec3 col = base * (.72 + .5 * tone) * (.86 + .28 * a) * (.9 + .2 * gr);
+  col = mix(col, uFabD, step(.86, tone) * .6);
+  col = mix(col, col * 1.3 + .03, chip * .6);
+  col = mix(col, uFabC * (.8 + .4 * gr), joint);
+  float streak = fN(vec3(p.x * 6., p.y * .4, p.z * 6.));
+  float soot = sa * clamp(smoothstep(.45, .85, streak * .6 + a * .4) * .7 + fabOcc * .8, 0., 1.);
+  col *= 1. - .5 * soot;
+  col = mix(col, vec3(.85, .84, .8), us * .35 * smoothstep(.55, .8, fF(p * 3. + 9.)) * (1. - joint));
+  fabCol = col; fabRough = clamp(r0 + .05 * (gr - .5), .3, 1.); fabMetal = 0.;
+  fabH = smoothstep(0., .012, d) * .006 * (1. - joint) + (b - .5) * .004 - chip * .006 - joint * .004;
+  fWet(n);
+}
+#endif
+#if FAB_F == 20
+// ---- marbre : veines qui serpentent ; uFabB.z = densité des veines, uFabC = veine, uFabD = filets dorés
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN);
+  float us = uFabA.x, sa = uFabA.z, a = fF(p * 1.1 + 3.), b = fF(p * 3.7 + 7.), c = fF(p * 11. + 1.);
+  vec3 q = p + (vec3(a, b, fF(p * 1.3 + 11.)) - .5) * 1.4;
+  float v1 = abs(fF(q * 1.6) - .5) * 2., v2 = abs(fF(q * 4.2 + 5.) - .5) * 2.;
+  float vein = clamp(((1. - smoothstep(0., .09, v1)) * .9 + (1. - smoothstep(0., .05, v2)) * .45 * fFade(8.)) * uFabB.z, 0., 1.);
+  vec3 col = base * (.86 + .22 * a) * (.94 + .1 * c);
+  col = mix(col, uFabC, vein * .8);
+  col = mix(col, uFabD, (1. - smoothstep(0., .03, v2)) * .25 * smoothstep(.5, .7, b) * min(uFabB.z, 1.));
+  float terne = us * smoothstep(.35, .75, fF(p * 5. + 2.) * .6 + fabOcc * .5 + vFabA.x * .4);
+  fabCol = col; fabRough = clamp(r0 + .45 * terne + .2 * sa * b, .05, 1.); fabMetal = 0.;
+  fabH = -vein * .0006 - terne * .0004 + (c - .5) * .0003;
+  fDust(n, sa * .7, vec3(.1, .09, .075)); fWet(n);
+}
+#endif
+#if FAB_F == 21
+// ---- herbe : brins, touffes, bandes de tonte (uFabB.z = largeur d'une bande, 0 = aucune) ; l'usure met la terre à nu (uFabC)
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN);
+  float us = uFabA.x, a = fF(p * .35 + 3.), b = fF(p * 2.1 + 7.), fd = fFade(60.);
+  float blade = fN(vec3(p.x * 90., p.y * 20., p.z * 90.)) * fd + .5 * (1. - fd), tuft = fF(vec3(p.x * 9., 0., p.z * 9.));
+  vec3 col = mix(base, uFabD, smoothstep(.35, .8, tuft * .6 + blade * .4)) * (.72 + .5 * a) * (.85 + .3 * b);
+  if (uFabB.z > .01) col *= .9 + .2 * step(.5, fract(p.z / (uFabB.z * 2.)));
+  float bare = smoothstep(1.02 - us * 1.1, 1.12 - us * .9, a * .55 + b * .35 + fN(p * 14.) * .2 + fabOcc * .2);
+  col = mix(col, uFabC * (.75 + .5 * b) * (.9 + .2 * blade), bare);
+  fabCol = col; fabRough = r0; fabMetal = 0.;
+  fabH = (blade - .5) * .012 * (1. - bare) * fd + (tuft - .5) * .02 * (1. - bare) + (b - .5) * .01 * bare;
+  fWet(n);
+}
+#endif
+#if FAB_F == 22
+// ---- damas : papier peint ou tenture à médaillons ; uFabB.z = largeur d'un motif, uFabC = teinte du motif
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN); vec2 u = fUV(p, n);
+  float us = uFabA.x, sa = uFabA.z, M = uFabB.z, a = fF(p * 1.2 + 3.), b = fF(p * 6. + 5.);
+  vec2 c = vec2(u.x / M, u.y / (M * 1.5)); c.y += .5 * mod(floor(c.x), 2.); vec2 f = fract(c) - .5; f.x = abs(f.x);
+  float aw = fabPx / M * 1.2 + .012, fd = fFade(4. / M);
+  float d1 = f.x / .3 + pow(abs(f.y) / .44, 1.6) - 1., d2 = f.x / .17 + pow(abs(f.y) / .3, 1.6) - 1.;
+  float ring = smoothstep(aw * 2., -aw * 2., d1) * smoothstep(-aw * 3., aw * 3., d2);
+  float fleur = smoothstep(aw, -aw, length(vec2(f.x * 1.5, f.y)) - .09 - .035 * cos(atan(f.x, f.y) * 6.));
+  vec2 g2 = vec2(.5 - f.x, .5 - abs(f.y)); float coin = smoothstep(aw, -aw, length(g2 * vec2(1., .7)) - .12 - .04 * cos(atan(g2.x, g2.y) * 4.));
+  float pat = clamp(ring + fleur + coin, 0., 1.) * fd;
+  float weave = fN(vec3(u.x * 700., u.y * 700., 1.)) * fFade(700.) + .5 * (1. - fFade(700.));
+  vec3 col = mix(base, uFabC, pat) * (.82 + .3 * a) * (.92 + .16 * weave);
+  float passe = us * smoothstep(.4, .8, a * .6 + b * .4); col = mix(col, vec3(dot(col, vec3(.33))) * 1.15, passe * .5);
+  float tache = sa * smoothstep(.5, .85, fN(vec3(p.x * 5., p.y * .35, p.z * 5.)) * .6 + b * .4 + fabOcc * .5); col *= 1. - .5 * tache;
+  fabCol = col; fabRough = clamp(r0 - .28 * pat + .1 * tache, .2, 1.); fabMetal = 0.;
+  fabH = pat * .0004 + (weave - .5) * .0003;
+  fWet(n);
+}
+#endif
+#if FAB_F == 23
+// ---- vitrail : verres de couleur sertis de plomb, éclairés par derrière ; uFabB.z = intensité, uFabB.w = taille d'un verre
+void fabSurf(vec3 base, float r0, float m0){
+  vec3 p = vFabP * uFabB.x; vec3 n = normalize(vFabN); vec2 u = fUV(p, n) / uFabB.w;
+  vec3 v = fV2(u * vec2(1., .7) + vFabA.z * 13.);
+  float lw = max(.07, fabPx / uFabB.w * 1.5), plomb = 1. - smoothstep(lw, lw * 1.8, v.y - v.x);
+  float k = fract(v.z * 7.31), a = fF(p * 9. + 2.), vie = .9 + .1 * sin(uFabT * .7 + v.z * 30.);
+  vec3 tint = k < .4 ? base : (k < .72 ? uFabC : (k < .9 ? uFabD : vec3(.82, .86, .8)));
+  tint *= .65 + .5 * fract(v.z * 3.17) + .12 * (a - .5);
+  float voile = uFabA.z * smoothstep(.4, .8, fF(p * 3. + 5.) * .7 + fabOcc * .5);
+  fabCol = mix(tint * .25, vec3(.035, .035, .04), plomb); fabRough = mix(r0, .6, plomb); fabMetal = plomb * .6; fabH = plomb * .003;
+  fabEmis = tint * uFabB.z * (1. - plomb) * (1. - .6 * voile) * vie;
+}
+#endif
+`);
+/* ==========================================================================================
+   FABRIQUE — formes libres et corps articulés
+   loft (sections elliptiques empilées), prisme (contour extrudé), squelette et liens d'os.
+   ========================================================================================== */
+FAB._objets.push(function (fab) {
+'use strict';
+const THREE = fab.THREE, P = fab.Constructeur.prototype;
+
+/* squelette([[nom, parent, x, y, z], …]) : déclare les os, dans l'ordre parent avant enfant.
+   L'objet fini devient un maillage déformable ; ses os sont dans userData.os. */
+P.squelette = function (defs) { this.os = defs; this.osIndex = {}; defs.forEach((d, i) => { this.osIndex[d[0]] = i; }); this.sol = false; return this; };
+/* lier(os, os2, poids) : les formes construites ensuite suivent cet os, ou un mélange des deux (poids = part du second) */
+P.lier = function (a, b, w) { const i = this.osIndex[a]; if (i === undefined) throw new Error('FABRIQUE : os inconnu « ' + a + ' »'); this.lien = [i, b ? this.osIndex[b] : i, b ? (w === undefined ? .5 : w) : 0]; return this; };
+/* enfant(objet three) : attache un objet tout fait (un effet, une lumière) à l'objet en construction */
+P.enfant = function (o) { this.enfants.push(o); return this; };
+
+/* loft(mat, sections, x, y, z, {seg, vers, rot, s, fond, dessus, ao, arc, ep, matInt})
+   sections, de bas en haut : { y, rx, rz, dx, dz, n, os }
+   rx, rz = demi-largeur et demi-profondeur ; dx, dz = décalage du centre ; n = 2 pour une ellipse, davantage pour une section plus carrée.
+   os = [nom, nom2, poids] ou une fonction (cos, sin) -> [nom, nom2, poids] pour lier chaque point du tour à un os différent (jupe, cape).
+   arc = [a0, a1] ne construit qu'une partie du tour (0 = +x, PI/2 = +z) ; ep ajoute une face intérieure à cette distance, dans le matériau matInt. */
+P.loft = function (mat, S, x, y, z, o) {
+  o = o || {}; const l = this._lot(mat), seg = o.seg || 14, m = S.length, lien0 = this.lien, ao = o.ao || 0, pos = [], arc = o.arc, nj = seg + 1;
+  const a0 = arc ? arc[0] : 0, a1 = arc ? arc[1] : Math.PI * 2, ang = j => a0 + (a1 - a0) * j / seg;
+  for (let i = 0; i < m; i++) { const s = S[i], k = 2 / (s.n || 2); for (let j = 0; j <= seg; j++) { const t = ang(j), c = Math.cos(t), sn = Math.sin(t);
+    pos.push((s.dx || 0) + s.rx * Math.sign(c) * Math.pow(Math.abs(c), k), s.y, (s.dz || 0) + s.rz * Math.sign(sn) * Math.pow(Math.abs(sn), k)); } }
+  const at = (i, j) => (i * nj + (arc ? Math.max(0, Math.min(seg, j)) : ((j % seg) + seg) % seg)) * 3;
+  const lier = (s, c, sn) => { if (!s.os) return; const r = typeof s.os === 'function' ? s.os(c, sn) : s.os; this.lier(r[0], r[1], r[2]); };
+  const faces = [[l, 1]]; if (o.ep) faces.push([o.matInt ? this._lot(o.matInt) : l, -1]);
+  this._tr(x, y, z, o);
+  for (const [L, sg] of faces) { const base = L.n;
+    for (let i = 0; i < m; i++) { const s = S[i], i0 = Math.max(0, i - 1), i1 = Math.min(m - 1, i + 1);
+      for (let j = 0; j <= seg; j++) { const q = at(i, j), a = at(i, j - 1), b = at(i, j + 1), c = at(i0, j), d = at(i1, j), t = ang(j);
+        const ux = pos[b] - pos[a], uy = pos[b + 1] - pos[a + 1], uz = pos[b + 2] - pos[a + 2], vx = pos[d] - pos[c], vy = pos[d + 1] - pos[c + 1], vz = pos[d + 2] - pos[c + 2];
+        let nx = vy * uz - vz * uy, ny = vz * ux - vx * uz, nz = vx * uy - vy * ux; const N = Math.hypot(nx, ny, nz);
+        if (N < 1e-9) { nx = 0; ny = i ? 1 : -1; nz = 0; } else { nx /= N; ny /= N; nz /= N; }
+        lier(s, Math.cos(t), Math.sin(t));
+        if (sg > 0) this._v(L, pos[q], pos[q + 1], pos[q + 2], nx, ny, nz, s.e || 0, Math.min(1, ao + (s.ao || 0)));
+        else this._v(L, pos[q] - nx * o.ep, pos[q + 1] - ny * o.ep, pos[q + 2] - nz * o.ep, -nx, -ny, -nz, 0, Math.min(1, ao + .4)); } }
+    for (let i = 0; i < m - 1; i++) for (let j = 0; j < seg; j++) { const A = base + i * nj + j, B = A + nj, C = B + 1, D = A + 1; if (sg > 0) L.I.push(A, B, C, A, C, D); else L.I.push(A, C, B, A, D, C); }
+    if (sg > 0 && !arc) {
+      if (o.fond !== false) { const s = S[0]; lier(s, 0, 0); const c0 = this._v(L, s.dx || 0, s.y, s.dz || 0, 0, -1, 0, 0, ao); for (let j = 0; j < seg; j++) L.I.push(c0, base + j, base + j + 1); }
+      if (o.dessus !== false) { const s = S[m - 1], b1 = base + (m - 1) * nj; lier(s, 0, 0); const c1 = this._v(L, s.dx || 0, s.y, s.dz || 0, 0, 1, 0, 0, ao); for (let j = 0; j < seg; j++) L.I.push(c1, b1 + j + 1, b1 + j); } } }
+  this.lien = lien0; this._fin(); return this;
+};
+
+/* prisme(mat, contour [[a, b], …], épaisseur, x, y, z, {plan, lisse, rot, ao})
+   plan 'xz' (défaut) : contour vu de dessus, extrudé en hauteur ; 'xy' : vu de face, extrudé en profondeur ; 'zy' : vu de côté, extrudé en largeur.
+   L'épaisseur est centrée sur x, y, z. lisse adoucit les angles faibles (contours courbes). */
+P.prisme = function (mat, C, h, x, y, z, o) {
+  o = o || {}; const l = this._lot(mat), n = C.length, plan = o.plan || 'xz', ao = o.ao || 0;
+  const U = plan === 'zy' ? [0, 0, 1] : [1, 0, 0], V = plan === 'xz' ? [0, 0, 1] : [0, 1, 0], W = plan === 'xz' ? [0, 1, 0] : plan === 'xy' ? [0, 0, 1] : [1, 0, 0], direct = plan === 'xy';
+  let aire = 0; for (let i = 0; i < n; i++) { const p = C[i], q = C[(i + 1) % n]; aire += p[0] * q[1] - q[0] * p[1]; }
+  const pts = aire < 0 ? C.slice().reverse() : C;
+  const P3 = (a, b, w) => [a * U[0] + b * V[0] + w * W[0], a * U[1] + b * V[1] + w * W[1], a * U[2] + b * V[2] + w * W[2]];
+  const N2 = pts.map((p, i) => { const q = pts[(i + 1) % n], ta = q[0] - p[0], tb = q[1] - p[1], L = Math.hypot(ta, tb) || 1; return [tb / L, -ta / L]; });
+  const moy = (a, b) => { const L = Math.hypot(a[0] + b[0], a[1] + b[1]) || 1; return [(a[0] + b[0]) / L, (a[1] + b[1]) / L]; };
+  this._tr(x, y, z, o);
+  const v = (pt, w, nn) => { const A = P3(pt[0], pt[1], w), N = P3(nn[0], nn[1], 0); return this._v(l, A[0], A[1], A[2], N[0], N[1], N[2], o.arete || 0, ao); };
+  for (let i = 0; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n], N = N2[i]; let n0 = N, n1 = N;
+    if (o.lisse) { const a = N2[(i - 1 + n) % n], c = N2[(i + 1) % n]; if (a[0] * N[0] + a[1] * N[1] > .6) n0 = moy(a, N); if (c[0] * N[0] + c[1] * N[1] > .6) n1 = moy(c, N); }
+    const A = v(p, -h / 2, n0), B = v(q, -h / 2, n1), Cc = v(q, h / 2, n1), D = v(p, h / 2, n0);
+    if (direct) l.I.push(A, B, Cc, A, Cc, D); else l.I.push(A, Cc, B, A, D, Cc); }
+  const tris = THREE.ShapeUtils.triangulateShape(pts.map(p => new THREE.Vector2(p[0], p[1])), []);
+  for (const sg of [-1, 1]) { const base = l.n; for (const p of pts) { const A = P3(p[0], p[1], sg * h / 2), N = P3(0, 0, sg); this._v(l, A[0], A[1], A[2], N[0], N[1], N[2], 0, ao); }
+    for (const t of tris) { let a = t[0], b = t[1], c = t[2]; if ((pts[b][0] - pts[a][0]) * (pts[c][1] - pts[a][1]) - (pts[c][0] - pts[a][0]) * (pts[b][1] - pts[a][1]) < 0) { const k = b; b = c; c = k; }
+      if ((sg > 0) === direct) l.I.push(base + a, base + b, base + c); else l.I.push(base + a, base + c, base + b); } }
+  this._fin(); return this;
+};
+});
+/* ==========================================================================================
+   FABRIQUE — effets : feu, fumée, pluie, neige, eau
+   Tout est calculé dans le shader à partir du temps (fab.maj) : aucun code par image, un appel de dessin par effet.
+
+     scene.add(fab.effet('feu', { rayon: .2, hauteur: .7 }));
+     scene.add(fab.effet('pluie'));                       // suit la caméra
+     scene.add(fab.effet('eau', { largeur: 6, profondeur: 4 }));
+   ========================================================================================== */
+FAB._objets.push(function (fab) {
+'use strict';
+const THREE = fab.THREE, REV = parseInt(THREE.REVISION, 10) || 128, lin = FAB.lin;
+const SORTIE = '\n#include <tonemapping_fragment>\n#include <' + (REV >= 152 ? 'colorspace_fragment' : 'encodings_fragment') + '>\n';
+const BRUIT = `
+float eH(vec3 p){ p = fract(p * .1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
+float eN(vec3 x){ vec3 i = floor(x), f = fract(x); f = f * f * (3. - 2. * f);
+  return mix(mix(mix(eH(i), eH(i + vec3(1,0,0)), f.x), mix(eH(i + vec3(0,1,0)), eH(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(eH(i + vec3(0,0,1)), eH(i + vec3(1,0,1)), f.x), mix(eH(i + vec3(0,1,1)), eH(i + vec3(1,1,1)), f.x), f.y), f.z); }`;
+function quads(n, graine) { // n particules = n carrés ; aG = quatre nombres au hasard par particule
+  const r = FAB.alea(graine || 1), P = new Float32Array(n * 12), G = new Float32Array(n * 16), I = [], C = [-1, -1, 1, -1, 1, 1, -1, 1];
+  for (let i = 0; i < n; i++) { const a = r(), b = r(), c = r(), d = r();
+    for (let k = 0; k < 4; k++) { P[i * 12 + k * 3] = C[k * 2]; P[i * 12 + k * 3 + 1] = C[k * 2 + 1]; G[i * 16 + k * 4] = a; G[i * 16 + k * 4 + 1] = b; G[i * 16 + k * 4 + 2] = c; G[i * 16 + k * 4 + 3] = d; }
+    I.push(i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('aG', new THREE.BufferAttribute(G, 4)); g.setIndex(I); return g;
+}
+const C3 = c => { const l = lin(c); return new THREE.Vector3(l[0], l[1], l[2]); };
+function mesh(n, graine, vs, fs, uniforms, additif) {
+  const m = new THREE.ShaderMaterial({ uniforms: Object.assign({ uT: fab.temps }, uniforms), vertexShader: vs, fragmentShader: fs, transparent: true, depthWrite: false, fog: false, side: THREE.DoubleSide, blending: additif ? THREE.AdditiveBlending : THREE.NormalBlending });
+  const o = new THREE.Mesh(quads(n, graine), m); o.frustumCulled = false; o.renderOrder = 4;
+  if (uniforms.uH) { const sz = new THREE.Vector2(); o.onBeforeRender = r => { const rt = r.getRenderTarget(); uniforms.uH.value = rt ? rt.height : r.getDrawingBufferSize(sz).y; }; }
+  return o;
+}
+const VS_COLONNE = `
+attribute vec4 aG; uniform float uT; uniform vec4 uP; uniform vec3 uW; varying vec2 vC; varying vec3 vK;
+void main(){
+  float life = fract(aG.x + uT * (.7 + .6 * aG.y) / uP.y);
+  float ang = aG.z * 6.2832, rad = sqrt(aG.w) * uP.x * mix(1., uP.w, life);
+  vec3 c = vec3(cos(ang) * rad, (life * life * .3 + life * .7) * uP.z, sin(ang) * rad) + uW * life * uP.y;
+  c.x += sin(uT * 3.1 + aG.x * 40.) * .10 * uP.x * life; c.z += cos(uT * 2.7 + aG.y * 31.) * .10 * uP.x * life;
+  float size = uP.x * mix(1.25, 1.25 * uP.w + .35, life) * (.55 + .7 * aG.y);
+  vec3 org = (modelMatrix * vec4(0., 0., 0., 1.)).xyz; float ech = length(modelMatrix[1].xyz);
+  vec4 mv = viewMatrix * vec4(org + c * ech, 1.); mv.xy += position.xy * size * ech * vec2(1., uP.w < 1. ? 1.45 : 1.);
+  gl_Position = projectionMatrix * mv; vC = position.xy; vK = vec3(life, aG.x, aG.z);
+}`;
+const FS_FEU = `
+uniform float uT; uniform vec3 uC1; uniform vec3 uC2; uniform float uI; varying vec2 vC; varying vec3 vK;` + BRUIT + `
+void main(){
+  float life = vK.x; vec2 q = vC; q.x *= 1. + q.y * .35;
+  float d = length(q * vec2(1., .85) - vec2(0., -.1));
+  float n = eN(vec3(vC * 2.4 + vK.yz * 9., uT * 3.5));
+  float a = smoothstep(1., .15, d + (n - .5) * .6) * smoothstep(0., .12, life) * pow(1. - life, 1.5) * .5;
+  vec3 col = mix(uC1, uC2, smoothstep(0., .75, life + d * .35));
+  col = mix(col, vec3(.25, .03, 0.), smoothstep(.6, 1., life));
+  gl_FragColor = vec4(col * uI, a);` + SORTIE + `}`;
+const FS_FUMEE = `
+uniform float uT; uniform vec3 uC1; uniform vec3 uC2; uniform float uI; varying vec2 vC; varying vec3 vK;` + BRUIT + `
+void main(){
+  float life = vK.x, d = length(vC);
+  float n = eN(vec3(vC * 1.7 + vK.yz * 11., uT * .5)) * .6 + eN(vec3(vC * 4.1 - vK.zy * 7., uT * .8)) * .4;
+  float a = smoothstep(1., .2, d + (n - .5) * .7) * smoothstep(0., .15, life) * (1. - life) * uI;
+  gl_FragColor = vec4(mix(uC1, uC2, life) * (.8 + .4 * n), a);` + SORTIE + `}`;
+const VS_CHUTE = `
+attribute vec4 aG; uniform float uT; uniform float uH; uniform vec3 uB; uniform vec3 uV; uniform vec4 uP; varying vec2 vC; varying float vA;
+void main(){
+  vec3 b = aG.xyz * uB + uV * uT * (.75 + .5 * aG.w);
+  b.xz += vec2(sin(uT * .9 + aG.w * 40.), cos(uT * .7 + aG.x * 33.)) * uP.w;                         // flottement des flocons
+  vec3 org = uP.z > .5 ? cameraPosition : (modelMatrix * vec4(0., 0., 0., 1.)).xyz + vec3(0., uB.y * .5, 0.);
+  vec3 w = mod(b - org + uB * .5, uB) - uB * .5 + org;                                               // boucle dans le volume
+  vec3 rel = (w - org) / (uB * .5); vA = 1. - smoothstep(.72, 1., max(abs(rel.x), abs(rel.z)));
+  vec4 p0 = viewMatrix * vec4(w, 1.);
+  float px = -p0.z * 2. / (projectionMatrix[1][1] * uH), wd = max(uP.y, px * .7); vA *= uP.y / wd;        // jamais plus fin qu'un pixel : on élargit et on éclaircit
+  if (uP.x > 0.) { vec4 p1 = viewMatrix * vec4(w + normalize(uV) * uP.x, 1.); vec2 ax = normalize(p1.xy - p0.xy + vec2(1e-5, 0.));
+    p0 = mix(p0, p1, position.y * .5 + .5); p0.xy += vec2(-ax.y, ax.x) * position.x * wd; }
+  else p0.xy += position.xy * wd * (.6 + .8 * aG.w);
+  gl_Position = projectionMatrix * p0; vC = position.xy;
+}`;
+const FS_PLUIE = `
+uniform vec3 uC1; uniform float uI; varying vec2 vC; varying float vA;
+void main(){ float a = (1. - abs(vC.x)) * smoothstep(1., .5, abs(vC.y)) * vA * uI; gl_FragColor = vec4(uC1, a);` + SORTIE + `}`;
+const FS_NEIGE = `
+uniform vec3 uC1; uniform float uI; varying vec2 vC; varying float vA;
+void main(){ float a = smoothstep(1., .25, length(vC)) * vA * uI; gl_FragColor = vec4(uC1, a);` + SORTIE + `}`;
+
+/* effet(nom, options) -> un maillage à ajouter à la scène
+   feu    : rayon, hauteur, duree, nombre, intensite, couleur1 (cœur), couleur2 (flamme)
+   fumee  : rayon, hauteur, duree, nombre, opacite, vent [x,y,z], couleur1 (à la source), couleur2
+   pluie  : volume [l,h,p], nombre, vitesse [x,y,z], longueur, largeur, opacite, couleur, suivre (true : le volume suit la caméra)
+   neige  : volume, nombre, vitesse, taille, opacite, couleur, suivre
+   eau    : largeur, profondeur, et les réglages du matériau « eau » (couleur, opacite, agitation) */
+fab.effet = function (nom, o) {
+  o = o || {}; const d = (k, v) => o[k] === undefined ? v : o[k]; let m;
+  if (nom === 'feu') { const r = d('rayon', .18);
+    m = mesh(d('nombre', 36), o.graine, VS_COLONNE, FS_FEU, { uP: { value: new THREE.Vector4(r, d('duree', .9), d('hauteur', .6), .2) }, uW: { value: new THREE.Vector3() }, uC1: { value: C3(d('couleur1', '#fff0b0')) }, uC2: { value: C3(d('couleur2', '#ff6a14')) }, uI: { value: d('intensite', 1.5) } }, true);
+  } else if (nom === 'fumee') { const w = d('vent', [.12, 0, .04]);
+    m = mesh(d('nombre', 26), o.graine, VS_COLONNE, FS_FUMEE, { uP: { value: new THREE.Vector4(d('rayon', .22), d('duree', 4.5), d('hauteur', 2.4), 2.6) }, uW: { value: new THREE.Vector3(w[0], w[1], w[2]) }, uC1: { value: C3(d('couleur1', '#2c2a28')) }, uC2: { value: C3(d('couleur2', '#807c76')) }, uI: { value: d('opacite', .42) } }, false);
+  } else if (nom === 'pluie' || nom === 'neige') { const pl = nom === 'pluie', v = d('volume', [14, 9, 14]), s = d('vitesse', pl ? [.6, -9, .2] : [.25, -.9, .1]);
+    m = mesh(d('nombre', pl ? 1400 : 900), o.graine, VS_CHUTE, pl ? FS_PLUIE : FS_NEIGE, { uH: { value: 800 }, uB: { value: new THREE.Vector3(v[0], v[1], v[2]) }, uV: { value: new THREE.Vector3(s[0], s[1], s[2]) },
+      uP: { value: new THREE.Vector4(pl ? d('longueur', .35) : 0, pl ? d('largeur', .006) : d('taille', .018), d('suivre', true) ? 1 : 0, pl ? 0 : .22) }, uC1: { value: C3(d('couleur', pl ? '#dbe6ee' : '#f2f5f8')) }, uI: { value: d('opacite', pl ? .45 : .9) } }, false);
+  } else if (nom === 'eau') { const mo = Object.assign({ espace: 'monde' }, o); delete mo.largeur; delete mo.profondeur;
+    m = new THREE.Mesh(new THREE.PlaneGeometry(d('largeur', 4), d('profondeur', 4)), fab.mat('eau', mo)); m.rotation.x = -Math.PI / 2; m.receiveShadow = true; m.renderOrder = 3;
+  } else throw new Error('FABRIQUE : effet inconnu « ' + nom + ' »');
+  m.name = 'effet_' + nom; m.userData.effet = nom; return m;
+};
+/* scintillement(t, graine) -> facteur autour de 1 pour faire vaciller la lumière d'une flamme */
+fab.scintillement = function (t, g) { g = g || 0; return 1 + .16 * Math.sin(t * 11.3 + g * 7.1) * Math.sin(t * 5.3 + g) + .07 * Math.sin(t * 23.7 + g * 3.3); };
+});
+/* ==========================================================================================
+   FABRIQUE — catalogue d'objets
+   Chaque objet est posé au sol (y = 0), centré, face avant vers +z, aux dimensions réelles en mètres.
+   Signature : fonction(b, o, m) — b = constructeur, o = options de l'appel, m(nom, options) = matériau.
+   ========================================================================================== */
+FAB._objets.push(function (fab) {
+'use strict';
+const PI = Math.PI, E = fab.enregistrer;
+const PEINT = ['#4d6b55', '#66737a', '#c9bc98', '#8a2c20', '#2f5560', '#5d5a3a'];
+
+/* ------------------------------------------------------------------ accessoires partagés */
+function bride(b, M, B, r, x, y, z, vers) { // bride boulonnée, axe selon « vers »
+  b.groupe([x, y, z], vers, g => { g.cyl(M, r * 1.65, .016, 0, 0, 0, { ch: .002 }); for (let i = 0; i < 6; i++) { const a = i / 6 * PI * 2; g.cyl(B, .0075, .03, Math.cos(a) * r * 1.35, 0, Math.sin(a) * r * 1.35, { seg: 6, ch: .001 }); } });
+}
+function volant(b, M, R, x, y, z, vers, rayons) { // volant de manœuvre
+  b.groupe([x, y, z], vers, g => { g.tore(M, R, R * .085, 0, 0, 0); g.cyl(M, R * .2, R * .16, 0, 0, 0, { seg: 10 }); const n = rayons || 4;
+    for (let i = 0; i < n; i++) { const a = i / n * PI * 2; g.boite(M, R * .86, R * .07, R * .1, Math.cos(a) * R * .5, 0, -Math.sin(a) * R * .5, { rot: [0, a, 0], r: R * .02 }); } });
+}
+function bouton(b, M, r, x, y, z, vers) { // bouton de réglage : jupe, molette, calotte
+  b.tour(M, [[0, 0], [r * 1.25, 0], [r * 1.25, r * .25], [r, r * .4], [r * .9, r * 1.3], [r * .6, r * 1.45], [0, r * 1.45]], x, y, z, { seg: 14, ch: .0008, vers });
+}
+function voyant(b, m, couleur, r, x, y, z, vers) { // voyant lumineux serti
+  b.groupe([x, y, z], vers, g => { g.bague(m('laiton'), r * 1.35, r * .95, r * .5, 0, r * .25, 0, { seg: 12 }); g.sphere(m('lueur_' + couleur), r, 0, r * .3, 0, { phi0: PI / 2, seg: 10, seg2: 4 }); });
+}
+function cadran(b, m, R, x, y, z, vers, spec) { // manomètre ou voltmètre : boîtier, cadran, lunette, verre
+  b.groupe([x, y, z], vers, g => { g.cyl(m('acier_noir'), R * 1.08, R * .5, 0, R * .25, 0, { seg: 20 });
+    g.plaque(Object.assign({ style: 'cadran' }, spec), R * 1.9, R * 1.9, 0, R * .505, 0, { vers: 'y+' });
+    g.bague(m('laiton'), R * 1.16, R * .96, R * .16, 0, R * .52, 0, { seg: 20 });
+    g.cyl(m('verre'), R * .97, .002, 0, R * .56, 0, { seg: 20, ch: 0 }); });
+}
+function ecran(b, m, w, h, x, y, z, spec, rot) { // tube cathodique : cadre, image émissive, verre
+  b.groupe([x, y, z], rot || [0, 0, 0], g => { g.boite(m('bakelite_noire'), w + .05, h + .05, .03, 0, 0, -.012, { r: .008 });
+    g.plaque(Object.assign({ style: 'ecran' }, spec), w, h, 0, 0, .0045);
+    g.boite(m('verre'), w + .004, h + .004, .006, 0, 0, .009, { r: .002 }); });
+}
+function roulette(b, m, x, y, z) { // roulette pivotante de 70 mm ; y = dessous de la platine, le sol est 0,1 m plus bas
+  const A = m('acier');
+  b.cyl(A, .022, .006, x, y - .003, z, { seg: 10 }); for (const s of [-1, 1]) b.boite(A, .005, .06, .03, x + s * .016, y - .036, z, { r: .001 });
+  b.cyl(m('caoutchouc'), .035, .022, x, y - .065, z, { vers: 'x+', seg: 14, ch: .004 }); b.cyl(A, .008, .04, x, y - .065, z, { vers: 'x+', seg: 8 });
+}
+function flacon(b, m, r, h, x, y, z, verre, etiq) { // flacon de pharmacie bouché
+  b.tour(m(verre), [[0, 0], [r, 0], [r, h * .62], [r * .45, h * .8], [r * .45, h * .92], [0, h * .92]], x, y, z, { seg: 12, ch: .002 });
+  b.cyl(m('bakelite_noire'), r * .52, h * .1, x, y + h * .95, z, { seg: 10, ch: .001 });
+  if (etiq) b.plaque({ t: etiq, style: 'etiquette' }, r * 1.5, h * .3, x, y + h * .32, z + r + .0006, { courbe: r + .0006 });
+}
+function bascule(b, m, x, y, z, vers, haut) { // interrupteur à bascule
+  b.groupe([x, y, z], vers, g => { g.cyl(m('acier'), .007, .004, 0, .002, 0, { seg: 6, ch: .0008 }); g.cyl(m('acier_poli'), .0025, .016, 0, .011, haut ? -.004 : .004, { rot: [haut ? -.45 : .45, 0, 0], seg: 6, r2: .0035, ch: .0005 }); });
+}
+function persiennes(b, M, w, n, x, y, z, pas) { // ouïes embouties sur une face avant
+  for (let k = 0; k < n; k++) b.boite(M, w, .012, .012, x, y + k * (pas || .024), z, { rot: [.6, 0, 0], r: .002, ao: .35 });
+}
+fab.accessoires = { bride, volant, bouton, voyant, cadran, ecran, roulette, flacon, bascule, persiennes };
+
+/* ================================================================== RANGEMENT */
+E('casier', { titre: 'Casier vestiaire', groupe: 'Rangement', parties: 'porte' }, (b, o, m) => {
+  const W = .4, H = 1.8, D = .5, t = .012, y0 = .1, hc = H - y0;
+  const P = m('peinture', { couleur: o.couleur || b.choix(PEINT) }), A = m('acier_noir'), L = m('laiton');
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.boite(A, .03, y0, .03, sx * (W / 2 - .03), y0 / 2, sz * (D / 2 - .03), { r: .003 });
+  b.boite(P, W, hc, t, 0, y0 + hc / 2, -D / 2 + t / 2);
+  for (const s of [-1, 1]) b.boite(P, t, hc, D - t, s * (W / 2 - t / 2), y0 + hc / 2, t / 2);
+  b.boite(P, W - 2 * t, t, D - t, 0, y0 + t / 2, t / 2); b.boite(P, W - 2 * t, t, D - t, 0, H - t / 2, t / 2);
+  b.boite(P, W + .006, .018, D + .006, 0, H + .004, 0, { r: .004 });
+  b.boite(P, W - 2 * t, .01, D - .06, 0, H - .3, 0, { ao: .4 }); b.cyl(A, .008, W - 2 * t, 0, H - .36, 0, { vers: 'x+', seg: 8 });
+  b.partie('porte', [-W / 2 + t, y0, D / 2], p => { const pw = W - 2 * t - .004, ph = hc - .008, cx = pw / 2 + .002;
+    p.boite(P, pw, ph, .014, cx, ph / 2 + .004, .007, { r: .004 });
+    p.boite(P, pw - .07, ph - .56, .004, cx, ph / 2, .016, { r: .002 });
+    persiennes(p, P, pw - .1, 5, cx, ph - .21, .017); persiennes(p, P, pw - .1, 5, cx, .09, .017);
+    p.boite(A, .03, .11, .006, pw - .04, ph * .52, .017, { r: .002 }); p.boite(A, .014, .07, .022, pw - .04, ph * .52, .03, { r: .004 }); p.cyl(L, .009, .008, pw - .04, ph * .52 - .075, .02, { vers: 'z+', seg: 10 });
+    for (const yy of [.2, ph / 2, ph - .2]) p.cyl(A, .007, .07, 0, yy, .012, { seg: 8 });
+    p.plaque({ t: o.texte || String(1 + b.entier(40)).padStart(2, '0'), style: 'plaque' }, .075, .038, cx, ph - .055, .0146); });
+  b.collision(-W / 2, 0, -D / 2, W / 2, H, D / 2);
+});
+
+E('armoire', { titre: 'Armoire métallique', groupe: 'Rangement', parties: 'porte_g, porte_d' }, (b, o, m) => {
+  const W = .95, H = 1.95, D = .45, t = .014, y0 = .09, hc = H - y0;
+  const P = m('peinture', { couleur: o.couleur || b.choix(['#66737a', '#4d6b55', '#c9bc98']) }), A = m('acier'), N = m('peinture_noire');
+  b.boite(N, W - .04, y0, D - .05, 0, y0 / 2, -.005, { r: .004 });
+  b.boite(P, W, hc, t, 0, y0 + hc / 2, -D / 2 + t / 2); for (const s of [-1, 1]) b.boite(P, t, hc, D - t, s * (W / 2 - t / 2), y0 + hc / 2, t / 2);
+  b.boite(P, W - 2 * t, t, D - t, 0, y0 + t / 2, t / 2); b.boite(P, W - 2 * t, t, D - t, 0, H - t / 2, t / 2); b.boite(P, W + .008, .02, D + .008, 0, H + .005, 0, { r: .005 });
+  for (let k = 1; k <= 3; k++) b.boite(P, W - 2 * t, .012, D - .05, 0, y0 + hc * k / 4, -.005, { ao: .4 });
+  const pw = W / 2 - t - .003, ph = hc - .01;
+  for (const s of [-1, 1]) b.partie(s < 0 ? 'porte_g' : 'porte_d', [s * (W / 2 - t), y0, D / 2], p => { const cx = -s * pw / 2, hx = -s * (pw - .04);
+    p.boite(P, pw, ph, .016, cx, ph / 2 + .005, .008, { r: .004 });
+    for (const yy of [ph * .30, ph * .74]) p.boite(P, pw - .09, ph * .34, .004, cx, yy, .018, { r: .002 });
+    persiennes(p, P, pw - .14, 4, cx, .07, .019);
+    p.cyl(A, .008, .28, hx, ph * .52, .045, { seg: 8 }); for (const yy of [-.12, .12]) p.cyl(A, .006, .03, hx, ph * .52 + yy, .03, { vers: 'z+', seg: 6 });
+    for (const yy of [.22, ph / 2, ph - .22]) p.cyl(A, .008, .08, 0, yy, .014, { seg: 8 });
+    if (s > 0) p.cyl(m('laiton'), .012, .008, hx, ph * .52 - .2, .02, { vers: 'z+', seg: 10 });
+    else p.plaque({ t: o.texte || b.choix(['PHARMACIE', 'OUTILLAGE', 'ARCHIVES', 'MATÉRIEL']), style: 'etiquette' }, .17, .07, cx, ph - .075, .0166); });
+  b.collision(-W / 2, 0, -D / 2, W / 2, H, D / 2);
+});
+
+E('etagere', { titre: 'Étagère à cornières', groupe: 'Rangement' }, (b, o, m) => {
+  const W = 1.2, H = 2.0, D = .5, P = m('peinture', { couleur: o.couleur || b.choix(['#2f5560', '#66737a', '#8a2c20']) }), G = m('galva'), A = m('acier_noir'), C = m('caoutchouc');
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const x = sx * (W / 2 - .02), z = sz * (D / 2 - .02);
+    b.boite(P, .04, H, .003, x, H / 2, sz * (D / 2 - .0015), { r: 0 }); b.boite(P, .003, H, .04, sx * (W / 2 - .0015), H / 2, z, { r: 0 });
+    b.boite(C, .046, .012, .046, x, .006, z, { r: .002 }); }
+  for (const y of [.12, .58, 1.04, 1.5, 1.94]) { b.boite(G, W - .008, .03, D - .008, 0, y, 0, { r: .004 });
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.rivets(A, [[sx * (W / 2 - .02), y, sz * (D / 2 + .0005)]], .006, sz > 0 ? 'z+' : 'z-'); }
+  const L = Math.hypot(W - .06, .9), a = Math.atan2(.9, W - .06);
+  for (const s of [-1, 1]) b.boite(P, L, .025, .003, 0, 1.04, -D / 2 - .002, { rot: [0, 0, s * a], r: 0 });
+  b.collision(-W / 2, 0, -D / 2, W / 2, H, D / 2);
+});
+
+E('caisse_bois', { titre: 'Caisse en bois', groupe: 'Rangement', surface: 'bois', parties: 'couvercle' }, (b, o, m) => {
+  const W = .8, H = .5, D = .5, t = .018, c = o.couleur || b.choix(['#9a6b3c', '#a57c4c', '#7d5a34']), y0 = .022, hc = H - y0 - .02;
+  const Bx = m('bois', { axe: 'x', planche: .095, couleur: c }), By = m('bois', { axe: 'y', planche: .2, couleur: c }), Bz = m('bois', { axe: 'z', planche: .095, couleur: c }), A = m('acier_noir'), R = m('corde');
+  for (const sx of [-.25, .25]) b.boite(Bz, .07, y0, D, sx, y0 / 2, 0, { r: .003 });
+  b.boite(Bx, W, t, D, 0, y0 + t / 2, 0, { r: .003 });
+  for (const s of [-1, 1]) { b.boite(Bx, W, hc, t, 0, y0 + hc / 2, s * (D / 2 - t / 2), { r: .003 }); b.boite(Bz, t, hc, D - 2 * t, s * (W / 2 - t / 2), y0 + hc / 2, 0, { r: .003 }); }
+  for (const sz of [-1, 1]) for (const sx of [-1, 1]) { b.boite(By, .07, hc, .02, sx * (W / 2 - .035), y0 + hc / 2, sz * (D / 2 + .01), { r: .003 });
+    b.rivets(A, [.12, .5, .88].map(k => [sx * (W / 2 - .035), y0 + hc * k, sz * (D / 2 + .02)]), .005, sz > 0 ? 'z+' : 'z-'); }
+  for (const sx of [-1, 1]) for (const yy of [y0 + .045, y0 + hc - .045]) b.boite(Bz, .02, .07, D + .04, sx * (W / 2 + .01), yy, 0, { r: .003 });
+  b.tore(R, .055, .009, W / 2 + .012, y0 + hc * .66, 0, { vers: 'x+', a0: -PI / 2, a1: PI / 2, seg: 10, seg2: 6 });
+  b.tore(R, .055, .009, -W / 2 - .012, y0 + hc * .66, 0, { vers: 'x-', a0: PI / 2, a1: PI * 1.5, seg: 10, seg2: 6 });
+  b.partie('couvercle', [0, H - .02, -D / 2], p => { p.boite(Bx, W + .012, .02, D + .012, 0, .01, D / 2, { r: .003 }); for (const sx of [-.24, .24]) p.boite(Bz, .07, .02, D - .05, sx, .03, D / 2, { r: .003 }); }, 'x');
+  b.plaque({ t: o.texte || b.choix(['MUNITIONS', 'VIVRES', 'PIÈCES', 'FRAGILE', 'SECTEUR 07', 'TUBES T-12']), style: 'pochoir', couleur: '#15130f' }, .36, .085, 0, y0 + hc * .5, D / 2 + .0006);
+  b.collision(-W / 2, 0, -D / 2, W / 2, H + .02, D / 2);
+});
+
+E('caisse_metal', { titre: 'Caisse à munitions', groupe: 'Rangement', parties: 'couvercle' }, (b, o, m) => {
+  const W = .6, H = .34, D = .38, hb = .24, K = m('peinture', { couleur: o.couleur || b.choix(['#5d5a3a', '#4d6b55', '#66737a']) }), A = m('acier');
+  const t = .012;                                           // caisse creuse : fond, quatre parois
+  b.boite(K, W, t, D, 0, t / 2, 0, { r: .005 });
+  for (const sz of [-1, 1]) b.boite(K, W, hb, t, 0, hb / 2, sz * (D / 2 - t / 2), { r: .005 }); for (const sx of [-1, 1]) b.boite(K, t, hb, D - 2 * t, sx * (W / 2 - t / 2), hb / 2, 0, { r: .005 });
+  for (const sz of [-1, 1]) for (const yy of [.07, .17]) b.boite(K, W - .1, .014, .006, 0, yy, sz * (D / 2 + .002), { r: .003 });
+  for (const sx of [-1, 1]) b.boite(K, .006, .014, D - .1, sx * (W / 2 + .002), .07, 0, { r: .003 });
+  b.partie('couvercle', [0, hb, -D / 2], p => { const hl = H - hb, w2 = W + .014, d2 = D + .014;
+    p.boite(K, w2, t, d2, 0, hl - t / 2, D / 2, { r: .005 }); for (const sz of [-1, 1]) p.boite(K, w2, hl, t, 0, hl / 2, D / 2 + sz * (d2 / 2 - t / 2), { r: .005 }); for (const sx of [-1, 1]) p.boite(K, t, hl, d2 - 2 * t, sx * (w2 / 2 - t / 2), hl / 2, D / 2, { r: .005 });
+    p.boite(K, W + .024, .022, D + .024, 0, .013, D / 2, { r: .007, sans: 'y+y-' }); p.boite(K, W - .16, .006, D - .14, 0, hl + .002, D / 2, { r: .003 }); }, 'x');
+  for (const sx of [-.17, .17]) { b.boite(A, .045, .07, .006, sx, hb - .02, D / 2 + .004, { r: .002 }); b.boite(A, .03, .016, .02, sx, hb + .012, D / 2 + .018, { r: .004 }); b.cyl(A, .005, .05, sx, hb - .045, D / 2 + .01, { vers: 'x+', seg: 6 }); }
+  for (const sx of [-1, 1]) { const x = sx * (W / 2 + .004); b.tuyau(A, [[x, .2, -.07], [x + sx * .035, .2, -.07], [x + sx * .035, .2, .07], [x, .2, .07]], .005, { coude: .015 }); for (const z of [-.07, .07]) b.boite(A, .006, .03, .03, x, .2, z, { r: .002 }); }
+  b.plaque({ t: o.texte || b.choix(['7,62 MM', 'CAL .50', 'FUSÉES', 'TUBES T-12', 'MÉDICAL']), style: 'pochoir', couleur: '#d8c98a' }, .3, .06, 0, .12, D / 2 + .0006);
+  b.collision(-W / 2, 0, -D / 2, W / 2, H, D / 2);
+});
+
+E('palette', { titre: 'Palette Europe', groupe: 'Rangement', surface: 'bois' }, (b, o, m) => {
+  const c = o.couleur || '#a58456', Bx = m('bois', { axe: 'x', planche: .3, couleur: c, usure: .6 }), Bz = m('bois', { axe: 'z', planche: .3, couleur: c, usure: .6 }), By = m('bois', { axe: 'y', planche: .3, couleur: c, usure: .6 }), A = m('acier_noir');
+  const zs = [-.3275, -.16375, 0, .16375, .3275], ws = [.145, .1, .145, .1, .145], xs = [-.5275, 0, .5275];
+  zs.forEach((z, i) => b.boite(Bx, 1.2, .022, ws[i], 0, .133, z, { r: .003 }));
+  for (const x of xs) { b.boite(Bz, .145, .022, .8, x, .111, 0, { r: .003 }); for (const z of [-.3275, 0, .3275]) b.boite(By, .145, .078, z ? .1 : .145, x, .061, z, { r: .004 }); }
+  [-.35, 0, .35].forEach((z, i) => b.boite(Bx, 1.2, .022, i === 1 ? .145 : .1, 0, .011, z, { r: .003 }));
+  const cl = []; for (const x of xs) zs.forEach(z => cl.push([x - .03, .144, z], [x + .03, .144, z])); b.rivets(A, cl, .004, 'y+');
+  b.collision(-.6, 0, -.4, .6, .144, .4);
+});
+
+E('fut', { titre: 'Fût de 200 litres', groupe: 'Rangement' }, (b, o, m) => {
+  const r = .29, H = .88, P = m('peinture', { couleur: o.couleur || b.choix(['#2f5560', '#8a2c20', '#5d5a3a', '#c2941c']) }), A = m('acier');
+  b.tour(P, [[0, .015], [r - .014, .015], [r - .014, 0], [r, 0], [r, .02], [r - .006, .03], [r - .006, .275], [r + .006, .29], [r + .006, .305], [r - .006, .32], [r - .006, .56], [r + .006, .575], [r + .006, .59], [r - .006, .605], [r - .006, .85], [r, .86], [r, H], [r - .014, H], [r - .014, H - .015], [0, H - .015]], 0, 0, 0, { seg: 30, ch: .003 });
+  b.cyl(A, .032, .014, .17, H - .01, 0, { seg: 12, ch: .002 }); b.cyl(A, .014, .012, .17, H + .001, 0, { seg: 6, ch: .001 }); b.cyl(A, .014, .01, -.18, H - .012, .03, { seg: 8, ch: .001 });
+  const rr = r - .006 + .0008; b.plaque({ t: o.texte || b.choix(['HUILE 40', 'GAZOLE', 'SOLVANT', 'EAU']), style: 'pochoir' }, .26, .07, 0, .44, rr, { courbe: rr });
+  b.collision(-r, 0, -r, r, H, r);
+});
+
+E('bidon', { titre: 'Jerrican', groupe: 'Rangement' }, (b, o, m) => {
+  const K = m('peinture', { couleur: o.couleur || b.choix(['#5d5a3a', '#4d6b55', '#8a2c20']) }), A = m('acier');
+  b.boite(K, .345, .40, .165, 0, .20, 0, { r: .028 });
+  b.boite(K, .23, .05, .14, -.03, .415, 0, { r: .02 });
+  for (const z of [-.045, 0, .045]) b.boite(K, .15, .014, .014, -.03, .458, z, { r: .005 });
+  for (const x of [-.105, .045]) b.boite(K, .014, .035, .12, x, .445, 0, { r: .005 });
+  b.cyl(A, .022, .045, .125, .425, 0, { seg: 12, rot: [0, 0, -.5] }); b.cyl(A, .028, .016, .14, .45, 0, { seg: 12, rot: [0, 0, -.5], ch: .002 }); b.boite(A, .05, .006, .016, .13, .468, 0, { rot: [0, 0, -.5], r: .002 });
+  for (const sz of [-1, 1]) { for (const a of [-.62, .62]) b.boite(K, .3, .012, .005, 0, .2, sz * .0835, { rot: [0, 0, a], r: .002 }); b.boite(K, .27, .012, .005, 0, .355, sz * .0835, { r: .002 }); b.boite(K, .27, .012, .005, 0, .045, sz * .0835, { r: .002 }); }
+  b.collision(-.1725, 0, -.0825, .1725, .47, .0825);
+});
+
+E('bonbonne', { titre: 'Bouteille de gaz', groupe: 'Rangement' }, (b, o, m) => {
+  const r = .115, gaz = b.choix([['OXYGÈNE', '#dedbcd', '#66737a'], ['ACÉTYLÈNE', '#8a2c20', '#7a2a1c'], ['AZOTE', '#232424', '#4d6b55'], ['PROTOXYDE', '#2f5560', '#66737a']]);
+  const P = m('peinture', { couleur: o.couleur || gaz[2] }), O = m('peinture', { couleur: gaz[1] }), L = m('laiton'), A = m('acier');
+  b.tour(P, [[0, .012], [r - .02, .012], [r - .02, 0], [r, 0], [r, 1.12]], 0, 0, 0, { seg: 24, ch: .004 });
+  b.tour(O, [[r, 1.12], [r * .97, 1.17], [r * .87, 1.215], [r * .7, 1.25], [r * .5, 1.272], [.035, 1.285], [.035, 1.33], [0, 1.33]], 0, 0, 0, { seg: 24, ch: .003 });
+  b.tore(A, r + .004, .005, 0, .93, 0, { seg: 24, seg2: 6 });
+  if (o.chapeau === undefined ? b.hasard() < .5 : o.chapeau) b.tour(A, [[.05, 1.3], [.05, 1.4], [.042, 1.43], [.02, 1.445], [0, 1.447]], 0, 0, 0, { seg: 14, ch: .003 });
+  else { b.cyl(L, .022, .06, 0, 1.36, 0, { seg: 10 }); b.cyl(L, .012, .045, .03, 1.365, 0, { vers: 'x+', seg: 8 }); b.cyl(L, .008, .03, 0, 1.4, 0, { seg: 6 }); volant(b, A, .034, 0, 1.42, 0, 'y+', 3); }
+  b.plaque({ t: gaz[0], style: 'pochoir' }, .15, .04, 0, .72, r + .0008, { courbe: r + .0008 });
+  b.collision(-r, 0, -r, r, 1.45, r);
+});
+
+E('extincteur', { titre: 'Extincteur', groupe: 'Rangement' }, (b, o, m) => {
+  const P = m('peinture', { couleur: o.couleur || '#8a2c20', rugosite: .32 }), L = m('laiton'), A = m('acier'), C = m('caoutchouc');
+  b.cyl(C, .078, .022, 0, .011, 0, { seg: 18 });
+  b.tour(P, [[.075, .02], [.075, .40], [.07, .43], [.055, .455], [.03, .47], [.022, .475], [.022, .49], [0, .49]], 0, 0, 0, { seg: 20, ch: .003 });
+  b.cyl(L, .02, .04, 0, .51, 0, { seg: 10 }); b.cyl(L, .011, .03, .028, .515, 0, { vers: 'x+', seg: 8 });
+  b.boite(A, .115, .008, .022, -.04, .545, 0, { rot: [0, 0, -.22], r: .002 }); b.boite(A, .1, .008, .022, -.035, .515, 0, { rot: [0, 0, .1], r: .002 }); b.tore(A, .012, .002, .016, .535, .014, { vers: 'z+', seg: 10, seg2: 4 });
+  b.tuyau(C, [[.04, .515, 0], [.075, .515, 0], [.092, .36, 0], [.088, .17, 0]], .009, { coude: .04 }); b.cyl(m('bakelite_noire'), .011, .06, .088, .14, 0, { seg: 8, r2: .016 });
+  b.plaque({ t: 'EXTINCTEUR\nPOUDRE 6 KG\nN° ' + (412 + b.entier(6) * 7), style: 'etiquette' }, .11, .1, 0, .25, .0758, { courbe: .0758 });
+  b.bague(A, .0775, .0752, .022, 0, .33, 0, { seg: 20 });
+  b.collision(-.1, 0, -.08, .1, .56, .08);
+});
+
+/* ================================================================== ATELIER */
+E('etabli', { titre: 'Établi avec étau', groupe: 'Atelier', surface: 'bois' }, (b, o, m) => {
+  const W = 1.6, H = .88, D = .7, B = m('bois', { axe: 'x', planche: .14 }), B2 = m('bois_sombre', { axe: 'x', planche: .18 }), P = m('peinture', { couleur: o.couleur || '#4d6b55' }), F = m('fonte'), A = m('acier'), Ap = m('acier_poli');
+  b.boite(B, W, .05, D, 0, H - .025, 0, { r: .006 });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.boite(P, .05, H - .05, .05, sx * (W / 2 - .06), (H - .05) / 2, sz * (D / 2 - .06), { r: .004 });
+  for (const sz of [-1, 1]) { b.boite(P, W - .17, .06, .025, 0, H - .08, sz * (D / 2 - .06)); b.boite(P, W - .17, .04, .025, 0, .2, sz * (D / 2 - .06)); }
+  for (const sx of [-1, 1]) { b.boite(P, .025, .06, D - .17, sx * (W / 2 - .06), H - .08, 0); b.boite(P, .025, .04, D - .17, sx * (W / 2 - .06), .2, 0); }
+  b.boite(B2, W - .2, .02, D - .16, 0, .23, 0, { r: .003 });
+  b.boite(P, .44, .3, D - .14, .46, H - .2, 0, { r: .004 });
+  for (const yy of [H - .12, H - .27]) { b.boite(P, .40, .12, .012, .46, yy, D / 2 - .064, { r: .003 }); b.boite(A, .12, .014, .02, .46, yy, D / 2 - .05, { r: .004 }); }
+  const ex = -.5, ez = D / 2 - .1, ey = H;
+  b.boite(F, .15, .025, .17, ex, ey + .0125, ez - .02, { r: .004 });
+  b.boite(F, .1, .085, .05, ex, ey + .068, ez - .04, { r: .006 }); b.boite(F, .1, .085, .035, ex, ey + .068, ez + .06, { r: .006 });
+  b.boite(Ap, .09, .022, .006, ex, ey + .1, ez - .012, { r: .001 }); b.boite(Ap, .09, .022, .006, ex, ey + .1, ez + .04, { r: .001 });
+  b.boite(F, .05, .04, .16, ex, ey + .045, ez + .02, { r: .004 });
+  b.cyl(Ap, .011, .2, ex, ey + .045, ez + .12, { vers: 'z+', seg: 10 }); b.cyl(A, .016, .03, ex, ey + .045, ez + .21, { vers: 'z+', seg: 10 });
+  b.cyl(Ap, .005, .16, ex + .02, ey + .045, ez + .21, { vers: 'x+', seg: 6 }); for (const s of [-1, 1]) b.sphere(Ap, .009, ex + .02 + s * .08, ey + .045, ez + .21, { seg: 8, seg2: 5 });
+  b.boite(F, .06, .012, .06, ex, ey + .031, ez - .09, { r: .002 });
+  b.collision(-W / 2, 0, -D / 2, W / 2, H, D / 2);
+});
+
+E('tuyauterie', { titre: 'Tronçon de tuyauterie', groupe: 'Atelier', note: 'options : matiere (peinture, rouille, cuivre, galva)' }, (b, o, m) => {
+  const r = .05, y = .55, mat = o.matiere || 'peinture', T = mat === 'peinture' ? m('peinture', { couleur: o.couleur || b.choix(['#b8892a', '#2f5560', '#66737a']) }) : m(mat), F = m('fonte'), A = m('acier'), B = m('acier_noir');
+  b.tuyau(T, [[-1, y, 0], [.72, y, 0], [.72, 1.5, 0]], r, { coude: .13, pas: 7, seg: 14 });
+  for (const x of [-.98, -.3, .3]) bride(b, T, B, r, x, y, 0, 'x+'); bride(b, T, B, r, .72, 1.48, 0, 'y+'); bride(b, T, B, r, .72, .95, 0, 'y+');
+  for (const x of [-.7, .45]) { b.boite(A, .04, y - r, .04, x, (y - r) / 2, 0, { r: .003 }); b.boite(A, .16, .01, .12, x, .005, 0, { r: .002 }); b.boite(A, .13, .012, .05, x, y - r - .006, 0, { r: .002 }); b.tore(A, r + .006, .005, x, y, 0, { vers: 'x+', a0: PI / 2, a1: PI * 1.5, seg: 12, seg2: 5 }); }
+  // vanne en ligne
+  b.sphere(F, .085, 0, y, 0, { s: [1, 1.05, .95], seg: 16, seg2: 8 }); b.cyl(F, .045, .1, 0, y + .12, 0, { seg: 12 }); b.cyl(F, .06, .016, 0, y + .17, 0, { seg: 12 });
+  b.cyl(m('laiton'), .009, .12, 0, y + .23, 0, { seg: 8 });
+  b.partie('volant', [0, y + .29, 0], p => volant(p, m('peinture_rouge'), .1, 0, 0, 0, 'y+', 4));
+  // manomètre sur piquage
+  b.cyl(m('laiton'), .01, .09, -.5, y + r + .04, 0, { seg: 8 }); cadran(b, m, .045, -.5, y + r + .13, -.022, 'z+', { t: 'BAR', max: 16, v: b.hasard(.2, .7) });
+  b.plaque({ style: 'fleche' }, .16, .05, -.19, y, r + .0008, { courbeV: r + .0008 });
+  b.collision(-1, 0, -.1, .8, 1.5, .1);
+});
+
+E('vanne', { titre: 'Vanne à volant', groupe: 'Atelier', note: 'origine au sol ; l\'axe du tuyau est à 0,12 m', parties: 'volant' }, (b, o, m) => {
+  const r = .05, y = .12, F = m('fonte'), B = m('acier_noir');
+  b.cyl(F, r, .3, 0, y, 0, { vers: 'x+', seg: 16 }); bride(b, F, B, r, -.142, y, 0, 'x+'); bride(b, F, B, r, .142, y, 0, 'x+');
+  b.sphere(F, .085, 0, y, 0, { s: [1, 1.05, .95], seg: 16, seg2: 8 }); b.cyl(F, .045, .1, 0, y + .12, 0, { seg: 12 }); b.cyl(F, .06, .016, 0, y + .17, 0, { seg: 12 });
+  for (let i = 0; i < 4; i++) { const a = i / 4 * PI * 2 + .78; b.cyl(B, .007, .026, Math.cos(a) * .046, y + .178, Math.sin(a) * .046, { seg: 6, ch: .001 }); }
+  b.cyl(m('laiton'), .009, .12, 0, y + .23, 0, { seg: 8 });
+  b.partie('volant', [0, y + .29, 0], p => volant(p, m('peinture', { couleur: o.couleur || '#8a2c20' }), .1, 0, 0, 0, 'y+', 4));
+  b.collision(-.16, 0, -.1, .16, .42, .1);
+});
+
+E('ventilateur', { titre: 'Extracteur mural', groupe: 'Atelier', note: 'dos à plat sur le mur (z = 0)', parties: 'helice' }, (b, o, m) => {
+  const S = .7, c = S / 2, P = m('peinture', { couleur: o.couleur || b.choix(['#66737a', '#4d6b55', '#c9bc98']) }), A = m('acier'), F = m('fonte');
+  for (const s of [-1, 1]) { b.boite(P, S, .05, .1, 0, c + s * (c - .025), .05, { r: .004 }); b.boite(P, .05, S - .1, .1, s * (c - .025), c, .05, { r: .004 }); }
+  b.boite(P, S - .1, S - .1, .004, 0, c, .098, { r: 0 });
+  b.bague(P, .31, .298, .16, 0, c, .18, { vers: 'z+', seg: 32 });
+  for (const rr of [.07, .13, .19, .25, .306]) b.tore(A, rr, .0035, 0, c, .262, { vers: 'z+', seg2: 5 });
+  for (let k = 0; k < 4; k++) b.boite(A, .62, .008, .004, 0, c, .266, { rot: [0, 0, k * PI / 4], r: 0 });
+  b.cyl(F, .075, .13, 0, c, .16, { vers: 'z+', seg: 16 });
+  for (let k = 0; k < 3; k++) { const a = k / 3 * PI * 2 + .5; b.boite(A, .24, .02, .006, Math.cos(a) * .19, c + Math.sin(a) * .19, .14, { rot: [0, 0, a], r: 0 }); }
+  b.partie('helice', [0, c, .235], p => { p.cyl(A, .045, .04, 0, 0, 0, { vers: 'z+', seg: 12 });
+    for (let k = 0; k < 5; k++) { const a = k / 5 * PI * 2; p.groupe([0, 0, 0], [0, 0, a], g => g.boite(m('peinture', { couleur: '#c2941c' }), .2, .1, .004, .16, 0, 0, { rot: [.55, 0, 0], r: 0 })); } }, 'z');
+  b.collision(-c, 0, 0, c, S, .28);
+});
+
+E('generateur', { titre: 'Groupe électrogène', groupe: 'Atelier' }, (b, o, m) => {
+  const P = m('peinture', { couleur: o.couleur || b.choix(['#4d6b55', '#2f5560', '#66737a']) }), T = m('peinture', { couleur: '#8a2c20' }), F = m('fonte'), A = m('acier'), N = m('acier_noir'), R = m('rouille'), Cu = m('cuivre'), C = m('caoutchouc'), G = m('peinture_grise');
+  for (const s of [-1, 1]) b.boite(N, 1.5, .07, .06, 0, .075, s * .26, { r: .005 }); for (const x of [-.68, 0, .68]) b.boite(N, .05, .05, .52, x, .075, 0, { r: .004 });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.cyl(C, .04, .04, sx * .66, .02, sz * .26, { seg: 10, ch: .004 });
+  // moteur
+  b.boite(F, .42, .36, .34, -.36, .29, 0, { r: .012 });
+  for (let k = 0; k < 8; k++) b.boite(F, .32, .006, .3, -.36, .49 + k * .022, 0, { r: 0, ao: .3 });
+  b.boite(F, .2, .17, .22, -.36, .56, 0, { r: .006 }); b.boite(T, .26, .05, .2, -.36, .68, 0, { r: .012 });
+  b.cyl(F, .15, .05, -.61, .3, 0, { vers: 'x-', seg: 20 }); b.cyl(A, .04, .06, -.65, .3, 0, { vers: 'x-', seg: 10 });
+  b.cyl(m('peinture_noire'), .06, .08, -.47, .57, .2, { vers: 'z+', seg: 16, ch: .008 });
+  b.tuyau(R, [[-.3, .52, -.17], [-.3, .52, -.3], [-.1, .52, -.3], [-.1, .82, -.3]], .022, { coude: .05 }); b.cyl(R, .05, .26, -.1, .95, -.3, { seg: 14, ch: .008 }); b.cyl(R, .018, .08, -.1, 1.11, -.3, { seg: 8 });
+  // accouplement et génératrice
+  b.cyl(A, .05, .12, -.1, .3, 0, { vers: 'x+', seg: 12 });
+  b.tour(F, [[0, 0], [.1, 0], [.165, .04], [.165, .06]], -.02, .3, 0, { vers: 'x+', seg: 24 });
+  b.cyl(P, .17, .4, .24, .3, 0, { vers: 'x+', seg: 24, ouvert: true }); b.bague(Cu, .172, .15, .05, .1, .3, 0, { vers: 'x+', seg: 24 });
+  for (let k = 0; k < 10; k++) { const a = k / 10 * PI * 2; b.boite(P, .06, .012, .03, .1, .3 + Math.sin(a) * .17, Math.cos(a) * .17, { rot: [-a, 0, 0], r: .002 }); }
+  b.tour(F, [[.165, 0], [.165, .02], [.1, .06], [.045, .07], [.045, .1], [0, .1]], .44, .3, 0, { vers: 'x+', seg: 24 });
+  for (const x of [.1, .38]) b.boite(N, .08, .14, .3, x, .13, 0, { r: .004 });
+  b.boite(P, .16, .1, .14, .26, .52, 0, { r: .006 }); b.cyl(m('laiton'), .014, .03, .26, .52, .08, { vers: 'z+', seg: 8 }); b.tuyau(C, [[.26, .52, .09], [.26, .52, .18], [.26, .1, .22], [.5, .02, .3]], .011, { coude: .06 });
+  // réservoir
+  b.boite(T, .5, .15, .3, -.36, .87, 0, { r: .045 }); b.cyl(A, .03, .02, -.24, .955, 0, { seg: 12, ch: .003 });
+  for (const sx of [-.47, -.25]) b.boite(N, .03, .1, .26, sx, .75, 0, { r: .003 });
+  // tableau
+  b.cyl(N, .014, .56, .64, .39, 0, { seg: 8 }); b.boite(G, .06, .3, .24, .64, .78, 0, { r: .006 });
+  b.groupe([.672, .78, 0], [0, PI / 2, 0], g => { cadran(g, m, .04, -.05, .07, 0, 'z+', { t: 'VOLTS', max: 300, v: .72 }); cadran(g, m, .04, .05, .07, 0, 'z+', { t: 'AMP', max: 40, v: .35 });
+    voyant(g, m, 'verte', .009, -.07, -.03, 0, 'z+'); voyant(g, m, 'rouge', .009, -.035, -.03, 0, 'z+'); bascule(g, m, .02, -.03, 0, 'z+', true); bascule(g, m, .06, -.03, 0, 'z+', false);
+    g.plaque({ t: 'GE-12\n12 kVA  380 V', style: 'plaque' }, .13, .045, 0, -.095, .0006); });
+  b.plaque({ t: 'GE-12', style: 'pochoir', couleur: '#e6dfc8' }, .22, .07, -.36, .87, .1508);
+  b.lumiere(.69, .75, -.07, '#52ff8a', .25, 1.5);
+  b.collision(-.75, 0, -.33, .75, 1.15, .33);
+});
+
+/* ================================================================== TECHNIQUE */
+E('armoire_electrique', { titre: 'Armoire électrique', groupe: 'Technique' }, (b, o, m) => {
+  const W = .8, H = 1.9, D = .38, P = m('peinture', { couleur: o.couleur || b.choix(['#66737a', '#5d5a3a', '#4d6b55']) }), N = m('peinture_noire'), A = m('acier'), L = m('laiton'), Bk = m('bakelite'), G = m('galva'), zf = D / 2 + .012;
+  b.boite(N, W - .02, .1, D - .02, 0, .05, 0, { r: .004 }); b.boite(P, W, H - .1, D, 0, .1 + (H - .1) / 2, 0, { r: .008 });
+  b.boite(P, W - .07, H - .22, .012, 0, .1 + (H - .1) / 2, D / 2 + .006, { r: .004 });
+  const riv = []; for (let k = 0; k < 9; k++) { const y = .22 + k * (H - .34) / 8; riv.push([-(W / 2 - .018), y, D / 2], [W / 2 - .018, y, D / 2]); } b.rivets(A, riv, .006, 'z+');
+  for (const yy of [.45, 1.0, 1.55]) b.cyl(A, .011, .1, -(W / 2 - .04), yy, zf + .004, { seg: 8 });
+  b.cyl(A, .02, .014, W / 2 - .09, 1.0, zf + .007, { vers: 'z+', seg: 12 }); b.boite(A, .022, .16, .016, W / 2 - .09, .94, zf + .022, { r: .005 });
+  cadran(b, m, .062, -.16, 1.55, zf, 'z+', { t: 'VOLTS', max: 400, v: b.hasard(.5, .8) }); cadran(b, m, .062, .16, 1.55, zf, 'z+', { t: 'AMP', max: 60, v: b.hasard(.15, .6) });
+  voyant(b, m, 'rouge', .012, -.1, 1.36, zf, 'z+'); voyant(b, m, 'ambre', .012, 0, 1.36, zf, 'z+'); voyant(b, m, 'verte', .012, .1, 1.36, zf, 'z+');
+  // interrupteur à couteau
+  b.boite(Bk, .12, .2, .014, -.12, 1.08, zf + .007, { r: .004 });
+  for (const sx of [-.03, .03]) { b.boite(L, .012, .02, .03, -.12 + sx, 1.155, zf + .028, { r: .002 }); b.boite(L, .012, .02, .03, -.12 + sx, 1.02, zf + .028, { r: .002 }); b.boite(L, .008, .15, .004, -.12 + sx, 1.1, zf + .05, { rot: [.3, 0, 0], r: 0 }); }
+  b.cyl(Bk, .012, .09, -.12, 1.17, zf + .075, { vers: 'x+', seg: 10 });
+  b.plaque({ t: 'DANGER 380 V', style: 'danger' }, .34, .085, .02, .74, zf + .0006); b.plaque({ style: 'eclair' }, .1, .1, .22, 1.1, zf + .0006);
+  b.plaque({ t: 'TYPE AE-7\nN° ' + (4102 + b.entier(6) * 13) + '  1957', style: 'plaque' }, .16, .06, .2, .9, zf + .0006);
+  persiennes(b, P, W - .28, 5, 0, .3, zf + .004);
+  for (const x of [-.22, 0, .22]) { b.cyl(G, .016, .5, x, H + .25, -.05, { seg: 10, ouvert: true }); b.cyl(A, .024, .02, x, H + .01, -.05, { seg: 6 }); }
+  b.lumiere(0, 1.36, zf + .1, '#ff9a3a', .3, 1.6);
+  b.collision(-W / 2, 0, -D / 2, W / 2, H, D / 2 + .05);
+});
+
+E('console', { titre: 'Pupitre de contrôle', groupe: 'Technique' }, (b, o, m) => {
+  const W = 1.3, P = m('peinture', { couleur: o.couleur || b.choix(['#5d6a66', '#66737a', '#4d6b55']) }), N = m('peinture_noire'), Bk = m('bakelite'), Bn = m('bakelite_noire'), A = m('acier'), L = m('laiton');
+  b.boite(N, W - .04, .08, .56, 0, .04, -.1, { r: .004 }); b.boite(P, W, .64, .62, 0, .4, -.09, { r: .01 });
+  b.boite(P, W, .5, .25, 0, 1.0, -.275, { r: .008 });
+  for (const s of [-1, 1]) persiennes(b, P, .3, 4, s * .38, .2, .225);
+  // pupitre incliné
+  b.groupe([0, .76, .1], [.33, 0, 0], g => { g.boite(P, W, .06, .52, 0, 0, 0, { r: .008 }); const y = .031;
+    for (let r = 0; r < 3; r++) for (let k = 0; k < 10; k++) { g.cyl(Bn, .011, .012, -.36 + k * .03 + r * .008, y + .004, .1 + r * .032, { seg: 8, ch: .002 }); }
+    for (let k = 0; k < 5; k++) bouton(g, Bk, .016, .1 + k * .06, y, .14, 'y+');
+    for (let k = 0; k < 8; k++) bascule(g, m, -.4 + k * .045, y, -.02, 'y+', b.hasard() < .5);
+    for (let k = 0; k < 6; k++) voyant(g, m, ['verte', 'ambre', 'rouge'][b.entier(3)], .008, -.4 + k * .045, y, -.08, 'y+');
+    g.boite(Bn, .34, .012, .12, .28, y + .004, -.05, { r: .003 }); for (let k = 0; k < 5; k++) { g.boite(A, .004, .008, .09, .15 + k * .065, y + .012, -.05, { r: 0 }); g.boite(Bk, .022, .02, .014, .15 + k * .065, y + .02, -.08 + b.hasard(0, .06), { r: .003 }); }
+    g.plaque({ t: 'SECTEUR 07 — VENTILATION', style: 'plaque', metal: 'alu' }, .3, .035, -.25, y + .0006, -.16, { vers: 'y+' });
+    g.plaque({ t: 'DÉBIT', style: 'etiquette' }, .06, .028, .22, y + .0006, .2, { vers: 'y+' }); });
+  // dosseret : écran et cadrans
+  const zf = -.15;
+  ecran(b, m, .36, .27, 0, 1.01, zf + .012, { t: 'VENTIL  07   ACTIF\nPRESSION   0,82\nDÉBIT      41 %\nTUBES      ' + b.entier(4) + '/3\n> _', onde: true });
+  for (const [x, y, t, mx] of [[-.44, 1.1, 'kPa', 10], [-.44, .92, '°C', 120], [.44, 1.1, 'VOLTS', 400], [.44, .92, 'Hz', 60]]) cadran(b, m, .058, x, y, zf, 'z+', { t, max: mx, v: b.hasard(.15, .85) });
+  b.plaque({ t: 'CONSOLE C-3', style: 'pochoir', couleur: '#d8cfae' }, .22, .04, 0, 1.2, zf + .0006);
+  b.lumiere(0, 1.0, zf + .25, '#52ff8a', .5, 2.2);
+  b.collision(-W / 2, 0, -.4, W / 2, 1.25, .38);
+});
+
+E('moniteur', { titre: 'Moniteur cathodique', groupe: 'Technique' }, (b, o, m) => {
+  const B = m('peinture', { couleur: o.couleur || b.choix(['#c9bc98', '#66737a', '#5d6a66']) }), Bk = m('bakelite_noire'), Br = m('bakelite');
+  b.boite(Bk, .3, .04, .3, 0, .02, 0, { r: .006 }); b.boite(B, .46, .38, .42, 0, .23, 0, { r: .035 });
+  ecran(b, m, .3, .23, -.04, .245, .214, { t: o.texte || 'ECG   78 BPM\nRYTHME STABLE\nSpO2  97 %', onde: true });
+  for (const y of [.34, .25, .16]) bouton(b, Br, .016, .178, y, .21, 'z+');
+  b.plaque({ t: 'MC-4', style: 'plaque' }, .05, .02, .178, .082, .2106);
+  for (let k = 0; k < 6; k++) b.boite(Bk, .24, .004, .014, 0, .421, -.1 + k * .03, { r: 0, ao: .5 });
+  b.cyl(B, .16, .12, 0, .23, -.26, { vers: 'z-', seg: 20, r2: .1 }); b.tuyau(m('caoutchouc'), [[0, .2, -.32], [0, .2, -.4], [0, .02, -.42], [.2, .012, -.5]], .008, { coude: .05 });
+  b.lumiere(-.04, .245, .4, '#52ff8a', .6, 2.2);
+  b.collision(-.23, 0, -.33, .23, .43, .22);
+});
+
+E('radio', { titre: 'Poste radio de campagne', groupe: 'Technique' }, (b, o, m) => {
+  const K = m('peinture', { couleur: o.couleur || '#5d5a3a' }), N = m('peinture_noire'), Bk = m('bakelite'), A = m('acier'), L = m('laiton'), zf = .113;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.cyl(m('caoutchouc'), .014, .012, sx * .18, .006, sz * .08, { seg: 8 });
+  b.boite(K, .44, .28, .22, 0, .152, 0, { r: .012 }); b.boite(N, .40, .24, .006, 0, .152, zf, { r: .002 });
+  const z = zf + .003;
+  b.plaque({ style: 'bandeau', v: b.hasard(.1, .9) }, .2, .055, -.08, .225, z + .0006); for (const s of [-1, 1]) b.boite(L, .21, .005, .006, -.08, .225 + s * .03, z + .003, { r: .001 });
+  b.cyl(m('toile_kaki'), .05, .003, .125, .15, z + .001, { vers: 'z+', seg: 18 }); for (const rr of [.012, .024, .036, .048]) b.tore(A, rr, .002, .125, .15, z + .004, { vers: 'z+', seg: 16, seg2: 4 });
+  for (let k = 0; k < 4; k++) bouton(b, Bk, .013, -.16 + k * .052, .09, z, 'z+');
+  bascule(b, m, -.16, .16, z, 'z+', true); bascule(b, m, -.12, .16, z, 'z+', false); voyant(b, m, 'ambre', .007, -.07, .16, z, 'z+');
+  b.bague(L, .008, .004, .006, .04, .16, z + .003, { vers: 'z+', seg: 10 });
+  b.plaque({ t: 'RT-7\nSECTEUR 07', style: 'plaque' }, .07, .028, .125, .068, z + .0006);
+  b.cyl(A, .008, .02, .19, .30, -.08, { seg: 8 }); b.cyl(A, .0035, .32, .19, .47, -.08, { seg: 6 }); b.cyl(A, .0022, .26, .19, .76, -.08, { seg: 6 }); b.sphere(A, .005, .19, .892, -.08, { seg: 6, seg2: 4 });
+  b.tuyau(m('cuir'), [[-.14, .292, 0], [-.11, .335, 0], [.11, .335, 0], [.14, .292, 0]], .008, { coude: .03, seg: 6 }); for (const s of [-1, 1]) b.boite(L, .02, .008, .03, s * .14, .294, 0, { r: .002 });
+  for (const s of [-1, 1]) b.boite(A, .006, .05, .03, s * .222, .21, .04, { r: .002 });
+  b.lumiere(-.07, .16, .2, '#ff9a3a', .2, 1.2);
+  b.collision(-.22, 0, -.11, .22, .3, .13);
+});
+
+E('tube_vide', { titre: 'Tube à vide', groupe: 'Technique', note: 'option taille : 1 = 13 cm de haut ; 3 pour un tube de puissance' }, (b, o, m) => {
+  const s = o.taille || 1, Bk = m('bakelite'), L = m('laiton'), V = m('verre', { opacite: .12, salete: .15 }), A = m('acier_noir'), Ap = m('acier_poli'), allume = o.allume !== false;
+  b.groupe([0, 0, 0], [0, 0, 0], g0 => {
+    for (let i = 0; i < 8; i++) { const a = i / 8 * PI * 2; g0.cyl(L, .0012, .012, Math.cos(a) * .011, .006, Math.sin(a) * .011, { seg: 5, ch: 0 }); }
+    g0.cyl(Bk, .004, .012, 0, .006, 0, { seg: 6 });
+    g0.tour(Bk, [[0, .012], [.016, .012], [.0165, .016], [.0165, .034], [.0145, .038], [0, .038]], 0, 0, 0, { seg: 16, ch: .0008 });
+    for (const y of [.046, .1]) g0.cyl(m('plastique', { couleur: '#b9b29a' }), .0125, .001, 0, y, 0, { seg: 12, ch: 0 });
+    g0.cyl(A, .0082, .046, 0, .073, 0, { seg: 10, ouvert: true }); for (const sx of [-1, 1]) g0.cyl(Ap, .0006, .06, sx * .0105, .07, 0, { seg: 4, ch: 0 });
+    g0.cyl(allume ? m('lueur_ambre', { intensite: 3.5 }) : A, .0016, .05, 0, .073, 0, { seg: 5, ch: 0 });
+    g0.tore(Ap, .006, .0012, 0, .106, 0, { seg: 10, seg2: 4 });
+    g0.tour(Ap, [[.0142, .112], [.0128, .119], [.009, .125], [.0045, .128]], 0, 0, 0, { seg: 14, lisse: true });   // dépôt argenté du getter
+    g0.tour(V, [[.0155, .038], [.0155, .108], [.0145, .118], [.0108, .127], [.005, .1325], [.0015, .137], [0, .138]], 0, 0, 0, { seg: 16, lisse: true });
+  }, [s, s, s]);
+  if (allume) b.lumiere(0, .08 * s, 0, '#ff9a3a', .35 * s, 1.2 * s);
+  b.collision(-.017 * s, 0, -.017 * s, .017 * s, .138 * s, .017 * s);
+});
+
+E('lampe_cage', { titre: 'Hublot à grille', groupe: 'Technique', note: 'se fixe sur un mur ou un plafond (base en y = 0)' }, (b, o, m) => {
+  const F = m('fonte'), A = m('acier'), L = m('laiton'), allume = o.allume !== false;
+  b.tour(F, [[0, 0], [.078, 0], [.082, .006], [.082, .03], [.066, .04], [0, .04]], 0, 0, 0, { seg: 20, ch: .003 });
+  b.cyl(L, .014, .03, 0, .055, 0, { seg: 8 }); b.sphere(allume ? m('lueur_blanche', { couleur: o.couleur || '#ffd9a0' }) : m('verre_depoli'), .024, 0, .092, 0, { s: [1, 1.25, 1], seg: 10, seg2: 6 });
+  b.tour(m('verre_depoli', { opacite: .3 }), [[.06, .04], [.062, .085], [.055, .12], [.038, .145], [.016, .158], [0, .16]], 0, 0, 0, { seg: 18, lisse: true });
+  for (let k = 0; k < 6; k++) { const a = k / 6 * PI * 2, c = Math.cos(a), s = Math.sin(a); b.tuyau(A, [[c * .07, .036, s * .07], [c * .071, .09, s * .071], [c * .055, .15, s * .055], [c * .012, .176, s * .012]], .0028, { coude: .03, seg: 5, bouts: false }); }
+  b.tore(A, .0705, .0028, 0, .075, 0, { seg: 20, seg2: 4 }); b.tore(A, .064, .0028, 0, .125, 0, { seg: 20, seg2: 4 }); b.cyl(A, .014, .008, 0, .177, 0, { seg: 8 });
+  b.cyl(L, .016, .03, .09, .02, 0, { vers: 'x+', seg: 8 }); b.cyl(m('galva'), .011, .12, .16, .02, 0, { vers: 'x+', seg: 8 });
+  if (allume) b.lumiere(0, .1, 0, o.couleur || '#ffd9a0', 1.2, 7);
+  b.collision(-.085, 0, -.085, .085, .18, .085);
+});
+
+/* ================================================================== VIE ET SOINS */
+E('lit', { titre: 'Lit d\'infirmerie', groupe: 'Vie et soins' }, (b, o, m) => {
+  const Em = m('email', { couleur: o.couleur || '#dedbcd' }), A = m('acier'), G = m('galva'), T = m('toile_rayee'), K = m('toile_kaki'), O = m('toile_blanche'), X = .98, Z = .42, yc = .46;
+  const arceau = (x, h) => { b.tuyau(Em, [[x, .1, -Z], [x, h, -Z], [x, h, Z], [x, .1, Z]], .016, { coude: .09, pas: 6 }); b.cyl(Em, .01, 2 * Z, x, yc - .1, 0, { vers: 'z+', seg: 8 });
+    for (const z of [-.25, -.085, .085, .25]) b.cyl(Em, .007, h - yc + .1, x, (h + yc - .1) / 2, z, { seg: 6 }); };
+  arceau(-X, 1.05); arceau(X, .8);
+  for (const s of [-1, 1]) { b.boite(Em, 2 * X, .04, .004, 0, yc - .02, s * (Z - .012), { r: 0 }); b.boite(Em, 2 * X, .004, .035, 0, yc - .04, s * (Z - .03), { r: 0 }); }
+  for (let k = 0; k < 7; k++) b.boite(G, .03, .003, 2 * Z - .06, -X + .14 + k * .283, yc - .036, 0, { r: 0 });
+  for (const z of [-.2, 0, .2]) b.boite(G, 2 * X - .04, .003, .025, 0, yc - .032, z, { r: 0 });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) roulette(b, m, sx * X, .1, sz * Z);
+  b.boite(T, 1.88, .12, .78, 0, yc + .03, 0, { r: .04 });
+  b.sphere(O, .2, -.7, yc + .12, 0, { s: [1, .32, 1.55], seg: 14, seg2: 7 });
+  b.boite(K, .5, .07, .7, .62, yc + .125, 0, { r: .03 }); b.boite(K, .46, .05, .66, .62, yc + .18, .0, { r: .024 });
+  b.groupe([X + .0165, .66, 0], [0, PI / 2, 0], g => g.plaque({ t: 'LIT ' + String(1 + b.entier(24)).padStart(2, '0') + '\nSECTEUR 07', style: 'etiquette' }, .11, .07, 0, 0, .0008));
+  b.boite(A, .003, .08, .12, X + .0155, .66, 0, { r: 0 });
+  b.collision(-1, 0, -.45, 1, .62, .45);
+});
+
+E('chariot', { titre: 'Chariot de soins', groupe: 'Vie et soins' }, (b, o, m) => {
+  const Ap = m('acier_poli'), Em = m('email'), W = .66, D = .42;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) { b.cyl(Ap, .011, .74, sx * (W / 2 - .02), .47, sz * (D / 2 - .02), { seg: 8 }); roulette(b, m, sx * (W / 2 - .02), .1, sz * (D / 2 - .02)); }
+  for (const y of [.3, .82]) { b.boite(Ap, W, .008, D, 0, y, 0, { r: .003 });
+    for (const s of [-1, 1]) { b.boite(Ap, W, .03, .004, 0, y + .016, s * (D / 2 - .002), { r: 0 }); b.boite(Ap, .004, .03, D, s * (W / 2 - .002), y + .016, 0, { r: 0 }); } }
+  b.tuyau(Ap, [[W / 2 - .02, .84, -(D / 2 - .02)], [W / 2 + .09, .87, -(D / 2 - .02)], [W / 2 + .09, .87, D / 2 - .02], [W / 2 - .02, .84, D / 2 - .02]], .011, { coude: .05 });
+  const y = .824;
+  flacon(b, m, .028, .12, -.2, y, -.08, 'verre_brun', 'ÉTHER'); flacon(b, m, .022, .1, -.13, y, -.1, 'verre_brun', 'IODE'); flacon(b, m, .03, .15, -.22, y, .06, 'verre', 'ALCOOL 90');
+  b.boite(Em, .22, .05, .14, .08, y + .025, .04, { r: .012 }); b.boite(Ap, .2, .004, .12, .08, y + .052, .04, { r: .001 });
+  b.boite(Ap, .24, .012, .1, .05, .312, -.06, { r: .004 }); b.boite(m('toile_blanche'), .2, .06, .14, -.12, .334, .05, { r: .02 });
+  b.boite(Em, W - .07, .12, D - .06, 0, .735, 0, { r: .006 }); b.boite(Ap, .14, .012, .016, 0, .765, (D - .06) / 2 + .008, { r: .004 }); b.plaque({ style: 'croix' }, .06, .06, 0, .715, (D - .06) / 2 + .0008);
+  b.collision(-.4, 0, -.22, .44, .9, .22);
+});
+
+E('tabouret', { titre: 'Tabouret d\'atelier', groupe: 'Vie et soins' }, (b, o, m) => {
+  const P = m('peinture', { couleur: o.couleur || b.choix(PEINT) }), B = m('bois', { axe: 'x', planche: .5 }), C = m('caoutchouc');
+  b.tour(B, [[0, .455], [.165, .455], [.17, .465], [.17, .485], [.16, .492], [0, .488]], 0, 0, 0, { seg: 22, ch: .004 });
+  b.cyl(P, .12, .012, 0, .449, 0, { seg: 16 });
+  for (let k = 0; k < 4; k++) { const a = k / 4 * PI * 2 + PI / 4, c = Math.cos(a), s = Math.sin(a); b.tuyau(P, [[c * .1, .445, s * .1], [c * .19, .012, s * .19]], .011, { seg: 8 }); b.cyl(C, .014, .014, c * .19, .007, s * .19, { seg: 8 }); }
+  b.tore(P, .158, .006, 0, .17, 0, { seg: 20, seg2: 5 });
+  b.collision(-.19, 0, -.19, .19, .49, .19);
+});
+
+E('table', { titre: 'Table métallique', groupe: 'Vie et soins' }, (b, o, m) => {
+  const W = 1.4, H = .76, D = .7, P = m('peinture', { couleur: o.couleur || b.choix(['#66737a', '#4d6b55', '#c9bc98']) }), G = m('galva'), A = m('acier');
+  b.boite(G, W, .028, D, 0, H - .014, 0, { r: .005 }); b.boite(P, W - .04, .07, D - .04, 0, H - .063, 0, { r: .004 });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const x = sx * (W / 2 - .05), z = sz * (D / 2 - .05); b.boite(P, .04, H - .1, .004, x, (H - .1) / 2, z + sz * .018, { r: 0 }); b.boite(P, .004, H - .1, .04, x + sx * .018, (H - .1) / 2, z, { r: 0 }); b.boite(m('caoutchouc'), .045, .01, .045, x, .005, z, { r: .002 }); }
+  for (const sz of [-1, 1]) b.boite(P, W - .14, .03, .004, 0, .16, sz * (D / 2 - .032), { r: 0 }); for (const sx of [-1, 1]) b.boite(P, .004, .03, D - .14, sx * (W / 2 - .032), .16, 0, { r: 0 });
+  b.boite(P, .5, .062, .012, 0, H - .063, D / 2 - .016, { r: .003 }); b.boite(A, .12, .012, .018, 0, H - .063, D / 2 - .002, { r: .004 });
+  b.collision(-W / 2, 0, -D / 2, W / 2, H, D / 2);
+});
+
+/* ================================================================== ARCHITECTURE */
+E('porte_blindee', { titre: 'Porte de sas blindée', groupe: 'Architecture', parties: 'porte, volant', note: 'options : texte, hublot' }, (b, o, m) => {
+  const P = m('peinture', { couleur: o.couleur || b.choix(['#66737a', '#5d6a66', '#4d6b55']) }), A = m('acier'), F = m('fonte'), L = m('laiton'), N = m('acier_noir');
+  for (const s of [-1, 1]) b.boite(P, .15, 2.22, .26, s * .575, 1.11, 0, { r: .012 }); b.boite(P, 1.3, .15, .26, 0, 2.2, 0, { r: .012 }); b.boite(A, 1.0, .06, .26, 0, .03, 0, { r: .006 });
+  const riv = []; for (let k = 0; k < 10; k++) { const y = .15 + k * .21; riv.push([-.575, y, .13], [.575, y, .13]); } for (let k = 0; k < 6; k++) riv.push([-.45 + k * .18, 2.2, .13]); b.rivets(A, riv, .009, 'z+');
+  b.partie('porte', [-.5, .06, .1], p => { const w = 1.0, h = 2.06, cx = w / 2;
+    p.boite(P, w - .01, h, .07, cx, h / 2, 0, { r: .02 });
+    for (const y of [.12, h - .12]) p.boite(P, w - .12, .05, .014, cx, y, .04, { r: .004 }); for (const x of [.085, w - .085]) p.boite(P, .05, h - .29, .014, x, h / 2, .04, { r: .004 });
+    for (const y of [h * .30, h * .70]) p.boite(P, w - .22, .04, .012, cx, y, .04, { r: .004 });
+    for (const y of [.3, h / 2, h - .3]) { p.cyl(N, .024, .17, -.012, y, .03, { seg: 10 }); p.boite(N, .12, .1, .012, .06, y, .04, { r: .003 }); }
+    for (const y of [.42, 1.0, 1.6]) { p.boite(A, .13, .04, .022, w - .06, y, .046, { r: .005 }); p.tuyau(A, [[cx, 1.0, .044], [w - .12, y, .044]], .007, { seg: 6 }); }
+    p.cyl(F, .05, .03, cx, 1.0, .05, { vers: 'z+', seg: 14 });
+    p.partie('volant', [cx, 1.0, .1], q => { volant(q, m('peinture', { couleur: '#8a2c20' }), .19, 0, 0, 0, 'z+', 5); q.cyl(L, .03, .05, 0, 0, .005, { vers: 'z+', seg: 12 }); }, 'z');
+    if (o.hublot !== false) { p.bague(L, .115, .085, .03, cx, 1.58, .045, { vers: 'z+', seg: 24 }); p.cyl(m('peinture_noire'), .087, .004, cx, 1.58, .036, { vers: 'z+', seg: 24, ch: 0 }); p.cyl(m('verre', { opacite: .3 }), .087, .012, cx, 1.58, .046, { vers: 'z+', seg: 24, ch: 0 });
+      const hr = []; for (let k = 0; k < 8; k++) { const a = k / 8 * PI * 2; hr.push([cx + Math.cos(a) * .1, 1.58 + Math.sin(a) * .1, .06]); } p.rivets(A, hr, .006, 'z+'); }
+    p.plaque({ t: o.texte || 'SAS 07', style: 'pochoir' }, .4, .1, cx, 1.31, .0358);
+    p.plaque({ style: 'danger' }, w - .24, .09, cx, .3, .0358);
+    p.plaque({ t: 'PORTE ÉTANCHE P-2\nÉPREUVE 4 BAR', style: 'plaque' }, .16, .055, cx, .52, .0358); });
+  b.collision(-.65, 0, -.13, .65, 2.28, .13);
+});
+});
+/* ==========================================================================================
+   FABRIQUE — personnages : homme, femme, mort-vivant, squelette ; tenues ; animations
+   Un seul squelette de 18 os pour tous. Le personnage regarde vers +z, sa gauche est en +x, pieds à l'origine.
+
+     const p = fab.objet('chevalier');                 scene.add(p);
+     fab.equiper(p, fab.objet('epee'), 'main_d');      // l'objet suit la main
+     fab.animer(p, 'marche', temps);                   // à chaque image ; aucun état à conserver
+   ========================================================================================== */
+FAB._objets.push(function (fab) {
+'use strict';
+const THREE = fab.THREE, PI = Math.PI, A0 = .26, SA = Math.sin(A0), CA = Math.cos(A0);
+const mx = (a, b, t) => a + (b - a) * t, cl = (x, a, b) => Math.max(a, Math.min(b, x)), ss = (a, b, x) => { x = cl((x - a) / (b - a), 0, 1); return x * x * (3 - 2 * x); };
+
+/* ---------------------------------------------------------------- gabarit : les cotes d'un corps (l'homme de 1,78 m sert de référence) */
+function gabarit(o) {
+  const f = o.sexe === 'femme', k = f ? .932 : 1, c = o.corpulence === undefined ? 1 : o.corpulence;
+  const g = { f, k, c, te: f ? .95 : 1, l: (f ? .86 : 1) * (.5 + .5 * c), ep: (f ? .86 : 1) * (.85 + .15 * c), th: (f ? .88 : 1) * (.65 + .35 * c), ta: (f ? .8 : 1) * c, ha: (f ? 1.02 : 1) * (.55 + .45 * c) };
+  g.yC = .08 * k; g.yG = .5 * k; g.yH = .93 * k; g.yT = 1.09 * k; g.yP = 1.3 * k; g.yS = 1.455 * k; g.yN = 1.5 * k; g.yM = 1.555 * k;
+  g.xH = f ? .09 : .093; g.xS = .19 * g.ep; g.L1 = .3 * k; g.L2 = .26 * k; g.wx = g.xS + SA * (g.L1 + g.L2); g.wy = g.yS - CA * (g.L1 + g.L2);
+  return g;
+}
+function listeOs(g) {
+  const d = [['racine', null, 0, 0, 0], ['bassin', 'racine', 0, g.yH, 0], ['colonne', 'bassin', 0, g.yT, 0], ['poitrine', 'colonne', 0, g.yP, 0], ['cou', 'poitrine', 0, g.yN, 0], ['tete', 'cou', 0, g.yM, 0]];
+  for (const [n, sg] of [['g', 1], ['d', -1]]) {
+    d.push(['bras_' + n, 'poitrine', sg * g.xS, g.yS, 0], ['avant_bras_' + n, 'bras_' + n, sg * (g.xS + SA * g.L1), g.yS - CA * g.L1, 0], ['main_' + n, 'avant_bras_' + n, sg * g.wx, g.wy, 0]);
+    d.push(['cuisse_' + n, 'bassin', sg * g.xH, g.yH, 0], ['jambe_' + n, 'cuisse_' + n, sg * g.xH, g.yG, 0], ['pied_' + n, 'jambe_' + n, sg * g.xH, g.yC, 0]);
+  }
+  return d;
+}
+/* ---------------------------------------------------------------- sections du corps (pour loft) */
+const CLES = ['rx', 'rz', 'dx', 'dz'];
+function couper(S, y0, y1) { // ne garde que les sections entre deux hauteurs, en recoupant proprement aux limites
+  const out = [], mixer = (a, b, y) => { const t = (y - a.y) / (b.y - a.y), r = { y, os: t < .5 ? a.os : b.os, n: a.n }; for (const c of CLES) r[c] = (a[c] || 0) * (1 - t) + (b[c] || 0) * t; return r; };
+  for (let i = 0; i < S.length; i++) { const s = S[i], p = S[i - 1];
+    if (p && p.y < y0 && s.y > y0) out.push(mixer(p, s, y0));
+    if (p && p.y < y1 && s.y > y1) out.push(mixer(p, s, y1));
+    if (s.y >= y0 && s.y <= y1) out.push(s); }
+  return out;
+}
+const gonfler = (S, e, e2) => S.map(s => Object.assign({}, s, { rx: s.rx + e, rz: s.rz + (e2 === undefined ? e : e2) }));
+const en = (S, y) => couper(S, y, y)[0];
+function sJambe(g, n, sg) { const L = g.l, k = g.k, H = g.ha, C = 'cuisse_' + n, J = 'jambe_' + n; return [
+  { y: .072 * k, rx: .041 * L, rz: .048 * L, os: [J] }, { y: .2 * k, rx: .045 * L, rz: .052 * L, os: [J] }, { y: .34 * k, rx: .054 * L, rz: .06 * L, dz: -.008, os: [J] },
+  { y: .44 * k, rx: .05 * L, rz: .054 * L, os: [J, C, .15] }, { y: .5 * k, rx: .053 * L, rz: .057 * L, dz: .004, os: [J, C, .5] }, { y: .56 * k, rx: .058 * L, rz: .062 * L, os: [C, J, .15] },
+  { y: .7 * k, rx: .071 * L, rz: .078 * L, os: [C] }, { y: .82 * k, rx: .082 * H, rz: .088 * H, dx: sg * .004, os: [C] }, { y: .9 * k, rx: .084 * H, rz: .09 * H, dx: sg * .006, os: [C, 'bassin', .35] },
+  { y: .97 * k, rx: .06 * H, rz: .075 * H, dx: sg * .004, os: [C, 'bassin', .6] }]; }
+function sTronc(g) { const k = g.k, f = g.f, H = g.ha, T = g.ta, P = g.th; return [
+  { y: .8 * k, rx: .05 * H, rz: .06 * H, os: ['bassin'] }, { y: .845 * k, rx: .12 * H, rz: .088 * H, os: ['bassin'] }, { y: .89 * k, rx: .158 * H, rz: .103 * H, dz: -.004, os: ['bassin'] }, { y: .93 * k, rx: .17 * H, rz: .11 * H, dz: -.006, os: ['bassin'] },
+  { y: 1.02 * k, rx: .16 * (H + T) / 2, rz: .105 * (H + T) / 2, dz: -.004, os: ['bassin', 'colonne', .3] }, { y: 1.09 * k, rx: .148 * T, rz: .098 * T, os: ['bassin', 'colonne', .6] },
+  { y: 1.17 * k, rx: .152 * (T + P) / 2, rz: .102 * (T + P) / 2, os: ['colonne'] },
+  { y: 1.27 * k, rx: .17 * P, rz: .114 * P + (f ? .012 : 0), dz: .004 + (f ? .016 : 0), os: ['colonne', 'poitrine', .5] },
+  { y: 1.35 * k, rx: .18 * P, rz: .118 * P + (f ? .006 : 0), dz: .006 + (f ? .008 : 0), os: ['poitrine'] },
+  { y: 1.425 * k, rx: g.xS - .012, rz: .105 * P, os: ['poitrine'] }, { y: 1.475 * k, rx: .125 * g.ep, rz: .082 * P, dz: -.004, os: ['poitrine'] },
+  { y: 1.512 * k, rx: .066, rz: .064, dz: -.004, os: ['poitrine', 'cou', .5] }]; }
+function sBras(g, n) { const L = g.l, B = 'bras_' + n, F = 'avant_bras_' + n, a = g.L2, T = g.L1 + g.L2; return [   // de 0 (poignet) à T (épaule), le long du bras
+  { y: 0, rx: .027 * L, rz: .031 * L, os: [F] }, { y: .06, rx: .031 * L, rz: .035 * L, os: [F] }, { y: a * .65, rx: .04 * L, rz: .044 * L, os: [F] },
+  { y: a - .035, rx: .039 * L, rz: .042 * L, os: [F, B, .2] }, { y: a, rx: .039 * L, rz: .043 * L, os: [F, B, .5] }, { y: a + .04, rx: .041 * L, rz: .045 * L, os: [B, F, .2] },
+  { y: a + g.L1 * .5, rx: .047 * L, rz: .052 * L, os: [B] }, { y: T - .075, rx: .052 * L, rz: .058 * L, os: [B] }, { y: T - .03, rx: .05 * L, rz: .056 * L, os: [B, 'poitrine', .25] },
+  { y: T + .006, rx: .043 * L, rz: .049 * L, os: [B, 'poitrine', .4] }, { y: T + .03, rx: .029 * L, rz: .034 * L, os: [B, 'poitrine', .5] }, { y: T + .043, rx: .012 * L, rz: .015 * L, os: [B, 'poitrine', .5] }]; }
+const T0 = [[-.02, .045, .05, 0], [0, .043, .056, .022], [.03, .062, .078, .012], [.07, .072, .09, .004], [.11, .076, .096, 0], [.15, .077, .099, -.004], [.19, .072, .096, -.008], [.215, .052, .074, -.01], [.226, .02, .03, -.01]];   // tête : y, rx, rz, dz depuis le menton
+
+/* ---------------------------------------------------------------- tenues */
+const TENUES = {
+  civil:      { haut: ['toile', '#5b6c7d'], bas: ['toile', '#2b3140'], pied: ['cuir', '#2a2019'], manches: 'courtes', ceinture: 'cuir' },
+  combat:     { haut: ['toile', '#4b4f38'], bas: ['toile', '#42452f'], pied: ['cuir', '#1c1a17'], manches: 'longues', bottes: .3, gilet: '#2c2e26', casque: 'combat', gants: '#1b1b19', genoux: '#26261f', ceinture: 'toile' },
+  soldat:     { haut: ['laine', '#6c6442'], bas: ['laine', '#665e3e'], pied: ['cuir', '#3a2416'], manches: 'longues', bottes: .4, bande: '#746a48', casque: 'plat', sac: '#5e5638', ceinture: 'cuir' },
+  villageois: { haut: ['lin', '#9c8c64'], bas: ['laine', '#5a4630'], pied: ['cuir', '#4a3220'], manches: 'longues', basque: .66, ceinture: 'cuir', coiffe: 'capuche',
+                femme: { robe: .11, tablier: '#c9c0a4', coiffe: 'coiffe', basque: 0, haut: ['laine', '#6e4a3a'] } },
+  noble:      { haut: ['velours', '#17131a'], bas: ['toile', '#131116'], pied: ['cuir', '#0e0c0c'], manches: 'longues', cape: ['#121015', '#7a1420'], jabot: 1,
+                femme: { robe: .03, ampleur: .2, haut: ['velours', '#5e1424'], cape: 0, jabot: 0, collier: 1 } },
+  chevalier:  { haut: ['toile', '#8c1c1c'], bas: ['acier'], pied: ['acier'], manches: 'armure', basque: .6, casque: 'heaume', gants: 'acier', spalieres: 1, genoux: 'acier', ceinture: 'cuir', croix: '#d8cfae' },
+  foot:       { haut: ['toile', '#1c4fa0'], bas: ['toile', '#f2f2f0'], pied: ['cuir', '#141414'], manches: 'courtes', short: 1, bottes: .42, bande: '#1c4fa0' },
+  blouse:     { haut: ['toile', '#e6e6e0'], bas: ['toile', '#3a4048'], pied: ['cuir', '#2a2019'], manches: 'longues', basque: .52 },
+  victorien:  { haut: ['laine', '#2c2c30'], bas: ['laine', '#3a3a40'], pied: ['cuir', '#141210'], manches: 'longues', basque: .6, jabot: 1, casque: 'melon',
+                femme: { robe: .04, ampleur: .16, basque: 0, jabot: 0, casque: 0, haut: ['laine', '#3a2a40'] } },
+  moine:      { haut: ['laine', '#3b2d21'], bas: ['laine', '#2a2018'], pied: ['cuir', '#3a2a1c'], manches: 'amples', robe: .09, coiffe: 'capuche', ceinture: 'corde' }
+};
+fab.tenues = TENUES;
+
+function casque(b, g, type, mm) {
+  const y = g.yM, t = g.te; b.lier('tete');
+  if (type === 'combat') { const c = mm('peinture', { couleur: '#4a4f36', rugosite: .85 });
+    b.sphere(c, .11 * t, 0, y + .15 * t, -.008 * t, { s: [1, 1, 1.14], phi0: PI * .5, seg: 14, seg2: 6 }); b.tore(c, .11 * t, .006, 0, y + .15 * t, -.008 * t, { s: [1, 1, 1.14], seg: 14, seg2: 5 });
+  } else if (type === 'plat') { const c = mm('peinture', { couleur: '#57593c', rugosite: .7 });
+    b.sphere(c, .1 * t, 0, y + .16 * t, -.008 * t, { s: [1, .66, 1.12], phi0: PI * .5, seg: 14, seg2: 5 });
+    b.tour(c, [[.096 * t, .002], [.152 * t, -.014], [.154 * t, -.007], [.098 * t, .01]], 0, y + .16 * t, -.008 * t, { s: [1, 1, 1.1], ferme: true, seg: 16, ch: .002 });
+  } else if (type === 'melon' || type === 'haut_de_forme') { const c = fab.mat('polymere', { couleur: '#121214', rugosite: .55, etat: .2 });
+    b.tour(c, (type === 'melon' ? [[.118, 0], [.121, .006], [.086, .012], [.083, .05], [.076, .09], [.05, .11], [0, .115]] : [[.125, 0], [.128, .006], [.086, .012], [.084, .15], [.088, .16], [0, .16]]).map(p => [p[0] * t, p[1] * t]), 0, y + .168 * t, -.008 * t, { seg: 16, s: [.95, 1, 1.15], ch: .002 });
+  } else if (type === 'heaume') { const c = mm('acier', { couleur: '#a2a6a9', rugosite: .3 }), n = fab.mat('polymere', { couleur: '#070707', rugosite: .9, etat: 0 });
+    b.tour(c, [[0, -.035], [.1, -.035], [.108, .02], [.112, .13], [.106, .2], [.085, .238], [0, .246]].map(p => [p[0] * t, p[1] * t]), 0, y, -.004, { seg: 16, s: [.95, 1, 1.1] });
+    b.tore(n, .1105 * t, .005, 0, y + .135 * t, -.004, { s: [.95, 1, 1.1], a0: PI / 2 - .95, a1: PI / 2 + .95, seg: 12, seg2: 5 });
+    b.boite(mm('laiton'), .014 * t, .2 * t, .008, 0, y + .1 * t, .121 * t, { r: .002 }); b.boite(mm('laiton'), .1 * t, .012, .008, 0, y + .16 * t, .119 * t, { r: .002 });
+  }
+}
+
+/* ---------------------------------------------------------------- squelette d'os */
+function crane(b, os, noir, dents, y0, t) { // y0 = hauteur du menton, t = échelle
+  b.loft(os, [[.058, .04, .05, -.022], [.075, .062, .08, -.008], [.11, .0725, .093, -.002], [.15, .0745, .096, -.005], [.19, .07, .094, -.008], [.215, .05, .072, -.01], [.226, .018, .028, -.01]]
+    .map(h => ({ y: y0 + h[0] * t, rx: h[1] * t, rz: h[2] * t, dz: h[3] * t, n: 2.2 })), 0, 0, 0, { seg: 14 });
+  b.loft(os, [{ y: y0 + .036 * t, rx: .034 * t, rz: .028 * t, dz: .052 * t, n: 2.6 }, { y: y0 + .085 * t, rx: .05 * t, rz: .04 * t, dz: .046 * t, n: 2.4 }], 0, 0, 0, { seg: 10 });
+  b.loft(os, [{ y: y0 - .012 * t, rx: .03 * t, rz: .034 * t, dz: .04 * t, n: 2.6 }, { y: y0 + .022 * t, rx: .046 * t, rz: .05 * t, dz: .03 * t, n: 2.6 }], 0, 0, 0, { seg: 10 });
+  b.boite(dents, .056 * t, .014 * t, .05 * t, 0, y0 + .03 * t, .05 * t, { r: .004 });
+  for (const sg of [1, -1]) { b.sphere(noir, .021 * t, sg * .031 * t, y0 + .124 * t, .074 * t, { s: [1.12, 1, .62], seg: 8, seg2: 5 }); b.boite(os, .012 * t, .06 * t, .028 * t, sg * .056 * t, y0 + .04 * t, 0, { rot: [.25, 0, 0], r: .004 }); }
+  b.prisme(noir, [[-.011 * t, 0], [.011 * t, 0], [0, .03 * t]], .012 * t, 0, y0 + .078 * t, .088 * t, { plan: 'xy' });
+}
+fab._crane = crane;
+function ossature(b, g, m, o) {
+  const k = g.k, t = g.te * .95, os = m('os'), noir = fab.mat('polymere', { couleur: '#090807', rugosite: .95, etat: 0 });
+  const long = (A, B, r, r2) => { b.tuyau(os, [A, B], [r, r2 || r], { seg: 6, bouts: false }); b.sphere(os, r * 1.5, A[0], A[1], A[2], { seg: 6, seg2: 4 }); b.sphere(os, (r2 || r) * 1.5, B[0], B[1], B[2], { seg: 6, seg2: 4 }); };
+  for (let i = 0; i < 17; i++) { const y = mx(.965 * k, 1.545 * k, i / 16), z = -.045 - .028 * Math.sin((y - .95 * k) / (.6 * k) * PI) + .04 * ss(1.4 * k, 1.56 * k, y);   // colonne vertébrale
+    if (y < g.yT) b.lier('bassin', 'colonne', ss(.95 * k, g.yT, y)); else if (y < g.yP) b.lier('colonne', 'poitrine', ss(g.yT, g.yP, y)); else if (y < g.yN) b.lier('poitrine', 'cou', ss(g.yP + .1, g.yN, y)); else b.lier('cou', 'tete', ss(g.yN, g.yM, y) * .6);
+    b.cyl(os, y > g.yN ? .013 : .019, .026 * k, 0, y, z, { seg: 6, ch: .003 }); b.boite(os, .012, .014, .03, 0, y, z - .026, { r: .003 }); }
+  [.07, .098, .116, .127, .131, .128, .118, .104].forEach((R, i) => { const y = (1.43 - i * .037) * k, gap = i > 5 ? 1 : .2 + i * .02;                                            // côtes
+    if (y > g.yP - .02) b.lier('poitrine'); else b.lier('colonne', 'poitrine', .5);
+    b.tore(os, R * g.th, .0075, 0, y, .022, { s: [1, 1, .74], rot: [.3, 0, 0], a0: PI / 2 + gap, a1: PI / 2 + 2 * PI - gap, seg: 14, seg2: 5 }); });
+  b.lier('poitrine'); b.boite(os, .034, .16 * k, .012, 0, 1.33 * k, .108, { rot: [-.12, 0, 0], r: .004 });
+  b.lier('bassin'); b.tore(os, .112 * g.ha, .015, 0, .99 * k, -.012, { s: [1, 1, .72], rot: [-.3, 0, 0], a0: PI / 2 + .55, a1: PI / 2 + 2 * PI - .55, seg: 14, seg2: 5 });
+  b.tuyau(os, [[-.085, .905 * k, .02], [0, .875 * k, .07], [.085, .905 * k, .02]], .011, { coude: .06, seg: 6 }); b.boite(os, .075, .1 * k, .03, 0, .955 * k, -.07, { rot: [-.25, 0, 0], r: .01 });
+  for (const [n, sg] of [['g', 1], ['d', -1]]) {
+    b.lier('bassin'); b.sphere(os, .07, sg * .098 * g.ha, .94 * k, -.012, { s: [.28, 1, .85], seg: 8, seg2: 5 });
+    b.lier('poitrine'); b.tuyau(os, [[sg * .018, 1.425 * k, .1], [sg * g.xS * .6, 1.45 * k, .06], [sg * g.xS, g.yS + .012, 0]], .008, { seg: 6, coude: .05 });
+    b.prisme(os, [[0, .05], [sg * .08, .04], [sg * .015, -.075]], .008, sg * .04, 1.385 * k, -.098, { plan: 'xy' });
+    const S = [sg * g.xS, g.yS, 0], d = [sg * SA, -CA], Ec = [S[0] + d[0] * g.L1, S[1] + d[1] * g.L1, 0], W = [sg * g.wx, g.wy, 0];
+    b.lier('bras_' + n); long(S, Ec, .0135, .012);
+    b.lier('avant_bras_' + n); for (const dz of [-.011, .011]) b.tuyau(os, [[Ec[0], Ec[1], dz], [W[0], W[1], dz * .8]], [.0085, .007], { seg: 5 });
+    b.lier('main_' + n); b.sphere(os, .016, W[0], W[1], 0, { seg: 6, seg2: 4, s: [.8, .7, 1.5] });
+    for (let i = 0; i < 5; i++) { const zz = (i - 1.5) * .013 + (i === 4 ? .012 : 0), L = (i === 4 ? .1 : .17 - Math.abs(i - 1.5) * .012) * k;
+      b.tuyau(os, [[W[0] + d[0] * .02, W[1] + d[1] * .02, zz * .6], [W[0] + d[0] * L * .6 - sg * .006, W[1] + d[1] * L * .6, zz * 1.3], [W[0] + d[0] * L - sg * .03, W[1] + d[1] * L, zz * 1.5]], [.0055, .0035], { seg: 4, coude: .03 }); }
+    const x = sg * g.xH; b.lier('cuisse_' + n); long([x * 1.12, g.yH, 0], [x, g.yG + .012, 0], .0165, .017);
+    b.lier('jambe_' + n); long([x - sg * .006, g.yG - .014, 0], [x - sg * .004, g.yC + .012, 0], .0155, .011); b.tuyau(os, [[x + sg * .028, g.yG - .03, -.008], [x + sg * .022, g.yC + .01, -.006]], .006, { seg: 5 });
+    b.lier('jambe_' + n, 'cuisse_' + n, .5); b.sphere(os, .021, x, g.yG, .026, { s: [1, 1.15, .6], seg: 6, seg2: 4 });
+    b.lier('pied_' + n); b.boite(os, .05, .042, .08, x, .046, -.014, { r: .012 });
+    for (let i = 0; i < 5; i++) { const xx = x + sg * (i - 2) * .0125; b.tuyau(os, [[xx, .05, .02], [xx + sg * (i - 2) * .004, .02, .11], [xx + sg * (i - 2) * .008, .009, .19 - Math.abs(i - 1) * .013]], [.007, .004], { seg: 4, coude: .04 }); }
+  }
+  b.lier('tete'); crane(b, os, noir, fab.mat('os', { couleur: '#e9e2cc', etat: o.etat * .4 }), g.yM, t);
+}
+
+/* ---------------------------------------------------------------- le personnage */
+function personnage(b, o, m) {
+  const g = gabarit(o), k = g.k, f = g.f, te = g.te, nat = o.nature || 'vivant', mort = nat === 'mort_vivant';
+  const T = Object.assign({}, TENUES[o.tenue] || TENUES.civil); if (f && T.femme) Object.assign(T, T.femme);
+  const al = FAB.alea((o.graine | 0) * 131 + 17);
+  b.squelette(listeOs(g)); b.perso = { yH: g.yH, yS: g.yS, xS: g.xS, L1: g.L1, L2: g.L2, k, sexe: f ? 'femme' : 'homme', nature: nat, stature: o.stature };
+  const E = mort ? Math.min(1, .45 + o.etat * .6) : o.etat, mm = (n, mo) => fab.mat(n, Object.assign({ etat: E, humide: o.humide }, mo));
+  if (nat === 'squelette') { ossature(b, g, m, o); if (o.casque) casque(b, g, typeof o.casque === 'string' ? o.casque : 'plat', (n, mo) => m(n, Object.assign({}, mo, { etat: Math.min(1, o.etat + .35) }))); return; }
+  const tissu = (d, c) => d[0] === 'acier' ? mm('acier', { couleur: '#a2a6a9', rugosite: .3 }) : mm(d[0], { couleur: c || d[1] });
+  const peau = mort ? mm('peau_morte') : fab.mat(o.peau || 'peau', { etat: o.etat * .5, humide: o.humide });
+  const haut = tissu(T.haut, o.couleur), bas = tissu(T.bas, o.couleur2), pied = T.pied[0] === 'acier' ? bas : mm(T.pied[0], { couleur: T.pied[1], salete: .15, usure: .25 });
+  const CH = ['#2a1c12', '#4a3220', '#6b4a2a', '#1a1614', '#8a6a3a', '#5a2a18', '#b8a070'];
+  const chev = fab.mat('cheveux', { couleur: o.cheveux || CH[Math.floor(al() * CH.length)], etat: mort ? .8 : .1 });
+  const ST = sTronc(g), armure = T.manches === 'armure';
+
+  /* jupe, robe, basque de tunique, tablier : un tour lié au bassin en haut, aux cuisses en bas */
+  const jupe = (mat, y0, amp, e, arc, ep, yRef) => { const S = [], n = 6, y1 = g.yT + .012, ref = yRef === undefined ? y0 : yRef;
+    for (let i = n; i >= 0; i--) { const y = mx(y1, y0, i / n), tt = (y1 - y) / (y1 - ref), h = ss(0, .3, tt), fl = amp * Math.pow(tt, 1.2), w = Math.min(.7, Math.max(0, tt - .12) * 1.15);
+      S.push({ y, rx: mx(.15 * g.ta, .172 * g.ha, h) + e + fl, rz: mx(.1 * g.ta, .114 * g.ha, h) + e + fl * .9, dz: -.004,
+        os: w > 0 ? (c => ['bassin', c >= 0 ? 'cuisse_g' : 'cuisse_d', w * Math.min(1, Math.abs(c) * 2.2)]) : ['bassin', 'colonne', i ? 0 : .5] }); }
+    b.loft(mat, S, 0, 0, 0, { seg: 18, fond: false, dessus: false, arc, ep }); };
+
+  for (const [n, sg] of [['g', 1], ['d', -1]]) {                                                                   // jambes et chaussures
+    const x = sg * g.xH, SJ = sJambe(g, n, sg);
+    if (T.short) { b.loft(peau, SJ, x, 0, 0, { seg: 12, fond: false }); b.loft(bas, gonfler(couper(SJ, .6 * k, 9), .012), x, 0, 0, { seg: 12, fond: false }); }
+    else b.loft(bas, gonfler(SJ, armure ? .008 : .004), x, 0, 0, { seg: 12, fond: false });
+    if (T.bottes) b.loft(T.bande ? mm('toile', { couleur: T.short && o.couleur ? o.couleur : T.bande }) : pied, gonfler(couper(SJ, .072 * k, T.bottes * k), .009), x, 0, 0, { seg: 12, fond: false });
+    if (T.genoux) { b.lier('jambe_' + n, 'cuisse_' + n, .5); b.sphere(T.genoux === 'acier' ? bas : mm('polymere', { couleur: T.genoux, rugosite: .7 }), .06 * g.l, x, g.yG, .012, { s: [1, 1.2, 1], seg: 8, seg2: 5 }); }
+    const q = k * (f ? .95 : 1), P = 'pied_' + n;
+    b.loft(pied, [[-.072, .028, .024, .034], [-.06, .036, .034, .037], [-.02, .043, .043, .044], [.035, .046, .04, .041], [.095, .05, .03, .031], [.155, .047, .024, .025], [.19, .034, .018, .019], [.2, .014, .01, .014]]
+      .map(s => ({ y: s[0] * q, rx: s[1] * q, rz: s[2] * q, dz: -s[3] * q, n: 2.6, os: [P] })), x, 0, 0, { seg: 10, vers: 'z+' });
+  }
+  b.loft(bas, couper(ST, 0, g.yT + .005), 0, 0, 0, { seg: 16, dessus: false });                                    // bassin, buste
+  b.loft(haut, gonfler(couper(ST, g.yT - .03, 9), .004), 0, 0, 0, { seg: 16, fond: false });
+  if (T.robe) jupe(haut, T.robe * k, T.ampleur || .1, .014, null, .006);
+  else if (T.basque) jupe(haut, T.basque * k, .014, .016);
+  if (T.tablier) jupe(mm('lin', { couleur: T.tablier }), .27 * k, T.ampleur || .1, .024, [PI / 2 - .8, PI / 2 + .8], 0, T.robe * k);
+
+  for (const [n, sg] of [['g', 1], ['d', -1]]) {                                                                   // bras et mains
+    const SB = sBras(g, n), tr = { seg: 10, rot: [0, 0, sg * A0] }, X = sg * g.wx, Y = g.wy, a = g.L2, mn = T.manches;
+    if (armure) { b.loft(bas, gonfler(SB, .008), X, Y, 0, tr); b.lier('avant_bras_' + n, 'bras_' + n, .5); b.sphere(bas, .05 * g.l, sg * (g.xS + SA * g.L1), g.yS - CA * g.L1, -.012, { seg: 8, seg2: 5 }); }
+    else if (mn === 'courtes' || (mort && n === 'g' && mn === 'longues')) { b.loft(peau, couper(SB, 0, a + g.L1 * .55), X, Y, 0, tr); b.loft(haut, gonfler(couper(SB, a + g.L1 * .45, 9), .006), X, Y, 0, tr); }
+    else if (mn === 'amples') b.loft(haut, SB.map(s => Object.assign({}, s, { rx: s.rx + .006 + .04 * ss(a + .1, 0, s.y), rz: s.rz + .006 + .05 * ss(a + .1, 0, s.y) })), X, Y, 0, tr);
+    else b.loft(haut, gonfler(SB, .005), X, Y, 0, tr);
+    const gm = T.gants ? (T.gants === 'acier' ? bas : mm('cuir', { couleur: T.gants })) : peau, h = k * (f ? .95 : 1) * (T.gants ? 1.08 : 1), c = -sg, M = 'main_' + n;
+    b.loft(gm, [[-.182, .007, .02, .03], [-.165, .011, .032, .021], [-.125, .013, .039, .007], [-.085, .016, .042, 0], [-.045, .019, .04, 0], [-.008, .023, .031, 0], [.016, .025, .029, 0]]
+      .map((s, i) => ({ y: s[0] * h, rx: s[1] * h, rz: s[2] * h, dx: c * s[3] * h, os: i === 6 ? [M, 'avant_bras_' + n, .5] : [M] })), X, Y, 0, { seg: 8, rot: [0, 0, sg * A0] });
+    b.groupe([X, Y, 0], [0, 0, sg * A0], b => { b.lier(M); b.tuyau(gm, [[c * .008, -.03 * h, .028 * h], [c * .018, -.07 * h, .052 * h], [c * .03, -.105 * h, .05 * h]], [.0125 * h, .008 * h], { coude: .02, seg: 6 }); });
+  }
+
+  b.loft(peau, [{ y: g.yN - .03 * k, rx: .058 * te, rz: .06 * te, dz: -.006, os: ['poitrine', 'cou', .4] }, { y: g.yN + .02 * k, rx: .051 * te, rz: .055 * te, os: ['cou'] },                // cou
+    { y: g.yM + .01, rx: .05 * te, rz: .056 * te, dz: .004, os: ['cou', 'tete', .5] }, { y: g.yM + .05 * te, rx: .05 * te, rz: .054 * te, os: ['tete'] }], 0, 0, 0, { seg: 10 });
+  const coiffe = o.casque === false ? null : typeof o.casque === 'string' ? o.casque : T.casque || T.coiffe, y0 = g.yM;
+  const calotte = (mat, e, front, yb, dessous) => { const S = (dessous || []).slice();                              // cheveux, capuche, coiffe : une coque autour du crâne, ouverte sur le visage
+    for (const h of T0) { if (h[0] < yb - 1e-6) continue; const back = -(h[2] - h[3]) - e, fr = Math.min(h[2] + h[3] + e, front(h[0])); if (fr - back < .012) continue;
+      S.push({ y: y0 + h[0] * te, rx: (h[1] + e) * te, rz: (fr - back) / 2 * te, dz: (fr + back) / 2 * te, n: 2.25, os: ['tete'] }); }
+    const d = S[S.length - 1]; S.push({ y: d.y + e * te, rx: d.rx * .5, rz: d.rz * .5, dz: d.dz, os: ['tete'] });
+    b.loft(mat, S, 0, 0, 0, { seg: 12 }); };
+  if (coiffe !== 'heaume') {
+    b.loft(peau, T0.map(h => ({ y: y0 + h[0] * te, rx: h[1] * te, rz: h[2] * te, dz: h[3] * te, n: 2.25, os: ['tete'] })), 0, 0, 0, { seg: 14 });
+    b.lier('tete'); const blanc = fab.mat('polymere', { couleur: '#d9d5c9', rugosite: .22, etat: 0 }), iris = fab.mat('polymere', { couleur: mort ? '#c9c9b9' : '#231a12', rugosite: .2, etat: 0 });
+    b.prisme(peau, [[0, 0], [.02 * te, .003 * te], [.027 * te, .012 * te], [0, .058 * te]], .028 * te, 0, y0 + .083 * te, .088 * te, { plan: 'zy', lisse: true });
+    for (const sg of [1, -1]) { b.sphere(blanc, .0115 * te, sg * .031 * te, y0 + .128 * te, .0805 * te, { seg: 8, seg2: 5 }); b.sphere(iris, .0062 * te, sg * .031 * te, y0 + .128 * te, .0875 * te, { seg: 6, seg2: 4 });
+      b.boite(chev, .036 * te, .007 * te, .012 * te, sg * .032 * te, y0 + .147 * te, .089 * te, { rot: [0, 0, -sg * .08], r: 0 });
+      b.sphere(peau, .03 * te, sg * .078 * te, y0 + .105 * te, -.008 * te, { s: [.3, 1, .62], seg: 8, seg2: 5 }); }
+    b.boite(mm('polymere', { couleur: mort ? '#2a1414' : '#7a3d36', rugosite: .5 }), .044 * te, (mort ? .014 : .006) * te, .01 * te, 0, y0 + .05 * te, .088 * te, { r: 0 });
+    const cf = o.coiffure || (mort && al() < .35 ? 'chauve' : f ? 'long' : 'court');
+    if (cf === 'long' && !coiffe) calotte(chev, .012, y => y < .14 ? mx(-.005, .04, ss(0, .14, y)) : y < .19 ? mx(.04, .092, ss(.14, .185, y)) : 9, -.02,
+      [{ y: y0 - .16 * k, rx: .07, rz: .028, dz: -.098, os: ['tete', 'poitrine', .6] }, { y: y0 - .08 * k, rx: .088, rz: .04, dz: -.082, os: ['tete', 'poitrine', .3] }]);
+    else if (cf !== 'chauve') calotte(chev, mort ? .006 : .009, y => y < .13 ? mx(-.025, .03, ss(.05, .13, y)) : y < .19 ? mx(.03, .09, ss(.13, .185, y)) : 9, .05);
+    if (cf === 'chignon') b.sphere(chev, .045 * te, 0, y0 + .15 * te, -.115 * te, { seg: 10, seg2: 6 });
+  }
+  if (coiffe === 'capuche') calotte(haut, .024, y => y < .16 ? mx(.045, .075, ss(-.02, .16, y)) : 9, -.02,
+    [{ y: g.yS - .09 * k, rx: g.xS + .062, rz: .15, dz: -.005, os: ['poitrine'] }, { y: g.yS + .005, rx: g.xS + .05, rz: .13, dz: -.01, os: ['poitrine'] }, { y: g.yN + .025, rx: .095, rz: .1, dz: -.01, os: ['poitrine', 'cou', .5] }]);
+  else if (coiffe === 'coiffe') calotte(mm('lin', { couleur: '#d2cab2' }), .014, y => y < .15 ? .015 : y < .19 ? mx(.015, .085, ss(.15, .19, y)) : 9, .05);
+  else if (coiffe) casque(b, g, coiffe, mm);
+
+  if (T.ceinture) { const yb = g.yT - .025 * k, r = en(ST, yb), e = T.basque || T.robe ? .023 : .009, cm = T.ceinture === 'corde' ? mm('corde') : T.ceinture === 'toile' ? mm('toile', { couleur: '#2a2a22' }) : mm('cuir');
+    b.loft(cm, [-.022, .022].map(d => ({ y: yb + d * k, rx: r.rx + e, rz: r.rz + e, dz: r.dz, os: ['bassin', 'colonne', .45] })), 0, 0, 0, { seg: 16, fond: false, dessus: false });
+    if (T.ceinture === 'cuir') { b.lier('bassin', 'colonne', .45); b.boite(mm('laiton'), .046, .04, .012, 0, yb, (r.dz || 0) + r.rz + e + .003, { r: .003 }); } }
+  if (T.gilet) { const gm = mm('toile', { couleur: T.gilet }), r = en(ST, 1.19 * k); b.loft(gm, gonfler(couper(ST, g.yT + .02 * k, 1.45 * k), .02, .024), 0, 0, 0, { seg: 16 });
+    b.lier('colonne', 'poitrine', .3); for (const x of [-.085, 0, .085]) b.boite(gm, .07, .12 * k, .04, x, 1.19 * k, (r.dz || 0) + r.rz + .036, { r: .008 }); }
+  if (T.sac) { b.lier('poitrine'); b.boite(mm('toile', { couleur: T.sac }), .27, .3 * k, .12, 0, 1.3 * k, -.172, { r: .02 }); }
+  if (T.cape) { const ce = mm('toile', { couleur: T.cape[0] }), ci = mm('velours', { couleur: T.cape[1] }), a = 1.5 * PI;
+    b.loft(ce, [[.16 * k, g.xS + .13, .215, -.06, ['bassin']], [g.yG, g.xS + .115, .195, -.05, ['bassin']], [g.yH, g.xS + .095, .175, -.04, ['colonne', 'bassin', .6]], [g.yP, g.xS + .078, .155, -.03, ['poitrine', 'colonne', .5]],
+      [g.yS + .012, g.xS + .052, .128, -.02, ['poitrine']], [g.yN + .01, .088, .088, -.012, ['poitrine']]].map(s => ({ y: s[0], rx: s[1], rz: s[2], dz: s[3], os: s[4] })), 0, 0, 0, { seg: 18, arc: [a - 2.05, a + 2.05], ep: .012, matInt: ci });
+    b.loft(ce, [{ y: g.yN - .01, rx: .078, rz: .082, dz: -.012, os: ['poitrine'] }, { y: g.yM + .035 * te, rx: .098, rz: .108, dz: -.02, os: ['poitrine'] }, { y: g.yM + .085 * te, rx: .118, rz: .128, dz: -.026, os: ['poitrine'] }],
+      0, 0, 0, { seg: 14, arc: [a - 1.85, a + 1.85], ep: .008, matInt: ci }); }
+  if (T.jabot) { b.lier('poitrine'); const r = en(ST, 1.4 * k); b.boite(mm('lin', { couleur: '#d8d2c2' }), .075, .11 * k, .022, 0, 1.4 * k, (r.dz || 0) + r.rz + .006, { r: .008 }); }
+  if (T.collier) { b.lier('poitrine'); b.tore(mm('or'), .072, .004, 0, g.yN - .012, .012, { s: [1, 1, .95], rot: [.55, 0, 0], seg: 16, seg2: 5 }); }
+  if (o.boulons) { b.lier('cou'); for (const sg of [1, -1]) b.cyl(fab.mat('acier', { etat: .6 }), .012, .05, sg * .066 * te, g.yN + .03 * k, 0, { vers: 'x+', seg: 6 }); }
+  if (o.numero !== undefined) { b.lier('poitrine'); const r = en(ST, 1.3 * k); b.plaque({ t: String(o.numero), style: 'pochoir', couleur: '#f4f4f0' }, .17, .17, 0, 1.3 * k, (r.dz || 0) - r.rz - .0065, { vers: 'z-' }); }
+  if (T.spalieres) for (const sg of [1, -1]) { b.lier('bras_' + (sg > 0 ? 'g' : 'd'), 'poitrine', .3); b.sphere(bas, .078, sg * (g.xS + .016), g.yS + .004, 0, { s: [1.05, .82, 1.2], phi0: PI * .42, seg: 10, seg2: 5 }); }
+  if (T.croix) { const cm = mm('toile', { couleur: T.croix }); b.loft(cm, gonfler(couper(ST, 1.19 * k, 1.4 * k), .0075), 0, 0, 0, { seg: 3, arc: [PI / 2 - .11, PI / 2 + .11] });
+    b.loft(cm, gonfler(couper(ST, 1.31 * k, 1.352 * k), .0075), 0, 0, 0, { seg: 8, arc: [PI / 2 - .42, PI / 2 + .42] }); }
+}
+
+/* ---------------------------------------------------------------- animations
+   animer(personnage, nom, temps, {vitesse, ampleur, haut, arme})
+   nom  : repos, marche, course, errance (mort-vivant), attaque, garde, viser, gisant
+   haut : une autre animation pour le haut du corps (marcher en visant : animer(p, 'marche', t, {haut: 'viser'}))
+   arme : l'arme tenue, pour que la seconde main trouve le garde-main */
+const qA = new THREE.Quaternion(), qB = new THREE.Quaternion(), mA = new THREE.Matrix4(), mB = new THREE.Matrix4(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), v4 = new THREE.Vector3(), v5 = new THREE.Vector3(), v6 = new THREE.Vector3(), v7 = new THREE.Vector3();
+const QV = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -PI / 2);
+function ik(G, c, cible, pole, qMain, dehors) { // amène le poignet sur une cible donnée dans le repère du corps debout ; pole = côté vers lequel part le coude
+  const B = G.userData.os, R = G.userData.perso, sg = c === 'g' ? 1 : -1, bras = B['bras_' + c], av = B['avant_bras_' + c], main = B['main_' + c], L1 = R.L1, L2 = R.L2;
+  mA.identity(); for (const n of ['bassin', 'colonne', 'poitrine']) { B[n].updateMatrix(); mA.multiply(B[n].matrix); }
+  qA.setFromRotationMatrix(mA); mB.copy(mA).invert();
+  v1.copy(cible).applyMatrix4(mB).sub(bras.position); const D = cl(v1.length(), Math.abs(L1 - L2) + .02, L1 + L2 - .003); v1.normalize();
+  const cA = cl((L1 * L1 + D * D - L2 * L2) / (2 * L1 * D), -1, 1), sA = Math.sqrt(1 - cA * cA);
+  v2.copy(pole).applyQuaternion(qB.copy(qA).invert()); v2.addScaledVector(v1, -v2.dot(v1)).normalize();
+  v3.copy(v1).multiplyScalar(cA).addScaledVector(v2, sA);
+  v4.set(sg * SA, -CA, 0); bras.quaternion.setFromUnitVectors(v4, v3);
+  v5.copy(v1).multiplyScalar(D).addScaledVector(v3, -L1).normalize().applyQuaternion(qB.copy(bras.quaternion).invert());
+  av.quaternion.setFromUnitVectors(v4, v5);
+  if (dehors) { // l'avant-bras tourne sur lui-même pour présenter son côté extérieur (le bouclier) vers « dehors »
+    qB.copy(qA).multiply(bras.quaternion).multiply(av.quaternion);
+    const f = v1.copy(v4).applyQuaternion(qB).normalize(), cur = v2.set(sg, 0, 0).applyQuaternion(qB), des = v3.copy(dehors);
+    cur.addScaledVector(f, -cur.dot(f)).normalize(); des.addScaledVector(f, -des.dot(f)).normalize();
+    av.quaternion.multiply(qB.setFromAxisAngle(v4, Math.atan2(v5.crossVectors(cur, des).dot(f), cur.dot(des)))); }
+  if (qMain) main.quaternion.copy(qA).multiply(bras.quaternion).multiply(av.quaternion).invert().multiply(qMain);
+}
+fab.animations = ['repos', 'marche', 'course', 'errance', 'attaque', 'garde', 'viser', 'arc', 'gisant'];
+fab.animer = function (G, nom, t, o) {
+  const B = G.userData.os, R = G.userData.perso; if (!B || !R) return G; o = o || {};
+  const v = o.vitesse === undefined ? 1 : o.vitesse, a = o.ampleur === undefined ? 1 : o.ampleur, s = Math.sin, c = Math.cos, haut = o.haut || nom;
+  for (const n in B) B[n].rotation.set(0, 0, 0); B.racine.position.set(0, 0, 0); B.bassin.position.y = R.yH;
+  const bras = (n, x, z, coude, y) => { const sg = n === 'g' ? 1 : -1; B['bras_' + n].rotation.set(x, sg * (y || 0), sg * z); B['avant_bras_' + n].rotation.x = coude; };
+  const jambe = (n, h, ge) => { B['cuisse_' + n].rotation.x = h; B['jambe_' + n].rotation.x = ge; B['pied_' + n].rotation.x = -(h + ge) * .55; };
+  let p = 0;
+  if (nom === 'marche' || nom === 'course') { const co = nom === 'course'; p = t * (co ? 9.5 : 5.2) * v;
+    for (const [n, ph] of [['g', p], ['d', p + PI]]) jambe(n, -(co ? .78 : .42) * a * s(ph) - (co ? .12 : 0), a * ((co ? .3 : .08) + (co ? 1.25 : .68) * Math.max(0, c(ph))));
+    B.bassin.position.y -= (co ? .035 : .026) * a * Math.abs(s(p)); B.bassin.rotation.set(co ? .1 : .02, -.07 * a * s(p), .025 * a * c(p)); B.colonne.rotation.set(co ? .14 : .02, .13 * a * s(p), -.02 * a * c(p));
+  } else if (nom === 'errance') { p = t * 2.4 * v; jambe('g', -.3 * a * s(p), .08 + .42 * Math.max(0, c(p))); jambe('d', .05 + .13 * a * s(p), .12);
+    B.bassin.position.y -= .02 * Math.abs(s(p)); B.bassin.rotation.set(.04, 0, .06 * s(p) + .04); B.colonne.rotation.set(.2 + .03 * s(t * 1.3), .05 * s(p), .1);
+  } else if (nom === 'arc') { jambe('g', -.2, .12); jambe('d', .2, .1); B.bassin.position.y -= .02; B.bassin.rotation.y = -.55;
+  } else if (nom === 'attaque' || nom === 'garde' || nom === 'viser') { jambe('g', -.26, .3); jambe('d', .2, .16); B.bassin.position.y -= .03; B.bassin.rotation.y = nom === 'viser' ? -.1 : -.2;
+  } else if (nom === 'gisant') { B.racine.rotation.x = -PI / 2; B.racine.position.set(0, .115, R.yH * .96);
+  } else { B.bassin.rotation.z = .015 * s(t * .6); B.colonne.rotation.z = -.015 * s(t * .6); }
+
+  if (haut === 'marche') { const q = s(p); bras('g', .4 * a * q, -.13, -.18 - .22 * Math.max(0, -q)); bras('d', -.4 * a * q, -.13, -.18 - .22 * Math.max(0, q)); B.tete.rotation.y = -.05 * a * q;
+  } else if (haut === 'course') { const q = s(p); bras('g', .95 * a * q, -.1, -1.45); bras('d', -.95 * a * q, -.1, -1.45); B.tete.rotation.x = -.12;
+  } else if (haut === 'errance') { bras('d', -1.25 + .08 * s(t * 1.7), .02, -.3); bras('g', -.4 + .12 * s(p + 1), -.1, -.55); B.main_d.rotation.x = -.5; B.main_g.rotation.z = .4;
+    B.tete.rotation.set(.1 + .06 * s(t * .9), .16 * s(t * .5), -.26); B.cou.rotation.x = .12;
+  } else if (haut === 'attaque') { const u = (((t * v / 1.15) % 1) + 1) % 1, e = x => x * x * (3 - 2 * x), w = u < .42 ? e(u / .42) : u < .56 ? 1 - e((u - .42) / .14) : 0, fl = u < .42 ? 0 : u < .56 ? e((u - .42) / .14) : 1 - e((u - .56) / .44);
+    bras('d', -.35 - 2.5 * w - .75 * fl, .12, -.25 - .85 * w + .1 * fl); B.main_d.rotation.x = 1.1 * fl + .2 * w; ik(G, 'g', v6.set(.02, R.yS - .26, .3), v7.set(1, -.35, .1), null, v1.set(0, 0, 1).clone());
+    B.colonne.rotation.y += -.32 * w + .3 * fl; B.colonne.rotation.x += .22 * fl - .06 * w; B.tete.rotation.y = .2 * w - .15 * fl;
+  } else if (haut === 'garde') { bras('d', -1 + .03 * s(t * 2), .2, -.75); B.main_d.rotation.x = .55; B.colonne.rotation.x += .08;
+    ik(G, 'g', v6.set(-.02, R.yS - .22, .34), v7.set(1, -.35, .1), null, v1.set(0, 0, 1).clone());
+  } else if (haut === 'viser') { const gd = (o.arme && o.arme.userData.points && o.arme.userData.points.garde) || [0, .045, .24];
+    B.colonne.rotation.y += -.22; B.colonne.rotation.x += .06; B.tete.rotation.set(.04, .2, -.1);
+    ik(G, 'd', v6.set(-.125, R.yS - .12, .25), v7.set(-.7, -1, -.25), QV);
+    ik(G, 'g', v6.set(-.093 + gd[0], R.yS - .132 + gd[1], .25 + gd[2]), v7.set(.5, -1, 0), QV);
+  } else if (haut === 'arc') { B.colonne.rotation.y += -.6; B.cou.rotation.y = .5; B.tete.rotation.y = .6;
+    ik(G, 'g', v6.set(.07, R.yS - .01, .6), v7.set(1, -.3, 0), QV); ik(G, 'd', v6.set(.0, R.yS + .0, .1), v7.set(-.2, -.2, -1), QV);
+  } else if (haut === 'gisant') { ik(G, 'g', v6.set(-.04, R.yS - .2, .15), v7.set(1, -.5, -.3)); ik(G, 'd', v6.set(.04, R.yS - .27, .16), v7.set(-1, -.5, -.3));
+  } else { bras('g', .03 + .015 * s(t * 1.1), -.14, -.16); bras('d', .03 - .015 * s(t * 1.1), -.14, -.16); B.poitrine.rotation.x = .012 * s(t * 1.6); B.tete.rotation.set(.02 * s(t * .8), .1 * s(t * .45), 0); }
+  return G;
+};
+/* equiper(personnage, objet, os, prise) : attache un objet à un os (par défaut la main droite) ; il suit ensuite les animations.
+   prise 'porte' : le long de l'objet en travers de la main (épée, torche) ; 'poing' : dans l'axe de l'avant-bras (arme à feu).
+   Sur 'avant_bras_g' l'objet est plaqué à l'extérieur du bras (bouclier) ; sur 'poitrine' il est porté dans le dos. */
+fab.equiper = function (G, obj, nomOs, prise) {
+  const B = G.userData.os, R = G.userData.perso; nomOs = nomOs || 'main_d'; const os = B && B[nomOs]; if (!os) throw new Error('FABRIQUE : os inconnu « ' + nomOs + ' »');
+  const sg = /_g$/.test(nomOs) ? 1 : -1; prise = prise || (fab.catalogue[obj.userData.fab] || {}).prise || 'porte';
+  obj.position.set(0, 0, 0); obj.rotation.set(0, 0, 0);
+  if (/^main/.test(nomOs)) { obj.position.set(sg * (SA * .085 - .022), -CA * .085, .004); if (prise === 'poing') obj.rotation.x = PI / 2; }
+  else if (/^avant_bras/.test(nomOs)) { obj.position.set(sg * (SA * R.L2 * .55 + .05), -CA * R.L2 * .55, 0); obj.rotation.set(0, sg * PI / 2, sg * PI / 2); }
+  else if (nomOs === 'poitrine') { obj.position.set(0, .1, -.15); obj.rotation.set(0, PI / 2, -.9); }
+  os.add(obj); return obj;
+};
+
+/* ---------------------------------------------------------------- catalogue */
+const OPT = { sexe: ['homme', 'femme'], tenue: Object.keys(TENUES), nature: ['vivant', 'mort_vivant', 'squelette'] };
+const P = (nom, titre, univers, def, note) => fab.enregistrer(nom, { titre, groupe: 'Personnages', surface: 'chair', univers, options: OPT, defauts: def, anime: true, note,
+  apres: (G, o, b) => { G.userData.perso = b.perso; if (b.perso.stature) G.scale.setScalar(b.perso.stature / (1.78 * b.perso.k)); fab.animer(G, 'repos', 0); } }, (b, o, m) => personnage(b, Object.assign({}, def, o), m));
+P('homme', 'Homme', ['retrofutur', 'tarkov', 'guerre'], { sexe: 'homme', tenue: 'civil', nature: 'vivant' }, 'Options : sexe, tenue, nature, couleur, couleur2, peau, cheveux, coiffure, corpulence, stature, casque.');
+P('femme', 'Femme', ['retrofutur', 'tarkov', 'guerre'], { sexe: 'femme', tenue: 'civil', nature: 'vivant' });
+P('villageois', 'Villageois', ['camelot', 'dracula'], { sexe: 'homme', tenue: 'villageois', nature: 'vivant' });
+P('villageoise', 'Villageoise', ['camelot', 'dracula'], { sexe: 'femme', tenue: 'villageois', nature: 'vivant' });
+P('chevalier', 'Chevalier', ['camelot', 'catacombes'], { sexe: 'homme', tenue: 'chevalier', nature: 'vivant' });
+P('comte', 'Comte', ['dracula'], { sexe: 'homme', tenue: 'noble', nature: 'vivant', peau: 'peau_claire', cheveux: '#15110f' });
+P('dame', 'Dame', ['dracula', 'camelot'], { sexe: 'femme', tenue: 'noble', nature: 'vivant' });
+P('moine', 'Moine', ['catacombes', 'camelot', 'dracula'], { sexe: 'homme', tenue: 'moine', nature: 'vivant' });
+P('soldat', 'Soldat', ['guerre'], { sexe: 'homme', tenue: 'soldat', nature: 'vivant' });
+P('combattant', 'Combattant', ['tarkov'], { sexe: 'homme', tenue: 'combat', nature: 'vivant' });
+P('mort_vivant', 'Mort-vivant', ['tarkov', 'dracula', 'catacombes'], { sexe: 'homme', tenue: 'civil', nature: 'mort_vivant' }, 'Toutes les tenues existent en mort-vivant : nature: \'mort_vivant\'.');
+P('footballeur', 'Footballeur', ['foot'], { sexe: 'homme', tenue: 'foot', nature: 'vivant' }, 'couleur (maillot et chaussettes), couleur2 (short), numero.');
+P('pharmacien', 'Pharmacien', ['pharmacie', 'ville', 'frankenstein'], { sexe: 'homme', tenue: 'blouse', nature: 'vivant' });
+P('pharmacienne', 'Pharmacienne', ['pharmacie', 'ville'], { sexe: 'femme', tenue: 'blouse', nature: 'vivant' });
+P('detective', 'Détective', ['sherlock', 'dracula', 'guerre'], { sexe: 'homme', tenue: 'victorien', nature: 'vivant' }, 'casque: \'haut_de_forme\' pour un autre chapeau.');
+P('creature', 'Créature', ['frankenstein'], { sexe: 'homme', tenue: 'civil', nature: 'mort_vivant', corpulence: 1.3, stature: 2.1, couleur: '#2a2a2c', couleur2: '#2a2622', boulons: 1, coiffure: 'court', cheveux: '#141210' });
+P('squelette', 'Squelette', ['catacombes', 'dracula', 'camelot'], { sexe: 'homme', tenue: 'civil', nature: 'squelette' }, 'casque: \'heaume\' | \'plat\' | \'combat\' pour un guerrier.');
+});
+/* ==========================================================================================
+   FABRIQUE — objets des autres univers : armes, château et pierre, mobilier ancien, nature, char, effets
+   Chaque objet porte la liste des univers où il a sa place (catalogue[nom].univers).
+   ========================================================================================== */
+FAB._objets.push(function (fab) {
+'use strict';
+const THREE = fab.THREE, PI = Math.PI;
+const D = 'dracula', C = 'camelot', K = 'catacombes', GM = 'guerre', TK = 'tarkov', RF = 'retrofutur';
+fab.univers = { retrofutur: 'Rétrofutur', dracula: 'Dracula', camelot: 'Camelot', catacombes: 'Catacombes', guerre: 'Guerre des mondes', tarkov: 'Tarkov' };
+const E = (nom, meta, fn) => { if (meta.points || meta.prise) { const ap = meta.apres; meta.apres = (G, o, b) => { G.userData.points = meta.points; G.userData.prise = meta.prise; if (ap) ap(G, o, b); }; } fab.enregistrer(nom, meta, fn); };
+const NOIR = () => fab.mat('polymere', { couleur: '#070706', rugosite: .95, etat: 0 });
+
+/* ---------------------------------------------------------------- formes irrégulières : rochers, feuillages */
+function bruit3(graine) { const h = (x, y, z) => { let n = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(z, 1440662683) ^ Math.imul(graine, 1274126177); n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967295; }, L = (a, b, t) => a + (b - a) * t;
+  return (x, y, z) => { const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z); let fx = x - xi, fy = y - yi, fz = z - zi; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy); fz = fz * fz * (3 - 2 * fz);
+    return L(L(L(h(xi, yi, zi), h(xi + 1, yi, zi), fx), L(h(xi, yi + 1, zi), h(xi + 1, yi + 1, zi), fx), fy), L(L(h(xi, yi, zi + 1), h(xi + 1, yi, zi + 1), fx), L(h(xi, yi + 1, zi + 1), h(xi + 1, yi + 1, zi + 1), fx), fy), fz); }; }
+/* blob(b, mat, rayon, x, y, z, {graine, amp, freq, s, facettes, detail, plat, rot}) : sphère déformée ; facettes pour la roche, plat pour poser au sol */
+function blob(b, mat, R, x, y, z, o) { o = o || {}; const nz = bruit3((o.graine | 0) + 1), amp = o.amp === undefined ? .25 : o.amp, f = o.freq || 1.6, s = o.s || [1, 1, 1];
+  const g = new THREE.IcosahedronGeometry(1, o.detail === undefined ? 2 : o.detail), p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const X = p.getX(i), Y = p.getY(i), Z = p.getZ(i), d = 1 + amp * (nz(X * f + 5, Y * f + 9, Z * f + 3) * 1.4 + nz(X * f * 2.3, Y * f * 2.3, Z * f * 2.3) * .6 - 1);
+    p.setXYZ(i, X * d * R * s[0], Math.max(Y * d, o.plat ? -.35 : -9) * R * s[1], Z * d * R * s[2]); }
+  g.computeVertexNormals();
+  if (!o.facettes) { const nr = g.attributes.normal, acc = new Map(), cle = i => Math.round(p.getX(i) * 1e4) + '|' + Math.round(p.getY(i) * 1e4) + '|' + Math.round(p.getZ(i) * 1e4);   // normales lissées : les sommets confondus partagent la leur
+    for (let i = 0; i < p.count; i++) { const k = cle(i), a = acc.get(k) || [0, 0, 0]; a[0] += nr.getX(i); a[1] += nr.getY(i); a[2] += nr.getZ(i); acc.set(k, a); }
+    for (let i = 0; i < p.count; i++) { const a = acc.get(cle(i)), L = Math.hypot(a[0], a[1], a[2]) || 1; nr.setXYZ(i, a[0] / L, a[1] / L, a[2] / L); } }
+  b.geo(mat, g, x, y, z, { rot: o.rot }); g.dispose(); }
+fab.accessoires.blob = blob;
+
+/* ---------------------------------------------------------------- flammes et bougies */
+const flamme = (b, m, x, y, z, k) => { k = k || 1; b.tour(m('lueur_flamme'), [[0, 0], [.0075 * k, .005 * k], [.0105 * k, .016 * k], [.006 * k, .034 * k], [0, .05 * k]], x, y, z, { seg: 6, lisse: true }); };
+function bougie(b, m, x, y, z, h, o) { o = o || {}; const r = o.r || .011, ci = m('cire', o.couleur ? { couleur: o.couleur } : {});
+  b.cyl(ci, r, h, x, y + h / 2, z, { seg: 8, ch: .002 }); b.sphere(ci, r * .7, x + r * .8, y + h * .8, z, { s: [.6, 1.6, .6], seg: 5, seg2: 3 });
+  b.cyl(fab.mat('polymere', { couleur: '#151210', etat: 0 }), .0012, .012, x, y + h + .006, z, { seg: 4 });
+  if (o.allumee !== false) flamme(b, m, x, y + h + .008, z, o.k); }
+function candelabre(b, m, o) { o = o || {}; const n = o.branches || 3, H = o.h || .42, la = m(o.matiere || 'laiton'), k = H / .42, kk = Math.min(2.2, k);
+  b.tour(la, [[0, 0], [.075 * kk, 0], [.078 * kk, .008], [.05 * kk, .022], [.018 * kk, .04], [.012 * kk, .06], [.02 * kk, .09 * k], [.011 * kk, .12 * k], [.011 * kk, H * .62], [.022 * kk, H * .66], [.01 * kk, H * .7], [.01 * kk, H], [0, H]], 0, 0, 0, { seg: 10, ch: .002 });
+  const tete = (x, z, y) => { b.tour(la, [[0, 0], [.012, 0], [.03, .012], [.032, .018], [.014, .02], [.014, .012], [0, .012]], x, y, z, { seg: 8, ch: .0015 }); bougie(b, m, x, y + .012, z, .11 * Math.min(1.6, k), { allumee: o.allumee }); };
+  tete(0, 0, H); const r = .13 * kk;
+  for (let i = 0; i < n - 1; i++) { const a = i * 2 * PI / (n - 1), x = Math.sin(a) * r, z = Math.cos(a) * r; b.tuyau(la, [[0, H * .64, 0], [x * .55, H * .58, z * .55], [x, H * .66, z], [x, H * .8, z]], .006 * kk, { coude: .04, seg: 5 }); tete(x, z, H * .8); }
+  if (o.allumee !== false) b.lumiere(0, H + .2, 0, '#ffb060', .9 + n * .15, 6); }
+
+fab.accessoires.flamme = flamme; fab.accessoires.bougie = bougie; fab.accessoires.candelabre = candelabre;
+
+/* ================================================================ ARMES
+   Tenues en main : l'origine est la poignée, le canon ou la lame part vers +z, le dessus est +y. */
+const ARM = { groupe: 'Armes', surface: 'metal', prise: 'poing', pose: 'main' };
+const pontet = (b, ac, z0, z1) => b.tuyau(ac, [[0, .026, z0], [0, -.014, z0 + .01], [0, -.014, z1 - .01], [0, .026, z1]], .003, { coude: .012, seg: 4 });
+
+E('fusil_assaut', Object.assign({ titre: 'Fusil d\'assaut', univers: [TK, GM], parties: ['chargeur', 'culasse'], points: { bouche: [0, .058, .72], ejection: [-.02, .07, .06], garde: [0, .04, .29] } }, ARM), (b, o, m) => { b.sol = false;
+  const ac = m('acier_noir'), bo = m('bois', { couleur: o.couleur || '#7a4a24', axe: 'z', planche: 9 });
+  b.boite(ac, .036, .058, .3, 0, .055, .03, { r: .006 }); b.boite(ac, .033, .016, .22, 0, .09, .02, { r: .007 });
+  b.boite(bo, .03, .105, .042, 0, -.024, -.014, { rot: [.3, 0, 0], r: .009 }); pontet(b, ac, .02, .1);
+  b.partie('chargeur', [0, .028, .135], c => c.prisme(ac, [[-.03, 0], [.032, 0], [.058, -.085], [.105, -.2], [.05, -.215], [.005, -.1]], .026, 0, 0, 0, { plan: 'zy', lisse: true }), 'x');
+  b.partie('culasse', [-.02, .072, .07], c => { c.boite(ac, .008, .016, .05, 0, 0, 0, { r: .002 }); c.cyl(ac, .005, .03, -.016, 0, .012, { vers: 'x-', seg: 5 }); }, 'tz');
+  b.boite(bo, .042, .05, .2, 0, .05, .29, { r: .013 }); b.boite(bo, .034, .03, .17, 0, .092, .285, { r: .011 });
+  b.cyl(ac, .0085, .32, 0, .058, .54, { vers: 'z+', seg: 8 }); b.cyl(ac, .0065, .12, 0, .092, .43, { vers: 'z+', seg: 6 }); b.boite(ac, .02, .052, .03, 0, .075, .5, { r: .004 });
+  b.boite(ac, .012, .05, .014, 0, .088, .66, { r: .003 }); b.cyl(ac, .0125, .045, 0, .058, .7, { vers: 'z+', seg: 8 }); b.boite(ac, .022, .014, .05, 0, .104, .13, { r: .003 });
+  b.prisme(bo, [[-.115, .084], [-.115, .03], [-.36, -.045], [-.4, -.035], [-.4, .068]], .034, 0, 0, 0, { plan: 'zy', lisse: true }); b.boite(ac, .036, .11, .012, 0, .016, -.404, { r: .004 }); });
+
+E('fusil_mitrailleur', Object.assign({ titre: 'Fusil-mitrailleur', univers: [GM, TK], parties: ['chargeur', 'bipied'], points: { bouche: [0, .06, .87], ejection: [-.03, .05, .08], garde: [0, .0, .3] } }, ARM), (b, o, m) => { b.sol = false;
+  const ac = m('acier_noir'), fo = m('fonte'), bo = m('bois', { couleur: o.couleur || '#6e4424', axe: 'z', planche: 9 });
+  b.boite(ac, .05, .07, .34, 0, .06, .02, { r: .008 }); b.boite(bo, .032, .105, .044, 0, -.024, -.014, { rot: [.3, 0, 0], r: .009 }); pontet(b, ac, .02, .1);
+  b.tour(fo, [[0, 0], [.03, 0], [.03, .5], [.024, .52], [0, .52]], 0, .06, .19, { vers: 'z+', seg: 10 });
+  for (let i = 0; i < 9; i++) b.bague(ac, .034, .029, .008, 0, .06, .24 + i * .05, { vers: 'z+', seg: 10 });
+  b.cyl(ac, .011, .17, 0, .06, .79, { vers: 'z+', seg: 8 }); b.tour(ac, [[.011, 0], [.022, .05], [.019, .055], [.011, .055]], 0, .06, .815, { vers: 'z+', seg: 8, ferme: true });
+  b.partie('chargeur', [0, .098, .07], c => { c.tour(fo, [[0, 0], [.118, 0], [.122, .008], [.122, .026], [.105, .034], [0, .036]], 0, 0, 0, { seg: 18, ch: .002 });
+    for (let i = 0; i < 12; i++) c.boite(ac, .004, .006, .09, Math.sin(i * PI / 6) * .065, .037, Math.cos(i * PI / 6) * .065, { rot: [0, i * PI / 6, 0], r: 0 }); c.cyl(ac, .016, .014, 0, .042, 0, { seg: 8 }); }, 'y');
+  b.partie('bipied', [0, .028, .66], c => { for (const sg of [1, -1]) { c.tuyau(ac, [[0, 0, 0], [sg * .15, -.27, .03]], .0055, { seg: 5 }); c.boite(ac, .03, .006, .05, sg * .15, -.272, .03, { r: 0 }); } }, 'x');
+  b.boite(ac, .012, .04, .012, 0, .105, .7, { r: .002 }); b.boite(ac, .024, .03, .014, 0, .108, -.1, { r: .003 });
+  b.prisme(bo, [[-.15, .09], [-.15, .03], [-.4, -.05], [-.45, -.04], [-.45, .075]], .038, 0, 0, 0, { plan: 'zy', lisse: true }); b.boite(ac, .04, .125, .012, 0, .016, -.454, { r: .004 }); });
+
+E('fusil_pompe', Object.assign({ titre: 'Fusil à pompe', univers: [TK, GM, RF], parties: ['pompe'], points: { bouche: [0, .068, .68], ejection: [-.022, .06, .05], garde: [0, .036, .37] } }, ARM), (b, o, m) => { b.sol = false;
+  const ac = m('acier_noir'), bo = m('bois', { couleur: o.couleur || '#6a3d1e', axe: 'z', planche: 9 });
+  b.boite(ac, .04, .062, .25, 0, .055, .03, { r: .008 }); pontet(b, ac, .01, .09);
+  b.cyl(ac, .0105, .52, 0, .068, .42, { vers: 'z+', seg: 8 }); b.cyl(ac, .0115, .4, 0, .04, .35, { vers: 'z+', seg: 8 }); b.boite(ac, .014, .03, .012, 0, .054, .55, { r: .002 }); b.sphere(m('laiton'), .004, 0, .082, .665, { seg: 5, seg2: 3 });
+  b.partie('pompe', [0, .04, .37], c => { c.tour(bo, [[.0125, -.085], [.024, -.08], [.025, .08], [.0125, .085]], 0, 0, 0, { vers: 'z+', seg: 10, ferme: true }); for (let i = 0; i < 6; i++) c.bague(m('bois_sombre'), .0262, .024, .006, 0, 0, -.055 + i * .022, { vers: 'z+', seg: 10 }); }, 'tz');
+  b.prisme(bo, [[-.095, .084], [-.43, .07], [-.43, -.05], [-.4, -.06], [-.16, -.005], [-.08, -.055], [-.035, -.045], [-.03, .03]], .036, 0, 0, 0, { plan: 'zy', lisse: true }); b.boite(m('caoutchouc'), .038, .12, .014, 0, .012, -.436, { r: .005 }); });
+
+E('fusil_verrou', Object.assign({ titre: 'Fusil à verrou', univers: [GM, TK, D], parties: ['culasse'], options: { lunette: [false, true] }, points: { bouche: [0, .055, .82], ejection: [-.02, .06, .05], garde: [0, .03, .34] } }, ARM), (b, o, m) => { b.sol = false;
+  const ac = m('acier_noir'), bo = m('bois', { couleur: o.couleur || '#70421f', axe: 'z', planche: 9 });
+  b.prisme(bo, [[-.43, .075], [-.43, -.045], [-.39, -.06], [-.13, -.012], [-.06, -.03], [-.02, -.028], [.03, 0], [.2, .012], [.64, .022], [.64, .05], [-.09, .05], [-.14, .068]], .04, 0, 0, 0, { plan: 'zy', lisse: true });
+  b.boite(ac, .042, .12, .01, 0, .014, -.433, { r: .004 }); pontet(b, ac, .02, .1); b.boite(ac, .026, .035, .09, 0, -.005, .14, { r: .004 });
+  b.cyl(ac, .0165, .23, 0, .055, .055, { vers: 'z+', seg: 8 }); b.cyl(ac, .009, .66, 0, .055, .49, { vers: 'z+', seg: 8 });
+  for (const z of [.4, .6]) b.bague(ac, .026, .02, .016, 0, .04, z, { vers: 'z+', seg: 8 });
+  b.boite(ac, .008, .022, .012, 0, .072, .79, { r: .002 }); b.boite(ac, .02, .014, .04, 0, .078, .2, { r: .003 });
+  b.partie('culasse', [0, .055, -.04], c => { c.cyl(ac, .0115, .09, 0, 0, 0, { vers: 'z+', seg: 8 }); c.tuyau(ac, [[0, 0, .02], [-.035, -.005, .02], [-.05, -.03, .02]], .005, { coude: .012, seg: 5 }); c.sphere(ac, .011, -.05, -.034, .02, { seg: 6, seg2: 4 }); }, 'tz');
+  if (o.lunette) { b.tour(ac, [[.011, -.14], [.017, -.13], [.017, -.09], [.0125, -.07], [.0125, .06], [.02, .09], [.02, .14], [.011, .145]], 0, .108, .09, { vers: 'z+', seg: 10, ferme: true }); for (const z of [.02, .15]) b.boite(ac, .014, .036, .016, 0, .086, z, { r: .003 }); }
+  b.tuyau(m('cuir'), [[.021, 0, -.3], [.034, -.05, .05], [.021, .012, .42]], .006, { coude: .2, seg: 4 }); });
+
+E('epee', { titre: 'Épée', groupe: 'Armes', univers: [C, K, D], surface: 'metal', prise: 'porte', pose: 'main', points: { pointe: [0, 0, .9] } }, (b, o, m) => { b.sol = false;
+  const ac = m('acier_poli'), la = m(o.garde || 'laiton');
+  b.loft(ac, [[.07, .0045, .027], [.14, .0045, .026], [.6, .0036, .021], [.8, .003, .015], [.87, .002, .007], [.905, .0004, .0008]].map(s => ({ y: s[0], rx: s[1], rz: s[2], n: 1.15 })), 0, 0, 0, { seg: 8, vers: 'z+' });
+  b.boite(la, .024, .2, .024, 0, 0, .062, { r: .006 }); b.cyl(m('cuir'), .0135, .1, 0, 0, 0, { vers: 'z+', seg: 8, ch: .002 }); b.sphere(la, .023, 0, 0, -.07, { seg: 8, seg2: 5 }); });
+
+function fleche(b, m) { b.cyl(m('bois_clair', { axe: 'z', planche: 9 }), .004, .72, 0, 0, 0, { vers: 'z+', seg: 5 }); b.tour(m('acier'), [[0, 0], [.009, 0], [0, .045]], 0, 0, .36, { vers: 'z+', seg: 4 });
+  for (let i = 0; i < 3; i++) b.boite(m('toile', { couleur: '#b8b0a0' }), .001, .016, .07, 0, 0, -.3, { rot: [0, 0, i * PI / 3], r: 0 }); }
+E('fleche', { titre: 'Flèche', groupe: 'Armes', univers: [C, K], surface: 'bois', prise: 'porte', pose: 'main' }, (b, o, m) => { b.sol = false; fleche(b, m); });
+E('arc', { titre: 'Arc', groupe: 'Armes', univers: [C, K], surface: 'bois', prise: 'poing', pose: 'main', options: { tendu: [0, 1] }, note: 'tendu: 1 donne l\'arc bandé avec sa flèche ; se tient dans main_g' }, (b, o, m) => { b.sol = false;
+  const t = +o.tendu || 0, bo = m('bois_sombre', { axe: 'y', planche: 9 }), yt = .64 - .06 * t, zt = -.13 - .12 * t, zn = zt - .38 * t;
+  for (const sg of [1, -1]) b.tuyau(bo, [[0, 0, .012], [0, sg * .22, .005], [0, sg * .44, -.035 - .03 * t], [0, sg * yt, zt]], [.015, .006], { coude: .15, seg: 6 });
+  b.cyl(m('cuir'), .0175, .13, 0, 0, .012, { seg: 8 }); b.tuyau(m('corde'), [[0, -yt, zt], [0, 0, zn], [0, yt, zt]], .0017, { coude: 0, seg: 4, bouts: false });
+  if (t > 0 || o.fleche) b.groupe([.014, .014, zn + .36], [0, 0, 0], b => fleche(b, m)); });
+
+E('bouclier', { titre: 'Bouclier', groupe: 'Armes', univers: [C, K], surface: 'bois', pose: 'main', options: { forme: ['ecu', 'rond'] }, note: 'couleur, couleur2 ; se fixe sur avant_bras_g' }, (b, o, m) => { b.sol = false;
+  const ac = m('acier'), pe = m('peinture', { couleur: o.couleur || '#8c1c1c', rugosite: .7 }), cl = m('peinture', { couleur: o.couleur2 || '#d8cfae', rugosite: .7 });
+  if (o.forme === 'rond') { b.tour(m('bois', { axe: 'y' }), [[0, 0], [.37, 0], [.37, .022], [.12, .034], [0, .036]], 0, 0, 0, { vers: 'z+', seg: 22, ch: .003 });
+    b.tore(ac, .37, .012, 0, 0, .012, { vers: 'z+', seg: 22, seg2: 6 }); b.sphere(ac, .085, 0, 0, .03, { vers: 'z+', phi0: PI * .5, s: [1, .75, 1], seg: 12, seg2: 5 });
+    b.rivets(ac, [0, 1, 2, 3, 4, 5, 6, 7].map(i => [Math.cos(i * PI / 4) * .3, Math.sin(i * PI / 4) * .3, .028]), .009, 'z+');
+  } else { b.prisme(pe, [[-.27, .36], [.27, .36], [.27, .06], [.2, -.2], [0, -.44], [-.2, -.2], [-.27, .06]], .024, 0, 0, .012, { plan: 'xy' });
+    b.boite(cl, .07, .66, .004, 0, -.02, .026, { r: 0 }); b.boite(cl, .5, .07, .004, 0, .14, .026, { r: 0 });
+    b.rivets(ac, [[-.23, .32, .024], [.23, .32, .024], [-.23, .08, .024], [.23, .08, .024], [0, -.36, .024]], .01, 'z+'); }
+  for (const y of [-.1, .12]) b.tuyau(m('cuir'), [[-.09, y, 0], [-.09, y, -.05], [.09, y, -.05], [.09, y, 0]], .009, { coude: .02, seg: 5 }); });
+
+/* ================================================================ CHÂTEAU ET PIERRE */
+function mur(b, p, w, h, e, o) { o = o || {};
+  if (o.arche) { const a = o.ouverture ? o.ouverture / 2 : Math.min(w * .28, 1.3), hs = Math.min(h - a - .6, o.naissance || 1.9), Cn = [[-w / 2, 0], [-a, 0], [-a, hs]];
+    for (let i = 1; i < 8; i++) Cn.push([-Math.cos(i * PI / 8) * a, hs + Math.sin(i * PI / 8) * a]);
+    Cn.push([a, hs], [a, 0], [w / 2, 0], [w / 2, h], [-w / 2, h]); b.prisme(p, Cn, e, 0, 0, 0, { plan: 'xy' });
+    if (!o.sansCol) { b.collision(-w / 2, 0, -e / 2, -a, h, e / 2); b.collision(a, 0, -e / 2, w / 2, h, e / 2); }
+  } else { b.boite(p, w, h, e, 0, h / 2, 0, { r: .02 }); if (!o.sansCol) b.collision(-w / 2, 0, -e / 2, w / 2, h, e / 2); }
+  if (o.creneaux) { const n = Math.max(2, Math.round(w / 1.3)), pas = w / n; b.boite(p, w, .25, e + .3, 0, h + .125, 0, { r: .02 });
+    for (let i = 0; i < n; i++) b.boite(p, pas * .55, .75, .4, -w / 2 + pas * (i + .5), h + .625, e / 2 - .05, { r: .02 }); } }
+function tourRonde(b, m, p, R, H, o) { o = o || {}; const noir = NOIR();
+  b.tour(p, [[0, 0], [R * 1.05, 0], [R * 1.05, .4], [R, .75], [R, H - 1], [R * 1.1, H - .65], [R * 1.1, H], [R * .86, H], [R * .86, H - .7], [0, H - .7]], 0, 0, 0, { seg: 20, ch: .03 });
+  const n = Math.round(R * 4.2); for (let i = 0; i < n; i++) { const a = (i + .5) * 2 * PI / n; b.boite(p, R * 2 * PI / n * .52, .7, .28, Math.sin(a) * R * .98, H + .35, Math.cos(a) * R * .98, { rot: [0, a, 0], r: .02 }); }
+  for (let j = 0; j < Math.floor((H - 3) / 3); j++) for (let i = 0; i < 3; i++) { const a = i * 2 * PI / 3 + j * 1.1 + .4; b.boite(noir, .12, .95, .1, Math.sin(a) * (R - .03), 2.6 + j * 3, Math.cos(a) * (R - .03), { rot: [0, a, 0], r: 0 }); }
+  if (o.toit) b.tour(m('ardoise'), [[R * 1.22, H + .55], [R * .62, H + .55 + R * .9], [0, H + .55 + R * 2.1]], 0, 0, 0, { seg: 20, ch: .02 }); }
+const PIERRE = { groupe: 'Château et pierre', surface: 'pierre' };
+
+E('mur_pierre', Object.assign({ titre: 'Mur de pierre', univers: [D, C, K], options: { creneaux: [false, true], arche: [false, true] }, note: 'largeur (4), hauteur (3), epaisseur (0,8), matiere (pierre, pierre_claire, pierre_sombre)' }, PIERRE), (b, o, m) =>
+  mur(b, m(o.matiere || 'pierre'), o.largeur || 4, o.hauteur || 3, o.epaisseur || .8, o));
+E('tour_ronde', Object.assign({ titre: 'Tour ronde', univers: [C, D], options: { toit: [true, false] }, note: 'rayon (2,2), hauteur (9)' }, PIERRE), (b, o, m) => { const R = o.rayon || 2.2, H = o.hauteur || 9;
+  tourRonde(b, m, m(o.matiere || 'pierre', { rayon: R }), R, H, { toit: o.toit !== false }); b.boite(m('bois_sombre', { axe: 'y', planche: .2 }), .95, 1.9, .1, 0, .95, R * 1.02, { r: .01 }); b.collision(-R, 0, -R, R, H, R); });
+E('colonne', Object.assign({ titre: 'Colonne de pierre', univers: [K, D, C], note: 'hauteur (3)' }, PIERRE), (b, o, m) => { const H = o.hauteur || 3, p = m(o.matiere || 'pierre_claire', { rayon: .24, assise: .5 }), p2 = m(o.matiere || 'pierre_claire', { mode: 'roche' });
+  b.boite(p2, .64, .16, .64, 0, .08, 0, { r: .015 }); b.tour(p, [[.3, .16], [.3, .22], [.25, .3], [.235, .34], [.22, H - .34], [.25, H - .3], [.3, H - .2], [.3, H - .16]], 0, 0, 0, { seg: 16, ch: .012 }); b.boite(p2, .68, .16, .68, 0, H - .08, 0, { r: .015 });
+  b.collision(-.3, 0, -.3, .3, H, .3); });
+E('pierre_tombale', Object.assign({ titre: 'Pierre tombale', univers: [D, K, C], note: 'texte' }, PIERRE), (b, o, m) => { const p = m('pierre_sombre', { mode: 'roche' }), Cn = [[-.3, 0], [.3, 0], [.3, .72]];
+  for (let i = 1; i < 8; i++) Cn.push([Math.cos(i * PI / 8) * .3, .72 + Math.sin(i * PI / 8) * .26]); Cn.push([-.3, .72]);
+  b.prisme(p, Cn, .13, 0, .08, 0, { plan: 'xy', rot: [-.05, 0, .03] }); b.boite(p, .76, .1, .3, 0, .05, 0, { r: .02 });
+  b.plaque({ t: o.texte || 'R · I · P', style: 'pochoir', couleur: '#1c1b19' }, .36, .09, 0, .74, .07, { rot: [-.05, 0, .03] }); b.boite(p, .05, .26, .012, 0, .5, .068, { rot: [-.05, 0, .03], r: 0 }); b.boite(p, .16, .05, .012, 0, .54, .068, { rot: [-.05, 0, .03], r: 0 }); });
+E('chateau', Object.assign({ titre: 'Château fort', univers: [C, D], parties: ['porte_g', 'porte_d'], note: 'cour (20 m de côté), hauteur des murs (7)' }, PIERRE), (b, o, m) => {
+  const L = o.cour || 20, H = o.hauteur || 7, R = 2.3, p = m(o.matiere || 'pierre', { assise: .36 }), bo = m('bois_sombre', { axe: 'y', planche: .22 }), fe = m('fer_forge'), h = L / 2, W = L - R * 1.6;
+  for (const [x, z] of [[-h, -h], [h, -h], [-h, h], [h, h]]) { b.groupe([x, 0, z], [0, 0, 0], b => tourRonde(b, m, p, R, H + 3, { toit: true })); b.collision(x - R, 0, z - R, x + R, H + 3, z + R); }
+  b.groupe([0, 0, h], [0, 0, 0], b => mur(b, p, W, H, 1.3, { creneaux: 1, arche: 1, ouverture: 3, naissance: 2.6, sansCol: 1 }));
+  b.groupe([0, 0, -h], [0, PI, 0], b => mur(b, p, W, H, 1.3, { creneaux: 1, sansCol: 1 }));
+  for (const sg of [1, -1]) { b.groupe([sg * h, 0, 0], [0, sg * PI / 2, 0], b => mur(b, p, W, H, 1.3, { creneaux: 1, sansCol: 1 })); b.collision(sg * h - .65, 0, -h, sg * h + .65, H, h);
+    b.boite(p, 1.7, H + 1.8, 2.3, sg * 2.65, (H + 1.8) / 2, h + .5, { r: .03 }); for (const dx of [-.55, .55]) b.boite(p, .5, .7, .4, sg * 2.65 + dx, H + 2.15, h + 1.45, { r: .02 });
+    b.collision(sg > 0 ? 1.5 : -h, 0, h - .65, sg > 0 ? h : -1.5, H, h + .65);
+    b.partie(sg > 0 ? 'porte_d' : 'porte_g', [sg * 1.5, 0, h], c => { c.boite(bo, 1.48, 3.7, .12, -sg * .74, 1.85, 0, { r: .01 }); for (const y of [.6, 1.85, 3.1]) c.boite(fe, 1.4, .1, .14, -sg * .74, y, 0, { r: .01 }); }, 'y'); }
+  b.collision(-h, 0, -h - .65, h, H, -h + .65);
+  const dz = -h * .35, DW = 6.5, DH = H + 6; b.boite(p, DW, DH, DW, 0, DH / 2, dz, { r: .03 }); b.collision(-DW / 2, 0, dz - DW / 2, DW / 2, DH, dz + DW / 2);                 // donjon
+  for (let s = 0; s < 4; s++) b.groupe([0, DH, dz], [0, s * PI / 2, 0], b => { for (let i = 0; i < 4; i++) b.boite(p, .9, .8, .4, -DW / 2 + .8 + i * 1.63, .4, DW / 2 - .2, { r: .02 });
+    for (const y of [-3, -6.5]) b.boite(NOIR(), .35, 1.1, .1, s % 2 ? 1.2 : -1, y, DW / 2 - .03, { r: 0 }); });
+  b.boite(bo, 1.3, 2.3, .1, 0, 1.15, dz + DW / 2 + .01, { r: .01 }); });
+
+/* ================================================================ MOBILIER ANCIEN */
+const MOB = { groupe: 'Mobilier ancien', surface: 'bois' };
+function tableB(b, m, L) { const bo = m('bois_sombre', { axe: 'x', planche: .19 }), W = .95;
+  b.boite(bo, L, .06, W, 0, .75, 0, { r: .008 });
+  for (const sg of [1, -1]) { const x = sg * (L / 2 - .32); b.boite(bo, .09, .66, W * .62, x, .39, 0, { r: .01 }); b.boite(bo, .14, .07, W * .82, x, .035, 0, { r: .012 }); b.boite(bo, .12, .05, W * .7, x, .7, 0, { r: .008 }); }
+  b.boite(bo, L - .64, .09, .05, 0, .3, 0, { r: .008 }); b.collision(-L / 2, 0, -W / 2, L / 2, .78, W / 2); }
+function chaise(b, m, o) { o = o || {}; const bo = m('bois_sombre', { axe: 'y', planche: 9 }), ve = m('velours', o.couleur ? { couleur: o.couleur } : {});
+  for (const sx of [1, -1]) { b.boite(bo, .05, .46, .05, sx * .2, .23, .19, { r: .006 }); b.boite(bo, .05, 1.18, .05, sx * .2, .59, -.19, { r: .006 }); b.boite(bo, .035, .04, .36, sx * .2, .16, 0, { r: .005 }); }
+  b.boite(bo, .46, .05, .44, 0, .47, 0, { r: .008 }); b.boite(ve, .4, .035, .38, 0, .505, .005, { r: .014 });
+  b.boite(bo, .36, .5, .025, 0, .86, -.19, { r: .004 }); b.boite(ve, .3, .4, .02, 0, .86, -.175, { r: .008 });
+  b.prisme(bo, [[-.23, 0], [.23, 0], [.23, .05], [.12, .1], [0, .13], [-.12, .1], [-.23, .05]], .05, 0, 1.12, -.19, { plan: 'xy' }); b.boite(bo, .36, .05, .03, 0, .56, -.19, { r: .005 }); }
+const couvert = (b, m, x, z, et) => { b.tour(et, [[0, 0], [.07, 0], [.115, .012], [.118, .018], [.07, .008], [0, .008]], x, .78, z, { seg: 12, ch: .001 });
+  b.tour(et, [[0, 0], [.03, 0], [.03, .004], [.008, .012], [.008, .06], [.03, .075], [.036, .14], [.032, .14], [.027, .08], [0, .07]], x + .15, .78, z - .05 * Math.sign(z), { seg: 8, ch: .001 }); };
+
+E('table_banquet', Object.assign({ titre: 'Table de banquet', univers: [D, C], note: 'longueur (2,6)' }, MOB), (b, o, m) => tableB(b, m, o.longueur || 2.6));
+E('chaise', Object.assign({ titre: 'Chaise à haut dossier', univers: [D, C], note: 'couleur du velours' }, MOB), (b, o, m) => { chaise(b, m, o); b.collision(-.24, 0, -.22, .24, 1.25, .22); });
+E('salle_a_manger', Object.assign({ titre: 'Salle à manger', univers: [D, C], note: 'longueur (3,2), couleur du velours ; table dressée, chaises et chandelier' }, MOB), (b, o, m) => { const L = o.longueur || 3.2, n = Math.max(1, Math.floor((L - .5) / .68)), et = m('acier', { couleur: '#b9b8b0', rugosite: .42 });
+  tableB(b, m, L);
+  for (let i = 0; i < n; i++) for (const sg of [1, -1]) { const x = -(n - 1) * .34 + i * .68; b.groupe([x, 0, sg * .8], [0, sg > 0 ? PI : 0, 0], b => chaise(b, m, o)); couvert(b, m, x - .05, sg * .3, et); }
+  for (const sg of [1, -1]) b.groupe([sg * (L / 2 + .34), 0, 0], [0, -sg * PI / 2, 0], b => chaise(b, m, o));
+  b.groupe([0, .78, 0], [0, .3, 0], b => candelabre(b, m, { branches: 3, allumee: o.allumee })); b.sol = true;
+  for (const sg of [1, -1]) { b.tour(et, [[0, 0], [.1, 0], [.17, .03], [.175, .04], [.1, .012], [0, .012]], sg * L * .28, .78, 0, { seg: 14, ch: .001 }); blob(b, m('polymere', { couleur: sg > 0 ? '#7a2a1c' : '#6a4a22', rugosite: .5 }), .07, sg * L * .28, .845, 0, { graine: 4 + sg, amp: .2, s: [1.2, .7, 1] }); } });
+E('armoire_bois', Object.assign({ titre: 'Armoire en bois', univers: [D, C], parties: ['porte_g', 'porte_d'] }, MOB), (b, o, m) => { const bo = m('bois_sombre', { axe: 'y', planche: .16 }), b2 = m('bois', { couleur: '#6a4526', axe: 'y', planche: 9 }), fe = m('fer_forge'), W = 1.3, H = 2.1, Dp = .58, e = .03;
+  b.boite(bo, W + .1, .1, Dp + .06, 0, .05, 0, { r: .012 }); for (const sx of [1, -1]) b.boite(bo, e, H - .2, Dp, sx * (W / 2 - e / 2), .1 + (H - .2) / 2, 0, { r: .004 });
+  b.boite(bo, W - 2 * e, H - .2, .018, 0, .1 + (H - .2) / 2, -Dp / 2 + .009, { r: 0 }); b.boite(bo, W - 2 * e, e, Dp - .02, 0, .115, 0, { r: .003 }); b.boite(bo, W - 2 * e, e, Dp - .02, 0, 1.45, 0, { r: .003 });
+  b.boite(bo, W, e, Dp, 0, H - .1 - e / 2, 0, { r: .004 }); b.boite(bo, W + .14, .1, Dp + .09, 0, H - .05, 0, { r: .02 }); b.boite(bo, W + .06, .04, Dp + .05, 0, H - .12, 0, { r: .01 }); b.boite(fe, W - .1, .02, .02, 0, 1.75, 0, { r: .004 });
+  for (const sg of [1, -1]) b.partie(sg > 0 ? 'porte_d' : 'porte_g', [sg * (W / 2 - e), .1, Dp / 2], c => { const w = W / 2 - e - .004, h = H - .21, x = -sg * w / 2;
+    c.boite(bo, w, h, .028, x, h / 2, .014, { r: .004 }); for (const [y, hh] of [[h * .28, h * .44], [h * .75, h * .38]]) c.boite(b2, w - .14, hh, .012, x, y, .032, { r: .01 });
+    for (const y of [.25, h - .25]) c.boite(fe, .12, .03, .008, -sg * .06, y, .032, { r: .003 }); c.tore(fe, .022, .004, -sg * (w - .06), h * .5, .04, { vers: 'z+', seg: 10, seg2: 4 }); }, 'y');
+  b.collision(-W / 2 - .05, 0, -Dp / 2, W / 2 + .05, H, Dp / 2 + .03); });
+E('cercueil', Object.assign({ titre: 'Cercueil', univers: [D, K], parties: ['couvercle'] }, MOB), (b, o, m) => { const bo = m('bois_sombre', { axe: 'z', planche: .16 }), ve = m('velours'), la = m('laiton'), H = .44;
+  const Cn = [[-.2, -1], [.2, -1], [.36, -.45], [.23, 1], [-.23, 1], [-.36, -.45]], sc = k => Cn.map(p => [p[0] * k, p[1] * (1 - (1 - k) * .25)]), wx = z => z < -.45 ? .2 + .16 * (z + 1) / .55 : .36 - .13 * (z + .45) / 1.45;
+  b.prisme(bo, Cn, .03, 0, .035, 0); b.prisme(ve, sc(.9), .02, 0, .062, 0); b.boite(ve, .3, .06, .22, 0, .1, -.78, { r: .025 });
+  for (let i = 0; i < 6; i++) { const p = Cn[i], q = Cn[(i + 1) % 6], dx = q[0] - p[0], dz = q[1] - p[1]; b.boite(bo, Math.hypot(dx, dz) + .02, H - .05, .028, (p[0] + q[0]) / 2, .05 + (H - .05) / 2, (p[1] + q[1]) / 2, { rot: [0, -Math.atan2(dz, dx), 0], r: .004 }); }
+  b.partie('couvercle', [-.38, H + .002, 0], c => { c.prisme(bo, sc(1.04), .035, .38, .018, 0); c.boite(la, .035, .006, .5, .38, .039, -.25, { r: 0 }); c.boite(la, .26, .006, .035, .38, .039, -.38, { r: 0 }); }, 'z');
+  for (const sg of [1, -1]) for (const z of [-.55, .4]) { const x = sg * (wx(z) + .012); b.tuyau(la, [[x, .3, z - .07], [x + sg * .035, .26, z - .05], [x + sg * .035, .26, z + .05], [x, .3, z + .07]], .007, { coude: .02, seg: 5 }); }
+  b.collision(-.38, 0, -1.02, .38, H, 1.02); });
+E('coffre', Object.assign({ titre: 'Coffre', univers: [D, C, K], parties: ['couvercle'] }, MOB), (b, o, m) => { const bo = m('bois_sombre', { axe: 'x', planche: .13 }), fe = m('fer_forge'), W = .9, H = .42, Dp = .52, e = .03, a = { vers: 'x+', a0: PI / 2, a1: PI * 1.5, s: [.6, 1, 1] };
+  b.boite(bo, W, e, Dp, 0, .05 + e / 2, 0, { r: .004 }); for (const sz of [1, -1]) b.boite(bo, W, H, e, 0, .05 + H / 2, sz * (Dp / 2 - e / 2), { r: .004 }); for (const sx of [1, -1]) b.boite(bo, e, H, Dp - 2 * e, sx * (W / 2 - e / 2), .05 + H / 2, 0, { r: .004 });
+  for (const sx of [1, -1]) for (const sz of [1, -1]) b.boite(bo, .07, .05, .07, sx * (W / 2 - .05), .025, sz * (Dp / 2 - .05), { r: .008 });
+  for (const x of [-.3, .3]) for (const sz of [1, -1]) b.boite(fe, .05, H, .006, x, .05 + H / 2, sz * (Dp / 2 + .002), { r: .001 });
+  b.boite(m('laiton'), .09, .11, .012, 0, H - .04, Dp / 2 + .006, { r: .004 });
+  b.partie('couvercle', [0, .05 + H, -Dp / 2], c => { c.tour(bo, [[0, -W / 2], [Dp / 2, -W / 2], [Dp / 2, W / 2], [0, W / 2]], 0, 0, Dp / 2, Object.assign({ seg: 10, ch: .004 }, a)); c.boite(bo, W, .02, Dp, 0, .01, Dp / 2, { r: 0 });
+    for (const x of [-.3, .3]) c.tour(fe, [[Dp / 2 + .004, x - .025], [Dp / 2 + .004, x + .025]], 0, 0, Dp / 2, Object.assign({ seg: 10 }, a)); }, 'x');
+  b.collision(-W / 2, 0, -Dp / 2, W / 2, H + .2, Dp / 2); });
+E('tonneau', Object.assign({ titre: 'Tonneau', univers: [D, C, K, TK, GM] }, MOB), (b, o, m) => { const bo = m('bois', { couleur: '#7a5530', axe: 'y', planche: .085 }), fe = m('fer_forge'), R = .3, H = .92, r = y => R * (.82 + .18 * Math.sin(PI * y / H));
+  const Pr = [[0, .03], [r(0) - .02, .03], [r(0) - .02, 0], [r(0), 0]]; for (let i = 1; i < 8; i++) Pr.push([r(H * i / 8), H * i / 8]); Pr.push([r(H), H], [r(H) - .02, H], [r(H) - .02, H - .03], [0, H - .03]);
+  b.tour(bo, Pr, 0, 0, 0, { seg: 18, ch: .003 }); for (const y of [.07, .26, H - .26, H - .07]) b.tour(fe, [[r(y - .022) + .004, y - .022], [r(y + .022) + .004, y + .022]], 0, 0, 0, { seg: 18 });
+  b.collision(-R, 0, -R, R, H, R); });
+E('chandelier', Object.assign({ titre: 'Chandelier', univers: [D, C, K], surface: 'metal', options: { branches: [3, 5, 1], pied: [false, true], allumee: [true, false] }, note: 'pied: true pour le modèle sur pied (1,5 m) ; matiere (laiton, fer_forge, or)' }, MOB), (b, o, m) =>
+  candelabre(b, m, { branches: +o.branches || 3, h: o.pied ? 1.5 : .42, allumee: o.allumee, matiere: o.matiere }));
+E('bougie', Object.assign({ titre: 'Bougie', univers: [D, C, K], surface: 'metal', options: { allumee: [true, false] } }, MOB), (b, o, m) => { b.tour(m('laiton'), [[0, 0], [.045, 0], [.055, .012], [.05, .016], [.018, .008], [.018, .02], [0, .02]], 0, 0, 0, { seg: 10, ch: .001 });
+  bougie(b, m, 0, .012, 0, o.hauteur || .16, { allumee: o.allumee, r: .013 }); if (o.allumee !== false) b.lumiere(0, .26, 0, '#ffb060', .7, 4.5); });
+E('lustre', Object.assign({ titre: 'Lustre à bougies', univers: [D, C], surface: 'metal', pose: 'plafond', options: { allumee: [true, false] }, note: 'origine au plafond ; bougies (8), rayon (0,55), chute (1,1)' }, MOB), (b, o, m) => { b.sol = false; const fe = m('fer_forge'), n = o.bougies || 8, R = o.rayon || .55, y = -(o.chute || 1.1);
+  b.tore(fe, R, .014, 0, y, 0, { seg: 24, seg2: 6 }); b.tore(fe, R * .45, .01, 0, y, 0, { seg: 16, seg2: 5 }); for (let i = 0; i < 4; i++) b.boite(fe, .012, .012, R * 2, 0, y, 0, { rot: [0, i * PI / 4, 0], r: 0 });
+  b.cyl(fe, .03, .03, 0, -.015, 0, { seg: 8 }); for (let i = 0; i < 3; i++) { const a = i * 2 * PI / 3; b.tuyau(fe, [[0, -.03, 0], [Math.sin(a) * R, y + .01, Math.cos(a) * R]], .006, { seg: 4 }); }
+  for (let i = 0; i < n; i++) { const a = (i + .5) * 2 * PI / n, x = Math.sin(a) * R, z = Math.cos(a) * R; b.tour(fe, [[0, 0], [.03, 0], [.034, .012], [.012, .014], [0, .014]], x, y + .012, z, { seg: 8 }); bougie(b, m, x, y + .026, z, .1, { allumee: o.allumee }); }
+  if (o.allumee !== false) b.lumiere(0, y + .25, 0, '#ffb060', 2.4, 10); });
+E('torche', Object.assign({ titre: 'Torche', univers: [C, K, D], surface: 'bois', pose: 'mur', prise: 'porte', options: { murale: [true, false], allumee: [true, false] }, note: 'murale : origine contre le mur ; murale: false : torche tenue en main' }, MOB), (b, o, m) => { b.sol = false;
+  const fe = m('fer_forge'), bo = m('bois_sombre', { axe: 'z', planche: 9 }), ti = m('toile', { couleur: '#2a2018' }); let tip;
+  if (o.murale !== false) { b.boite(fe, .09, .16, .012, 0, 0, .006, { r: .003 }); b.tuyau(fe, [[0, -.04, .01], [0, -.06, .1], [0, 0, .16]], .008, { coude: .04, seg: 5 }); b.bague(fe, .03, .022, .03, 0, .02, .17, { rot: [.42, 0, 0], seg: 8 });
+    b.groupe([0, .02, .17], [.42, 0, 0], b => { b.cyl(bo, .017, .5, 0, .08, 0, { seg: 7 }); b.tour(ti, [[.018, .28], [.034, .3], [.038, .4], [.026, .43], [0, .44]], 0, 0, 0, { seg: 8 }); }); tip = [0, .02 + Math.cos(.42) * .45, .17 + Math.sin(.42) * .45];
+  } else { b.cyl(bo, .017, .5, 0, 0, .13, { vers: 'z+', seg: 7 }); b.tour(ti, [[.018, 0], [.034, .02], [.038, .12], [.026, .15], [0, .16]], 0, 0, .34, { vers: 'z+', seg: 8 }); tip = [0, 0, .5]; }
+  if (o.allumee !== false) { const f = fab.effet('feu', { rayon: .07, hauteur: .3, nombre: 22, graine: b.g }); f.position.set(tip[0], tip[1], tip[2]); b.enfant(f); b.lumiere(tip[0], tip[1] + .12, tip[2], '#ff9a40', 1.8, 8); } });
+E('grimoire', Object.assign({ titre: 'Grimoire', univers: [K, D, C], surface: 'cuir', options: { ouvert: [false, true] }, note: 'couleur de la reliure' }, MOB), (b, o, m) => { const cu = m('cuir', { couleur: o.couleur || '#3d1616' }), pa = m('parchemin'), la = m('laiton'), W = .24, Dp = .32;
+  if (o.ouvert) { for (const sg of [1, -1]) { b.boite(cu, W, .012, Dp, sg * (W / 2 + .004), .006, 0, { r: .003 }); b.boite(pa, W - .016, .03, Dp - .02, sg * (W / 2 - .002), .027, 0, { rot: [0, 0, -sg * .06], r: .004 });
+      for (let i = 0; i < 9; i++) b.boite(fab.mat('polymere', { couleur: '#2a1c12', etat: 0, rugosite: .9 }), W - .07 - (i % 3) * .02, .0015, .006, sg * (W / 2 - .004), .0425 + sg * 0, -Dp / 2 + .05 + i * .026, { rot: [0, 0, -sg * .06], r: 0 }); }
+    b.cyl(cu, .018, Dp, 0, .012, 0, { vers: 'z+', seg: 6 }); b.boite(m('velours'), .012, .002, .22, .03, .046, .08, { rot: [0, .15, -.06], r: 0 });
+  } else { b.boite(cu, W, .012, Dp, 0, .006, 0, { r: .003 }); b.boite(pa, W - .014, .05, Dp - .014, .004, .037, 0, { r: .002 }); b.boite(cu, W, .012, Dp, 0, .068, 0, { r: .003 }); b.boite(cu, .014, .074, Dp, -W / 2 + .001, .037, 0, { r: .005 });
+    for (const sx of [1, -1]) for (const sz of [1, -1]) b.boite(la, .04, .014, .04, sx * (W / 2 - .018), .068, sz * (Dp / 2 - .018), { r: .003 });
+    b.tour(la, [[0, 0], [.035, 0], [.03, .004], [0, .006]], 0, .074, 0, { seg: 10 }); for (const z of [.07, -.07]) b.boite(la, .03, .078, .022, W / 2 + .002, .037, z, { r: .004 }); } });
+E('crane', Object.assign({ titre: 'Crâne', univers: [K, D], surface: 'os' }, MOB), (b, o, m) => fab._crane(b, m('os'), NOIR(), m('os', { couleur: '#e9e2cc' }), .014, 1));
+
+/* ================================================================ NATURE */
+E('arbre', { titre: 'Arbre', groupe: 'Nature', univers: [C, D, TK, GM], surface: 'bois', options: { espece: ['feuillu', 'sapin', 'mort'] }, note: 'hauteur, feuillage (feuillage, feuillage_automne) ; chaque graine donne un arbre différent' }, (b, o, m) => {
+  const es = o.espece || 'feuillu', H = o.hauteur || (es === 'sapin' ? 9 : es === 'mort' ? 5.5 : 7), ec = m('ecorce', es === 'mort' ? { couleur: '#5c544a', salete: .1 } : {}), R = H * .034 + .05;
+  b.tour(ec, [[R * 1.9, 0], [R * 1.35, .12], [R * 1.08, .4]], 0, 0, 0, { seg: 9, lisse: true });
+  if (es === 'sapin') { const fe = m('sapin'); b.tuyau(ec, [[0, 0, 0], [0, H, 0]], [R, .02], { seg: 8 });
+    for (let i = 0; i < 7; i++) { const t = i / 6, y = H * (.2 + .68 * t), r = H * .26 * (1 - t * .8), h = H * .2 * (1 - t * .45);
+      b.tour(fe, [[0, y - h * .1], [r, y - h * .22], [r * .5, y + h * .3], [0, y + h * .9]], b.hasard(-.05, .05), 0, b.hasard(-.05, .05), { seg: 9, lisse: true, rot: [b.hasard(-.04, .04), b.hasard(0, 6), b.hasard(-.04, .04)] }); }
+  } else { const feu = es === 'mort' ? null : m(o.feuillage || 'feuillage'), top = [b.hasard(-.25, .25), H * .62, b.hasard(-.25, .25)], nb = es === 'mort' ? 6 : 5;
+    b.tuyau(ec, [[0, 0, 0], [b.hasard(-.12, .12), H * .3, b.hasard(-.12, .12)], top], [R, R * .5], { coude: H * .2, seg: 8 });
+    for (let i = 0; i < nb; i++) { const a = i * 2 * PI / nb + b.hasard(-.4, .4), y0 = H * b.hasard(.36, .58), L = H * b.hasard(.22, .34), up = b.hasard(.3, .75), e = [Math.sin(a) * L, y0 + L * up, Math.cos(a) * L], mid = [e[0] * .5, y0 + L * up * .3, e[2] * .5];
+      b.tuyau(ec, [[0, y0 - .1, 0], mid, e], [R * .42, R * .1], { coude: L * .3, seg: 6 });
+      if (feu) for (let j = 0; j < 2; j++) blob(b, feu, H * b.hasard(.11, .16), e[0] * (.95 - j * .3) + b.hasard(-.3, .3), e[1] + H * (.02 + j * .07), e[2] * (.95 - j * .3) + b.hasard(-.3, .3), { graine: b.entier(999), amp: .34, freq: 1.9, s: [1.1, .8, 1.1] });
+      else for (let j = 0; j < 2; j++) { const a2 = a + b.hasard(-1, 1), l2 = L * b.hasard(.35, .6); b.tuyau(ec, [mid, [mid[0] + Math.sin(a2) * l2, mid[1] + l2 * b.hasard(.4, .9), mid[2] + Math.cos(a2) * l2]], [R * .16, R * .04], { seg: 5 }); } }
+    if (feu) for (let j = 0; j < 4; j++) { const a = j * 2.2 + b.hasard(0, 1), r = j ? H * .1 : 0; blob(b, feu, H * (j ? b.hasard(.13, .17) : .19), top[0] + Math.sin(a) * r, H * (j ? b.hasard(.66, .8) : .86), top[2] + Math.cos(a) * r, { graine: b.entier(999), amp: .34, freq: 1.9, s: [1.1, .85, 1.1] }); }
+    else b.tuyau(ec, [top, [top[0] + .2, H * .85, top[2] - .1], [top[0] - .1, H, top[2] + .15]], [R * .5, R * .06], { coude: .3, seg: 6 }); }
+  b.collision(-R * 1.2, 0, -R * 1.2, R * 1.2, H * .5, R * 1.2); });
+E('rocher', { titre: 'Rocher', groupe: 'Nature', univers: [C, D, K, TK, GM], surface: 'pierre', note: 'taille (1,2) ; chaque graine donne une forme' }, (b, o, m) => { const T = o.taille_m || 1.2, ro = m('roche');
+  blob(b, ro, T * .6, 0, T * .178, 0, { facettes: true, graine: b.g * 7 + 1, amp: .42, plat: true, s: [1.15, .85, .95] });
+  blob(b, ro, T * .3, T * .55, T * .084, T * .2, { facettes: true, detail: 1, graine: b.g * 7 + 2, amp: .4, plat: true, s: [1, .8, 1.1], rot: [0, 1.1, 0] });
+  b.collision(-T * .6, 0, -T * .5, T * .7, T * .7, T * .5); });
+
+/* ================================================================ VÉHICULE */
+E('char', { titre: 'Char d\'assaut', groupe: 'Véhicules', univers: [GM], surface: 'metal', parties: ['tourelle', 'canon'], note: 'couleur, numero ; la tourelle tourne autour de y, le canon se lève autour de x' }, (b, o, m) => {
+  const pe = m('peinture', { couleur: o.couleur || '#5b5d3f', rugosite: .72 }), fo = m('fonte'), ch = m('acier_noir', { rouille: .35 }), ac = m('acier_noir'), noir = NOIR(), num = o.numero || 'B-' + (10 + b.entier(89));
+  b.prisme(pe, [[-2.55, .55], [-2.62, 1.02], [-2.3, 1.4], [.95, 1.4], [1.85, 1.12], [2.6, .86], [2.35, .44], [-2.25, .44]], 1.72, 0, 0, 0, { plan: 'zy' });
+  for (const sg of [1, -1]) { const x = sg * 1.08, v = sg > 0 ? 'x+' : 'x-';
+    b.prisme(ch, [[-2.3, 0], [2.25, 0], [2.72, .48], [2.72, .78], [2.45, 1.06], [-2.45, 1.06], [-2.78, .8], [-2.78, .5]], .44, x, 0, 0, { plan: 'zy', lisse: true });
+    for (let i = 0; i < 31; i++) b.boite(fo, .46, .028, .085, x, 1.072, -2.4 + i * .16, { r: 0 });
+    for (let i = 0; i < 5; i++) { b.tour(pe, [[0, 0], [.3, 0], [.31, .02], [.31, .07], [.22, .09], [.1, .09]], x + sg * .2, .32, -1.7 + i * .85, { vers: v, seg: 14 }); b.tour(fo, [[.1, .085], [.08, .12], [0, .12]], x + sg * .2, .32, -1.7 + i * .85, { vers: v, seg: 8 }); }
+    b.tour(fo, [[0, 0], [.36, 0], [.36, .08], [.14, .1], [0, .14]], x + sg * .2, .64, 2.32, { vers: v, seg: 12 }); b.tour(fo, [[0, 0], [.33, 0], [.33, .08], [.12, .1], [0, .12]], x + sg * .2, .64, -2.4, { vers: v, seg: 12 });
+    for (const z of [-1.2, 0, 1.2]) b.cyl(fo, .11, .1, x + sg * .24, .93, z, { vers: 'x+', seg: 8 });
+    b.boite(pe, .52, .03, 5.1, x + sg * .02, 1.115, -.05, { r: .006 });
+    for (const y of [1.19, 1.32]) b.rivets(ac, [-2.2, -1.8, -.8, -.4, 0, .4, .8].map(z => [sg * .862, y, z]), .016, v);
+    b.plaque({ t: num, style: 'pochoir', couleur: '#d8d2b8' }, .44, .13, sg * .863, 1.255, -1.3, { vers: v });
+    b.tuyau(m('rouille'), [[sg * .5, 1.2, -2.5], [sg * .5, 1.2, -2.78], [sg * .5, 1.5, -2.84]], .05, { coude: .08, seg: 7 }); }
+  b.boite(pe, .5, .05, .4, -.35, 1.29, 1.38, { rot: [.3, 0, 0], r: .012 }); b.boite(noir, .26, .03, .02, -.35, 1.255, 1.62, { rot: [.3, 0, 0], r: 0 });
+  b.sphere(pe, .09, .55, 1.2, 1.86, { seg: 8, seg2: 5 }); b.cyl(m('verre_depoli'), .07, .012, .55, 1.2, 1.945, { vers: 'z+', seg: 10 });
+  b.partie('tourelle', [0, 1.4, .1], c => {
+    c.tour(pe, [[0, 0], [.9, 0], [.92, .04], [.84, .5], [.74, .58], [0, .6]], 0, 0, 0, { seg: 12, ch: .015 });
+    for (let i = 0; i < 12; i++) { const a = i * PI / 6 + .26; c.sphere(ac, .018, Math.sin(a) * .915, .1, Math.cos(a) * .915, { seg: 5, seg2: 3 }); }
+    c.tour(pe, [[0, 0], [.27, 0], [.27, .16], [.21, .2], [0, .21]], -.32, .58, -.22, { seg: 10 }); c.boite(noir, .2, .03, .02, -.32, .68, .05, { r: 0 });
+    c.boite(pe, .72, .42, .3, 0, .3, .8, { r: .05 }); c.tuyau(ac, [[.5, .58, -.5], [.5, 2, -.55]], [.008, .003], { seg: 4 });
+    c.partie('canon', [0, .3, .9], d => { d.tour(fo, [[0, 0], [.085, 0], [.085, .35], [.06, .42], [.052, 1.75], [.07, 1.77], [.07, 1.92], [.04, 1.92], [.04, 1.8], [0, 1.8]], 0, 0, 0, { vers: 'z+', seg: 10 }); d.cyl(ac, .022, .5, .2, .06, .35, { vers: 'z+', seg: 6 }); }, 'x');
+  }, 'y');
+  b.collision(-1.3, 0, -2.8, 1.3, 1.4, 2.75); b.collision(-.92, 1.4, -.82, .92, 2, 1.02); });
+
+/* ================================================================ EFFETS (les mêmes que fab.effet, rangés au catalogue) */
+const FX = { groupe: 'Effets', surface: 'aucune', effet: true };
+E('feu_de_camp', Object.assign({ titre: 'Feu de camp', univers: [C, D, K, TK, GM], options: { allume: [true, false] } }, FX), (b, o, m) => { const ro = m('roche'), bu = m('ecorce', { couleur: '#33261c' });
+  for (let i = 0; i < 9; i++) { const a = i * 2 * PI / 9; blob(b, ro, b.hasard(.08, .12), Math.sin(a) * .42, .035, Math.cos(a) * .42, { facettes: true, detail: 1, graine: i + b.g * 13, amp: .35, plat: true }); }
+  for (let i = 0; i < 5; i++) { const a = i * 2 * PI / 5 + .3; b.tuyau(bu, [[Math.sin(a) * .32, .05, Math.cos(a) * .32], [-Math.sin(a) * .05, .26, -Math.cos(a) * .05]], [.045, .035], { seg: 6 }); }
+  if (o.allume !== false) { const f = fab.effet('feu', { rayon: .22, hauteur: .8, nombre: 40, graine: b.g }), s = fab.effet('fumee', { rayon: .2, graine: b.g }); f.position.y = .1; s.position.y = .7; b.enfant(f); b.enfant(s); b.lumiere(0, .5, 0, '#ff9a40', 2.6, 11); } });
+E('fumee', Object.assign({ titre: 'Fumée', univers: [TK, GM, C, D, K, RF], note: 'rayon, hauteur, duree, opacite, vent [x,y,z], couleur1, couleur2' }, FX), (b, o) => b.enfant(fab.effet('fumee', o)));
+E('pluie', Object.assign({ titre: 'Pluie', univers: [TK, GM, C, D, RF], note: 'suit la caméra ; volume, nombre, vitesse [x,y,z], longueur, opacite' }, FX), (b, o) => b.enfant(fab.effet('pluie', o)));
+E('neige', Object.assign({ titre: 'Neige', univers: [TK, GM, C, D], note: 'suit la caméra ; volume, nombre, vitesse [x,y,z], taille, opacite' }, FX), (b, o) => b.enfant(fab.effet('neige', o)));
+E('bassin', Object.assign({ titre: 'Bassin d\'eau', univers: [C, D, K, TK, GM], surface: 'pierre', note: 'largeur (3), profondeur (2), eau: \'eau\' ou \'eau_trouble\'' }, FX), (b, o, m) => { const W = o.largeur || 3, Dp = o.profondeur || 2, p = m('pierre', { assise: .22 }), e = .28, h = .46;
+  for (const sz of [1, -1]) b.boite(p, W, h, e, 0, h / 2, sz * (Dp / 2 - e / 2), { r: .02 }); for (const sx of [1, -1]) b.boite(p, e, h, Dp - 2 * e, sx * (W / 2 - e / 2), h / 2, 0, { r: .02 });
+  b.boite(m('pierre_sombre', { mode: 'roche' }), W - 2 * e, .05, Dp - 2 * e, 0, .025, 0, { r: 0 });
+  const eau = new THREE.Mesh(new THREE.PlaneGeometry(W - 2 * e, Dp - 2 * e), fab.mat(o.eau || 'eau', { espace: 'monde' })); eau.rotation.x = -PI / 2; eau.position.y = h - .09; eau.renderOrder = 3; b.enfant(eau); b.collision(-W / 2, 0, -Dp / 2, W / 2, h, Dp / 2); });
+
+/* les objets rétrofuturistes qui ont aussi leur place ailleurs */
+const AUSSI = { caisse_bois: [TK, GM, C, D], palette: [TK, GM], fut: [TK, GM], bidon: [TK, GM], caisse_metal: [TK, GM], etabli: [TK, GM], etagere: [TK], casier: [TK], armoire: [TK], lit: [TK, GM], chariot: [TK], tabouret: [TK, GM], table: [TK, GM],
+  extincteur: [TK], generateur: [TK, GM], radio: [TK, GM], lampe_cage: [TK, GM], tuyauterie: [TK], vanne: [TK], porte_blindee: [TK, GM], armoire_electrique: [TK], bonbonne: [TK], ventilateur: [TK], moniteur: [TK] };
+for (const n in fab.catalogue) { const c = fab.catalogue[n]; if (!c.univers) c.univers = [RF].concat(AUSSI[n] || []); if (Array.isArray(c.parties)) c.parties = c.parties.join(', '); }
+});
+/* ==========================================================================================
+   FABRIQUE — objets des jeux (1) : laboratoire et pharmacie (Pharma-Cook, Frankenstein), intérieur victorien (Sherlock, Dracula)
+   ========================================================================================== */
+FAB._objets.push(function (fab) {
+'use strict';
+const THREE = fab.THREE, PI = Math.PI, A = fab.accessoires;
+const D = 'dracula', C = 'camelot', K = 'catacombes', GM = 'guerre', TK = 'tarkov', RF = 'retrofutur', PH = 'pharmacie', FR = 'frankenstein', SH = 'sherlock', VI = 'ville';
+Object.assign(fab.univers, { pharmacie: 'Pharma-Cook', frankenstein: 'Frankenstein', sherlock: 'Sherlock', foot: 'Pharma-Foot', ville: 'PharmaVille' });
+const E = (nom, meta, fn) => { if (meta.points || meta.prise) { const ap = meta.apres; meta.apres = (G, o, b) => { G.userData.points = meta.points; G.userData.prise = meta.prise; if (ap) ap(G, o, b); }; } fab.enregistrer(nom, meta, fn); };
+const NOIR = () => fab.mat('polymere', { couleur: '#070706', rugosite: .95, etat: 0 });
+
+/* ---------------------------------------------------------------- inscriptions nouvelles */
+const ST = fab.styles, HT = fab.stylesHaut; HT.maille = 128; HT.horloge = 220; HT.portrait = 300; HT.toile = 256; HT.lignes = 128;
+ST.maille = (g, w, h, s) => { const n = s.n || 5; g.strokeStyle = s.couleur || '#ecece6'; g.lineWidth = Math.max(1.5, w * .02); g.beginPath(); for (let i = 0; i <= n; i++) { g.moveTo(i / n * w, 0); g.lineTo(i / n * w, h); g.moveTo(0, i / n * h); g.lineTo(w, i / n * h); } g.stroke(); };
+ST.horloge = (g, w, h, s) => { const R = Math.min(w, h) / 2, cx = w / 2, cy = h / 2, hr = s.heure === undefined ? 11.92 : s.heure; g.fillStyle = '#e9e2cc'; g.beginPath(); g.arc(cx, cy, R * .98, 0, 7); g.fill(); g.strokeStyle = '#2a2016'; g.lineWidth = R * .03; g.beginPath(); g.arc(cx, cy, R * .93, 0, 7); g.stroke();
+  g.fillStyle = '#1c1610'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold ' + R * .17 + 'px Georgia, serif'; ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'].forEach((t, i) => g.fillText(t, cx + Math.sin(i * PI / 6) * R * .74, cy - Math.cos(i * PI / 6) * R * .74));
+  const aig = (a, L, e) => { g.lineWidth = e; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - Math.sin(a) * L * .15, cy + Math.cos(a) * L * .15); g.lineTo(cx + Math.sin(a) * L, cy - Math.cos(a) * L); g.stroke(); };
+  g.strokeStyle = '#14100c'; aig(hr / 12 * 2 * PI, R * .48, R * .06); aig((hr % 1) * 2 * PI, R * .7, R * .04); g.beginPath(); g.arc(cx, cy, R * .05, 0, 7); g.fill(); };
+ST.portrait = (g, w, h, s) => { const gr = g.createRadialGradient(w * .5, h * .4, h * .05, w * .5, h * .5, h * .75); gr.addColorStop(0, '#4a3a26'); gr.addColorStop(1, '#120d08'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.fillStyle = s.couleur || '#1a1216'; g.beginPath(); g.moveTo(w * .08, h); g.quadraticCurveTo(w * .12, h * .58, w * .5, h * .56); g.quadraticCurveTo(w * .88, h * .58, w * .92, h); g.fill();
+  g.fillStyle = '#e4dccb'; g.beginPath(); g.moveTo(w * .42, h * .56); g.lineTo(w * .5, h * .68); g.lineTo(w * .58, h * .56); g.fill();
+  g.fillStyle = '#b39680'; g.beginPath(); g.ellipse(w * .5, h * .36, w * .15, h * .17, 0, 0, 7); g.fill(); g.fillStyle = '#1c1410'; g.beginPath(); g.ellipse(w * .5, h * .27, w * .17, h * .1, 0, PI, 0); g.fill();
+  g.fillStyle = 'rgba(20,10,8,.85)'; for (const sx of [-1, 1]) { g.beginPath(); g.ellipse(w * (.5 + sx * .065), h * .35, w * .024, h * .012, 0, 0, 7); g.fill(); } g.fillRect(w * .46, h * .44, w * .08, h * .008); };
+ST.toile = (g, w, h, s) => { const cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2, n = 11; g.strokeStyle = 'rgba(235,235,230,.75)'; g.lineWidth = Math.max(1, R * .012); g.beginPath();
+  for (let i = 0; i < n; i++) { const a = i * 2 * PI / n + .2; g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); }
+  for (let k = 1; k < 8; k++) { const r = R * k / 8 * .97; for (let i = 0; i <= n; i++) { const a = i * 2 * PI / n + .2, a2 = a - PI / n, rr = r * .9; if (i === 0) g.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); else g.quadraticCurveTo(cx + Math.cos(a2) * rr, cy + Math.sin(a2) * rr, cx + Math.cos(a) * r, cy + Math.sin(a) * r); } } g.stroke(); };
+ST.lignes = (g, w, h, s) => { const n = s.n || 7; g.strokeStyle = s.couleur || 'rgba(42,28,18,.85)'; g.lineWidth = Math.max(1, h / n * .14); for (let i = 0; i < n; i++) { const y = h * (i + .6) / n, L = w * (.8 + .18 * Math.sin(i * 7.3 + (s.g || 0))); g.beginPath(); for (let x = w * .04; x < L; x += w * .02) g.lineTo(x, y + Math.sin(x * .35 + i) * h / n * .12); g.stroke(); } };
+
+/* ---------------------------------------------------------------- verrerie et pots */
+const PROFILS = { fiole: [[0, 0], [.02, 0], [.034, .012], [.04, .035], [.034, .06], [.014, .075], [.012, .105], [.016, .11]], flacon: [[0, 0], [.03, 0], [.032, .004], [.032, .075], [.024, .09], [.011, .098], [.011, .118], [.015, .12], [.015, .128]],
+  erlenmeyer: [[0, 0], [.04, 0], [.042, .004], [.014, .085], [.013, .115], [.017, .118]], becher: [[0, 0], [.034, 0], [.035, .003], [.035, .085], [.038, .088]], eprouvette: [[0, 0], [.006, .001], [.0085, .008], [.0085, .14], [.0098, .142]],
+  ballon: [[0, 0], [.025, .004], [.045, .03], [.05, .05], [.045, .072], [.022, .095], [.013, .105], [.013, .15], [.017, .153]] };
+const LIQ = ['#7a1c1c', '#2f6a3a', '#2a4a8a', '#b88a1c', '#6a2a7a', '#1c6a6a'];
+/* verrerie(b, m, forme, x, y, z, {couleur, niveau, lumineux, k, bouchon}) : un récipient de verre et son liquide */
+function verrerie(b, m, forme, x, y, z, o) { o = o || {}; const k = o.k || 1, P = (PROFILS[forme] || PROFILS.flacon).map(p => [p[0] * k, p[1] * k]), H = P[P.length - 1][1], niv = (o.niveau === undefined ? .55 : o.niveau) * H, sg = o.seg || 10;
+  b.tour(m('verre', { couleur: o.verre || '#dcebe6', opacite: .2 }), P, x, y, z, { seg: sg, lisse: true });
+  if (o.couleur && niv > 0) { const L = [[0, .002 * k]]; for (let i = 1; i < P.length; i++) { const a = P[i - 1], c = P[i]; if (c[1] <= niv) L.push([Math.max(.001, c[0] - .0025 * k), Math.max(.002 * k, c[1])]); else { const t = (niv - a[1]) / (c[1] - a[1] || 1); L.push([Math.max(.001, a[0] + (c[0] - a[0]) * t - .0025 * k), niv]); break; } }
+    L.push([0, niv]); b.tour(o.lumineux ? m('lueur', { couleur: o.couleur, intensite: 1.3, scintille: .06 }) : fab.mat('polymere', { couleur: o.couleur, rugosite: .08, etat: 0 }), L, x, y, z, { seg: sg, lisse: true }); }
+  if (o.bouchon !== false && forme !== 'becher' && forme !== 'erlenmeyer') b.cyl(m('bois_clair', { planche: 9 }), P[P.length - 1][0] * .8, .018 * k, x, y + H + .003 * k, z, { seg: 7, ch: .002 }); }
+const NOMS_B = ['OPIUM', 'ARNICA', 'BELLADONE', 'CAMPHRE', 'QUINQUINA', 'DIGITALE', 'ALOÈS', 'VALÉRIANE'];
+function bocal(b, m, x, y, z, texte, k, sg) { k = k || 1; sg = sg || 12;
+  b.tour(m('email'), [[0, 0], [.05, 0], [.055, .01], [.06, .05], [.06, .16], [.05, .19], [.04, .2], [.04, .215], [.047, .22], [.047, .228], [.02, .245], [.012, .258], [.017, .266], [0, .272]].map(p => [p[0] * k, p[1] * k]), x, y, z, { seg: sg, ch: .002 });
+  b.bague(m('laiton'), .0485 * k, .046 * k, .006 * k, x, y + .225 * k, z, { seg: sg });
+  if (texte) b.plaque({ t: texte, style: 'etiquette', couleur: '#2a4a6a' }, .075 * k, .05 * k, x, y + .11 * k, z + .0605 * k, { courbe: .0605 * k }); }
+A.verrerie = verrerie; A.bocal = bocal;
+const LAB = { groupe: 'Laboratoire', surface: 'metal' };
+
+E('flacon', Object.assign({}, LAB, { titre: 'Flacon et verrerie', univers: [PH, FR, K, D, SH, RF], surface: 'verre', options: { forme: ['flacon', 'fiole', 'erlenmeyer', 'becher', 'eprouvette', 'ballon'], lumineux: [false, true] }, note: 'couleur du liquide, niveau (0 à 1), k (échelle) ; lumineux : potion' }), (b, o, m) =>
+  verrerie(b, m, o.forme || 'flacon', 0, 0, 0, { couleur: o.couleur || LIQ[b.entier(LIQ.length)], niveau: o.niveau, lumineux: o.lumineux, k: o.k }));
+E('bocal', Object.assign({}, LAB, { titre: 'Pot de pharmacie', univers: [PH, FR, SH, K], surface: 'pierre', note: 'texte de l\'étiquette' }), (b, o, m) => bocal(b, m, 0, 0, 0, o.texte || NOMS_B[b.entier(NOMS_B.length)]));
+E('mortier', Object.assign({}, LAB, { titre: 'Mortier et pilon', univers: [PH, FR, K, SH], surface: 'pierre', note: 'matiere (marbre, bronze, email)' }), (b, o, m) => { const ma = m(o.matiere || 'marbre');
+  b.tour(ma, [[0, 0], [.05, 0], [.055, .008], [.046, .024], [.07, .07], [.086, .105], [.08, .108], [.066, .078], [.03, .034], [0, .03]], 0, 0, 0, { seg: 14, ch: .002 });
+  b.tour(ma, [[0, 0], [.02, 0], [.024, .02], [.012, .05], [.011, .16], [.015, .172], [0, .178]], .02, .045, 0, { seg: 8, rot: [0, 0, -.5], ch: .002 }); });
+E('alambic', Object.assign({}, LAB, { titre: 'Alambic', univers: [PH, FR, K, SH], options: { feu: [true, false] } }), (b, o, m) => { const cu = m('cuivre'), fe = m('fer_forge');
+  for (let i = 0; i < 3; i++) { const a = i * 2 * PI / 3; b.tuyau(fe, [[Math.sin(a) * .17, 0, Math.cos(a) * .17], [Math.sin(a) * .13, .2, Math.cos(a) * .13]], .009, { seg: 5 }); b.tuyau(fe, [[.44 + Math.sin(a + .5) * .1, 0, Math.cos(a + .5) * .1], [.44 + Math.sin(a + .5) * .08, .2, Math.cos(a + .5) * .08]], .007, { seg: 5 }); }
+  b.tore(fe, .135, .008, 0, .2, 0, { seg: 14, seg2: 5 }); b.tour(cu, [[0, 0], [.1, 0], [.15, .04], [.165, .13], [.14, .23], [.07, .29], [.06, .31]], 0, .2, 0, { seg: 14, ch: .003 });
+  b.bague(m('laiton'), .066, .055, .02, 0, .51, 0, { seg: 12 }); b.tour(cu, [[.06, 0], [.1, .05], [.09, .12], [.04, .17], [.018, .19]], 0, .51, 0, { seg: 12 });
+  b.tuyau(cu, [[0, .7, 0], [0, .78, 0], [.2, .8, 0], [.4, .66, 0], [.44, .56, 0]], [.018, .012], { coude: .06, seg: 7 });
+  b.tour(cu, [[0, 0], [.09, 0], [.1, .01], [.1, .36], [.105, .37], [.095, .37], [.093, .02], [0, .02]], .44, .2, 0, { seg: 12, ch: .002 });
+  b.tuyau(cu, [[.44, .25, .09], [.44, .24, .16], [.44, .2, .19]], .008, { coude: .03, seg: 5 }); verrerie(b, m, 'erlenmeyer', .44, 0, .2, { couleur: '#b88a1c', niveau: .35 });
+  if (o.feu !== false) { b.tour(m('lueur_flamme'), [[0, 0], [.06, .01], [.04, .06], [0, .1]], 0, .08, 0, { seg: 7, lisse: true }); b.lumiere(0, .15, 0, '#ff9a40', 1.2, 4); } b.collision(-.18, 0, -.18, .56, .82, .2); });
+E('etuve', Object.assign({}, LAB, { titre: 'Étuve', univers: [PH, FR, RF], parties: 'porte', note: 'couleur' }), (b, o, m) => { const pe = m('peinture', { couleur: o.couleur || '#d9d4c2' }), ac = m('acier'), W = .62, H = .66, Dp = .5, y0 = .14, yb = y0 + H - .055;
+  for (const sx of [1, -1]) for (const sz of [1, -1]) b.cyl(ac, .018, y0, sx * (W / 2 - .05), y0 / 2, sz * (Dp / 2 - .05), { seg: 7 });
+  b.boite(pe, W, .03, Dp, 0, y0 + .015, 0, { r: .006 }); b.boite(pe, W, .03, Dp, 0, y0 + H - .015, 0, { r: .006 }); b.boite(pe, W, H, .02, 0, y0 + H / 2, -Dp / 2 + .01, { r: .004 }); for (const sx of [1, -1]) b.boite(pe, .02, H, Dp, sx * (W / 2 - .01), y0 + H / 2, 0, { r: .004 });
+  b.boite(ac, W - .06, .008, Dp - .06, 0, y0 + H * .45, 0, { r: 0 }); b.boite(pe, W, .11, .02, 0, yb, Dp / 2 - .01, { r: .004 });
+  b.plaque({ style: 'cadran', t: '°C', v: .6, max: 200 }, .075, .075, -.18, yb, Dp / 2 + .0008); b.cyl(m('bakelite_noire'), .018, .016, 0, yb, Dp / 2 + .008, { vers: 'z+', seg: 8 }); b.sphere(m('lueur_rouge'), .008, .16, yb, Dp / 2 + .002, { seg: 6, seg2: 4 });
+  b.cyl(ac, .03, .12, .15, y0 + H + .06, -.1, { seg: 8 });
+  b.partie('porte', [-W / 2 + .01, y0 + .03, Dp / 2], c => { const w = W - .02, h = H - .17; c.boite(pe, w, h, .03, w / 2, h / 2, .015, { r: .006 }); c.cyl(m('verre_depoli'), .11, .012, w / 2, h / 2, .034, { vers: 'z+', seg: 14 }); c.bague(ac, .125, .105, .014, w / 2, h / 2, .034, { vers: 'z+', seg: 14 }); c.boite(ac, .02, .14, .03, w - .04, h / 2, .045, { r: .006 }); }, 'y');
+  b.collision(-W / 2, 0, -Dp / 2, W / 2, y0 + H, Dp / 2); });
+E('balance', Object.assign({}, LAB, { titre: 'Balance de pharmacie', univers: [PH, FR, SH, K], parties: 'fleau' }), (b, o, m) => { const la = m('laiton');
+  b.boite(m('bois_sombre', { planche: 9 }), .34, .035, .15, 0, .0175, 0, { r: .005 }); b.tour(la, [[0, 0], [.04, 0], [.042, .006], [.015, .02], [.01, .05], [.014, .06], [.009, .075], [.008, .33], [.014, .34], [0, .35]], 0, .035, 0, { seg: 10, ch: .0015 });
+  b.partie('fleau', [0, .385, 0], c => { c.boite(la, .3, .01, .008, 0, 0, 0, { r: .002 }); c.tour(la, [[0, 0], [.008, 0], [.004, .03], [0, .04]], 0, .005, 0, { seg: 6 });
+    for (const sg of [1, -1]) { const x = sg * .14; for (let i = 0; i < 3; i++) { const a = i * 2 * PI / 3; c.tuyau(la, [[x, 0, 0], [x + Math.sin(a) * .05, -.17, Math.cos(a) * .05]], .0012, { seg: 3, bouts: false }); }
+      c.tour(la, [[0, 0], [.03, 0], [.055, .012], [.057, .016], [.03, .006], [0, .006]], x, -.185, 0, { seg: 12, ch: .001 }); } }, 'z'); });
+E('boite_medicament', Object.assign({}, LAB, { titre: 'Boîte de médicament', univers: [PH, VI, TK], surface: 'carton', note: 'texte, couleur de la bande' }), (b, o, m) => { const W = .11, H = .06, Dp = .035;
+  b.boite(m('papier', { couleur: '#eceae2' }), W, H, Dp, 0, H / 2, 0, { r: .002 }); b.boite(m('peinture', { couleur: o.couleur || b.choix(['#2f8a4a', '#2a5a9a', '#b8322a', '#c98a1c']), rugosite: .5 }), W + .0006, H * .28, Dp + .0006, 0, H * .16, 0, { r: 0 });
+  b.plaque({ style: 'croix', couleur: '#2f8a4a' }, .028, .028, -.034, H * .66, Dp / 2 + .0006); b.plaque({ t: o.texte || b.choix(['DOLIPRAX', 'ASPIRINE', 'VITAMINE C', 'SIROP']), style: 'pochoir', couleur: '#22262c' }, .058, .016, .018, H * .66, Dp / 2 + .0006); });
+E('comptoir', Object.assign({}, LAB, { titre: 'Comptoir d\'officine', univers: [PH, SH, VI, FR], surface: 'bois', parties: 'tiroir', note: 'longueur (1,8), plateau (marbre, marbre_noir, bois_sombre) ; les tiroirs sont du côté −z' }), (b, o, m) => { const L = o.longueur || 1.8, bo = m('bois_sombre', { axe: 'y', planche: .14 }), b2 = m('bois', { couleur: '#6a4526', planche: 9 }), la = m('laiton'), H = .92, Dp = .6, n = Math.max(2, Math.round(L / .45)), w = (L - .1) / n, zf = Dp / 2 - .03;
+  b.boite(bo, L, .08, Dp, 0, .04, 0, { r: .008 }); b.boite(bo, L - .04, H - .12, Dp - .06, 0, .08 + (H - .12) / 2, 0, { r: .006 }); b.boite(m(o.plateau || 'marbre'), L + .06, .04, Dp + .06, 0, H - .02, 0, { r: .008 });
+  for (let i = 0; i < n; i++) { const x = -L / 2 + .05 + w * (i + .5); b.boite(b2, w - .06, H - .3, .012, x, .08 + (H - .12) / 2, zf + .006, { r: .008 });
+    for (let j = 0; j < 3; j++) { const y = .22 + j * .22; if (!i && j === 2) continue; b.boite(b2, w - .04, .19, .012, x, y, -zf - .006, { r: .006 }); b.sphere(la, .012, x, y, -zf - .02, { seg: 6, seg2: 4 }); } }
+  b.partie('tiroir', [-L / 2 + .05 + w * .5, .66, -zf], c => { c.boite(b2, w - .04, .19, .012, 0, 0, -.006, { r: .006 }); c.sphere(la, .012, 0, 0, -.02, { seg: 6, seg2: 4 }); c.boite(bo, w - .08, .01, .4, 0, -.08, .2, { r: 0 }); for (const sx of [1, -1]) c.boite(bo, .01, .14, .4, sx * (w / 2 - .04), -.015, .2, { r: 0 }); c.boite(bo, w - .08, .14, .01, 0, -.015, .4, { r: 0 }); }, 'tz');
+  b.collision(-L / 2 - .03, 0, -Dp / 2 - .03, L / 2 + .03, H, Dp / 2 + .03); });
+E('etagere_bocaux', Object.assign({}, LAB, { titre: 'Étagère à bocaux', univers: [PH, FR, SH, K], surface: 'bois', note: 'largeur (1,2), hauteur (2), rayons (4)' }), (b, o, m) => { const W = o.largeur || 1.2, H = o.hauteur || 2, n = o.rayons || 4, Dp = .28, bo = m('bois_sombre', { axe: 'y', planche: .14 }), pas = (H - .16) / n;
+  for (const sx of [1, -1]) b.boite(bo, .03, H, Dp, sx * (W / 2 - .015), H / 2, 0, { r: .004 }); b.boite(bo, W - .06, H, .014, 0, H / 2, -Dp / 2 + .007, { r: 0 }); b.boite(bo, W + .06, .05, Dp + .04, 0, H - .025, 0, { r: .01 }); b.boite(bo, W, .1, Dp, 0, .05, 0, { r: .006 });
+  for (let j = 0; j < n; j++) { const y = .1 + j * pas; b.boite(bo, W - .06, .024, Dp - .02, 0, y + .012, .005, { r: .003 }); let x = -W / 2 + .1;
+    while (x < W / 2 - .09) { const t = b.hasard(0, 1); if (j % 2 === 0 && t < .75) { bocal(b, m, x, y + .024, 0, t < .3 ? b.choix(NOMS_B) : null, b.hasard(.8, .95), 6); x += .135; } else { verrerie(b, m, b.choix(['flacon', 'flacon', 'fiole', 'ballon']), x - .02, y + .024, b.hasard(-.03, .04), { couleur: b.choix(LIQ), niveau: b.hasard(.3, .8), k: b.hasard(1, 1.5), seg: 6 }); x += b.hasard(.085, .12); } } }
+  b.collision(-W / 2, 0, -Dp / 2, W / 2, H, Dp / 2); });
+E('microscope', Object.assign({}, LAB, { titre: 'Microscope', univers: [PH, FR, SH, RF] }), (b, o, m) => { const la = m('laiton'), no = m('peinture_noire');
+  b.prisme(no, [[-.06, -.07], [.06, -.07], [.06, .06], [.03, .09], [.03, -.02], [-.03, -.02], [-.03, .09], [-.06, .06]], .02, 0, .01, 0); b.boite(no, .04, .16, .03, 0, .1, -.05, { rot: [.25, 0, 0], r: .006 });
+  b.boite(no, .1, .008, .1, 0, .13, .01, { r: .002 }); b.cyl(m('acier_poli'), .022, .004, 0, .06, .02, { rot: [.5, 0, 0], seg: 10 });
+  b.groupe([0, .2, -.045], [.25, 0, 0], b => { b.cyl(la, .016, .16, 0, .06, .05, { seg: 10 }); b.cyl(la, .02, .03, 0, .15, .05, { seg: 10 }); b.cyl(no, .013, .03, 0, -.03, .05, { seg: 8, r2: .008 }); for (const sx of [1, -1]) b.cyl(la, .018, .012, sx * .032, .0, 0, { vers: 'x+', seg: 10 }); b.boite(no, .03, .1, .03, 0, .03, .012, { r: .006 }); }); });
+E('croix_pharmacie', Object.assign({}, LAB, { titre: 'Croix de pharmacie', univers: [PH, VI], pose: 'mur', options: { allumee: [true, false] }, note: 'enseigne lumineuse en drapeau ; origine contre le mur' }), (b, o, m) => { b.sol = false; const a = .11, L = .33, Cn = [[-a, -L], [a, -L], [a, -a], [L, -a], [L, a], [a, a], [a, L], [-a, L], [-a, a], [-L, a], [-L, -a], [-a, -a]], k = .86, ac = m('acier_noir');
+  b.tuyau(ac, [[0, 0, 0], [0, 0, .5]], .012, { seg: 6 }); b.boite(ac, .1, .1, .008, 0, 0, .004, { r: .002 }); b.tuyau(ac, [[0, .25, .0], [0, .02, .3]], .006, { seg: 4 });
+  b.prisme(m('peinture', { couleur: '#e8e8e2' }), Cn, .09, 0, 0, .52, { plan: 'zy' }); const lu = o.allumee === false ? m('peinture_verte') : m('lueur', { couleur: '#3cff7a', intensite: 2.6, scintille: .08, vitesse: .2 });
+  for (const sx of [1, -1]) b.prisme(lu, Cn.map(p => [p[0] * k, p[1] * k]), .004, sx * .046, 0, .52, { plan: 'zy' }); if (o.allumee !== false) b.lumiere(0, 0, .52, '#3cff7a', 1.4, 5); });
+
+/* ---- Frankenstein */
+E('table_operation', Object.assign({}, LAB, { titre: 'Table d\'opération', univers: [FR, RF, TK], parties: 'plateau' }), (b, o, m) => { const fe = m('fer_forge'), ac = m('acier'), cu = m('cuir', { couleur: '#3a2a1c' }), la = m('laiton');
+  for (const sz of [1, -1]) { for (const sx of [1, -1]) b.tuyau(fe, [[sx * .34, 0, sz * .75], [sx * .3, .72, sz * .6]], .018, { seg: 6 }); b.tuyau(fe, [[-.32, .3, sz * .69], [.32, .3, sz * .69]], .012, { seg: 5 }); } b.tuyau(fe, [[0, .3, -.69], [0, .3, .69]], .012, { seg: 5 }); b.boite(fe, .5, .04, 1.1, 0, .74, 0, { r: .006 });
+  b.partie('plateau', [0, .78, 0], c => { c.boite(ac, .78, .035, 2, 0, .018, 0, { r: .008 }); for (const sx of [1, -1]) c.boite(ac, .02, .03, 2, sx * .38, .05, 0, { r: .004 });
+    for (const z of [-.62, -.1, .45, .8]) { c.boite(cu, .8, .006, .07, 0, .042, z, { r: 0 }); c.boite(la, .04, .01, .05, .2, .046, z, { r: .002 }); }
+    c.boite(m('toile_blanche'), .3, .05, .2, 0, .06, -.86, { r: .02 }); for (const sx of [1, -1]) { c.tuyau(la, [[sx * .3, .03, -.95], [sx * .3, .3, -.95], [sx * .16, .36, -.9]], .008, { coude: .04, seg: 5 }); c.sphere(la, .022, sx * .16, .36, -.9, { seg: 8, seg2: 5 }); } }, 'x');
+  b.collision(-.4, 0, -1, .4, .85, 1); });
+E('bobine_tesla', Object.assign({}, LAB, { titre: 'Bobine de Tesla', univers: [FR, RF], options: { active: [true, false] } }), (b, o, m) => { const cu = m('cuivre'), bk = m('bakelite_noire'), la = m('laiton');
+  b.boite(m('bois_sombre', { planche: 9 }), .56, .12, .56, 0, .06, 0, { r: .012 }); b.boite(bk, .44, .02, .44, 0, .13, 0, { r: .004 });
+  for (let i = 0; i < 6; i++) b.tore(cu, .2 - i * .004, .012, 0, .17 + i * .03, 0, { seg: 18, seg2: 5 }); for (let i = 0; i < 4; i++) { const a = i * PI / 2 + .4; b.cyl(bk, .012, .22, Math.sin(a) * .2, .25, Math.cos(a) * .2, { seg: 6 }); }
+  b.cyl(bk, .075, 1.05, 0, .14 + .525, 0, { seg: 14 }); b.tour(cu, [[.0775, .02], [.0775, 1.0]], 0, .14, 0, { seg: 14 }); for (let i = 0; i < 24; i++) b.tore(cu, .0785, .0022, 0, .18 + i * .04, 0, { seg: 12, seg2: 3 });
+  b.tore(m('acier_poli'), .17, .06, 0, 1.24, 0, { seg: 20, seg2: 8 }); b.sphere(la, .05, 0, 1.33, 0, { seg: 10, seg2: 6 }); for (const sx of [1, -1]) { b.cyl(la, .01, .05, sx * .2, .16, .2, { seg: 6 }); b.sphere(la, .018, sx * .2, .195, .2, { seg: 8, seg2: 5 }); }
+  if (o.active !== false) { const lu = m('lueur_violette'); b.sphere(lu, .022, 0, 1.4, 0, { seg: 8, seg2: 5 }); for (let i = 0; i < 3; i++) { const a = b.hasard(0, 6); b.tuyau(lu, [[Math.sin(a) * .23, 1.24, Math.cos(a) * .23], [Math.sin(a + .3) * .34, 1.3 + b.hasard(-.1, .1), Math.cos(a + .3) * .34], [Math.sin(a - .2) * .46, 1.22 + b.hasard(-.15, .1), Math.cos(a - .2) * .46]], [.006, .001], { coude: 0, seg: 3 }); } b.lumiere(0, 1.3, 0, '#b48aff', 2, 7); }
+  b.collision(-.28, 0, -.28, .28, 1.4, .28); });
+E('interrupteur', Object.assign({}, LAB, { titre: 'Interrupteur à couteau', univers: [FR, RF], parties: 'levier', pose: 'mur', note: 'origine contre le mur ; parties.levier.rotation.x = 1.2 pour l\'ouvrir' }), (b, o, m) => { b.sol = false; const la = m('laiton'), cu = m('cuivre');
+  b.boite(m('ardoise', { mode: 'roche' }), .2, .32, .025, 0, 0, .0125, { r: .004 }); for (const y of [-.1, .1]) for (const sx of [1, -1]) { b.boite(la, .012, .05, .04, sx * .05, y, .045, { r: .002 }); b.cyl(la, .012, .012, sx * .075, y, .03, { vers: 'z+', seg: 6 }); }
+  b.partie('levier', [0, -.1, .05], c => { for (const sx of [1, -1]) c.boite(cu, .006, .26, .028, sx * .05, .12, 0, { r: 0 }); c.cyl(m('bakelite_noire'), .016, .15, 0, .25, .02, { vers: 'x+', seg: 8 }); c.boite(cu, .1, .012, .02, 0, .24, 0, { r: .002 }); }, 'x'); });
+E('bocal_specimen', Object.assign({}, LAB, { titre: 'Bocal à spécimen', univers: [FR, RF, K], surface: 'verre', options: { contenu: ['cerveau', 'oeil', 'coeur'] } }), (b, o, m) => { const ch = m('chair', { couleur: o.contenu === 'coeur' ? '#7a1c1c' : '#b88a86' });
+  b.tour(m('verre', { couleur: '#cfe6c8', opacite: .22 }), [[0, 0], [.075, 0], [.08, .008], [.08, .2], [.07, .215], [.07, .23]], 0, 0, 0, { seg: 14, lisse: true }); b.cyl(m('verre', { couleur: '#9ab85a', opacite: .4 }), .074, .17, 0, .095, 0, { seg: 14 });
+  b.cyl(m('laiton'), .074, .02, 0, .24, 0, { seg: 14, ch: .003 }); b.plaque({ t: 'N° ' + (10 + b.entier(89)), style: 'etiquette' }, .06, .03, 0, .05, .0806, { courbe: .0806 });
+  if (o.contenu === 'oeil') { b.sphere(m('email'), .03, 0, .1, 0, { seg: 10, seg2: 7 }); b.sphere(fab.mat('polymere', { couleur: '#3a5a7a', rugosite: .2, etat: 0 }), .014, 0, .1, .019, { seg: 8, seg2: 5 }); b.tuyau(ch, [[0, .1, -.03], [.01, .06, -.04], [-.01, .03, -.02]], [.006, .003], { coude: .02, seg: 5 }); }
+  else if (o.contenu === 'coeur') { A.blob(b, ch, .04, 0, .1, 0, { graine: 3, amp: .25, s: [1, 1.25, .85] }); b.tuyau(ch, [[.01, .14, 0], [.02, .17, .01]], .012, { seg: 6 }); }
+  else for (const sx of [1, -1]) A.blob(b, ch, .036, sx * .022, .1, 0, { graine: 5 + sx, amp: .3, freq: 5, s: [.8, .9, 1.25] }); });
+E('chaudron', Object.assign({}, LAB, { titre: 'Chaudron', univers: [FR, K, C, D], options: { feu: [true, false] }, note: 'contenu : couleur du bouillon' }), (b, o, m) => { const fo = m('fonte');
+  b.tour(fo, [[0, .08], [.14, .08], [.27, .15], [.33, .3], [.31, .44], [.28, .48], [.31, .5], [.31, .52], [.27, .52], [.29, .3], [.2, .17], [0, .14]], 0, 0, 0, { seg: 16, ch: .004 });
+  for (let i = 0; i < 3; i++) { const a = i * 2 * PI / 3; b.tuyau(fo, [[Math.sin(a) * .2, .14, Math.cos(a) * .2], [Math.sin(a) * .26, 0, Math.cos(a) * .26]], [.022, .014], { seg: 6 }); } for (const sx of [1, -1]) b.tore(fo, .045, .009, sx * .335, .44, 0, { vers: 'z+', seg: 10, seg2: 4 });
+  b.cyl(o.feu === false ? fab.mat('polymere', { couleur: o.contenu || '#3a4a22', rugosite: .1, etat: 0 }) : m('lueur', { couleur: o.contenu || '#7ad04a', intensite: .9, scintille: .2, vitesse: .2 }), .275, .01, 0, .42, 0, { seg: 16 });
+  if (o.feu !== false) { for (let i = 0; i < 4; i++) { const a = i * PI / 2 + .4; b.tuyau(m('ecorce', { couleur: '#33261c' }), [[Math.sin(a) * .3, .03, Math.cos(a) * .3], [-Math.sin(a) * .1, .05, -Math.cos(a) * .1]], .03, { seg: 6 }); } const f = fab.effet('feu', { rayon: .16, hauteur: .3, nombre: 26, graine: b.g }); f.position.y = .04; b.enfant(f); b.lumiere(0, .2, 0, '#ff9a40', 1.8, 7); }
+  b.collision(-.33, 0, -.33, .33, .52, .33); });
+E('corps_linceul', Object.assign({}, LAB, { titre: 'Corps sous linceul', univers: [FR, K, D, TK], surface: 'chair' }), (b, o, m) => { const li = m('lin', { couleur: '#c9c2ae' }), co = m('corde');
+  b.loft(li, [[-.9, .06, .05], [-.82, .1, .1], [-.7, .09, .11], [-.6, .16, .11], [-.4, .2, .12], [-.1, .17, .1], [.1, .18, .1], [.4, .15, .085], [.7, .11, .075], [.84, .09, .11], [.9, .05, .06]].map(s => ({ y: s[0], rx: s[1], rz: s[2], dz: -s[2], n: 2.4 })), 0, 0, 0, { seg: 12, vers: 'z+' });
+  for (const z of [-.66, .0, .62]) b.tore(co, z ? .1 : .19, .008, 0, z ? .1 : .1, z, { vers: 'z+', s: [1, 1, z ? 1 : .55], seg: 12, seg2: 4 }); b.collision(-.2, 0, -.9, .2, .25, .9); });
+E('pelle', { titre: 'Pelle', groupe: 'Armes', univers: [FR, GM, TK, K, D], surface: 'bois', prise: 'porte', pose: 'main' }, (b, o, m) => { b.sol = false; const bo = m('bois_clair', { axe: 'z', planche: 9 }), ac = m('acier');
+  b.cyl(bo, .017, 1, 0, 0, .2, { vers: 'z+', seg: 7 }); b.tore(bo, .05, .013, 0, 0, -.35, { vers: 'x+', seg: 10, seg2: 5 }); b.cyl(ac, .02, .14, 0, 0, .72, { vers: 'z+', seg: 7 });
+  b.loft(ac, [[.74, .06, .006, 0], [.8, .1, .008, .012], [.98, .1, .008, .016], [1.06, .06, .006, .01], [1.09, .01, .003, .006]].map(s => ({ y: s[0], rx: s[1], rz: s[2], dz: s[3], n: 3 })), 0, 0, 0, { seg: 8, vers: 'z+' }); });
+
+/* ================================================================ INTÉRIEUR VICTORIEN ET GOTHIQUE */
+const MOB = { groupe: 'Mobilier ancien', surface: 'bois' };
+const CUIRS = ['#4a1c1c', '#1c3a2a', '#2a2a4a', '#5a3a1c', '#2a1c14', '#6a5a3a'];
+function livres(b, m, x0, x1, y, z, hmax) { let x = x0; const M = CUIRS.map(c => m('cuir', { couleur: c }));       // une rangée de livres debout
+  while (x < x1 - .02) { const e = b.hasard(.018, .05), h = hmax * b.hasard(.72, 1), p = b.hasard(.13, .19), pen = b.hasard(0, 1) < .08 ? .16 : 0; if (x + e > x1) break;
+    b.boite(M[b.entier(M.length)], e, h, p, x + e / 2 + pen * h * .4, y + h / 2, z - p / 2, { r: 0, rot: [0, 0, -pen] }); x += e + .002 + pen * h * .9; } }
+A.livres = livres;
+
+E('bureau', Object.assign({}, MOB, { titre: 'Bureau à caissons', univers: [SH, D, FR, PH], parties: 'tiroir, double_fond', note: 'le tiroir central coulisse vers +z ; son double fond se soulève (rotation.x = −0.6)' }), (b, o, m) => { const bo = m('bois_sombre', { axe: 'x', planche: 9 }), b2 = m('bois', { couleur: '#5a3a22', planche: 9 }), la = m('laiton'), W = 1.5, Dp = .75, H = .76;
+  b.boite(bo, W, .04, Dp, 0, H - .02, 0, { r: .008 }); b.boite(m('cuir', { couleur: '#1f3a2a' }), W - .2, .004, Dp - .2, 0, H + .001, 0, { r: 0 });
+  for (const sx of [1, -1]) { const x = sx * (W / 2 - .21); b.boite(bo, .4, H - .1, Dp - .06, x, .06 + (H - .1) / 2, 0, { r: .006 }); b.boite(bo, .42, .06, Dp - .04, x, .03, 0, { r: .008 });
+    for (let j = 0; j < 3; j++) { b.boite(b2, .34, .19, .012, x, .17 + j * .21, Dp / 2 - .03 + .006, { r: .006 }); b.tore(la, .02, .004, x, .16 + j * .21, Dp / 2 - .012, { a0: PI, a1: 2 * PI, seg: 8, seg2: 4 }); } }
+  b.boite(bo, W - .84, .1, .02, 0, H - .09, -Dp / 2 + .05, { r: .004 });
+  b.partie('tiroir', [0, H - .095, Dp / 2 - .03], c => { const w = W - .86; c.boite(b2, w, .1, .014, 0, 0, .007, { r: .005 }); c.tore(la, .022, .004, 0, -.01, .02, { a0: PI, a1: 2 * PI, seg: 8, seg2: 4 });
+    c.boite(bo, w - .04, .008, .5, 0, -.042, -.25, { r: 0 }); for (const sx of [1, -1]) c.boite(bo, .01, .08, .5, sx * (w / 2 - .025), -.006, -.25, { r: 0 }); c.boite(bo, w - .04, .08, .01, 0, -.006, -.5, { r: 0 });
+    c.boite(m('papier'), .2, .002, .13, .05, -.036, -.3, { r: 0, rot: [0, .2, 0] }); c.plaque({ style: 'lignes', n: 5, g: 2 }, .17, .1, .05, -.0345, -.3, { rot: [-PI / 2, 0, .2] });
+    c.partie('double_fond', [0, -.026, -.49], d => d.boite(b2, w - .065, .006, .47, 0, 0, .235, { r: 0 }), 'x'); }, 'tz');
+  b.collision(-W / 2, 0, -Dp / 2, W / 2, H, Dp / 2); });
+E('bibliotheque', Object.assign({}, MOB, { titre: 'Bibliothèque', univers: [SH, D, C, K, FR], note: 'largeur (1,2), hauteur (2,2) ; chaque graine range les livres autrement' }), (b, o, m) => { const W = o.largeur || 1.2, H = o.hauteur || 2.2, Dp = .34, bo = m('bois_sombre', { axe: 'y', planche: .16 }), n = Math.max(2, Math.round((H - .3) / .36)), pas = (H - .26) / n;
+  for (const sx of [1, -1]) b.boite(bo, .035, H, Dp, sx * (W / 2 - .0175), H / 2, 0, { r: .004 }); b.boite(bo, W - .07, H, .014, 0, H / 2, -Dp / 2 + .007, { r: 0 }); b.boite(bo, W + .08, .07, Dp + .05, 0, H - .035, 0, { r: .014 }); b.boite(bo, W + .04, .12, Dp + .02, 0, .06, 0, { r: .008 });
+  for (let j = 0; j < n; j++) { const y = .12 + j * pas; b.boite(bo, W - .07, .024, Dp - .02, 0, y + .012, .005, { r: .003 }); livres(b, m, -W / 2 + .04, W / 2 - .04 - (j % 3 === 1 ? .2 : 0), y + .024, Dp / 2 - .03, pas - .07); }
+  b.collision(-W / 2, 0, -Dp / 2, W / 2, H, Dp / 2); });
+E('livre', Object.assign({}, MOB, { titre: 'Livres', univers: [SH, D, C, K, FR, PH], surface: 'cuir', note: 'pile (1 à 6)' }), (b, o, m) => { const n = o.pile || 3; let y = 0;
+  for (let i = 0; i < n; i++) { const w = b.hasard(.14, .2), d = w * 1.4, e = b.hasard(.025, .05), cu = m('cuir', { couleur: b.choix(CUIRS) }), r = [0, b.hasard(-.3, .3), 0];
+    b.groupe([b.hasard(-.01, .01), y, 0], r, b => { b.boite(cu, w, e, d, 0, e / 2, 0, { r: .003 }); b.boite(m('papier'), w - .008, e - .01, d - .01, .003, e / 2, 0, { r: 0 }); b.boite(m('or'), .003, e + .0006, d * .5, -w / 2 + .012, e / 2, 0, { r: 0 }); }); y += e; } });
+E('cheminee', Object.assign({}, MOB, { titre: 'Cheminée', univers: [SH, D, C, FR], surface: 'pierre', options: { allumee: [true, false] }, note: 'matiere (marbre_noir, marbre, pierre, brique) ; origine contre le mur, foyer vers +z' }), (b, o, m) => { const ma = m(o.matiere || 'marbre_noir'), br = m('brique_sombre', { salete: .9 }), fe = m('fer_forge'), W = 1.5, H = 1.2, Dp = .38;
+  for (const sx of [1, -1]) { b.boite(ma, .24, H - .16, Dp, sx * (W / 2 - .12), (H - .16) / 2, Dp / 2, { r: .01 }); b.boite(ma, .28, .1, Dp + .03, sx * (W / 2 - .12), .05, Dp / 2, { r: .012 }); b.boite(br, .03, .86, Dp - .04, sx * .52, .43, Dp / 2 - .02, { r: 0 }); }
+  b.boite(ma, W, .22, Dp, 0, H - .27, Dp / 2, { r: .01 }); b.boite(ma, W + .16, .06, Dp + .1, 0, H - .13 + .03, Dp / 2 + .02, { r: .014 }); b.boite(br, 1.04, .86, .03, 0, .43, .015, { r: 0 }); b.boite(m('pierre_sombre', { mode: 'roche' }), W + .1, .04, Dp + .32, 0, .02, Dp / 2 + .14, { r: .008 });
+  for (let i = 0; i < 6; i++) b.tuyau(fe, [[-.3 + i * .12, .06, .1], [-.3 + i * .12, .06, .34], [-.3 + i * .12, .2, .36]], .008, { coude: .03, seg: 4 }); for (const sx of [1, -1]) b.tuyau(fe, [[sx * .34, .04, .22], [sx * .34, .22, .22]], .012, { seg: 5 });
+  for (let i = 0; i < 3; i++) b.tuyau(m('ecorce', { couleur: '#33261c' }), [[-.26, .1 + i * .03, .16 + i * .05], [.26, .1 + i * .035, .2 + i * .04]], .04, { seg: 6 });
+  if (o.allumee !== false) { const f = fab.effet('feu', { rayon: .2, hauteur: .45, nombre: 34, graine: b.g }); f.position.set(0, .14, .22); b.enfant(f); b.lumiere(0, .4, .5, '#ff9a40', 2.4, 9); }
+  b.collision(-W / 2 - .08, 0, 0, W / 2 + .08, H, Dp + .05); });
+E('fauteuil', Object.assign({}, MOB, { titre: 'Fauteuil à oreilles', univers: [SH, D, FR], surface: 'cuir', note: 'couleur ; matiere (cuir, velours)' }), (b, o, m) => { const cu = m(o.matiere || 'cuir', { couleur: o.couleur || '#4a2a1c' }), bo = m('bois_sombre', { planche: 9 });
+  for (const sx of [1, -1]) for (const sz of [1, -1]) b.tour(bo, [[.022, 0], [.03, .03], [.02, .08], [.03, .13]], sx * .3, 0, sz * .3, { seg: 7 });
+  b.boite(cu, .74, .2, .72, 0, .23, 0, { r: .04 }); b.boite(cu, .56, .12, .56, 0, .39, .04, { r: .05 }); b.boite(cu, .7, .78, .16, 0, .72, -.3, { r: .06, rot: [-.12, 0, 0] });
+  for (const sx of [1, -1]) { b.cyl(cu, .085, .64, sx * .34, .5, .0, { vers: 'z+', seg: 10, ch: .02 }); b.boite(cu, .13, .2, .6, sx * .34, .38, 0, { r: .03 }); b.boite(cu, .09, .46, .26, sx * .33, .88, -.2, { r: .04, rot: [-.12, sx * .25, 0] }); }
+  b.collision(-.42, 0, -.4, .42, 1.1, .38); });
+E('lampe_petrole', Object.assign({}, MOB, { titre: 'Lampe à pétrole', univers: [SH, D, FR, GM, K], surface: 'metal', options: { allumee: [true, false] } }), (b, o, m) => { const la = m('laiton');
+  b.tour(la, [[0, 0], [.06, 0], [.065, .008], [.03, .025], [.02, .06], [.05, .09], [.062, .13], [.05, .165], [.028, .18], [.03, .2], [.036, .205], [.036, .215], [0, .215]], 0, 0, 0, { seg: 12, ch: .0015 }); b.cyl(la, .008, .03, .045, .2, 0, { vers: 'x+', seg: 6 });
+  b.tour(m('verre', { couleur: '#e8efe6', opacite: .16 }), [[.034, .215], [.05, .26], [.046, .31], [.026, .37], [.024, .45]], 0, 0, 0, { seg: 12, lisse: true });
+  if (o.allumee !== false) { A.flamme(b, m, 0, .225, 0, 1.3); b.lumiere(0, .3, 0, '#ffb060', 1.3, 6); } });
+E('loupe', Object.assign({}, MOB, { titre: 'Loupe', univers: [SH, PH], surface: 'metal', prise: 'porte', pose: 'main' }), (b, o, m) => { b.sol = false; const la = m('laiton');
+  b.cyl(m('bois_sombre', { axe: 'z', planche: 9 }), .011, .11, 0, 0, 0, { vers: 'z+', seg: 7, ch: .003 }); b.cyl(la, .007, .03, 0, 0, .068, { vers: 'z+', seg: 6 }); b.tore(la, .048, .005, 0, 0, .13, { vers: 'x+', seg: 16, seg2: 5 });
+  b.cyl(m('verre', { couleur: '#e6f0ee', opacite: .18 }), .046, .004, 0, 0, .13, { vers: 'x+', seg: 16 }); });
+E('pipe', Object.assign({}, MOB, { titre: 'Pipe', univers: [SH], prise: 'porte', pose: 'main' }), (b, o, m) => { b.sol = false; const bo = m('bois_sombre', { planche: 9 });
+  b.tour(bo, [[0, 0], [.012, .002], [.018, .014], [.019, .038], [.016, .042], [.0125, .042], [.0125, .014], [0, .012]], 0, -.012, .05, { seg: 9 }); b.tuyau(bo, [[0, -.004, .04], [0, -.002, 0]], [.008, .006], { seg: 6 });
+  b.tuyau(m('bakelite_noire'), [[0, -.002, 0], [0, .006, -.05], [0, .016, -.09]], [.0055, .004], { coude: .03, seg: 6 }); });
+E('botte', Object.assign({}, MOB, { titre: 'Botte', univers: [SH, GM, D], surface: 'cuir' }), (b, o, m) => { const cu = m('cuir', { couleur: o.couleur || '#1c1612' });
+  b.loft(cu, [[-.075, .03, .026, .036], [-.06, .038, .036, .04], [-.02, .045, .046, .048], [.04, .048, .042, .044], [.1, .052, .032, .034], [.16, .049, .026, .028], [.195, .036, .02, .022], [.205, .015, .012, .016]].map(s => ({ y: s[0], rx: s[1], rz: s[2], dz: -s[3] - .012, n: 2.6 })), 0, 0, 0, { seg: 10, vers: 'z+' });
+  b.loft(cu, [[.06, .042, .05, -.022], [.14, .04, .046, -.03], [.26, .05, .055, -.034], [.34, .056, .06, -.034]].map(s => ({ y: s[0], rx: s[1], rz: s[2], dz: s[3] })), 0, 0, 0, { seg: 10, fond: false, dessus: false, ep: .004 });
+  b.boite(m('caoutchouc'), .1, .012, .28, 0, .006, .065, { r: .004 }); b.boite(m('caoutchouc'), .085, .02, .07, 0, .016, -.04, { r: .004 }); });
+E('horloge', Object.assign({}, MOB, { titre: 'Horloge comtoise', univers: [SH, D, FR], parties: 'balancier', note: 'heure (0 à 12) ; le balancier oscille : parties.balancier.rotation.z = 0.12 × sin(3 × temps)' }), (b, o, m) => { const bo = m('bois_sombre', { axe: 'y', planche: 9 }), la = m('laiton'), W = .5;
+  b.boite(bo, W, .5, .3, 0, .25, 0, { r: .01 }); b.boite(bo, W + .06, .08, .34, 0, .04, 0, { r: .012 }); for (const sx of [1, -1]) b.boite(bo, .05, 1.05, .24, sx * .16, 1.02, 0, { r: .006 }); b.boite(bo, .37, 1.05, .014, 0, 1.02, -.113, { r: 0 }); b.boite(bo, .42, .05, .26, 0, .52, 0, { r: .008 });
+  b.boite(m('verre', { opacite: .12 }), .27, 1.0, .006, 0, 1.02, .115, { r: 0 }); b.boite(bo, W, .5, .3, 0, 1.8, 0, { r: .01 }); b.boite(bo, W + .1, .06, .36, 0, 2.08, 0, { r: .02 }); b.boite(bo, W + .04, .04, .32, 0, 1.56, 0, { r: .01 });
+  b.plaque({ style: 'horloge', heure: o.heure === undefined ? 11.92 : o.heure }, .36, .36, 0, 1.8, .1508); b.tore(la, .185, .008, 0, 1.8, .151, { vers: 'z+', seg: 20, seg2: 5 }); for (const sx of [1, -1]) b.tour(la, [[.02, 0], [.03, .03], [.012, .06], [0, .1]], sx * .22, 2.11, 0, { seg: 7 });
+  b.partie('balancier', [0, 1.5, .02], c => { c.boite(la, .008, .78, .004, 0, -.39, 0, { r: 0 }); c.cyl(la, .065, .012, 0, -.8, 0, { vers: 'z+', seg: 14, ch: .003 }); }, 'z'); b.collision(-W / 2, 0, -.16, W / 2, 2.1, .16); });
+E('globe', Object.assign({}, MOB, { titre: 'Globe terrestre', univers: [SH, D, GM], parties: 'globe' }), (b, o, m) => { const bo = m('bois_sombre', { planche: 9 }), la = m('laiton');
+  b.tour(bo, [[0, 0], [.14, 0], [.15, .012], [.06, .04], [.025, .08], [.02, .2], [.035, .24], [.02, .28], [.02, .32], [0, .32]], 0, 0, 0, { seg: 12, ch: .002 });
+  b.groupe([0, .52, 0], [0, 0, -.41], b => { b.tore(la, .178, .006, 0, 0, 0, { vers: 'z+', a0: -PI / 2, a1: PI / 2, seg: 16, seg2: 4 }); b.cyl(la, .004, .37, 0, 0, 0, { seg: 5 }); });
+  b.tuyau(la, [[0, .32, 0], [.02, .34, 0], [.08, .355, 0]], .008, { coude: .02, seg: 5 });
+  b.partie('globe', [0, .52, 0], c => c.sphere(m('marbre', { couleur: '#3f6e86', couleur2: '#b8a56a', couleur3: '#5a7a3a', veine: 2.4, rugosite: .35 }), .165, 0, 0, 0, { seg: 20, seg2: 12, rot: [0, 0, -.41] }), 'y'); });
+E('fenetre', Object.assign({}, MOB, { titre: 'Fenêtre', univers: [SH, D, C, FR, GM], options: { forme: ['guillotine', 'gothique'], rideaux: [true, false] }, note: 'largeur, hauteur ; origine en bas, au nu du mur ; gothique : encadrement de pierre et vitrail éclairé' }), (b, o, m) => { const W = o.largeur || 1, H = o.hauteur || (o.forme === 'gothique' ? 2.6 : 1.7);
+  if (o.forme === 'gothique') { const p = m('pierre_claire', { mode: 'roche' }), a = W / 2, hs = H - a * 1.5, arc = (r, e) => { const P = [[-r, 0], [-r, hs]]; for (let i = 1; i < 8; i++) { const t = i / 8; P.push([-r + r * t * t * 1.0, hs + Math.sin(t * PI / 2) * (r * 1.5 + e)]); } P.push([0, hs + r * 1.5 + e]); for (let i = 7; i > 0; i--) { const t = i / 8; P.push([r - r * t * t, hs + Math.sin(t * PI / 2) * (r * 1.5 + e)]); } P.push([r, hs], [r, 0]); return P; };
+    b.prisme(p, arc(a + .12, .12), .16, 0, 0, 0, { plan: 'xy' }); b.prisme(m('vitrail', o.couleur ? { couleur: o.couleur } : {}), arc(a, 0), .02, 0, 0, .075, { plan: 'xy' }); b.boite(p, .05, hs + a, .05, 0, (hs + a) / 2, .085, { r: .006 }); b.boite(p, W + .34, .1, .26, 0, -.05, .02, { r: .01 }); b.lumiere(0, H * .6, .8, '#c9a12a', .8, 6);
+  } else { const bl = m('peinture_creme'), ve = m('verre', { opacite: .12 }), e = .06;
+    for (const sx of [1, -1]) b.boite(bl, e, H, .12, sx * (W / 2 - e / 2), H / 2, 0, { r: .006 }); for (const y of [e / 2, H - e / 2]) b.boite(bl, W, e, .12, 0, y, 0, { r: .006 }); b.boite(bl, W + .14, .04, .2, 0, -.02, .03, { r: .008 });
+    for (const [y0, z] of [[e, -.02], [H / 2, .02]]) { const h = H / 2 - e / 2; b.boite(ve, W - 2 * e, h, .005, 0, y0 + h / 2, z, { r: 0 }); b.boite(bl, W - 2 * e, .04, .035, 0, y0 + .02, z, { r: .004 }); b.boite(bl, W - 2 * e, .04, .035, 0, y0 + h - .02, z, { r: .004 }); b.boite(bl, .024, h, .03, 0, y0 + h / 2, z, { r: .003 }); b.boite(bl, W - 2 * e, .024, .03, 0, y0 + h / 2, z, { r: .003 }); }
+    if (o.rideaux !== false) { const ve2 = m('velours', o.couleur ? { couleur: o.couleur } : {}); b.cyl(m('laiton'), .012, W + .5, 0, H + .1, .12, { vers: 'x+', seg: 7 }); for (const sx of [1, -1]) for (let i = 0; i < 4; i++) b.cyl(ve2, .035, H + .25, sx * (W / 2 + .2 - i * .055), H / 2 - .04, .12 + (i % 2) * .02, { seg: 7 }); } } });
+E('tapis', Object.assign({}, MOB, { titre: 'Tapis', univers: [SH, D, C, FR], surface: 'tissu', note: 'largeur (2), longueur (3), couleur, couleur2' }), (b, o, m) => { const W = o.largeur || 2, L = o.longueur || 3, c1 = o.couleur || '#5e1420';
+  b.boite(m('damas', { couleur: c1, couleur2: o.couleur2 || '#b8964a', motif: .42, rugosite: .95 }), W - .24, .012, L - .24, 0, .008, 0, { r: 0 }); b.boite(m('laine', { couleur: '#2a1c18' }), W, .01, L, 0, .005, 0, { r: .003 }); b.boite(m('laine', { couleur: '#b8964a' }), W - .12, .011, L - .12, 0, .0056, 0, { r: 0 }); });
+E('cadre', Object.assign({}, MOB, { titre: 'Cadre doré', univers: [SH, D, FR, C], pose: 'mur', options: { contenu: ['portrait', 'miroir'] }, note: 'largeur (0,7), hauteur (0,95) ; origine au centre, contre le mur' }), (b, o, m) => { b.sol = false; const W = o.largeur || .7, H = o.hauteur || .95, or_ = m('or'), e = .07;
+  for (const sx of [1, -1]) { b.boite(or_, e, H, .05, sx * (W / 2 - e / 2), 0, .025, { r: .014 }); b.boite(or_, W, e, .05, 0, sx * (H / 2 - e / 2), .025, { r: .014 }); for (const sy of [1, -1]) b.sphere(or_, .03, sx * (W / 2 - e / 2), sy * (H / 2 - e / 2), .05, { seg: 8, seg2: 5, s: [1, 1, .6] }); }
+  if (o.contenu === 'miroir') b.boite(m('acier_poli', { rugosite: .03, rouille: 0, usure: .15 }), W - e, H - e, .01, 0, 0, .012, { r: 0 }); else { b.boite(m('toile', { couleur: '#1a140e' }), W - e, H - e, .01, 0, 0, .012, { r: 0 }); b.plaque({ style: 'portrait', couleur: o.couleur }, W - 2 * e + .02, H - 2 * e + .02, 0, 0, .018); } });
+E('lit_baldaquin', Object.assign({}, MOB, { titre: 'Lit à baldaquin', univers: [D, C, SH], note: 'couleur des tentures' }), (b, o, m) => { const bo = m('bois_sombre', { axe: 'y', planche: 9 }), ve = m('velours', o.couleur ? { couleur: o.couleur } : {}), W = 1.6, L = 2.1, H = 2.15;
+  for (const sx of [1, -1]) for (const sz of [1, -1]) b.tour(bo, [[.05, 0], [.05, .3], [.035, .36], [.045, .5], [.03, .6], [.03, H - .12], [.045, H - .08], [.045, H]], sx * W / 2, 0, sz * L / 2, { seg: 8, ch: .003 });
+  b.boite(bo, W, .22, .05, 0, .36, L / 2, { r: .008 }); b.boite(bo, W, .95, .05, 0, .72, -L / 2, { r: .01 }); for (const sx of [1, -1]) b.boite(bo, .05, .22, L, sx * W / 2, .36, 0, { r: .008 });
+  b.boite(m('toile_blanche'), W - .06, .2, L - .06, 0, .56, 0, { r: .05 }); b.boite(ve, W - .02, .1, L * .62, 0, .66, L * .17, { r: .04 }); for (const sx of [1, -1]) b.boite(m('toile_blanche'), .58, .13, .38, sx * .36, .72, -L / 2 + .3, { r: .06 });
+  for (const sx of [1, -1]) { b.boite(bo, .05, .08, L, sx * W / 2, H - .04, 0, { r: .006 }); b.boite(ve, .02, .32, L + .06, sx * (W / 2 + .03), H - .2, 0, { r: .006 }); for (const sz of [1, -1]) for (let i = 0; i < 3; i++) b.cyl(ve, .04, H - .5, sx * (W / 2 + .03), (H - .5) / 2 + .3, sz * (L / 2 - .06 - i * .07), { seg: 7 }); }
+  for (const sz of [1, -1]) { b.boite(bo, W, .08, .05, 0, H - .04, sz * L / 2, { r: .006 }); b.boite(ve, W + .06, .32, .02, 0, H - .2, sz * (L / 2 + .03), { r: .006 }); } b.boite(ve, W, .02, L, 0, H + .005, 0, { r: 0 }); b.collision(-W / 2, 0, -L / 2, W / 2, .8, L / 2); });
+E('parchemin', Object.assign({}, MOB, { titre: 'Parchemin', univers: [K, C, D, SH], surface: 'papier' }), (b, o, m) => { const pa = m('parchemin');
+  b.boite(pa, .2, .002, .26, 0, .002, 0, { r: 0 }); for (const sz of [1, -1]) b.cyl(pa, .014, .21, 0, .014, sz * .14, { vers: 'x+', seg: 8 }); b.plaque({ style: 'lignes', n: 8, g: b.g }, .16, .2, 0, .0036, 0, { rot: [-PI / 2, 0, 0] }); b.cyl(m('cire', { couleur: '#8a1c1c' }), .016, .004, .06, .005, .1, { seg: 9 }); });
+});
+/* ==========================================================================================
+   FABRIQUE — objets des jeux (2) : donjon et créatures (Catacombes, Dracula), La Guerre des mondes, Pharma-Foot, PharmaVille
+   ========================================================================================== */
+FAB._objets.push(function (fab) {
+'use strict';
+const THREE = fab.THREE, PI = Math.PI, A = fab.accessoires;
+const D = 'dracula', C = 'camelot', K = 'catacombes', GM = 'guerre', TK = 'tarkov', RF = 'retrofutur', PH = 'pharmacie', FR = 'frankenstein', SH = 'sherlock', FT = 'foot', VI = 'ville';
+const E = (nom, meta, fn) => { if (meta.points || meta.prise) { const ap = meta.apres; meta.apres = (G, o, b) => { G.userData.points = meta.points; G.userData.prise = meta.prise; if (ap) ap(G, o, b); }; } fab.enregistrer(nom, meta, fn); };
+const NOIR = () => fab.mat('polymere', { couleur: '#070706', rugosite: .95, etat: 0 });
+const S5 = l => l.map(s => ({ y: s[0], rx: s[1], rz: s[2], dz: s[3] || 0, n: s[4] || 2 }));
+
+/* ================================================================ DONJON */
+const DON = { groupe: 'Château et pierre', surface: 'pierre' };
+E('sarcophage', Object.assign({}, DON, { titre: 'Sarcophage', univers: [K, D, C], parties: 'couvercle', note: 'matiere ; le couvercle glisse de côté : parties.couvercle.position.x = 0.4' }), (b, o, m) => { const p = m(o.matiere || 'pierre_claire', { mode: 'roche' }), W = .9, L = 2.2, H = .78, e = .09, yc = .12 + (H - .12) / 2;
+  b.boite(p, W + .16, .12, L + .16, 0, .06, 0, { r: .02 }); b.boite(p, W - 2 * e, .04, L - 2 * e, 0, .14, 0, { r: 0 });
+  for (const sx of [1, -1]) { b.boite(p, e, H - .12, L, sx * (W / 2 - e / 2), yc, 0, { r: .012 }); for (let i = 0; i < 4; i++) b.boite(p, .02, H - .36, .34, sx * (W / 2 + .008), yc, -L / 2 + .32 + i * .52, { r: .008 }); }
+  for (const sz of [1, -1]) b.boite(p, W - 2 * e, H - .12, e, 0, yc, sz * (L / 2 - e / 2), { r: .012 });
+  b.partie('couvercle', [0, H, 0], c => { c.boite(p, W + .1, .1, L + .1, 0, .05, 0, { r: .02 }); c.boite(p, W - .16, .06, L - .16, 0, .12, 0, { r: .02 }); c.boite(p, .1, .03, 1.3, 0, .16, .1, { r: .008 }); c.boite(p, .5, .03, .1, 0, .16, -.3, { r: .008 }); }, 'tx');
+  b.collision(-W / 2 - .08, 0, -L / 2 - .08, W / 2 + .08, H + .15, L / 2 + .08); });
+E('autel', Object.assign({}, DON, { titre: 'Autel', univers: [K, D, C], options: { allumee: [true, false] }, note: 'couleur du drap' }), (b, o, m) => { const p = m('pierre_claire', { mode: 'roche' }), ve = m('velours', o.couleur ? { couleur: o.couleur } : {}), or_ = m('or');
+  b.boite(p, 1.9, .14, 1, 0, .07, 0, { r: .02 }); b.boite(p, 1.5, .76, .7, 0, .52, 0, { r: .015 }); for (const sx of [1, -1]) b.tour(p, [[.1, 0], [.1, .06], [.07, .1], [.07, .66], [.1, .7], [.1, .76]], sx * .62, .14, .28, { seg: 10, ch: .006 }); b.boite(p, 1.8, .1, .9, 0, .95, 0, { r: .02 });
+  b.boite(ve, .6, .012, .92, 0, 1.006, 0, { r: 0 }); b.boite(ve, .6, .5, .012, 0, .76, .456, { r: 0 }); b.boite(or_, .6, .03, .014, 0, .53, .457, { r: 0 });
+  for (const sx of [1, -1]) { b.tour(m('laiton'), [[0, 0], [.05, 0], [.03, .02], [.012, .04], [.012, .16], [.03, .18], [0, .18]], sx * .65, 1, 0, { seg: 8 }); A.bougie(b, m, sx * .65, 1.18, 0, .2, { r: .014, allumee: o.allumee }); }
+  b.tour(or_, [[0, 0], [.045, 0], [.012, .03], [.01, .09], [.05, .12], [.055, .19], [.05, .19], [.045, .125], [0, .11]], 0, 1.012, .1, { seg: 10, ch: .001 });
+  if (o.allumee !== false) b.lumiere(0, 1.5, .2, '#ffb060', 1.2, 6); b.collision(-.95, 0, -.5, .95, 1, .5); });
+E('brasero', Object.assign({}, DON, { titre: 'Brasero', univers: [K, D, C, FR], surface: 'metal', options: { allume: [true, false] } }), (b, o, m) => { const fe = m('fer_forge'), on = o.allume !== false, ch = on ? m('lueur', { couleur: '#ff6a1c', intensite: 1.6, scintille: .5, vitesse: .3 }) : m('roche', { couleur: '#1c1a18' });
+  for (let i = 0; i < 3; i++) { const a = i * 2 * PI / 3; b.tuyau(fe, [[Math.sin(a) * .32, 0, Math.cos(a) * .32], [Math.sin(a) * .1, .5, Math.cos(a) * .1], [Math.sin(a) * .24, .82, Math.cos(a) * .24]], .014, { coude: .08, seg: 5 }); }
+  b.tore(fe, .11, .01, 0, .5, 0, { seg: 10, seg2: 4 }); b.tour(fe, [[0, .74], [.16, .74], [.27, .86], [.3, 1], [.31, 1], [.28, .84], [.16, .76], [0, .76]], 0, 0, 0, { seg: 12 });
+  for (let i = 0; i < 7; i++) A.blob(b, ch, b.hasard(.05, .08), b.hasard(-.14, .14), .86 + b.hasard(0, .05), b.hasard(-.14, .14), { graine: i, amp: .3, detail: 1, facettes: !on });
+  if (on) { const f = fab.effet('feu', { rayon: .2, hauteur: .6, nombre: 34, graine: b.g }); f.position.y = .9; b.enfant(f); b.lumiere(0, 1.3, 0, '#ff9a40', 2.4, 10); } b.collision(-.3, 0, -.3, .3, 1, .3); });
+E('porte_bois', Object.assign({}, DON, { titre: 'Porte de bois', univers: [K, D, C], surface: 'bois', parties: 'porte', options: { cadre: [true, false] }, note: 'largeur (1,1), hauteur (2,2)' }), (b, o, m) => { const W = o.largeur || 1.1, H = o.hauteur || 2.2, a = W / 2, bo = m('bois_sombre', { axe: 'y', planche: .18 }), fe = m('fer_forge');
+  if (o.cadre !== false) { const Cn = [[-a - .4, 0], [-a, 0], [-a, H - a]]; for (let i = 1; i < 8; i++) Cn.push([-Math.cos(i * PI / 8) * a, H - a + Math.sin(i * PI / 8) * a]); Cn.push([a, H - a], [a, 0], [a + .4, 0], [a + .4, H + .45], [-a - .4, H + .45]);
+    b.prisme(m('pierre'), Cn, .5, 0, 0, 0, { plan: 'xy' }); b.collision(-a - .4, 0, -.25, -a, H, .25); b.collision(a, 0, -.25, a + .4, H, .25); }
+  b.partie('porte', [-a + .01, 0, 0], c => { const w = W - .02, Cd = [[0, 0], [w, 0], [w, H - a]]; for (let i = 1; i < 8; i++) Cd.push([a - .01 + Math.cos(i * PI / 8) * a * .98, H - a + Math.sin(i * PI / 8) * a * .98]); Cd.push([0, H - a]);
+    c.prisme(bo, Cd, .07, 0, 0, 0, { plan: 'xy' }); for (const y of [.35, H * .5, H - a - .1]) { for (const sz of [1, -1]) c.boite(fe, w * .82, .07, .012, w * .41, y, sz * .041, { r: .003 }); c.rivets(fe, [0, 1, 2, 3].map(i => [.1 + i * w * .22, y, .047]), .012, 'z+'); }
+    c.tore(fe, .07, .01, w - .14, H * .45, .06, { vers: 'z+', seg: 12, seg2: 4 }); }, 'y'); });
+E('herse', Object.assign({}, DON, { titre: 'Herse', univers: [K, D, C], surface: 'metal', parties: 'grille', note: 'largeur (2,4), hauteur (3) ; parties.grille.position.y pour la lever' }), (b, o, m) => { const W = o.largeur || 2.4, H = o.hauteur || 3, fe = m('fer_forge'), p = m('pierre'), n = Math.round(W / .22);
+  for (const sx of [1, -1]) { b.boite(p, .5, H + .8, .7, sx * (W / 2 + .25), (H + .8) / 2, 0, { r: .02 }); b.collision(sx * (W / 2 + .25) - .25, 0, -.35, sx * (W / 2 + .25) + .25, H, .35); } b.boite(p, W + 1, .6, .7, 0, H + .5, 0, { r: .02 });
+  b.partie('grille', [0, 0, 0], c => { for (let i = 0; i <= n; i++) { const x = -W / 2 + .06 + i * (W - .12) / n; c.boite(fe, .035, H - .1, .035, x, H / 2 + .1, 0, { r: .004 }); c.tour(fe, [[0, 0], [.026, .15]], x, .005, 0, { seg: 4 }); }
+    for (let j = 0; j < 5; j++) c.boite(fe, W - .08, .045, .02, 0, .35 + j * (H - .5) / 4, 0, { r: .004 }); }, 'ty'); });
+E('escalier', Object.assign({}, DON, { titre: 'Escalier de pierre', univers: [K, D, C], note: 'marches (8), largeur (1,4), hauteur de marche (0,18), giron (0,28) ; monte vers −z' }), (b, o, m) => { const n = o.marches || 8, W = o.largeur || 1.4, h = o.hauteur || .18, g = o.giron || .28, p = m(o.matiere || 'pierre', { assise: h });
+  for (let i = 0; i < n; i++) { b.boite(p, W, h * (i + 1), g, 0, h * (i + 1) / 2, -g * (i + .5), { r: .012 }); b.collision(-W / 2, 0, -g * (i + 1), W / 2, h * (i + 1), -g * i); } });
+E('tas_os', Object.assign({}, DON, { titre: 'Tas d\'ossements', univers: [K, D, FR], surface: 'os', note: 'nombre (14)' }), (b, o, m) => { const os = m('os'), n = o.nombre || 14;
+  A.blob(b, os, .3, 0, .045, 0, { graine: b.g, amp: .3, plat: true, s: [1.3, .45, 1.1] });
+  for (let i = 0; i < n; i++) { const a = b.hasard(0, 6.28), r = b.hasard(0, .4), x = Math.sin(a) * r, z = Math.cos(a) * r, y = .1 + (.4 - r) * .3 + b.hasard(0, .05), L = b.hasard(.2, .4), a2 = b.hasard(0, 6.28), t = b.hasard(-.3, .3), P1 = [x - Math.sin(a2) * L / 2, y - t * L / 2, z - Math.cos(a2) * L / 2], P2 = [x + Math.sin(a2) * L / 2, y + t * L / 2, z + Math.cos(a2) * L / 2];
+    b.tuyau(os, [P1, P2], .013, { seg: 5 }); b.sphere(os, .022, P1[0], P1[1], P1[2], { seg: 6, seg2: 4 }); b.sphere(os, .02, P2[0], P2[1], P2[2], { seg: 6, seg2: 4 }); }
+  for (let i = 0; i < 3; i++) b.groupe([b.hasard(-.3, .3), .13 + i * .07, b.hasard(-.25, .3)], [b.hasard(-.4, .4), b.hasard(0, 6), b.hasard(-.5, .5)], b => fab._crane(b, os, NOIR(), m('os', { couleur: '#e9e2cc' }), -.08, 1)); });
+E('tas_or', Object.assign({}, DON, { titre: 'Tas d\'or', univers: [K, D, C], surface: 'metal' }), (b, o, m) => { const or_ = m('or');
+  A.blob(b, or_, .28, 0, .044, 0, { graine: b.g, amp: .22, plat: true, s: [1.2, .45, 1.1], freq: 3 });
+  for (let i = 0; i < 40; i++) { const a = b.hasard(0, 6.28), r = Math.sqrt(b.hasard(0, 1)) * .42, k = r < .3 ? 1 : 0; b.cyl(or_, .017, .003, Math.sin(a) * r, k ? .06 + (.3 - r) * .3 : .002, Math.cos(a) * r, { seg: 8, rot: [b.hasard(-.5, .5) * k, 0, b.hasard(-.5, .5) * k] }); }
+  b.tour(or_, [[0, 0], [.04, 0], [.012, .025], [.01, .07], [.045, .1], [.05, .16], [.046, .16], [.04, .105], [0, .09]], .16, .1, .05, { seg: 10, rot: [0, 0, -.9] });
+  for (const [c, x, z] of [['#d0283a', -.1, .1], ['#2a7ad0', .05, -.12], ['#2ac05a', -.02, .16]]) b.sphere(m('lueur', { couleur: c, intensite: .7, scintille: .1 }), .016, x, .15, z, { seg: 5, seg2: 3 }); });
+E('piege_pieux', Object.assign({}, DON, { titre: 'Piège à pieux', univers: [K, D], parties: 'pieux', note: 'parties.pieux.position.y = −0.5 : pieux rentrés' }), (b, o, m) => { const fe = m('acier', { rouille: .5 });
+  b.boite(m('pierre_sombre', { mode: 'roche' }), 1, .06, 1, 0, .03, 0, { r: .01 }); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) b.cyl(NOIR(), .045, .004, -.3 + i * .3, .062, -.3 + j * .3, { seg: 8 });
+  b.partie('pieux', [0, .06, 0], c => { for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) c.tour(fe, [[.03, -.5], [.03, .25], [0, .5]], -.3 + i * .3, 0, -.3 + j * .3, { seg: 6 }); }, 'ty'); });
+E('levier', Object.assign({}, DON, { titre: 'Levier', univers: [K, D, C, FR], parties: 'levier', note: 'parties.levier.rotation.x de −0.6 à 0.6' }), (b, o, m) => { const fe = m('fer_forge');
+  b.boite(m('pierre_sombre', { mode: 'roche' }), .4, .12, .5, 0, .06, 0, { r: .015 }); b.boite(fe, .12, .03, .36, 0, .13, 0, { r: .004 }); b.boite(NOIR(), .04, .004, .3, 0, .146, 0, { r: 0 });
+  b.partie('levier', [0, .1, 0], c => { c.boite(fe, .03, .8, .03, 0, .4, 0, { r: .006 }); c.sphere(m('laiton'), .045, 0, .82, 0, { seg: 8, seg2: 6 }); }, 'x'); });
+E('gargouille', Object.assign({}, DON, { titre: 'Gargouille', univers: [D, K, C] }), (b, o, m) => { const p = m('pierre_sombre', { mode: 'roche' });
+  b.boite(p, .5, .12, .6, 0, .06, 0, { r: .02 }); b.loft(p, S5([[.12, .16, .15, 0], [.3, .19, .2, .02], [.5, .17, .17, .06], [.66, .12, .12, .12], [.74, .08, .08, .16]]), 0, 0, -.05, { seg: 10 });
+  A.blob(b, p, .12, 0, .82, .18, { graine: 3, amp: .12, s: [.9, .85, 1.15] }); b.boite(p, .1, .07, .13, 0, .78, .31, { r: .02 }); b.tuyau(p, [[0, .2, -.2], [.2, .1, -.32], [.3, .14, -.1]], [.04, .01], { coude: .1, seg: 6 });
+  for (const sx of [1, -1]) { b.tuyau(p, [[sx * .07, .9, .14], [sx * .13, 1, .08], [sx * .11, 1.08, -.02]], [.03, .008], { coude: .05, seg: 6 }); b.sphere(NOIR(), .014, sx * .045, .84, .285, { seg: 5, seg2: 3 });
+    A.blob(b, p, .12, sx * .17, .24, 0, { graine: 5, amp: .1, s: [.8, 1.1, 1.2] }); b.tuyau(p, [[sx * .14, .5, .12], [sx * .17, .3, .22], [sx * .15, .15, .25]], [.05, .035], { coude: .06, seg: 6 }); b.boite(p, .09, .04, .13, sx * .15, .14, .29, { r: .015 });
+    b.prisme(p, [[0, 0], [sx * .5, .34], [sx * .44, .1], [sx * .36, -.02], [sx * .3, -.16], [sx * .2, -.1], [sx * .1, -.2]], .03, sx * .1, .62, -.16, { plan: 'xy', rot: [0, -sx * .5, 0] }); }
+  b.collision(-.25, 0, -.3, .25, 1, .3); });
+
+/* ---- armes et objets de donjon */
+const ARM = { groupe: 'Armes', surface: 'metal', prise: 'porte', pose: 'main' };
+E('hache', Object.assign({}, ARM, { titre: 'Hache de bataille', univers: [K, C, D], points: { pointe: [0, 0, .7] } }), (b, o, m) => { b.sol = false; const ac = m('acier');
+  b.cyl(m('bois_sombre', { axe: 'z', planche: 9 }), .016, .85, 0, 0, .22, { vers: 'z+', seg: 7 }); b.sphere(ac, .022, 0, 0, -.21, { seg: 6, seg2: 4 }); b.tour(ac, [[.02, 0], [0, .1]], 0, 0, .64, { vers: 'z+', seg: 6 });
+  b.prisme(ac, [[.5, .02], [.47, .17], [.56, .21], [.66, .17], [.62, .02], [.62, -.02], [.66, -.17], [.56, -.21], [.47, -.17], [.5, -.02]], .012, 0, 0, 0, { plan: 'zy', lisse: true }); b.boite(ac, .04, .06, .13, 0, 0, .56, { r: .008 }); });
+E('masse', Object.assign({}, ARM, { titre: 'Masse d\'armes', univers: [K, C, D], points: { pointe: [0, 0, .5] } }), (b, o, m) => { b.sol = false; const fe = m('acier_noir');
+  b.cyl(m('bois_sombre', { axe: 'z', planche: 9 }), .015, .56, 0, 0, .14, { vers: 'z+', seg: 7 }); b.sphere(fe, .022, 0, 0, -.15, { seg: 6, seg2: 4 }); b.sphere(fe, .05, 0, 0, .45, { seg: 10, seg2: 6 });
+  for (let i = 0; i < 6; i++) b.boite(fe, .008, .15, .12, 0, 0, .45, { rot: [0, 0, i * PI / 6], r: 0 }); b.tour(fe, [[.014, 0], [0, .06]], 0, 0, .5, { vers: 'z+', seg: 5 }); });
+E('dague', Object.assign({}, ARM, { titre: 'Dague', univers: [K, C, D, SH] }), (b, o, m) => { b.sol = false; const la = m('laiton');
+  b.loft(m('acier_poli'), [[.05, .003, .016], [.2, .0025, .012], [.27, .0015, .005], [.29, .0004, .0008]].map(s => ({ y: s[0], rx: s[1], rz: s[2], n: 1.15 })), 0, 0, 0, { seg: 8, vers: 'z+' });
+  b.boite(la, .016, .09, .014, 0, 0, .046, { r: .004 }); b.cyl(m('cuir'), .011, .085, 0, 0, 0, { vers: 'z+', seg: 7 }); b.sphere(la, .015, 0, 0, -.05, { seg: 6, seg2: 4 }); });
+E('baton_mage', Object.assign({}, ARM, { titre: 'Bâton de mage', univers: [K, C], surface: 'bois', note: 'couleur du cristal' }), (b, o, m) => { b.sol = false; const bo = m('bois_sombre', { axe: 'z', planche: 9 }), c = o.couleur || '#6ab0ff';
+  b.tuyau(bo, [[0, 0, -.6], [.01, 0, 0], [-.01, .01, .6], [0, 0, .95]], [.016, .02], { coude: .3, seg: 7 }); for (let i = 0; i < 3; i++) { const a = i * 2 * PI / 3; b.tuyau(bo, [[0, 0, .93], [Math.cos(a) * .06, Math.sin(a) * .06, 1], [Math.cos(a + .8) * .05, Math.sin(a + .8) * .05, 1.1], [Math.cos(a + 1.6) * .015, Math.sin(a + 1.6) * .015, 1.15]], [.012, .004], { coude: .04, seg: 5 }); }
+  b.sphere(m('lueur', { couleur: c, intensite: 2.6, scintille: .25, vitesse: .3 }), .038, 0, 0, 1.06, { seg: 4, seg2: 2, s: [1, 1, 1.4] }); b.lumiere(0, 0, 1.06, c, 1.2, 6); });
+E('cle', Object.assign({}, ARM, { titre: 'Clé', univers: [K, D, C, SH, FR], pose: 'sol', prise: 'porte' }), (b, o, m) => { const fe = m(o.matiere || 'fer_forge');
+  b.tore(fe, .02, .005, 0, .005, -.06, { seg: 10, seg2: 4 }); b.cyl(fe, .0045, .11, 0, .005, .01, { vers: 'z+', seg: 6 }); b.boite(fe, .022, .006, .008, .011, .005, .05, { r: 0 }); b.boite(fe, .016, .006, .008, .008, .005, .035, { r: 0 }); });
+
+/* ================================================================ CRÉATURES */
+const CRE = { groupe: 'Créatures', surface: 'chair' };
+E('rat', Object.assign({}, CRE, { titre: 'Rat', univers: [K, D, FR, TK, SH], note: 'taille_m (0,25 de long, sans la queue), couleur' }), (b, o, m) => { const k = (o.taille_m || .25) / .25, fu = m('cheveux', { couleur: o.couleur || '#4a4038', rugosite: .7, usure: 0 }), pe = m('peau', { couleur: '#c9a090' });
+  b.groupe([0, 0, 0], [0, 0, 0], b => { b.loft(fu, S5([[-.11, .02, .022, -.03], [-.07, .04, .04, -.042], [0, .045, .048, -.05], [.06, .036, .04, -.045], [.1, .024, .026, -.04], [.14, .01, .012, -.032]]), 0, 0, 0, { seg: 9, vers: 'z+' });
+    for (const sx of [1, -1]) { b.sphere(pe, .016, sx * .02, .065, .095, { s: [1, 1, .3], seg: 6, seg2: 4 }); b.sphere(NOIR(), .005, sx * .014, .046, .124, { seg: 5, seg2: 3 }); for (const z of [-.06, .06]) b.tuyau(pe, [[sx * .03, .03, z], [sx * .04, .005, z + .01], [sx * .04, .004, z + .03]], .006, { coude: .01, seg: 4 }); }
+    b.sphere(pe, .006, 0, .034, .143, { seg: 5, seg2: 3 }); b.tuyau(pe, [[0, .04, -.11], [.03, .02, -.2], [-.02, .01, -.3], [.02, .008, -.38]], [.008, .002], { coude: .06, seg: 5 }); }, [k, k, k]); });
+E('chauve_souris', Object.assign({}, CRE, { titre: 'Chauve-souris', univers: [D, K], parties: 'aile_g, aile_d', pose: 'main', note: 'battement : parties.aile_g.rotation.z = 0.6 × sin(12 × temps), aile_d l\'inverse' }), (b, o, m) => { b.sol = false; const fu = m('cheveux', { couleur: '#2a2224', rugosite: .7, usure: 0 }), cu = m('cuir', { couleur: '#241c1e' });
+  b.loft(fu, S5([[-.06, .012, .014], [-.03, .03, .032], [.01, .034, .036], [.04, .026, .028, -.004], [.065, .012, .014, -.006]]), 0, 0, 0, { seg: 8, vers: 'z+' }); b.sphere(fu, .028, 0, .012, .07, { seg: 8, seg2: 6 });
+  for (const sx of [1, -1]) { b.tour(cu, [[.014, 0], [0, .045]], sx * .016, .03, .068, { seg: 5, rot: [0, 0, -sx * .3] }); b.sphere(m('lueur_rouge'), .004, sx * .011, .016, .094, { seg: 4, seg2: 3 });
+    b.partie(sx > 0 ? 'aile_g' : 'aile_d', [sx * .025, .01, .01], c => { c.prisme(cu, [[0, .03], [sx * .14, .06], [sx * .3, .02], [sx * .25, -.03], [sx * .19, -.01], [sx * .15, -.07], [sx * .1, -.03], [sx * .06, -.08], [0, -.04]], .004, 0, 0, 0);
+      for (const [x, z] of [[.3, .02], [.15, -.07], [.06, -.08]]) c.tuyau(fu, [[0, .003, .02], [sx * .13, .004, .05], [sx * x, .003, z]], [.004, .0015], { coude: .03, seg: 3 }); }, 'z'); } });
+E('araignee', Object.assign({}, CRE, { titre: 'Araignée', univers: [K, D, FR], note: 'taille_m (envergure, 0,5)' }), (b, o, m) => { const k = (o.taille_m || .5) / .5, ch = fab.mat('polymere', { couleur: o.couleur || '#1a1614', rugosite: .35, etat: .3 }), fu = m('cheveux', { couleur: '#2a2220', rugosite: .6, usure: 0 });
+  b.groupe([0, 0, 0], [0, 0, 0], b => { A.blob(b, fu, .075, 0, .11, -.08, { graine: 2, amp: .1, s: [1, .85, 1.25] }); b.sphere(ch, .045, 0, .09, .03, { seg: 8, seg2: 6, s: [1, .8, 1.1] });
+    for (const sx of [1, -1]) { for (let i = 0; i < 4; i++) { const a = -.9 + i * .6, cx = Math.cos(a), sz = Math.sin(a); b.tuyau(ch, [[sx * .03, .09, .03 + sz * .02], [sx * (.03 + cx * .11), .17, .03 + sz * .11], [sx * (.03 + cx * .2), .08, .03 + sz * .2], [sx * (.03 + cx * .25), .004, .03 + sz * .25]], [.01, .003], { coude: .03, seg: 5 }); }
+      b.tuyau(ch, [[sx * .012, .08, .07], [sx * .016, .05, .1], [sx * .008, .03, .095]], [.007, .003], { coude: .01, seg: 4 }); for (const [x, y] of [[.012, .105], [.026, .1]]) b.sphere(m('lueur_rouge'), .0045, sx * x, y, .068, { seg: 4, seg2: 3 }); } }, [k, k, k]); });
+E('corbeau', Object.assign({}, CRE, { titre: 'Corbeau', univers: [D, K, C, GM, SH] }), (b, o, m) => { const pl = m('cheveux', { couleur: '#0e0e12', rugosite: .32, usure: 0 }), bec = fab.mat('polymere', { couleur: '#1a1a1c', rugosite: .3, etat: 0 });
+  b.groupe([0, .17, 0], [-.45, 0, 0], b => { b.loft(pl, S5([[-.2, .012, .008], [-.12, .04, .03], [-.03, .07, .066], [.06, .068, .07, .004], [.13, .05, .055, .012], [.17, .035, .04, .02]]), 0, 0, 0, { seg: 10, vers: 'z+' });
+    b.prisme(pl, [[-.035, -.14], [.035, -.14], [.05, -.34], [0, -.37], [-.05, -.34]], .012, 0, .012, 0); for (const sx of [1, -1]) b.sphere(pl, .1, sx * .062, .012, -.06, { s: [.22, .6, 1.5], seg: 8, seg2: 5, rot: [.15, 0, 0] }); });
+  b.sphere(pl, .048, 0, .3, .13, { seg: 10, seg2: 7 }); b.tour(bec, [[.019, 0], [.012, .035], [0, .078]], 0, .292, .165, { vers: 'z+', seg: 6 });
+  for (const sx of [1, -1]) { b.sphere(fab.mat('polymere', { couleur: '#050505', rugosite: .05, etat: 0 }), .007, sx * .031, .312, .158, { seg: 5, seg2: 4 }); b.tuyau(bec, [[sx * .03, .13, .02], [sx * .03, .02, .03]], .006, { seg: 4 }); for (const dz of [-.035, .03, .045]) b.tuyau(bec, [[sx * .03, .02, .03], [sx * (.03 + (dz > .03 ? .015 : 0)), .006, .03 + dz]], [.005, .002], { seg: 3 }); } });
+
+/* ================================================================ LA GUERRE DES MONDES */
+E('tripode', { titre: 'Tripode martien', groupe: 'Véhicules', univers: [GM], surface: 'metal', parties: 'patte_0, patte_1, patte_2, rayon', note: 'hauteur (12) ; chaque patte se balance autour de sa hanche (rotation.x), le rayon ardent pivote (rotation.y)',
+  apres: G => { for (let i = 0; i < 3; i++) { const p = G.userData.parties['patte_' + i]; p.rotation.order = 'YXZ'; p.rotation.y = i * 2 * PI / 3 + PI / 3; } } }, (b, o, m) => { b.sol = false;
+  const H = o.hauteur || 12, k = H / 12, me = m('acier', { couleur: '#8a8e90', rugosite: .32 }), sb = m('acier_noir'), yc = 9.6 * k, vert = m('lueur', { couleur: '#7dff9a', intensite: 3, scintille: .2, vitesse: .2 });
+  b.tour(me, [[0, -.7], [.9, -.66], [1.6, -.3], [1.85, .3], [1.55, .95], [.85, 1.35], [0, 1.45]].map(p => [p[0] * k, p[1] * k]), 0, yc, 0, { seg: 16, s: [.9, 1, 1.25], ch: .02 * k });
+  b.tore(sb, 1.86 * k, .07 * k, 0, yc + .3 * k, 0, { s: [.9, 1, 1.25], seg: 20, seg2: 5 }); b.tore(sb, .34 * k, .07 * k, 0, yc + .35 * k, 2.2 * k, { vers: 'z+', seg: 12, seg2: 5 }); b.sphere(vert, .27 * k, 0, yc + .35 * k, 2.12 * k, { seg: 10, seg2: 6, s: [1, 1, .5] });
+  b.cyl(sb, 1 * k, .5 * k, 0, yc - .9 * k, 0, { seg: 14, ch: .03 * k }); for (let i = 0; i < 5; i++) b.tore(sb, (.75 - i * .04) * k, .025 * k, 0, yc - (.5 + i * .28) * k, -1.5 * k, { seg: 10, seg2: 3 }); for (let i = 0; i < 6; i++) { const a = i * PI / 3; b.tuyau(sb, [[Math.sin(a) * .75 * k, yc - .5 * k, -1.5 * k + Math.cos(a) * .75 * k], [Math.sin(a) * .59 * k, yc - 1.62 * k, -1.5 * k + Math.cos(a) * .59 * k]], .02 * k, { seg: 3 }); }
+  for (let i = 0; i < 5; i++) { const a = b.hasard(-1.1, 1.1), r = .7 * k, w = b.hasard(-.6, .6) * k; b.tuyau(me, [[Math.sin(a) * r, yc - 1.1 * k, Math.cos(a) * r], [Math.sin(a) * r * 1.6 + w, yc - 2.8 * k, Math.cos(a) * r * 1.8], [Math.sin(a) * r * 1.2 - w, yc - 4.2 * k, Math.cos(a) * r * 2.4], [Math.sin(a) * r * 1.5, yc - b.hasard(5, 6.2) * k, Math.cos(a) * r * 1.9]], [.07 * k, .02 * k], { coude: .7 * k, seg: 5 }); }
+  for (let i = 0; i < 3; i++) b.partie('patte_' + i, [0, yc - k, 0], c => { const hip = [0, 0, .7 * k], knee = [0, -1.5 * k, 3.5 * k], foot = [0, -(yc - k) + .14 * k, 4.4 * k];
+    c.sphere(sb, .3 * k, hip[0], hip[1], hip[2], { seg: 8, seg2: 6 }); c.tuyau(me, [hip, knee], .16 * k, { seg: 7 }); c.sphere(sb, .27 * k, knee[0], knee[1], knee[2], { seg: 8, seg2: 6 }); c.tuyau(me, [knee, foot], [.15 * k, .09 * k], { seg: 7 });
+    c.tour(sb, [[0, 0], [.45 * k, 0], [.32 * k, .14 * k], [.1 * k, .22 * k]], foot[0], foot[1] - .14 * k, foot[2], { seg: 8 }); c.tuyau(m('cuivre'), [[0, -.35 * k, 1 * k], [0, -1.15 * k, 2.7 * k]], .05 * k, { seg: 5 }); }, 'x');
+  b.partie('rayon', [1.25 * k, yc - .5 * k, .9 * k], c => { c.tuyau(sb, [[0, 0, 0], [.5 * k, -.2 * k, .6 * k], [.5 * k, -.1 * k, 1.3 * k]], .06 * k, { coude: .2 * k, seg: 5 }); c.boite(sb, .34 * k, .34 * k, .5 * k, .5 * k, -.1 * k, 1.5 * k, { r: .04 * k }); c.cyl(m('lueur', { couleur: '#ff5a2a', intensite: 3, scintille: .3 }), .11 * k, .04 * k, .5 * k, -.1 * k, 1.76 * k, { vers: 'z+', seg: 10 }); }, 'y');
+  b.lumiere(0, yc, 3 * k, '#7dff9a', 2, 14 * k); b.collision(-1.8 * k, yc - 1.2 * k, -2.3 * k, 1.8 * k, yc + 1.5 * k, 2.3 * k); });
+E('cylindre_martien', { titre: 'Cylindre martien', groupe: 'Véhicules', univers: [GM], surface: 'metal', note: 'diametre (5) ; à demi enterré dans son cratère, couvercle dévissé' }, (b, o, m) => { const R = (o.diametre || 5) / 2, me = m('acier', { couleur: '#6a6660', rugosite: .5, rouille: .4, salete: .8 }), te = m('terre');
+  for (let i = 0; i < 12; i++) { const a = i * PI / 6 + b.hasard(-.1, .1); A.blob(b, te, R * b.hasard(.45, .62), Math.sin(a) * R * 1.9, R * .1, Math.cos(a) * R * 1.9, { graine: i + b.g * 3, amp: .35, plat: true, s: [1.2, .7, 1.2], detail: 1 }); }
+  b.groupe([0, R * .25, 0], [-.35, 0, 0], b => { b.tour(me, [[0, -R * 2.2], [R * .96, -R * 2.2], [R, -R * 2.1], [R, R * 1.2], [R * .96, R * 1.3], [R * .8, R * 1.3], [R * .8, R * 1.1], [0, R * 1.1]], 0, 0, 0, { vers: 'z+', seg: 20, ch: R * .02 });
+    for (let i = 0; i < 4; i++) b.tore(me, R * 1.005, R * .03, 0, 0, R * (-1.6 + i * .75), { vers: 'z+', seg: 20, seg2: 4 }); b.cyl(m('lueur', { couleur: '#7dff9a', intensite: 1.6, scintille: .3, vitesse: .2 }), R * .78, R * .02, 0, 0, R * 1.12, { vers: 'z+', seg: 16 });
+    b.cyl(me, R * .82, R * .16, R * 1.5, -R * .3, R * 1.1, { seg: 18, ch: R * .02, rot: [1.2, 0, .5] }); });
+  b.lumiere(0, R * 1.4, R * 1.7, '#7dff9a', 1.5, R * 5); b.collision(-R, 0, -R * 2, R, R * 1.2, R * 1.5); });
+E('canon_campagne', { titre: 'Canon de campagne', groupe: 'Véhicules', univers: [GM, C], surface: 'metal', parties: 'fut', note: 'parties.fut.rotation.x = −0.2 pour lever le tube ; matiere (fonte, bronze)' }, (b, o, m) => { const bo = m('bois', { couleur: '#5a5038', planche: 9 }), fe = m('fer_forge'), br = m(o.matiere || 'fonte');
+  for (const sx of [1, -1]) { const x = sx * .72; b.tore(bo, .68, .045, x, .72, 0, { vers: 'x+', seg: 22, seg2: 5 }); b.bague(fe, .735, .715, .07, x, .72, 0, { vers: 'x+', seg: 22 }); b.cyl(bo, .1, .2, x, .72, 0, { vers: 'x+', seg: 10 });
+    for (let i = 0; i < 12; i++) { const a = i * PI / 6; b.boite(bo, .04, .58, .05, x, .72 + Math.cos(a) * .38, Math.sin(a) * .38, { rot: [a, 0, 0], r: .006 }); } b.boite(fe, .04, .3, .5, sx * .17, .88, .1, { r: .006 }); }
+  b.cyl(fe, .05, 1.5, 0, .72, 0, { vers: 'x+', seg: 8 }); b.prisme(bo, [[.3, .62], [.3, .82], [-1, .5], [-2.3, .1], [-2.4, 0], [-2.2, 0], [-1, .32]], .22, 0, 0, 0, { plan: 'zy' }); b.boite(fe, .3, .2, .05, 0, .07, -2.38, { rot: [.5, 0, 0], r: .006 });
+  b.partie('fut', [0, .98, .1], c => { c.tour(br, [[0, -.55], [.1, -.55], [.115, -.5], [.12, -.2], [.105, .2], [.085, 1.2], [.095, 1.25], [.095, 1.32], [.05, 1.32], [.05, 1.2], [0, 1.2]], 0, 0, 0, { vers: 'z+', seg: 12 }); c.sphere(br, .06, 0, 0, -.6, { seg: 8, seg2: 5 }); c.cyl(br, .045, .44, 0, 0, 0, { vers: 'x+', seg: 8 }); }, 'x');
+  b.collision(-.8, 0, -2.4, .8, 1.45, 1.4); });
+const BAT = { groupe: 'Ville et bâtiments', surface: 'pierre' };
+E('maison', Object.assign({}, BAT, { titre: 'Maison de bourg', univers: [GM, VI, SH, D], options: { etage: [true, false], eclairee: [false, true] }, note: 'largeur (7), profondeur (5), matiere (brique, brique_jaune, pierre), toit (ardoise, tuile)' }), (b, o, m) => { const W = o.largeur || 7, Dp = o.profondeur || 5, et = o.etage !== false, H = et ? 5.4 : 2.8, hr = Dp * .42, mu = m(o.matiere || 'brique'), tu = m(o.toit || 'ardoise'), bl = m('peinture_creme');
+  const vi = o.eclairee ? m('lueur', { couleur: '#ffcf7a', intensite: 1.4, scintille: .03 }) : fab.mat('polymere', { couleur: '#1c262c', rugosite: .08, etat: 0 }), an = Math.atan2(hr, Dp / 2), Ls = Math.hypot(Dp / 2, hr) + .35;
+  b.boite(mu, W, H, Dp, 0, H / 2, 0, { r: .02 }); b.prisme(mu, [[-Dp / 2, H], [Dp / 2, H], [0, H + hr]], W - .02, 0, 0, 0, { plan: 'zy' });
+  for (const sz of [1, -1]) b.boite(tu, W + .5, .08, Ls, 0, H + hr / 2 + .02, sz * (Dp / 4 + .1), { rot: [sz * an, 0, 0], r: .01 });
+  b.boite(mu, .6, hr + 1.2, .5, W / 2 - .8, H + (hr + 1.2) / 2, 0, { r: .015 }); for (const dx of [-.14, .14]) b.cyl(m('tuile'), .09, .3, W / 2 - .8 + dx, H + hr + 1.35, 0, { seg: 8 });
+  b.boite(m('bois_sombre', { axe: 'y', planche: .2 }), 1, 2.1, .08, 0, 1.05, Dp / 2 + .01, { r: .01 }); b.boite(bl, 1.2, .12, .12, 0, 2.2, Dp / 2 + .02, { r: .01 }); b.boite(m('pierre_claire', { mode: 'roche' }), 1.4, .15, .5, 0, .075, Dp / 2 + .25, { r: .01 });
+  const fen = (x, y, z, ry) => b.groupe([x, y, z], [0, ry, 0], b => { b.boite(vi, .9, 1.2, .04, 0, 0, 0, { r: 0 }); b.boite(bl, 1, .07, .1, 0, .63, 0, { r: .006 }); b.boite(bl, 1.06, .08, .14, 0, -.64, .02, { r: .006 }); for (const sx of [1, -1]) b.boite(bl, .06, 1.26, .1, sx * .48, 0, 0, { r: .006 }); b.boite(bl, .04, 1.2, .06, 0, 0, .01, { r: 0 }); b.boite(bl, .9, .04, .06, 0, 0, .01, { r: 0 }); });
+  for (const y of (et ? [1.5, 4] : [1.5])) { for (const x of [-W / 2 + 1.3, W / 2 - 1.3]) { fen(x, y, Dp / 2 + .01, 0); fen(x, y, -Dp / 2 - .01, PI); } if (y > 2) fen(0, y, Dp / 2 + .01, 0); }
+  if (o.eclairee) b.lumiere(0, 1.5, Dp / 2 + 1.5, '#ffcf7a', 1, 8); b.collision(-W / 2, 0, -Dp / 2, W / 2, H + hr, Dp / 2); });
+E('eglise', Object.assign({}, BAT, { titre: 'Église', univers: [GM, D, C, VI], note: 'nef vers −z, clocher et portail vers +z' }), (b, o, m) => { const p = m('pierre', { assise: .32 }), ar = m('ardoise'), vi = m('vitrail'), bo = m('bois_sombre', { axe: 'y', planche: .2 }), W = 7, L = 14, H = 6, hr = 4, T = 4.2, TH = 13, zt = T / 2 - .2;
+  const an = Math.atan2(hr, W / 2), Ls = Math.hypot(W / 2, hr) + .4;
+  b.boite(p, W, H, L, 0, H / 2, -L / 2, { r: .02 }); b.prisme(p, [[-W / 2, H], [W / 2, H], [0, H + hr]], L - .02, 0, 0, -L / 2, { plan: 'xy' });
+  for (const sx of [1, -1]) { b.boite(ar, Ls, .1, L + .4, sx * (W / 4 + .12), H + hr / 2 + .03, -L / 2, { rot: [0, 0, -sx * an], r: .01 });
+    for (let i = 0; i < 4; i++) { const z = -2 - i * 3.2; b.boite(vi, .06, 2.6, .9, sx * (W / 2 + .005), 3.2, z, { r: 0 }); b.boite(p, .16, .2, 1.2, sx * (W / 2 + .04), 1.8, z, { r: .01 }); b.boite(p, .5, H, .6, sx * (W / 2 + .2), H / 2, z + 1.6, { r: .02 }); } }
+  b.boite(p, T, TH, T, 0, TH / 2, zt, { r: .02 }); b.tour(ar, [[T * .74, TH], [0, TH + 7]], 0, 0, zt, { seg: 8, rot: [0, PI / 8, 0] });
+  for (let s = 0; s < 4; s++) b.groupe([0, TH - 2.2, zt], [0, s * PI / 2, 0], b => { b.boite(NOIR(), .9, 1.8, .1, 0, 0, T / 2 - .02, { r: 0 }); for (let i = 0; i < 5; i++) b.boite(bo, .9, .05, .16, 0, -.7 + i * .35, T / 2 + .02, { rot: [.5, 0, 0], r: 0 }); });
+  b.boite(bo, 1.6, 2.8, .12, 0, 1.4, T - .2 + .02, { r: .01 }); b.boite(vi, 1.2, 2.2, .06, 0, 6.5, T - .2 + .005, { r: 0 }); b.plaque({ style: 'horloge', heure: 9.75 }, 1.6, 1.6, 0, TH - 4.6, T - .2 + .012);
+  b.collision(-W / 2, 0, -L, W / 2, H + hr, 0); b.collision(-T / 2, 0, -.2, T / 2, TH, T - .2); });
+
+/* ================================================================ PHARMA-FOOT */
+const SPO = { groupe: 'Sport', surface: 'metal', univers: [FT] };
+E('but_foot', Object.assign({}, SPO, { titre: 'But de football', note: '7,32 × 2,44 m, filet compris ; ouverture vers +z' }), (b, o, m) => { const W = 7.32, H = 2.44, Dp = 1.5, bl = m('peinture', { couleur: '#f2f2ee', rugosite: .4 }), gr = m('acier'), T = .61, sp = { style: 'maille', n: 5 };
+  for (const sx of [1, -1]) { const x = sx * (W / 2 + .06); b.cyl(bl, .06, H + .06, x, (H + .06) / 2, 0, { seg: 10 }); b.cyl(gr, .025, H, x, H / 2, -Dp, { seg: 6 }); for (const y of [H, .025]) b.cyl(gr, .025, Dp, x, y, -Dp / 2, { vers: 'z+', seg: 6 }); b.collision(x - .06, 0, -.06, x + .06, H, .06);
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 3; i++) for (const v of ['x+', 'x-']) b.plaque(sp, .5, T, x, T * (j + .5), -.25 - i * .5, { vers: v }); }
+  b.cyl(bl, .06, W + .24, 0, H + .06, 0, { vers: 'x+', seg: 10 }); for (const y of [H, .025]) b.cyl(gr, .025, W + .12, 0, y, -Dp, { vers: 'x+', seg: 6 }); b.collision(-W / 2, H, -.06, W / 2, H + .12, .06);
+  for (let i = 0; i < 12; i++) { const x = -W / 2 + T * (i + .5); for (let j = 0; j < 4; j++) for (const v of ['z+', 'z-']) b.plaque(sp, T, T, x, T * (j + .5), -Dp, { vers: v }); for (let j = 0; j < 3; j++) for (const v of ['y+', 'y-']) b.plaque(sp, T, .5, x, H, -.25 - j * .5, { vers: v }); } });
+E('ballon', Object.assign({}, SPO, { titre: 'Ballon de football', surface: 'cuir', note: 'couleur des pièces' }), (b, o, m) => { const R = .11, no = fab.mat('polymere', { couleur: o.couleur || '#141414', rugosite: .4, etat: 0 }), t = (1 + Math.sqrt(5)) / 2, V = [];
+  for (const s1 of [1, -1]) for (const s2 of [1, -1]) V.push([0, s1, s2 * t], [s1, s2 * t, 0], [s2 * t, 0, s1]);
+  b.sphere(m('polymere', { couleur: '#f0f0ec', rugosite: .35 }), R, 0, R, 0, { seg: 18, seg2: 12 });
+  for (const v of V) { const L = Math.hypot(v[0], v[1], v[2]), d = [v[0] / L, v[1] / L, v[2] / L]; b.sphere(no, R + .0012, 0, R, 0, { phi0: PI - .38, seg: 5, seg2: 3, rot: [0, Math.atan2(-d[2], d[0]), -Math.acos(d[1])] }); } });
+E('drapeau_corner', Object.assign({}, SPO, { titre: 'Drapeau de corner', parties: 'drapeau', note: 'couleur' }), (b, o, m) => { b.cyl(m('plastique', { couleur: '#f0e040' }), .0125, 1.5, 0, .75, 0, { seg: 7 }); b.tour(m('caoutchouc'), [[0, 0], [.06, 0], [.03, .05], [.0125, .06]], 0, 0, 0, { seg: 8 });
+  b.partie('drapeau', [0, 1.3, 0], c => c.prisme(m('toile', { couleur: o.couleur || '#d0281c', salete: .1 }), [[.013, -.14], [.36, -.1], [.34, .12], [.013, .16]], .004, 0, 0, 0, { plan: 'xy' }), 'y'); });
+E('projecteur', Object.assign({}, SPO, { titre: 'Projecteur de stade', univers: [FT, VI], options: { allume: [true, false] }, note: 'hauteur (16)' }), (b, o, m) => { const H = o.hauteur || 16, ac = m('galva'), on = o.allume !== false, lu = on ? m('lueur_blanche') : m('verre_depoli');
+  b.boite(m('beton'), 1.2, .5, 1.2, 0, .25, 0, { r: .02 }); b.tour(ac, [[.22, .5], [.16, H * .5], [.11, H]], 0, 0, 0, { seg: 10 });
+  b.groupe([0, H, .1], [.45, 0, 0], b => { b.boite(ac, 2.6, 1.7, .12, 0, .6, 0, { r: .02 }); for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) { const x = -.94 + i * .63, y = .1 + j * .5; b.tour(ac, [[.14, 0], [.22, .16], [.235, .16]], x, y, .06, { vers: 'z+', seg: 10 }); b.cyl(lu, .2, .02, x, y, .21, { vers: 'z+', seg: 10 }); } });
+  if (on) b.lumiere(0, H - .5, 2, '#f4f6ff', 3, H * 3); b.collision(-.6, 0, -.6, .6, H, .6); });
+E('tribune', Object.assign({}, SPO, { titre: 'Tribune', surface: 'beton', note: 'largeur (10), rangs (6), couleur des sièges ; monte vers −z' }), (b, o, m) => { const W = o.largeur || 10, n = o.rangs || 6, be = m('beton'), si = m('plastique', { couleur: o.couleur || '#1c4fa0' }), ac = m('galva'), g = .8, h = .4, ns = Math.floor((W - .4) / .5);
+  for (let j = 0; j < n; j++) { const y = h * (j + 1), z = -g * (j + .5); b.boite(be, W, y, g, 0, y / 2, z, { r: .01 }); b.collision(-W / 2, 0, z - g / 2, W / 2, y, z + g / 2);
+    for (let i = 0; i < ns; i++) { const x = -(ns - 1) * .25 + i * .5; b.boite(si, .42, .04, .38, x, y + .22, z - .04, { r: 0 }); b.boite(si, .42, .34, .04, x, y + .4, z - .24, { r: 0, rot: [-.15, 0, 0] }); b.boite(ac, .04, .2, .04, x, y + .1, z - .1, { r: 0 }); } }
+  b.boite(be, W, h * n + 1.1, .2, 0, (h * n + 1.1) / 2, -g * n - .1, { r: .01 }); for (const sx of [1, -1]) { b.tuyau(ac, [[sx * (W / 2 - .03), 1.3, 0], [sx * (W / 2 - .03), h * n + 1.3, -g * n]], .025, { seg: 5 }); for (let j = 0; j <= n; j += 2) b.cyl(ac, .02, .9 + (j ? 0 : .4), sx * (W / 2 - .03), h * j + .85 - (j ? 0 : .2), -g * j, { seg: 5 }); } });
+E('banc_touche', Object.assign({}, SPO, { titre: 'Banc de touche', note: 'largeur (4), couleur des sièges' }), (b, o, m) => { const W = o.largeur || 4, ac = m('galva'), si = m('plastique', { couleur: o.couleur || '#b8322a' }), ve = m('verre', { opacite: .2, couleur: '#cfe0ea' }), ns = Math.floor(W / .55), R = 1.3, arc = { vers: 'x+', a0: PI - .5, a1: PI * 1.5 };
+  b.boite(m('beton'), W + .2, .08, 1.6, 0, .04, -.4, { r: .01 }); for (let i = 0; i < ns; i++) { const x = -(ns - 1) * .275 + i * .55; b.boite(si, .46, .05, .42, x, .5, -.4, { r: .01 }); b.boite(si, .46, .42, .05, x, .74, -.62, { rot: [-.12, 0, 0], r: .01 }); b.boite(ac, .05, .42, .05, x, .26, -.4, { r: 0 }); }
+  b.tour(ve, [[R, -W / 2], [R, W / 2]], 0, .6, 0, Object.assign({ seg: 14 }, arc)); b.boite(ve, W, .6, .01, 0, .3, -R, { r: 0 }); for (const x of [-W / 2, 0, W / 2]) { b.tore(ac, R, .025, x, .6, 0, Object.assign({ seg: 14, seg2: 4 }, arc)); b.cyl(ac, .025, .6, x, .3, -R, { seg: 5 }); }
+  b.collision(-W / 2, 0, -R, W / 2, 1.9, -R + .1); });
+E('coupe', Object.assign({}, SPO, { titre: 'Coupe', univers: [FT, C], note: 'texte du socle, matiere (or, argent)' }), (b, o, m) => { const or_ = m(o.matiere || 'or');
+  b.boite(m('marbre_noir'), .16, .08, .16, 0, .04, 0, { r: .006 }); b.plaque({ t: o.texte || 'CHAMPION', style: 'plaque' }, .1, .035, 0, .04, .0806);
+  b.tour(or_, [[0, 0], [.05, 0], [.055, .01], [.02, .03], [.014, .1], [.03, .13], [.075, .2], [.095, .32], [.1, .36], [.094, .36], [.07, .21], [0, .15]], 0, .08, 0, { seg: 14, ch: .002 });
+  for (const sx of [1, -1]) b.tore(or_, .05, .008, sx * .125, .34, 0, { vers: 'z+', a0: sx > 0 ? -PI / 2 : PI / 2, a1: sx > 0 ? PI / 2 : 1.5 * PI, seg: 10, seg2: 5 }); });
+
+/* ================================================================ PHARMAVILLE */
+E('lampadaire', Object.assign({}, BAT, { titre: 'Lampadaire', surface: 'metal', univers: [VI, SH, D, GM, TK], options: { style: ['ancien', 'moderne'], allume: [true, false] } }), (b, o, m) => { const on = o.allume !== false;
+  if (o.style === 'moderne') { const ac = m('galva'); b.tour(ac, [[.11, 0], [.11, .5], [.07, .6], [.05, 6]], 0, 0, 0, { seg: 10 }); b.tuyau(ac, [[0, 6, 0], [0, 6.6, 0], [0, 6.9, .5], [0, 6.85, 1.4]], .04, { coude: .4, seg: 7 }); b.boite(ac, .22, .08, .6, 0, 6.83, 1.5, { r: .02 });
+    b.boite(on ? m('lueur_blanche') : m('verre_depoli'), .16, .02, .5, 0, 6.785, 1.5, { r: 0 }); if (on) b.lumiere(0, 6.5, 1.5, '#f0f4ff', 2.4, 16); b.collision(-.11, 0, -.11, .11, 6, .11); return; }
+  const fo = m('fonte', { couleur: '#1f2a24' }); b.tour(fo, [[.16, 0], [.16, .12], [.1, .2], [.085, .6], [.11, .66], [.06, .75], [.045, 2.8], [.07, 2.86], [.03, 2.95], [.03, 3.05]], 0, 0, 0, { seg: 10, ch: .004 }); b.tuyau(fo, [[-.3, 2.55, 0], [.3, 2.55, 0]], .015, { seg: 5 });
+  b.tour(fo, [[.03, 3.05], [.11, 3.1], [.12, 3.12]], 0, 0, 0, { seg: 6 }); b.tour(m('verre', { couleur: '#f0e6c8', opacite: .25 }), [[.12, 3.12], [.17, 3.5]], 0, 0, 0, { seg: 6 }); b.tour(fo, [[.19, 3.5], [.1, 3.62], [.04, 3.7], [.02, 3.78], [0, 3.8]], 0, 0, 0, { seg: 6 });
+  for (let i = 0; i < 6; i++) { const a = i * PI / 3; b.tuyau(fo, [[Math.sin(a) * .12, 3.12, Math.cos(a) * .12], [Math.sin(a) * .17, 3.5, Math.cos(a) * .17]], .006, { seg: 3 }); }
+  if (on) { b.sphere(m('lueur', { couleur: '#ffd27a', intensite: 3, scintille: .12, vitesse: .4 }), .05, 0, 3.26, 0, { seg: 8, seg2: 5 }); b.lumiere(0, 3.3, 0, '#ffd27a', 1.8, 10); } b.collision(-.12, 0, -.12, .12, 3, .12); });
+E('banc_public', Object.assign({}, BAT, { titre: 'Banc public', surface: 'bois', univers: [VI, SH, GM, TK] }), (b, o, m) => { const fo = m('fonte', { couleur: '#1f2a24' }), bo = m('bois', { couleur: '#6a4a2a', axe: 'x', planche: 9 }), W = 1.8;
+  for (const sx of [1, -1]) b.prisme(fo, [[-.28, 0], [-.22, 0], [-.2, .38], [.2, .4], [.24, 0], [.3, 0], [.27, .44], [.22, .47], [-.2, .45], [-.3, .86], [-.36, .86], [-.27, .4]], .045, sx * (W / 2 - .12), 0, 0, { plan: 'zy' });
+  for (let i = 0; i < 4; i++) b.boite(bo, W, .025, .09, 0, .472 - i * .005, .16 - i * .11, { r: .006 }); for (let i = 0; i < 3; i++) { const t = .28 + i * .3; b.boite(bo, W, .1, .025, 0, .45 + .41 * t, -.2 - .1 * t + .014, { rot: [-.24, 0, 0], r: .006 }); }
+  b.collision(-W / 2, 0, -.36, W / 2, .5, .3); });
+E('feu_tricolore', Object.assign({}, BAT, { titre: 'Feu tricolore', surface: 'metal', univers: [VI, TK], options: { feu: ['rouge', 'orange', 'vert'] } }), (b, o, m) => { const no = m('peinture_noire'), f = o.feu || 'rouge', L = [['rouge', '#ff2a1c', '#4a100c'], ['orange', '#ffa01c', '#4a300c'], ['vert', '#2aff6a', '#0c3a1c']];
+  b.tour(m('peinture', { couleur: '#2a2e2c' }), [[.1, 0], [.1, .3], [.055, .4], [.05, 2.6]], 0, 0, 0, { seg: 10 }); b.boite(no, .3, .86, .22, 0, 3, 0, { r: .03 });
+  L.forEach(([n, c, d], i) => { const y = 3.27 - i * .27; b.cyl(n === f ? m('lueur', { couleur: c, intensite: 3.2, scintille: .02 }) : fab.mat('polymere', { couleur: d, rugosite: .25, etat: 0 }), .09, .02, 0, y, .112, { vers: 'z+', seg: 12 }); b.tour(no, [[.1, 0], [.11, .13]], 0, y, .11, { vers: 'z+', seg: 10, a0: PI, a1: 2 * PI }); if (n === f) b.lumiere(0, y, .5, c, .8, 5); });
+  b.collision(-.1, 0, -.1, .1, 2.6, .1); });
+E('poubelle_rue', Object.assign({}, BAT, { titre: 'Corbeille de rue', surface: 'metal', univers: [VI, TK, FT], note: 'couleur' }), (b, o, m) => { const pe = m('peinture', { couleur: o.couleur || '#2f5a3a' });
+  b.tour(pe, [[0, 0], [.2, 0], [.22, .02], [.25, .7], [.26, .72], [.24, .72], [.21, .04], [0, .03]], 0, .06, 0, { seg: 14 }); for (let i = 0; i < 14; i++) { const a = i * 2 * PI / 14; b.boite(pe, .03, .62, .012, Math.sin(a) * .245, .44, Math.cos(a) * .245, { rot: [0, a, 0], r: 0 }); }
+  b.tour(pe, [[.27, .86], [.27, .9], [.2, 1], [.08, 1.05], [0, 1.05]], 0, 0, 0, { seg: 14 }); for (let i = 0; i < 3; i++) { const a = i * 2 * PI / 3; b.cyl(pe, .014, .12, Math.sin(a) * .245, .82, Math.cos(a) * .245, { seg: 5 }); } b.cyl(m('acier'), .04, .06, 0, .03, 0, { seg: 8 }); b.collision(-.26, 0, -.26, .26, 1.05, .26); });
+E('borne_incendie', Object.assign({}, BAT, { titre: 'Borne d\'incendie', surface: 'metal', univers: [VI, TK], note: 'couleur' }), (b, o, m) => { const pe = m('peinture', { couleur: o.couleur || '#b8281c' }), ac = m('acier');
+  b.tour(pe, [[0, 0], [.14, 0], [.14, .04], [.1, .06], [.095, .5], [.12, .52], [.12, .56], [.1, .58], [.08, .68], [.04, .74], [0, .75]], 0, 0, 0, { seg: 12, ch: .003 });
+  for (const sx of [1, -1]) { b.cyl(pe, .05, .08, sx * .12, .42, 0, { vers: 'x+', seg: 8 }); b.cyl(ac, .03, .02, sx * .17, .42, 0, { vers: 'x+', seg: 5 }); } b.cyl(pe, .065, .09, 0, .38, .12, { vers: 'z+', seg: 8 }); b.cyl(ac, .022, .03, 0, .765, 0, { seg: 5 }); b.collision(-.14, 0, -.14, .14, .75, .14); });
+E('voiture', { titre: 'Voiture', groupe: 'Véhicules', univers: [VI, TK], surface: 'metal', options: { phares: [false, true] }, note: 'couleur ; l\'avant est vers +z' }, (b, o, m) => { const pe = m('peinture', { couleur: o.couleur || b.choix(['#8a1c1c', '#1c3a6a', '#d8d8d2', '#2a2a2c', '#3a6a4a', '#c9a12a']), rugosite: .3 }), vi = fab.mat('polymere', { couleur: '#10161a', rugosite: .06, etat: 0 }), no = m('caoutchouc'), W = 1.72;
+  b.prisme(pe, [[-2.05, .32], [-2.1, .62], [-2, .86], [-1.3, .9], [.9, .86], [1.6, .74], [2.08, .62], [2.1, .36], [1.95, .26], [-1.9, .26]], W, 0, 0, 0, { plan: 'zy', lisse: true });
+  b.prisme(vi, [[-1.55, .88], [-1.2, 1.36], [.25, 1.4], [.95, .88]], W - .16, 0, 0, 0, { plan: 'zy' }); b.prisme(pe, [[-1.24, 1.36], [-1.2, 1.42], [.24, 1.45], [.3, 1.4]], W - .12, 0, 0, 0, { plan: 'zy', lisse: true });
+  for (const sx of [1, -1]) { const v = sx > 0 ? 'x+' : 'x-'; for (const z of [-1.3, 1.3]) { b.tour(no, [[0, 0], [.3, 0], [.32, .03], [.32, .19], [.3, .22], [.19, .22]], sx * (W / 2 - .2), .32, z, { vers: v, seg: 14 }); b.tour(m('acier_poli'), [[.19, .2], [.17, .22], [0, .23]], sx * (W / 2 - .2), .32, z, { vers: v, seg: 10 }); }
+    for (const z of [-.45, .3]) b.boite(pe, .04, .5, .07, sx * (W / 2 - .085), 1.13, z, { r: .01 });
+    b.boite(o.phares ? m('lueur_blanche') : m('verre_depoli'), .32, .1, .04, sx * .6, .66, 2.085, { r: .01 }); b.boite(m('lueur', { couleur: '#ff1c1c', intensite: o.phares ? 2 : .5, scintille: 0 }), .34, .1, .04, sx * .6, .7, -2.08, { r: .01 }); b.boite(pe, .06, .07, .14, sx * (W / 2 + .05), .98, .75, { r: .02 }); }
+  for (const z of [2.08, -2.07]) b.boite(no, W - .1, .14, .12, 0, .37, z, { r: .03 }); b.plaque({ t: 'PV-' + (100 + b.entier(8) * 111), style: 'etiquette', couleur: '#1c3a8a' }, .4, .1, 0, .37, 2.141);
+  if (o.phares) b.lumiere(0, .7, 3.5, '#f4f6ff', 2, 14); b.collision(-W / 2, 0, -2.1, W / 2, 1.45, 2.1); });
+
+/* les objets déjà au catalogue qui servent aussi dans ces jeux */
+const AUSSI = { crane: [FR], cercueil: [FR], tonneau: [FR, SH], chandelier: [FR, SH], bougie: [FR, SH, PH], squelette: [FR], mort_vivant: [FR], table: [PH, FR, VI], tabouret: [PH, FR], etagere: [PH, VI], armoire: [PH], chariot: [PH], lit: [PH], extincteur: [PH, VI, FT], moniteur: [PH],
+  chaise: [SH, FR], table_banquet: [SH, FR], armoire_bois: [SH, FR], coffre: [SH], grimoire: [SH, FR], torche: [FR], arbre: [VI, FT, SH], rocher: [VI], homme: [VI, FT, PH, SH], femme: [VI, FT, PH, SH], fusil_verrou: [SH], bassin: [VI], pluie: [SH, VI, FT, FR], fumee: [FR, VI, SH], neige: [VI, SH], feu_de_camp: [FR], villageois: [FR], villageoise: [FR], soldat: [SH], epee: [SH] };
+for (const n in AUSSI) { const c = fab.catalogue[n]; if (c) for (const u of AUSSI[n]) if (c.univers.indexOf(u) < 0) c.univers.push(u); }
+for (const n in fab.catalogue) { const c = fab.catalogue[n]; if (Array.isArray(c.parties)) c.parties = c.parties.join(', '); }
+});

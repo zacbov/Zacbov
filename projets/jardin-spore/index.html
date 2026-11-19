@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#030504">
+  <title>Codevember 2026 / 16 / Spore</title>
+  <meta name="description" content="Spore. Translucent amber mushroom fins above glowing green moss, surrounded by drifting GPU-simulated spores.">
+  <link rel="canonical" href="https://mrdoob.github.io/codevember-2026/16/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Codevember 2026">
+  <meta property="og:title" content="Codevember 2026 / 16 / Spore">
+  <meta property="og:description" content="Amber mushroom fins and green stem bases illuminate a mossy grove as spore clouds curl through the air. Simulated on the GPU.">
+  <meta property="og:url" content="https://mrdoob.github.io/codevember-2026/16/">
+  <meta property="og:image" content="https://mrdoob.github.io/codevember-2026/16/preview.webp">
+  <meta property="og:image:width" content="800"><meta property="og:image:height" content="800">
+  <meta property="og:image:alt" content="Warm mushrooms above fine moss, surrounded by spores catching amber and blue light.">
+  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@mrdoob">
+  <meta name="twitter:title" content="Codevember 2026 / 16 / Spore">
+  <meta name="twitter:image" content="https://mrdoob.github.io/codevember-2026/16/preview.webp">
+  <link rel="icon" href="data:,"><link rel="stylesheet" href="style.css">
+  <script src="./fabrique.js"></script>
+  <script src="./plantes.js"></script>
+  <script type="importmap">{"imports":{
+    "three":"https://cdn.jsdelivr.net/gh/mrdoob/three.js@4f5d6bc0c7ec777e06703b56c7b7089e99be11d5/build/three.webgpu.js",
+    "three/webgpu":"https://cdn.jsdelivr.net/gh/mrdoob/three.js@4f5d6bc0c7ec777e06703b56c7b7089e99be11d5/build/three.webgpu.js",
+    "three/tsl":"https://cdn.jsdelivr.net/gh/mrdoob/three.js@4f5d6bc0c7ec777e06703b56c7b7089e99be11d5/build/three.tsl.js",
+    "three/addons/":"https://cdn.jsdelivr.net/gh/mrdoob/three.js@4f5d6bc0c7ec777e06703b56c7b7089e99be11d5/examples/jsm/"
+  }}</script>
+  <style>#bar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:5;display:flex;gap:12px;align-items:center;padding:8px 16px;border-radius:22px;background:#0a0806b3;border:1px solid #3a3226;color:#f1d8b0;font:inherit;font-size:12px}#bar button{padding:5px 14px;border-radius:16px;border:1px solid #6a5a44;background:transparent;color:inherit;font:inherit;letter-spacing:.1em;text-transform:uppercase;font-size:11px;cursor:pointer}#bar button[aria-pressed=true]{background:#f4f1ea;color:#1c1c1e}#hour{width:min(34vw,260px);accent-color:#e9a84a}#clock{font:12px monospace;min-width:42px}</style>
+</head>
+<body>
+  <main><canvas tabindex="0" aria-label="A mushroom grove releasing spores. Drag to orbit, scroll to approach. Space pauses, R restores the view, H hides the interface."></canvas></main>
+  <header><a href="../">CODEVEMBER 2026</a> / 17 / JARDIN DES SIMPLES</header>
+  <div id="bar"><button id="play" aria-pressed="false" aria-label="Lecture du temps">▶</button><input id="hour" type="range" min="0" max="24" step="0.05" aria-label="Heure"><span id="clock">23:00</span><button id="ink" aria-pressed="false">Encre</button></div>
+  <div id="status" role="status">Growing the garden…</div>
+  <aside><button id="settings-toggle" aria-expanded="false" aria-controls="settings">Settings</button>
+    <section id="settings" hidden>
+      <label>Camera orbit <input id="orbit" type="checkbox" checked></label>
+      <label>Pause <input id="pause" type="checkbox"></label>
+      <label>Air current <input id="wind" type="range" min="0" max="2" step="0.01" value="1"></label>
+      <label>Spore light <input id="brightness" type="range" min="0.1" max="6" step="0.01" value="4"></label>
+      <label>Subsurface <input id="sss" type="range" min="0" max="4" step="0.01" value="2.5"></label>
+      <label>Glow <input id="glow" type="range" min="0" max="1" step="0.01" value="1"></label>
+      <details class="grading" open>
+        <summary>Color grading</summary>
+        <label><span>Exposure <span id="exposure-value" class="value">0.50</span></span> <input id="exposure" type="range" min="0.2" max="2" step="0.01" value="0.5"></label>
+        <label><span>Saturation <span id="saturation-value" class="value">1.00</span></span> <input id="saturation" type="range" min="0" max="2" step="0.01" value="1"></label>
+        <label><span>Contrast <span id="contrast-value" class="value">1.15</span></span> <input id="contrast" type="range" min="0.5" max="1.5" step="0.01" value="1.15"></label>
+        <label><span>Warmth <span id="warmth-value" class="value">1.00</span></span> <input id="warmth" type="range" min="-1" max="1" step="0.01" value="1"></label>
+        <label><span>Tint <span id="tint-value" class="value">0.43</span></span> <input id="tint" type="range" min="-1" max="1" step="0.01" value="0.43"></label>
+        <button id="reset-grade">Reset grading</button>
+        <button id="copy-grade">Copy values</button>
+      </details>
+      <label>Display <select id="display-mode"><option value="auto">Automatic</option><option value="sdr">SDR</option></select></label>
+      <label title="Highlight ceiling relative to SDR white. Your browser adapts this to the display."><span>HDR peak <span id="hdr-peak-value" class="value">4.0×</span></span> <input id="hdr-peak" type="range" min="1" max="8" step="0.1" value="4"></label>
+      <p id="display-status" class="display-status"></p>
+      <label><span>Resolution <span id="resolution-value">1.50×</span></span> <input id="resolution" type="range" min="0.75" max="2" step="0.25" value="1.5"></label>
+      <label>Auto density <input id="adaptive" type="checkbox" checked></label>
+      <label>Particles <select id="particles"><option value="131072">131,072</option><option value="262144">262,144</option><option value="524288" selected>524,288</option><option value="1048576">1,048,576</option><option value="2097152">2,097,152</option><option value="4194304">4,194,304</option></select></label>
+      <label>Show meshlets <input id="meshlets" type="checkbox"></label>
+      <button id="reset">Reset camera</button>
+      <output id="metrics" aria-live="off"></output>
+    </section>
+  </aside>
+  <script type="module" src="bootstrap.js"></script>
+</body>
+</html>

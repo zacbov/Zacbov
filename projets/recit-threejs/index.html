@@ -493,7 +493,7 @@ function blankStory(){
     title:'Herbier d\u2019un jardin',
     theme:{ bg:'#0E1210', ink:'#EDEAE0', accent:'#A8B87F',
       display:'Fraunces', body:'Archivo', dispWeight:300, dispTrack:-2,
-      bodyWeight:300, bodyTrack:0 },
+      bodyWeight:300, bodyTrack:0, smooth:true, smoothLerp:0.1 },
     music:{ asset:null, volume:0.35, duck:0.35, fade:1.5 },
     shapes:{},
     sfxRoute:'',
@@ -1401,8 +1401,7 @@ function goTo(target, newTab) {
   }
   let i = target === 'next' ? currentIndex() + 1 : S.chapters.findIndex(c => c.id === target);
   if (i < 0) i = currentIndex() + 1;
-  const n = document.getElementById('anchor-' + i);
-  if (n) n.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
+  scrollToEl(document.getElementById('anchor-' + i));
 }
 function goToChapter(id) { goTo(id); }
 
@@ -1559,7 +1558,8 @@ function buildRail() {
     const f = Math.max(0, Math.min(1, (y - r.top) / r.height));
     const total = spacer.scrollHeight - innerHeight;
     if (total <= 0) return;
-    if (smooth && !still) { scrollTo({ top: f * total, behavior: 'smooth' }); return; }
+    if (smooth) { scrollToY(f * total, true); return; }
+    if (lenis) { scrollToY(f * total, false); return; }
     /* la page défile en douceur par défaut : pendant un glissé, la position
        doit suivre le geste sans retard */
     const html = document.documentElement, was = html.style.scrollBehavior;
@@ -1595,8 +1595,43 @@ function buildRail() {
   document.body.appendChild(nav);
 }
 function goChapter(i) {
-  const n = document.getElementById('anchor-' + i);
-  if (n) n.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
+  scrollToEl(document.getElementById('anchor-' + i));
+}
+
+/* Défilement doux (Lenis) : la molette glisse avec inertie au lieu d'avancer
+   par crans, ce qui rend aussi les vidéos défilées plus régulières. Le doigt
+   garde le défilement natif du téléphone. Sans connexion, ou si le visiteur
+   demande moins d'animations, le défilement reste celui du navigateur. */
+let lenis = null, lenisLoading = false;
+async function syncSmooth() {
+  const want = !still && S.theme && S.theme.smooth !== false;
+  if (!want) {
+    if (lenis) { lenis.destroy(); lenis = null; document.documentElement.classList.remove('lenis'); }
+    return;
+  }
+  if (lenis) { lenis.options.lerp = +S.theme.smoothLerp || 0.1; return; }
+  if (lenisLoading) return;
+  lenisLoading = true;
+  try {
+    const L = (await import('lenis')).default;
+    if (!lenis && !still && S.theme.smooth !== false) {
+      lenis = new L({ autoRaf: true, lerp: +S.theme.smoothLerp || 0.1, smoothWheel: true });
+      lenis.on('scroll', request);
+    }
+  } catch (e) { console.warn('[Récit] défilement doux indisponible', e); }
+  lenisLoading = false;
+}
+function scrollToY(y, smooth) {
+  if (lenis) { lenis.scrollTo(y, { immediate: !smooth || still, force: true }); return; }
+  const html = document.documentElement, was = html.style.scrollBehavior;
+  if (!smooth || still) html.style.scrollBehavior = 'auto';
+  if (smooth && !still) scrollTo({ top: y, behavior: 'smooth' }); else scrollTo(0, y);
+  html.style.scrollBehavior = was;
+}
+function scrollToEl(n) {
+  if (!n) return;
+  if (lenis) { lenis.scrollTo(n, { immediate: still, force: true }); return; }
+  n.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
 }
 /* position et nom des pastilles : recalculés à chaque retouche du récit */
 function layoutRail() {
@@ -2097,6 +2132,7 @@ function applyChapterSettings() {
     if (a) a.style.height = ch.len + 'dvh';
   });
   layoutRail();
+  syncSmooth();
 }
 
 /* Reconstruire un ornement ou un bouton coupe net l'animation en cours.
@@ -2148,7 +2184,7 @@ addEventListener('message', e => {
     let acc = 0;
     for (let i = 0; i < S.chapters.length; i++) {
       const len = (S.chapters[i].len / 100) * innerHeight;
-      if (S.chapters[i].id === m.chapter) { scrollTo({ top: acc + len * (m.at + 0.03), behavior: 'auto' }); break; }
+      if (S.chapters[i].id === m.chapter) { scrollToY(acc + len * (m.at + 0.03), false); break; }
       acc += len;
     }
   }
@@ -2812,7 +2848,8 @@ addEventListener('unhandledrejection', e => console.error('[Récit]', e.reason))
 const IMPORTMAP = {imports:{
   'three':'https://unpkg.com/three@0.160.0/build/three.module.js',
   'three/addons/':'https://unpkg.com/three@0.160.0/examples/jsm/',
-  'gaussian-splats-3d':'https://unpkg.com/@mkkellogg/gaussian-splats-3d@0.4.6/build/gaussian-splats-3d.module.js'
+  'gaussian-splats-3d':'https://unpkg.com/@mkkellogg/gaussian-splats-3d@0.4.6/build/gaussian-splats-3d.module.js',
+  'lenis':'https://cdn.jsdelivr.net/npm/lenis@1.3.27/+esm'
 }};
 
 /* Les médias en data: coûtent cher à recopier. On garde la dernière charge
@@ -2904,6 +2941,10 @@ function pageCSS(t){
   return `
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
+html.lenis,html.lenis body{height:auto}
+.lenis.lenis-smooth{scroll-behavior:auto!important}
+.lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}
+.lenis.lenis-stopped{overflow:hidden}
 body{margin:0;background:${t.bg};color:${t.ink};
   font-family:'${t.body}',system-ui,sans-serif;-webkit-font-smoothing:antialiased;
   --f-display:'${t.display}',Georgia,serif; --f-body:'${t.body}',system-ui,sans-serif; --fs:1}
@@ -3774,8 +3815,8 @@ function buildAsset(parent,ch){
     hh.textContent = !webcodecsSupport()
       ? 'Ce navigateur ne sait pas encoder la vidéo image par image. Utilisez Chrome ou Edge.'
       : forScrub
-      ? 'Chaque image est conservée et une image-clé est placée toutes les 6 : la vidéo suit le geste sans à-coup. Le fichier est plus lourd, c’est le prix de la fluidité. La vidéo est lue une fois pendant l’encodage : gardez l’onglet au premier plan.'
-      : 'La vidéo est lue une fois pendant l’encodage : gardez l’onglet au premier plan.';
+      ? 'Chaque image est conservée et une image-clé est placée toutes les 6 : la vidéo suit le geste sans à-coup. Le fichier est plus lourd, c’est le prix de la fluidité. La conversion va plus vite que la lecture ; hors connexion, la vidéo est lue une fois : gardez alors l’onglet au premier plan.'
+      : 'La conversion va plus vite que la lecture ; hors connexion, la vidéo est lue une fois : gardez alors l’onglet au premier plan.';
     conv.appendChild(hh);
     wrap.appendChild(conv);
   }
@@ -4851,6 +4892,12 @@ function buildTheme(parent){
   parent.appendChild(nav);
 
   if(themeTab==='couleurs'){
+  /* --- défilement --- */
+  const sm=document.createElement('div');
+  sm.appendChild(check(t,'smooth','Défilement doux'));
+  if(t.smooth!==false) sm.appendChild(labelled('Inertie',range(t,'smoothLerp',0.04,0.25,0.01,
+    v=>v<=0.07?'longue':v>=0.16?'courte':'moyenne')));
+  field(parent,'Défilement',sm,'La molette glisse avec inertie (bibliothèque Lenis). Le doigt garde le défilement du téléphone ; les visiteurs qui demandent moins d\u2019animations gardent le défilement normal.');
   const g=document.createElement('div'); g.className='three';
   g.appendChild(labelled('Fond',color(t,'bg')));
   g.appendChild(labelled('Texte',color(t,'ink')));
@@ -5848,7 +5895,68 @@ function encodePass(v,rate,o){
   });
 }
 
+/* Conversion rapide (Mediabunny) : le fichier est décodé puis réencodé
+   directement, image par image, sans être lu à l'écran. Plus rapide que le
+   temps réel, exacte à l'image près, et l'onglet peut passer au second plan.
+   Si la bibliothèque manque (hors ligne) ou bute sur le fichier, on retombe
+   sur la conversion par lecture, plus lente mais éprouvée. */
+const MEDIABUNNY_URL='https://cdn.jsdelivr.net/npm/mediabunny@1.66.0/+esm';
+let mbMod=null;
+async function loadMediabunny(){
+  if(mbMod) return mbMod;
+  mbMod=await import(MEDIABUNNY_URL);
+  if(!mbMod.Conversion) { mbMod=null; throw new Error('Mediabunny incomplet'); }
+  return mbMod;
+}
+async function convertFast(bytes,mime,opts,ui){
+  const MB=await loadMediabunny();
+  const input=new MB.Input({ source:new MB.BlobSource(new Blob([bytes],{type:mime})), formats:MB.ALL_FORMATS });
+  const vt=await input.getPrimaryVideoTrack();
+  if(!vt) throw new Error('Aucune piste vidéo');
+  const srcW=vt.displayWidth, srcH=vt.displayHeight;
+  let fps=30;
+  try{ const st=await vt.computePacketStats(120); if(st.averagePacketRate>1) fps=st.averagePacketRate; }catch(e){}
+  const maxW=opts.maxW||1920;
+  const W=srcW>maxW ? Math.round(maxW/2)*2 : Math.round(srcW/2)*2;
+  const H=Math.round(srcH*W/srcW/2)*2;
+  const bitrate=Math.round((opts.mbps||2.2)*1e6*(opts.scrub?1.8:1));
+  const keyEvery=opts.scrub?6:48;
+  let codec=null;
+  for(const c of ['vp9','vp8']){
+    try{ if(await MB.canEncodeVideo(c,{width:W,height:H,bitrate:bitrate})){ codec=c; break; } }catch(e){}
+  }
+  if(!codec) throw new Error('Aucun encodeur VP9 ni VP8');
+  const keepAudio=opts.keepAudio&&!opts.scrub;
+  const output=new MB.Output({ format:new MB.WebMOutputFormat(), target:new MB.BufferTarget() });
+  const conv=await MB.Conversion.init({ input, output, showWarnings:false,
+    video:{ codec, bitrate, width:W, height:H, fit:'fill', forceTranscode:true,
+            keyFrameInterval:keyEvery/fps },
+    audio: keepAudio ? { codec:'opus', bitrate:128000 } : { discard:true } });
+  if(!conv.isValid) throw new Error('Conversion impossible : '+conv.discardedTracks.map(t=>t.reason).join(', '));
+  const audio=keepAudio && conv.discardedTracks.every(t=>t.track.type!=='audio') && !!(await input.getPrimaryAudioTrack());
+  ui.label='';
+  ui.status('Conversion rapide…');
+  let frames=0;
+  conv.onProgress=(k)=>{ frames=Math.round((vt.duration||0)*fps*k);
+    ui.progress(Math.min(1,k),frames); if(ui.cancelled()) conv.cancel(); };
+  const tick=setInterval(()=>{ if(ui.cancelled()) conv.cancel(); },250);
+  try{ await conv.execute(); }
+  finally{ clearInterval(tick); }
+  if(ui.cancelled()) throw new Error('Conversion annulée.');
+  const out=new Uint8Array(output.target.buffer);
+  let n=frames; try{ n=videoReport(out).frames||frames; }catch(e){}
+  return { bytes:out, frames:n, lost:0, keyEvery, W, H, codec:codec.toUpperCase(), audio, fast:true };
+}
 async function convertToWebm(bytes,mime,opts,ui){
+  try{ return await convertFast(bytes,mime,opts,ui); }
+  catch(e){
+    if(ui.cancelled()) throw e;
+    console.warn('[Récit] conversion rapide indisponible, passage à la lecture :',e);
+    ui.status('Conversion par lecture…');
+  }
+  return convertRealtime(bytes,mime,opts,ui);
+}
+async function convertRealtime(bytes,mime,opts,ui){
   if(!webcodecsSupport()) throw new Error('Ce navigateur ne propose pas WebCodecs : utilisez Chrome ou Edge.');
   const M=await loadMuxer();
   const url=URL.createObjectURL(new Blob([bytes],{type:mime}));
@@ -5896,7 +6004,7 @@ function convPanel(){
     box.innerHTML='<video muted playsinline></video><div class="cb-body">'+
       '<b>Conversion en WebM</b><span class="cb-stat"></span>'+
       '<div class="cb-bar"><i></i></div>'+
-      '<span class="cb-note">Gardez cet onglet au premier plan.</span></div>'+
+      '<span class="cb-note">Conversion rapide ; en cas de repli sur la lecture, gardez l\u2019onglet au premier plan.</span></div>'+
       '<button class="btn ghost cb-x">Annuler</button>';
     document.body.appendChild(box);
   }
@@ -6555,6 +6663,15 @@ function loadProject(j){
    AUDIO → ignoré.
    --------------------------------------------------------------- */
 async function unzipEntries(bytes){
+  try{
+    const F=await loadFflate();
+    const all=F.unzipSync(bytes,{ filter:f=>/\.xml$|\.rels$/.test(f.name) });
+    const td=new TextDecoder();
+    return { names:Object.keys(all), read:async n=>all[n]?td.decode(all[n]):null };
+  }catch(e){ console.warn('[Récit] lecture fflate impossible, lecteur intégré :',e); }
+  return unzipEntriesBuiltin(bytes);
+}
+async function unzipEntriesBuiltin(bytes){
   const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
   let e=bytes.length-22;
   while(e>=0 && dv.getUint32(e,true)!==0x06054b50) e--;
@@ -6736,6 +6853,28 @@ function dosTime(d){
 function dosDate(d){
   return (((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate())&0xFFFF;
 }
+/* Archive compressée (fflate) : les fichiers déjà compressés (vidéo, son,
+   images) sont rangés tels quels, le reste (page, modèles 3D, splats) est
+   compressé. Hors ligne, l'ancienne archive non compressée prend le relais. */
+const FFLATE_URL='https://cdn.jsdelivr.net/npm/fflate@0.8.3/+esm';
+let fflateMod=null;
+async function loadFflate(){
+  if(!fflateMod) fflateMod=await import(FFLATE_URL);
+  return fflateMod;
+}
+async function makeZipBest(files){
+  try{
+    const F=await loadFflate();
+    const packed=/\.(mp4|m4v|webm|mov|ogv|mp3|m4a|ogg|opus|wav|aac|jpe?g|png|webp|gif|avif|spz|sog|ksplat)$/i;
+    const tree={};
+    files.forEach(f=>{ tree[f.name]=[f.data,{ level: packed.test(f.name)?0:6 }]; });
+    const out=await new Promise((res,rej)=>F.zip(tree,{},(err,data)=>err?rej(err):res(data)));
+    return { blob:new Blob([out],{type:'application/zip'}), compressed:true };
+  }catch(e){
+    console.warn('[Récit] fflate indisponible, archive non compressée :',e);
+    return { blob:makeZip(files), compressed:false };
+  }
+}
 function makeZip(files){
   const enc=new TextEncoder(), now=new Date();
   const t=dosTime(now), dt=dosDate(now);
@@ -6824,7 +6963,7 @@ document.querySelectorAll('input[name=expmode]').forEach(r=>{
     document.querySelectorAll('.opt').forEach(o=>o.classList.toggle('sel',o.querySelector('input').checked));
   });
 });
-document.getElementById('expGo').addEventListener('click',()=>{
+document.getElementById('expGo').addEventListener('click',async()=>{
   const mode=document.querySelector('input[name=expmode]:checked').value;
   expModal.classList.remove('on');
   try{
@@ -6837,9 +6976,12 @@ document.getElementById('expGo').addEventListener('click',()=>{
       const files=[{name:'index.html',data:enc.encode(buildHTML('folder'))}];
       for(const [k,a] of ASSETS)
         files.push({name:'assets/'+k+'_'+a.name,data:a.bytes});
-      const zip=makeZip(files);
+      toast('Préparation de l\u2019archive\u2026');
+      const raw=files.reduce((n,f)=>n+f.data.length,0);
+      const {blob:zip,compressed}=await makeZipBest(files);
       download(zip,slug(story.title)+'.zip');
       toast('Archive prête — '+files.length+' fichiers, '+fmtBytes(zip.size)+
+            (compressed&&raw>zip.size?' (au lieu de '+fmtBytes(raw)+')':'')+
             '. Déposez-la telle quelle sur Netlify Drop.');
     }
   }catch(e){ console.error(e); toast('Export impossible : '+e.message,'bad'); }

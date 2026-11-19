@@ -333,6 +333,15 @@ input[type=color]{width:100%;height:26px;padding:2px;background:var(--ink-3);
       <option value="cut">Coins coupés</option>
       <option value="bracket">Crochets d'angle</option>
     </select>
+    <label for="kBtnSize">Taille du bouton <span class="val" id="kBtnSizeV">1.00</span></label>
+    <input type="range" id="kBtnSize" min="60" max="320" value="100">
+    <label for="kBtnTrack">Espacement des lettres <span class="val" id="kBtnTrackV">0.20</span></label>
+    <input type="range" id="kBtnTrack" min="0" max="60" value="20">
+    <label for="kBtnWeight">Graisse</label>
+    <select id="kBtnWeight">
+      <option value="300">Fine</option><option value="400" selected>Normale</option>
+      <option value="600">Grasse</option>
+    </select>
     <p class="hint">Le bouton a son propre style, indépendant du cartouche de texte. Un chapitre sans aucun texte n'affiche donc que le bouton, sans cadre vide autour.</p>
     <div class="sub" id="subNeon">
       <label for="kNeonC">Couleur du néon</label><input type="color" id="kNeonC" value="#C9A227">
@@ -350,9 +359,15 @@ input[type=color]{width:100%;height:26px;padding:2px;background:var(--ink-3);
     <label for="tReveal">Apparition</label>
     <select id="tReveal">
       <option value="fade">Fondu simple</option>
-      <option value="words">Mot par mot</option>
+      <option value="words">Mot par mot — montée</option>
       <option value="letters">Lettre par lettre</option>
       <option value="type">Machine à écrire</option>
+      <option value="mask">Dévoilement par volet</option>
+      <option value="blur">Sortie de flou</option>
+      <option value="stagger">Cascade oblique</option>
+      <option value="wipe">Balayage lumineux</option>
+      <option value="split">Écartement des lettres</option>
+      <option value="scale">Zoom typographique</option>
     </select>
     <label class="sw"><input type="checkbox" id="tGrad"> Dégradé animé sur le titre</label>
     <label class="sw"><input type="checkbox" id="tPara"> Parallaxe du texte</label>
@@ -515,7 +530,7 @@ input[type=color]{width:100%;height:26px;padding:2px;background:var(--ink-3);
     <div id="objList" style="display:flex;flex-direction:column;gap:5px"></div>
     <label class="filebtn" id="addObjBtn" style="width:100%;text-align:center;margin-top:8px">
       Ajouter un objet<input type="file" id="fileAdd" multiple
-        accept=".glb,.gltf,.fbx,.obj,.js,.mjs,.splat,.ksplat,.ply,.spz,.bin,.png,.jpg,.jpeg,.webp,.ktx2"></label>
+        accept=".glb,.gltf,.fbx,.obj,.js,.mjs,.splat,.ksplat,.ply,.bin,.png,.jpg,.jpeg,.webp,.ktx2"></label>
     <div id="objEdit" style="display:none">
       <label>Outil de manipulation</label>
       <div class="seg" style="margin-bottom:4px">
@@ -546,6 +561,9 @@ input[type=color]{width:100%;height:26px;padding:2px;background:var(--ink-3);
       <label for="oTrans">Transition d'entrée et de sortie</label>
       <select id="oTrans">
         <option value="fade">Fondu d'opacité</option>
+        <option value="inf">Venu de l'infini — approche logarithmique</option>
+        <option value="infup">Venu de l'infini, en spirale</option>
+        <option value="infscale">Croissance depuis un point</option>
         <option value="zoom">Fondu + rapprochement</option>
         <option value="rise">Monte du sol</option>
         <option value="fall">Descend du ciel</option>
@@ -554,6 +572,13 @@ input[type=color]{width:100%;height:26px;padding:2px;background:var(--ink-3);
         <option value="iris">Éclosion depuis le centre</option>
         <option value="none">Aucune — apparition nette</option>
       </select>
+      <div class="sub" id="subReach">
+        <label for="oReach">Distance de départ <span class="val" id="oReachV">60</span></label>
+        <input type="range" id="oReach" min="5" max="600" value="60">
+        <label for="oCurve">Dureté de la courbe <span class="val" id="oCurveV">1.0</span></label>
+        <input type="range" id="oCurve" min="10" max="600" value="100">
+        <p class="hint">Plus la distance est grande, plus l'objet vient de loin. La courbe logarithmique le fait surgir vite puis ralentir en approchant — le contraire d'un mouvement mécanique.</p>
+      </div>
       <p class="hint">Les nuages gaussiens ne gèrent pas toujours l'opacité. Pour eux, préfère une transition <strong>géométrique</strong> — éclosion, surgissement ou pivot — qui fonctionne dans tous les cas.</p>
       <label for="oFx">Style de matière</label>
       <select id="oFx">
@@ -564,6 +589,9 @@ input[type=color]{width:100%;height:26px;padding:2px;background:var(--ink-3);
         <option value="holo">Hologramme</option>
         <option value="scan">Scanner — grille lumineuse</option>
         <option value="irid">Irisé — nacre</option>
+        <option value="hatch">Encre — tramage gravé</option>
+        <option value="stipple">Encre — pointillé</option>
+        <option value="lineart">Encre — trait seul</option>
         <option value="outline">Contour dessiné</option>
         <option value="toon">Cellulo — aplats</option>
         <option value="normal">Nuancier de normales</option>
@@ -573,6 +601,7 @@ input[type=color]{width:100%;height:26px;padding:2px;background:var(--ink-3);
       </select>
       <div class="sub" id="subFxMat">
         <label for="oFxColor">Couleur</label><input type="color" id="oFxColor" value="#8FD3E8">
+        <p class="hint" id="inkHint" style="display:none">Dessin à l'encre sur fond clair : règle le <strong>Fond</strong> dans <em>Atmosphère</em> sur un blanc cassé, baisse la brume, et coupe le post-traitement. L'<strong>intensité</strong> commande la densité des traits.</p>
         <label for="oFxPower">Intensité <span class="val" id="oFxPowerV">2.4</span></label>
         <input type="range" id="oFxPower" min="20" max="600" value="240">
         <label for="oFxOp">Opacité <span class="val" id="oFxOpV">0.85</span></label>
@@ -595,7 +624,7 @@ input[type=color]{width:100%;height:26px;padding:2px;background:var(--ink-3);
       </div>
       <button id="oSpread" style="width:100%;margin-top:5px">Aligner tous les objets</button>
     </div>
-    <p class="hint">Le gizmo apparaît sur l'objet sélectionné en mode <strong>Cadrer</strong>. Les formats <strong>.splat .ksplat .ply</strong> chargent un nuage gaussien. Le <strong>.spz</strong> est aussi pris en charge (rendu séparé via Spark, superposé à la scène).</p>
+    <p class="hint">Le gizmo apparaît sur l'objet sélectionné en mode <strong>Cadrer</strong>. Les formats <strong>.splat .ksplat .ply</strong> chargent un nuage gaussien.</p>
   </div>
 </details>
 
@@ -625,14 +654,7 @@ input[type=color]{width:100%;height:26px;padding:2px;background:var(--ink-3);
 <script type="importmap">
 {"imports":{
   "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
-  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/",
-  "@sparkjsdev/spark":"https://sparkjs.dev/releases/spark/2.1.0/spark.module.js"
-},
-"scopes":{
-  "https://sparkjs.dev/releases/spark/2.1.0/":{
-    "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
-  }
+  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
 }}
 </script>
 
@@ -863,11 +885,12 @@ function makeFX(THREE){
 function makeMatFX(THREE){
 
   const FRESNEL_V = [
-    'varying vec3 vN;','varying vec3 vV;','varying vec3 vW;','varying vec2 vUvF;',
+    'varying vec3 vN;','varying vec3 vV;','varying vec3 vW;','varying vec2 vUvF;','varying vec3 vWN;',
     'void main(){',
     '  vUvF = uv;',
     '  vec4 wp = modelMatrix * vec4(position,1.0);',
     '  vW = wp.xyz;',
+    '  vWN = normalize(mat3(modelMatrix) * normal);',
     '  vN = normalize(normalMatrix * normal);',
     '  vec4 mv = viewMatrix * wp;',
     '  vV = normalize(-mv.xyz);',
@@ -924,16 +947,135 @@ function makeMatFX(THREE){
     '  vec3 c = spectrum(d * 1.35) * (0.35 + f * 1.4);',
     '  gl_FragColor = vec4(mix(c, uColor, 0.22), (0.30 + f * 0.8) * uOpacity);','}'].join('\\n');
 
-  const shaderFor = {
-    xray: XRAY_F, ghost: GHOST_F, holo: HOLO_F, scan: SCAN_F, irid: IRID_F
-  };
+  /* ── encre : tramage, pointillé, trait ─────────────────
+     Densité de traits constante à l'écran par subdivision
+     en octaves, comme une gravure. Quand les traits ne sont
+     plus résolvables, on retombe sur leur couverture moyenne
+     plutôt que de laisser le moiré s'installer. */
+  const INK_LIB = [
+    'float inkStroke(float c, float w){',
+    '  float fw  = max(fwidth(c), 1e-6);',
+    '  float s   = exp2(max(0.0, ceil(log2(fw * 3.0))));',
+    '  float v   = c / s;',
+    '  float fwv = fw / s;',
+    '  float g   = abs(fract(v) - 0.5);',
+    '  float aa  = fwv + 0.0015;',
+    '  float line = 1.0 - smoothstep(w - aa, w + aa, g);',
+    '  float keep = smoothstep(0.52, 0.17, fwv);',
+    '  return mix(2.0 * w, line, keep);',
+    '}',
+    'float inkTri(vec3 p, vec3 bw, vec2 d, float w){',
+    '  float a = inkStroke(dot(p.zy, d), w);',
+    '  float b = inkStroke(dot(p.xz, d), w);',
+    '  float c = inkStroke(dot(p.xy, d), w);',
+    '  return a*bw.x + b*bw.y + c*bw.z;',
+    '}',
+    'float inkHash(vec2 c){ return fract(sin(dot(c, vec2(127.1, 311.7))) * 43758.5453); }',
+    'float inkDots(vec2 q, float tone){',
+    '  float fw  = max(fwidth(q.x), 1e-6);',
+    '  float s   = exp2(max(0.0, ceil(log2(fw * 3.0))));',
+    '  vec2  v   = q / s;',
+    '  float fwv = fw / s;',
+    '  vec2 cell = floor(v);',
+    '  vec2 f    = fract(v) - 0.5;',
+    '  float h1 = inkHash(cell);',
+    '  float h2 = inkHash(cell + 17.3);',
+    '  f -= (vec2(h1, h2) - 0.5) * 0.5;',
+    '  float r  = (1.0 - tone) * 0.42 * (0.55 + 0.9 * h1);',
+    '  float aa = fwv + 0.004;',
+    '  float dot_ = 1.0 - smoothstep(r - aa, r + aa, length(f));',
+    '  float keep = smoothstep(0.52, 0.17, fwv);',
+    '  return mix(3.14159 * r * r, dot_, keep);',
+    '}',
+    'vec3 inkBlend(vec3 wn){',
+    '  vec3 an = abs(normalize(wn));',
+    '  an = pow(an, vec3(3.0));',
+    '  return an / max(an.x + an.y + an.z, 1e-4);',
+    '}',
+    'float inkTone(vec3 wn, vec3 n, vec3 v, vec3 ld){',
+    '  float lam = dot(normalize(wn), normalize(ld)) * 0.5 + 0.5;',
+    '  float rim = pow(1.0 - abs(dot(normalize(n), normalize(v))), 2.0);',
+    '  return clamp(lam * 1.20 - rim * 0.45, 0.0, 1.0);',
+    '}',
+    /* silhouette d'épaisseur constante à l'écran, quelle que soit la distance */
+    'float inkEdge(vec3 n, vec3 v, float width){',
+    '  float ndv = abs(dot(normalize(n), normalize(v)));',
+    '  float w = fwidth(ndv) * width + 0.0035;',
+    '  return 1.0 - smoothstep(0.0, w, ndv);',
+    '}'
+  ].join('\\n');
 
-  function shaderMat(kind, color, power, opacity, additive){
+  const HATCH_F = [
+    'uniform vec3 uColor;','uniform float uPower;','uniform float uOpacity;','uniform vec3 uLight;',
+    'varying vec3 vN;','varying vec3 vV;','varying vec3 vW;','varying vec3 vWN;',
+    INK_LIB,
+    'void main(){',
+    '  vec3 bw = inkBlend(vWN);',
+    '  float tone = inkTone(vWN, vN, vV, uLight);',
+    '  vec3 p = vW * (5.0 * uPower);',
+    '  float w = 0.075;',
+    '  float ink = 0.0;',
+    '  ink = max(ink, inkTri(p,        bw, vec2( 0.7071, 0.7071), w) * smoothstep(0.95, 0.72, tone));',
+    '  ink = max(ink, inkTri(p * 1.90, bw, vec2(-0.7071, 0.7071), w) * smoothstep(0.68, 0.44, tone));',
+    '  ink = max(ink, inkTri(p * 3.30, bw, vec2( 0.0,    1.0   ), w) * smoothstep(0.40, 0.19, tone));',
+    '  ink = max(ink, smoothstep(0.17, 0.04, tone));',
+    '  ink = max(ink, inkEdge(vN, vV, 2.4));',
+    '  ink = clamp(ink * uOpacity * 1.12, 0.0, 1.0);',
+    '  gl_FragColor = vec4(uColor, ink);',
+    '}'
+  ].join('\\n');
+
+  const STIPPLE_F = [
+    'uniform vec3 uColor;','uniform float uPower;','uniform float uOpacity;','uniform vec3 uLight;',
+    'varying vec3 vN;','varying vec3 vV;','varying vec3 vW;','varying vec3 vWN;',
+    INK_LIB,
+    'void main(){',
+    '  vec3 bw = inkBlend(vWN);',
+    '  float tone = inkTone(vWN, vN, vV, uLight);',
+    '  vec3 p = vW * (5.5 * uPower);',
+    '  float d = inkDots(p.zy, tone) * bw.x',
+    '          + inkDots(p.xz, tone) * bw.y',
+    '          + inkDots(p.xy, tone) * bw.z;',
+    '  float ink = max(d, inkEdge(vN, vV, 2.0));',
+    '  ink = clamp(ink * uOpacity * 1.12, 0.0, 1.0);',
+    '  gl_FragColor = vec4(uColor, ink);',
+    '}'
+  ].join('\\n');
+
+  const LINEART_F = [
+    'uniform vec3 uColor;','uniform float uPower;','uniform float uOpacity;','uniform vec3 uLight;',
+    'varying vec3 vN;','varying vec3 vV;','varying vec3 vW;','varying vec3 vWN;',
+    INK_LIB,
+    'void main(){',
+    '  vec3 bw = inkBlend(vWN);',
+    '  float tone = inkTone(vWN, vN, vV, uLight);',
+    '  float edge = inkEdge(vN, vV, 1.1 + uPower * 0.9);',
+    '  vec3 p = vW * (3.4 * uPower);',
+    '  float form = inkTri(p, bw, vec2(0.7071, 0.7071), 0.06) * smoothstep(0.30, 0.06, tone);',
+    '  float ink = clamp(max(edge, form * 0.85) * uOpacity * 1.2, 0.0, 1.0);',
+    '  gl_FragColor = vec4(uColor, ink);',
+    '}'
+  ].join('\\n');
+
+  const shaderFor = {
+    xray: XRAY_F, ghost: GHOST_F, holo: HOLO_F, scan: SCAN_F, irid: IRID_F,
+    hatch: HATCH_F, stipple: STIPPLE_F, lineart: LINEART_F
+  };
+  const INK_KINDS = ['hatch','stipple','lineart'];
+
+  function shaderMat(kind, color, power, opacity, additive, light){
+    const isInk = INK_KINDS.indexOf(kind) >= 0;
+    const ld = light && light.length === 3 ? light : [4, 6, 3];
     return new THREE.ShaderMaterial({
       uniforms:{ uColor:{value:new THREE.Color(color)}, uPower:{value:power},
-                 uOpacity:{value:opacity}, uTime:{value:0} },
+                 uOpacity:{value:opacity}, uTime:{value:0},
+                 uLight:{value:new THREE.Vector3(ld[0], ld[1], ld[2])} },
       vertexShader: FRESNEL_V, fragmentShader: shaderFor[kind],
-      transparent:true, depthWrite:false, side:THREE.DoubleSide,
+      transparent:true,
+      /* l'encre écrit la profondeur : l'objet reste opaque,
+         seul le papier entre les traits laisse voir le fond */
+      depthWrite: isInk,
+      side: isInk ? THREE.FrontSide : THREE.DoubleSide,
       blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending
     });
   }
@@ -951,6 +1093,9 @@ function makeMatFX(THREE){
       case 'holo':  return shaderMat('holo',  color, power, opac, true);
       case 'scan':  return shaderMat('scan',  color, power, opac, true);
       case 'irid':  return shaderMat('irid',  color, power, opac, false);
+      case 'hatch':   return shaderMat('hatch',   color, power, opac, false, o.light);
+      case 'stipple': return shaderMat('stipple', color, power, opac, false, o.light);
+      case 'lineart': return shaderMat('lineart', color, power, opac, false, o.light);
       case 'toon': {
         const n = 4, data = new Uint8Array(n);
         for(let i=0;i<n;i++) data[i] = Math.round((i/(n-1)) * 255);
@@ -1055,10 +1200,20 @@ function makePresence(THREE){
       return v;
     },
     /* transitions géométriques : fonctionnent sur TOUT, y compris les nuages gaussiens */
-    pose(root, v, style, base){
+    pose(root, v, style, base, opt){
       if(!root) return;
       const b = base || {p:[0,0,0], r:[0,0,0], s:1};
       const e = v*v*(3-2*v);
+      const o = opt || {};
+      const reach = o.reach === undefined ? 60 : o.reach;   /* distance de départ */
+      const curve = o.curve === undefined ? 1 : o.curve;    /* dureté de la courbe */
+      /* rapprochement logarithmique : très loin au début, ralentit près du but.
+         v→0 renvoie une distance qui tend vers l'infini quand reach grandit. */
+      const logIn = t => {
+        const k = 6 * curve;
+        return (Math.log(1 + k * t) / Math.log(1 + k));
+      };
+      const far = reach * (1 - logIn(Math.max(1e-4, v)));
       let sx = b.s, ox = 0, oy = 0, oz = 0, ry = b.r[1];
       switch(style){
         case 'zoom':   sx = b.s * (0.55 + 0.45*e); break;
@@ -1067,6 +1222,12 @@ function makePresence(THREE){
         case 'swirl':  ry = b.r[1] + (1-e) * 1.15; sx = b.s * (0.7 + 0.3*e); break;
         case 'depth':  oz = (1-e) * -7.0; break;
         case 'iris':   sx = b.s * (0.25 + 0.75*e); ry = b.r[1] + (1-e)*0.5; break;
+        /* venu du lointain, courbe logarithmique */
+        case 'inf':    oz = -far; sx = b.s * (0.08 + 0.92*logIn(Math.max(1e-4,v))); break;
+        case 'infup':  oy = far * 0.55; oz = -far * 0.6;
+                       sx = b.s * (0.08 + 0.92*logIn(Math.max(1e-4,v)));
+                       ry = b.r[1] + (1-logIn(Math.max(1e-4,v))) * 2.2; break;
+        case 'infscale': sx = b.s * Math.max(0.0008, Math.pow(logIn(Math.max(1e-4,v)), 2.2)); break;
       }
       root.position.set(b.p[0]+ox, b.p[1]+oy, b.p[2]+oz);
       root.rotation.set(b.r[0], ry, b.r[2]);
@@ -1198,7 +1359,8 @@ const API = (new Function(ENGINE + '\nreturn {makeFX,makePath,filmShader,makeMat
 const cfg = {
   site:{title:'Sans titre', desc:'', brand:'Atelier', nav:true, degrade:true,
         accent:'#C9A227', text:'#F2EFE9', font:'Fraunces', titleFont:''},
-  card:{style:'none', neon:'#C9A227', speed:4, glow:1, btnStyle:'pill'},
+  card:{style:'none', neon:'#C9A227', speed:4, glow:1,
+        btnStyle:'pill', btnSize:1, btnTrack:.2, btnWeight:'400'},
   text:{reveal:'fade', gradient:false, parallax:false, parallaxAmt:.3},
   view:{smooth:true, orbit:false, orbAmp:.4, orbSpd:.3, mouse:false, mouseAmt:.5},
   ground:{shadow:false, shadowOp:.35, mirror:false, mirrorOp:.35, mirrorColor:'#7A93A0'},
@@ -1226,6 +1388,18 @@ const newSection = n => ({
 cfg.sections.push(newSection(1), newSection(2));
 
 const $ = id => document.getElementById(id);
+
+/* charge une famille Google au vol, pour que l'aperçu montre la vraie police */
+const loadedFonts = new Set();
+function ensureFont(name){
+  if(!name || loadedFonts.has(name)) return;
+  loadedFonts.add(name);
+  const l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=' +
+           encodeURIComponent(name).replace(/%20/g,'+') + ':wght@300;400;600&display=swap';
+  document.head.appendChild(l);
+}
 const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const MASKS = {
   fade:'radial-gradient(120% 90% at 50% 50%, #000 32%, transparent 78%)',
@@ -1360,9 +1534,8 @@ function pickClip(){
 $('anClip').onchange = e=>{ cfg.anim.clip=+e.target.value; pickClip(); };
 $('anMode').onchange = e=>{ cfg.anim.mode=e.target.value; };
 
-const MODEL_RE = /\.(glb|gltf|fbx|obj|m?js|splat|ksplat|ply|spz)$/i;
-const SPLAT_RE = /\.(splat|ksplat|ply|spz)$/i;
-const SPZ_RE = /\.spz$/i; // sous-ensemble de SPLAT_RE : nécessite Spark (three r180 isolé), pas GaussianSplats3D
+const MODEL_RE = /\.(glb|gltf|fbx|obj|m?js|splat|ksplat|ply)$/i;
+const SPLAT_RE = /\.(splat|ksplat|ply)$/i;
 
 /* ── le gizmo de déplacement ── */
 let gizmo = null;
@@ -1425,7 +1598,7 @@ async function loadFiles(list){
       const sv = pendingObjects.find(x=>x.main===nm);
       if(sv && sv.fx) fx = Object.assign(fx, sv.fx);
     }
-    let vis = {from:0, to:999, fade:true, trans:'fade'};
+    let vis = {from:0, to:999, fade:true, trans:'fade', reach:60, curve:1};
     if(pendingObjects){
       const sv = pendingObjects.find(x=>x.main===nm);
       if(sv && sv.vis) vis = Object.assign(vis, sv.vis);
@@ -1486,7 +1659,7 @@ async function instantiate(o){
   try{
     let inner = null, clipsFound = [];
     if(SPLAT_RE.test(o.main)){
-      inner = SPZ_RE.test(o.main) ? await loadSpz(url, o) : await loadSplat(url, o);
+      inner = await loadSplat(url, o);
       if(!inner) return;
     } else if(/\.(glb|gltf)$/i.test(o.main)){
       const g = await new Promise((res,rej)=>gltfLoader.load(url,res,undefined,rej));
@@ -1547,122 +1720,10 @@ async function loadSplat(url, o){
 }
 const splatViewers = [];
 
-/* ── .spz (Spark, three r180 isolé) ──
-   GaussianSplats3D ne sait pas lire le .spz. Spark exige three >= 0.180, incompatible
-   avec le three r160 qui porte tout le reste de l'Atelier (meshes, gizmo, post-processing).
-   Solution : un second canvas WebGL (Spark, r180) superposé au canvas principal (r160),
-   caméra synchronisée chaque frame. Composite visuellement correct pour un aperçu/export ;
-   limite connue : pas d'occlusion profondeur pixel-exacte entre un .spz et un mesh r160. */
-/* SPZ v4 -> v3 transcoder — Spark 2.1.0 ne lit que les .spz v1-3 (gzip simple).
-   Le v4 (Niantic, mai 2026) utilise un header 32o + N flux ZSTD independants.
-   On retranscode le conteneur (decompresse chaque flux, reassemble en v3 + gzip)
-   plutot que de reimplementer le decodage numerique des attributs. */
-function bytesToDataUrl(bytes){
-  // Blob + FileReader plutot que btoa(String.fromCharCode(...bytes)) pour rester
-  // robuste sur des fichiers de plusieurs Mo (pas de depassement de pile d'appel).
-  return new Promise((resolve, reject)=>{
-    const reader = new FileReader();
-    reader.onload = ()=> resolve(reader.result);
-    reader.onerror = ()=> reject(reader.error);
-    reader.readAsDataURL(new Blob([bytes], {type:'application/octet-stream'}));
-  });
-}
-
-// Convertit en data: URL, meme pour un .spz deja v1-3 compatible : sous file://,
-// les blob: URL crees par la page principale ont une origine opaque ("null") et
-// le Worker interne de Spark ne peut pas les recuperer (Fetch API cannot load
-// blob:...). Une data: URL n'a pas cette limite, quel que soit le contexte.
-async function transcodeSpzV4(url){
-  const buf = await (await fetch(url)).arrayBuffer();
-  const b = new Uint8Array(buf);
-  if(b.length < 20) return url;
-  if(b[0]===0x1f && b[1]===0x8b) return bytesToDataUrl(b); // deja gzip -> v1-3, relais en data:
-  const dv = new DataView(buf);
-  if(dv.getUint32(0,true) !== 0x5053474e) return url; // pas 'NGSP'
-  if(dv.getUint32(4,true) !== 4) return url; // pas v4
-  const fzstdMod = await import('https://cdn.jsdelivr.net/npm/fzstd@0.1.1/+esm');
-  const numPoints = dv.getUint32(8,true);
-  const shDegree=b[12], fracBits=b[13], flags=b[14], numStreams=b[15];
-  const tocOffset = dv.getUint32(16,true);
-  const entries = []; let off = tocOffset;
-  for(let i=0;i<numStreams;i++){
-    const comp = Number(dv.getBigUint64(off,true));
-    const uncomp = Number(dv.getBigUint64(off+8,true));
-    entries.push([comp,uncomp]); off += 16;
-  }
-  let pos = off, total = 0;
-  const chunks = entries.map(([comp,uncomp])=>{
-    const out = fzstdMod.decompress(b.subarray(pos,pos+comp), new Uint8Array(uncomp));
-    total += out.length; pos += comp; return out;
-  });
-  const payload = new Uint8Array(16+total);
-  const pdv = new DataView(payload.buffer);
-  pdv.setUint32(0,0x5053474e,true); pdv.setUint32(4,3,true); pdv.setUint32(8,numPoints,true);
-  payload[12]=shDegree; payload[13]=fracBits; payload[14]=flags; payload[15]=0;
-  let w=16; for(const c of chunks){ payload.set(c,w); w+=c.length; }
-  const cs = new CompressionStream('gzip');
-  const writer = cs.writable.getWriter();
-  writer.write(payload); writer.close();
-  const gz = await new Response(cs.readable).arrayBuffer();
-  return bytesToDataUrl(new Uint8Array(gz));
-}
-
-let sparkOverlayPromise = null;
-let sparkOverlayReady = null; // set once the promise above resolves — avoids awaiting every frame
-function ensureSparkOverlay(){
-  if(sparkOverlayPromise) return sparkOverlayPromise;
-  sparkOverlayPromise = (async()=>{
-    toast('Téléchargement du moteur Spark (.spz)…');
-    const [T180, Spark] = await Promise.all([
-      import('https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js'),
-      import('@sparkjsdev/spark')
-    ]);
-    const canvas = document.createElement('canvas');
-    canvas.style.position='absolute'; canvas.style.inset='0';
-    canvas.style.width='100%'; canvas.style.height='100%';
-    canvas.style.zIndex='2'; canvas.style.pointerEvents='none';
-    stage.appendChild(canvas);
-    const width = stage.clientWidth||1, height = stage.clientHeight||1;
-    const sRenderer = new T180.WebGLRenderer({canvas, antialias:true, alpha:true});
-    sRenderer.setClearAlpha(0);
-    sRenderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
-    sRenderer.setSize(width, height, false);
-    const sScene = new T180.Scene();
-    const sCamera = new T180.PerspectiveCamera(50, width/height, .05, 4000);
-    const sparkRenderer = new Spark.SparkRenderer({renderer:sRenderer});
-    sScene.add(sparkRenderer);
-    const ov = {THREE:T180, Spark:Spark, canvas, renderer:sRenderer, scene:sScene, camera:sCamera};
-    sparkOverlayReady = ov;
-    return ov;
-  })().catch(err=>{
-    console.error('[Atelier] Spark indisponible', err);
-    toast('Moteur Spark indisponible — vérifie ta connexion');
-    sparkOverlayPromise = null;
-    throw err;
-  });
-  return sparkOverlayPromise;
-}
-// Charge un .spz dans l'overlay Spark et renvoie un Group r160 factice
-// (sert de porteur de transform pour le gizmo / la liste d'objets / le cadrage).
-async function loadSpz(url, o){
-  const ov = await ensureSparkOverlay();
-  let safeUrl = url;
-  try{ safeUrl = await transcodeSpzV4(url); }
-  catch(e){ console.error('[Atelier] Transcodage .spz v4 echoue, tentative directe:', e); }
-  const mesh = new ov.Spark.SplatMesh({url: safeUrl});
-  ov.scene.add(mesh);
-  try{ await mesh.initialized; }catch(e){ console.error('[Atelier] .spz invalide', e); ov.scene.remove(mesh); toast('Fichier .spz invalide'); return null; }
-  o.spark = mesh;
-  return new THREE.Group(); // placeholder r160, invisible, purement transform
-}
-
 /* ── suppression ── */
 function removeObj(i){
   const o = objects[i]; if(!o) return;
   if(o.root){ pivot.remove(o.root); }
-  if(o.spark){
-    ensureSparkOverlay().then(ov=>{ try{ ov.scene.remove(o.spark); }catch(e){} }).catch(()=>{});
-  }
   objects.splice(i,1);
   if(objects.length===0){ $('drop').classList.remove('hide'); baseK=null; modelRoot=null; framedOnce=false; }
   selectObj(Math.min(i, objects.length-1));
@@ -1707,7 +1768,14 @@ function syncObjForm(){
   $('oScale').value = Math.max(5, Math.min(500, Math.round(o.t.s*100)));
   $('oScaleN').value = +o.t.s.toFixed(5);
   $('oScaleV').textContent = o.t.s<0.01 ? o.t.s.toExponential(1) : o.t.s.toFixed(o.t.s<1?3:2);
-  if(o.vis) $('oTrans').value = o.vis.trans || (o.vis.fade===false?'none':'fade');
+  if(o.vis){
+    $('oTrans').value = o.vis.trans || (o.vis.fade===false?'none':'fade');
+    $('oReach').value = o.vis.reach===undefined?60:o.vis.reach;
+    $('oReachV').textContent = $('oReach').value;
+    $('oCurve').value = Math.round((o.vis.curve===undefined?1:o.vis.curve)*100);
+    $('oCurveV').textContent = (+$('oCurve').value/100).toFixed(1);
+    $('subReach').classList.toggle('on', /^inf/.test($('oTrans').value));
+  }
   fillChapterSelects();
   const f = o.fx || {kind:'none',color:'#8FD3E8',power:2.4,opacity:.85};
   $('oFx').value = f.kind;
@@ -1715,6 +1783,7 @@ function syncObjForm(){
   $('oFxPower').value = Math.round(f.power*100); $('oFxPowerV').textContent = f.power.toFixed(1);
   $('oFxOp').value = Math.round(f.opacity*100);  $('oFxOpV').textContent = f.opacity.toFixed(2);
   $('subFxMat').classList.toggle('on', f.kind!=='none');
+  $('inkHint').style.display = IS_INK(f.kind) ? 'block' : 'none';
   $('oFx').disabled = SPLAT_RE.test(o.main);
 }
 ['oX','oY','oZ'].forEach((id,k)=>{
@@ -1748,16 +1817,27 @@ if($('oScaleFit')) $('oScaleFit').onclick=()=>{
   setScale(o, o.t.s * k);
   toast('Taille alignée sur « '+ref.name+' »');
 };
+const IS_INK = k => /^(hatch|stipple|lineart)$/.test(k||'');
 function applyMat(o){
   if(!o || !o.root) return;
   if(SPLAT_RE.test(o.main)) return;          /* un nuage gaussien n'a pas de matière */
-  MATFX.apply(o.root, o.fx.kind, {color:o.fx.color, power:o.fx.power, opacity:o.fx.opacity});
+  MATFX.apply(o.root, o.fx.kind, {color:o.fx.color, power:o.fx.power,
+                                  opacity:o.fx.opacity, light:cfg.lights.keyPos});
 }
+/* l'encre est éclairée par la lumière principale : on la recalcule si elle bouge */
+function refreshInk(){ objects.forEach(o=>{ if(o.fx && IS_INK(o.fx.kind)) applyMat(o); }); }
 if($('oFx')) $('oFx').onchange=e=>{
   const o=objects[objSel]; if(!o) return;
   if(SPLAT_RE.test(o.main)){ e.target.value='none'; return toast("Les splats n'ont pas de matière modifiable"); }
+  const was = o.fx.kind;
   o.fx.kind=e.target.value;
   $('subFxMat').classList.toggle('on', e.target.value!=='none');
+  $('inkHint').style.display = IS_INK(o.fx.kind) ? 'block' : 'none';
+  /* une encre claire sur fond clair ne se verrait pas : on propose le noir */
+  if(IS_INK(o.fx.kind) && !IS_INK(was) && o.fx.color.toLowerCase()==='#8fd3e8'){
+    o.fx.color = '#141A1E'; $('oFxColor').value = o.fx.color;
+    toast("Encre passée au noir — éclaircis le fond dans Atmosphère");
+  }
   applyMat(o); markDots();
 };
 if($('oFxColor')) $('oFxColor').oninput=e=>{
@@ -1818,10 +1898,15 @@ function fillChapterSelects(){
 }
 if($('oFrom')) $('oFrom').onchange=e=>{ const o=objects[objSel]; if(o){ o.vis.from=+e.target.value; markDots(); } };
 if($('oTo'))   $('oTo').onchange  =e=>{ const o=objects[objSel]; if(o){ o.vis.to=+e.target.value; markDots(); } };
+if($('oReach')) $('oReach').oninput=e=>{
+  const o=objects[objSel]; if(o){ o.vis.reach=+e.target.value; $('oReachV').textContent=e.target.value; } };
+if($('oCurve')) $('oCurve').oninput=e=>{
+  const o=objects[objSel]; if(o){ o.vis.curve=+e.target.value/100; $('oCurveV').textContent=(+e.target.value/100).toFixed(1); } };
 if($('oTrans')) $('oTrans').onchange=e=>{
   const o=objects[objSel]; if(!o) return;
   o.vis.trans = e.target.value;
   o.vis.fade  = e.target.value !== 'none';
+  $('subReach').classList.toggle('on', /^inf/.test(e.target.value));
   if(SPLAT_RE.test(o.main) && e.target.value === 'fade')
     toast("Ce nuage gaussien peut ignorer le fondu — essaie « éclosion » ou « surgit du lointain »");
 };
@@ -1927,7 +2012,10 @@ function paintOverlay(){
   cta.style.color=cfg.site.accent;
   $('ovBody').style.justifyContent = s.align==='center'?'center':s.align==='right'?'flex-end':'flex-start';
   card.style.textAlign = s.align==='center'?'center':'left';
-  applyCardStyle(card, cfg.card.style);
+  const bare = !String(s.eyebrow).trim() && !String(s.title).trim() && !String(s.body).trim();
+  applyCardStyle(card, bare ? 'none' : cfg.card.style);
+  applyBtnStyle(cta, cfg.card);
+  card.querySelectorAll('.eb,.ti,.bd').forEach(n=>n.style.display = bare ? 'none' : '');
   const im=images[i], back=(s.img.layer||'back')==='back';
   const plate=$('ovPlate'), bplate=$('ovBack');
   const live = back ? bplate : plate, dead = back ? plate : bplate;
@@ -1944,6 +2032,38 @@ function paintOverlay(){
     '<span style="opacity:'+(k===i?1:.45)+';color:'+(k===i?cfg.site.accent:cfg.site.text)+'">'+esc(c.eyebrow)+'</span>').join('');
   FX.amount = s.fxAmt;
   SPOTAPI.drawSpots($('ovSpots'), s.spots||[], sp=>projectSpot(sp,stage), fade);
+}
+
+function applyBtnStyle(el, c){
+  if(!el) return;
+  const A = cfg.site.accent, S = c.btnSize || 1;
+  ['padding','border','borderRadius','background','backdropFilter','boxShadow',
+   'clipPath','color','fontWeight','borderBottom'].forEach(k=>el.style[k]='');
+  el.style.fontSize = (0.65*S).toFixed(2)+'rem';
+  el.style.letterSpacing = (c.btnTrack===undefined?.2:c.btnTrack).toFixed(2)+'em';
+  el.style.fontWeight = c.btnWeight || '400';
+  el.style.color = cfg.site.text;
+  const px = (0.95*S).toFixed(2)+'rem '+(2.2*S).toFixed(2)+'rem';
+  switch(c.btnStyle){
+    case 'bare':    el.style.padding=(0.4*S)+'rem 0';
+                    el.style.borderBottom='1px solid '+A+'88'; el.style.color=A; break;
+    case 'solid':   el.style.padding=px; el.style.background=A; el.style.color=cfg.env.bg;
+                    el.style.borderRadius='3px'; el.style.fontWeight='600'; break;
+    case 'glass':   el.style.padding=px; el.style.borderRadius='99px';
+                    el.style.background='rgba(255,255,255,.07)';
+                    el.style.backdropFilter='blur(10px)';
+                    el.style.border='1px solid rgba(255,255,255,.18)'; break;
+    case 'cut':     el.style.padding=px; el.style.background='rgba(255,255,255,.06)';
+                    el.style.border='1px solid '+A;
+                    el.style.clipPath='polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px)'; break;
+    case 'bracket': el.style.padding=px; el.style.border='1px solid '+A+'55'; break;
+    case 'neon':    el.style.padding=px; el.style.borderRadius='99px';
+                    el.style.background='rgba(10,14,18,.5)';
+                    el.style.border='1px solid '+c.neon;
+                    el.style.boxShadow='0 0 '+(14*(c.glow||1))+'px '+c.neon+'66'; break;
+    default:        el.style.padding=px; el.style.borderRadius='99px';
+                    el.style.border='1px solid '+A;
+  }
 }
 
 function applyCardStyle(el, st){
@@ -2213,19 +2333,22 @@ $('sNav').onchange =e=>cfg.site.nav=e.target.checked;
 $('sDegrade').onchange=e=>cfg.site.degrade=e.target.checked;
 $('sAccent').oninput=e=>cfg.site.accent=e.target.value;
 $('sText').oninput =e=>cfg.site.text=e.target.value;
-$('sFont').onchange=e=>cfg.site.font=e.target.value;
+$('sFont').onchange=e=>{ cfg.site.font=e.target.value; ensureFont(e.target.value); };
 /* la liste des titres reprend les mêmes entrées */
 (function(){
   const src=$('sFont'), dst=$('sTitleFont');
   [...src.options].forEach(o=>dst.appendChild(o.cloneNode(true)));
   dst.value = cfg.site.titleFont;
-  dst.onchange = e => cfg.site.titleFont = e.target.value;
+  dst.onchange = e => { cfg.site.titleFont = e.target.value; ensureFont(e.target.value); };
 })();
 
 $('kStyle').onchange=e=>{cfg.card.style=e.target.value;
   $('subNeon').classList.toggle('on', /neon/.test(e.target.value)); markDots()};
 $('subNeon').classList.toggle('on', /neon/.test(cfg.card.style));
 $('kBtn').onchange=e=>{cfg.card.btnStyle=e.target.value;markDots()};
+bind('kBtnSize', v=>cfg.card.btnSize=v/100, v=>(v/100).toFixed(2));
+bind('kBtnTrack',v=>cfg.card.btnTrack=v/100, v=>(v/100).toFixed(2));
+$('kBtnWeight').onchange=e=>cfg.card.btnWeight=e.target.value;
 $('kNeonC').oninput=e=>cfg.card.neon=e.target.value;
 bind('kSpeed',v=>cfg.card.speed=v/10, v=>(v/10).toFixed(1)+'s');
 bind('kGlow', v=>cfg.card.glow=v/100, v=>(v/100).toFixed(1));
@@ -2258,7 +2381,7 @@ bind('lKey', v=>{cfg.lights.key=v/100;keyLight.intensity=v/100}, v=>(v/100).toFi
 bind('lRimC',v=>{cfg.lights.rimColor=v;rimLight.color.set(v)});
 bind('lRim', v=>{cfg.lights.rim=v/100;rimLight.intensity=v/100}, v=>(v/100).toFixed(1));
 ['lKeyX','lKeyY','lKeyZ'].forEach((id,i)=>$(id).oninput=()=>{
-  cfg.lights.keyPos[i]=+$(id).value; keyLight.position.set(...cfg.lights.keyPos)});
+  cfg.lights.keyPos[i]=+$(id).value; keyLight.position.set(...cfg.lights.keyPos); refreshInk();});
 keyLight.position.set(...cfg.lights.keyPos);
 
 toggle('gShadow','subShadow',v=>{cfg.ground.shadow=v;buildGround()});
@@ -2303,9 +2426,6 @@ function resize(){
   const w=stage.clientWidth,h=stage.clientHeight;
   renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
   if(composer) composer.setSize(w,h);
-  if(sparkOverlayPromise) sparkOverlayPromise.then(ov=>{
-    ov.renderer.setSize(w,h,false); ov.camera.aspect=w/h; ov.camera.updateProjectionMatrix();
-  }).catch(()=>{});
 }
 new ResizeObserver(resize).observe(stage); resize();
 
@@ -2354,7 +2474,7 @@ renderer.setAnimationLoop(()=>{
       if(!o.root) return;
       const v = PRES.amount(o.vis, progress, nCh);
       const st = (o.vis && o.vis.trans) || 'fade';
-      if(st !== 'fade' && st !== 'none') PRES.pose(o.root, v, st, o.t); else applyT(o);
+      if(st !== 'fade' && st !== 'none') PRES.pose(o.root, v, st, o.t, o.vis); else applyT(o);
       PRES.apply(o.root, (st==='none') ? (v>.5?1:0) : v);
     });
     if(PATH.sample(progress,oP,oT)){
@@ -2370,24 +2490,6 @@ renderer.setAnimationLoop(()=>{
 
   if(composer){ if(filmPass) filmPass.uniforms.uTime.value=T; composer.render(); }
   else renderer.render(scene,camera);
-
-  if(sparkOverlayReady){
-    const ov = sparkOverlayReady;
-    objects.forEach(o=>{
-      if(!o.spark || !o.root) return;
-      try{
-        o.root.updateMatrixWorld();
-        o.root.matrixWorld.decompose(o.spark.position, o.spark.quaternion, o.spark.scale);
-        o.spark.visible = o.root.visible;
-      }catch(e){}
-    });
-    ov.camera.position.copy(camera.position);
-    ov.camera.quaternion.copy(camera.quaternion);
-    ov.camera.fov = camera.fov; ov.camera.aspect = camera.aspect;
-    ov.camera.near = camera.near; ov.camera.far = camera.far;
-    ov.camera.updateProjectionMatrix();
-    ov.renderer.render(ov.scene, ov.camera);
-  }
 });
 
 let toastT;
@@ -2500,10 +2602,13 @@ $('btnExport').onclick=async()=>{
   btn.disabled=false; btn.textContent='Exporter';
 };
 
+const BY_WORD   = ['words','stagger','blur','scale'];
+const BY_LETTER  = ['letters','split'];
+const SPLIT_KINDS = BY_WORD.concat(BY_LETTER);
 function splitReveal(txt, kind){
-  if(kind==='words') return txt.split(/(\s+)/).map(w=>
+  if(BY_WORD.indexOf(kind)>=0) return String(txt).split(/(\s+)/).map(w=>
     /^\s+$/.test(w)?w:'<span class="wd">'+esc(w)+'</span>').join('');
-  if(kind==='letters') return [...txt].map(ch=>
+  if(BY_LETTER.indexOf(kind)>=0) return [...String(txt)].map(ch=>
     ch===' '?' ':'<span class="wd">'+esc(ch)+'</span>').join('');
   return esc(txt);
 }
@@ -2539,14 +2644,16 @@ function buildSite(assetMap){
         : '';
       return '  <section class="ch center soloch" id="ch'+i+'" data-fx="'+s.fxAmt+'">\n'+plate+solo+'  </section>';
     }
-    const title = (R==='words'||R==='letters') ? splitReveal(s.title,R) : esc(s.title);
+    const sp = SPLIT_KINDS.indexOf(R)>=0;
+    const title = sp ? splitReveal(s.title,R) : esc(s.title);
     const bodyTxt = R==='type' ? '<span class="typed" data-txt="'+esc(s.body)+'"></span>'
-                  : (R==='words'||R==='letters') ? splitReveal(s.body,R) : esc(s.body);
+                  : sp ? splitReveal(s.body,R) : esc(s.body);
+    const w = R==='mask' ? (t=>'<span>'+t+'</span>') : (t=>t);
     return '  <section class="ch '+s.align+'" id="ch'+i+'" data-fx="'+s.fxAmt+'">\n'+plate+
       '    <div class="card '+cfg.card.style+' rv-'+R+'">\n'+
-      '      <p class="eyebrow">'+esc(s.eyebrow)+'</p>\n'+
-      '      <h2'+(cfg.text.gradient?' class="grad"':'')+'>'+title+'</h2>\n'+
-      '      <p class="body">'+bodyTxt+'</p>\n'+
+      '      <p class="eyebrow">'+w(esc(s.eyebrow))+'</p>\n'+
+      '      <h2'+(cfg.text.gradient?' class="grad"':'')+'>'+w(title)+'</h2>\n'+
+      '      <p class="body">'+w(bodyTxt)+'</p>\n'+
       '    </div>\n'+cta+'  </section>';
   }).join('\n');
 
@@ -2557,14 +2664,16 @@ function buildSite(assetMap){
     inter:cfg.inter, text:cfg.text, degrade:cfg.site.degrade,
     imgOpacity:S.map(s=>s.img.opacity),
     spots:S.map(s=>s.spots||[]), assets:assetMap||null, baseK:baseK||1,
-    objects: objects.map(o=>({main:o.main, kind:o.kind, t:o.t, fx:o.fx, vis:o.vis, splat:SPLAT_RE.test(o.main), spz:SPZ_RE.test(o.main)})),
+    objects: objects.map(o=>({main:o.main, kind:o.kind, t:o.t, fx:o.fx, vis:o.vis, splat:SPLAT_RE.test(o.main)})),
     nCh: S.length
   });
 
   const css = [
 '@property --nba{syntax:"<angle>";initial-value:0deg;inherits:false}',
 ':root{--accent:'+cfg.site.accent+';--text:'+cfg.site.text+';--bg:'+cfg.env.bg+';--neon:'+cfg.card.neon+
-  ';--nbs:'+cfg.card.speed+'s;--glow:'+cfg.card.glow+'}',
+  ';--nbs:'+cfg.card.speed+'s;--glow:'+cfg.card.glow+
+  ';--bs:'+(cfg.card.btnSize||1)+';--btrack:'+(cfg.card.btnTrack===undefined?.2:cfg.card.btnTrack)+
+  'em;--bw:'+(cfg.card.btnWeight||400)+'}',
 '*{box-sizing:border-box}html{scroll-behavior:smooth}',
 'body{margin:0;background:var(--bg);color:var(--text);font-family:"'+cfg.site.font+'",Georgia,serif;-webkit-font-smoothing:antialiased}',
 cfg.inter.cursor?'@media (pointer:fine){body{cursor:none}a,button{cursor:none}}':'',
@@ -2590,10 +2699,43 @@ cfg.inter.cursor?'@media (pointer:fine){body{cursor:none}a,button{cursor:none}}'
 '.card{position:relative;max-width:34rem;opacity:0;transform:translateY(22px);',
 '  transition:opacity .9s cubic-bezier(.22,1,.36,1),transform .9s cubic-bezier(.22,1,.36,1)}',
 '.card.in{opacity:1;transform:none}',
-'.card.rv-words,.card.rv-letters{opacity:1;transform:none}',
+'.card.rv-words,.card.rv-letters,.card.rv-stagger,.card.rv-blur,',
+'.card.rv-scale,.card.rv-split{opacity:1;transform:none}',
 '.wd{display:inline-block;opacity:0;transform:translateY(.5em) rotate(2deg);',
-'  transition:opacity .5s ease,transform .5s cubic-bezier(.22,1,.36,1)}',
-'.card.in .wd{opacity:1;transform:none}',
+'  transition:opacity .5s ease,transform .5s cubic-bezier(.22,1,.36,1),filter .5s ease}',
+'.card.in .wd{opacity:1;transform:none;filter:none}',
+/* cascade oblique */
+'.rv-stagger .wd{transform:translate(-.35em,.7em) rotate(-4deg);',
+'  transition:opacity .62s ease,transform .62s cubic-bezier(.16,1,.3,1)}',
+/* sortie de flou */
+'.rv-blur .wd{filter:blur(10px);transform:translateY(.25em) scale(1.06);',
+'  transition:opacity .7s ease,transform .7s cubic-bezier(.22,1,.36,1),filter .7s ease}',
+/* zoom typographique */
+'.rv-scale .wd{transform:scale(.72);transform-origin:0 100%;',
+'  transition:opacity .6s ease,transform .6s cubic-bezier(.34,1.3,.42,1)}',
+/* écartement des lettres */
+'.rv-split .wd{transform:translateY(0) scaleX(1.9);opacity:0;transform-origin:center;',
+'  transition:opacity .55s ease,transform .55s cubic-bezier(.22,1,.36,1)}',
+'.card.in .rv-split .wd,.rv-split.in .wd{transform:none}',
+/* dévoilement par volet */
+'.rv-mask .eyebrow,.rv-mask h2,.rv-mask .body{overflow:hidden}',
+'.rv-mask .eyebrow>span,.rv-mask h2>span,.rv-mask .body>span{display:inline-block;',
+'  transform:translateY(105%);transition:transform .85s cubic-bezier(.22,1,.36,1)}',
+'.rv-mask.in .eyebrow>span{transition-delay:.05s}',
+'.rv-mask.in h2>span{transition-delay:.16s}',
+'.rv-mask.in .body>span{transition-delay:.28s}',
+'.rv-mask.in .eyebrow>span,.rv-mask.in h2>span,.rv-mask.in .body>span{transform:none}',
+'.card.rv-mask{opacity:1;transform:none}',
+/* balayage lumineux */
+'.card.rv-wipe{opacity:1;transform:none}',
+'.rv-wipe .eyebrow,.rv-wipe h2,.rv-wipe .body{',
+'  -webkit-mask-image:linear-gradient(100deg,#000 0 33%,rgba(0,0,0,.15) 47%,#000 60%);',
+'  mask-image:linear-gradient(100deg,#000 0 33%,rgba(0,0,0,.15) 47%,#000 60%);',
+'  -webkit-mask-size:320% 100%;mask-size:320% 100%;',
+'  -webkit-mask-position:120% 0;mask-position:120% 0;opacity:0;',
+'  transition:mask-position 1.5s ease,-webkit-mask-position 1.5s ease,opacity .5s ease}',
+'.rv-wipe.in .eyebrow,.rv-wipe.in h2,.rv-wipe.in .body{',
+'  -webkit-mask-position:-40% 0;mask-position:-40% 0;opacity:1}',
 '.typed::after{content:"▌";opacity:.6;animation:blink 1s steps(2) infinite}',
 '@keyframes blink{50%{opacity:0}}',
 '.card.glass,.card.glassneon{padding:2rem 2.2rem;border-radius:16px;background:rgba(10,14,18,.42);backdrop-filter:blur(10px)}',
@@ -2633,25 +2775,26 @@ cfg.inter.cursor?'@media (pointer:fine){body{cursor:none}a,button{cursor:none}}'
 '.ch.soloch{justify-content:center}',
 '.ch.soloch .ctawrap{position:static;transform:none}',
 '.cta{position:relative;display:inline-block;color:var(--text);text-decoration:none;',
-'  font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;transition:all .3s}',
-'.cta.bt-pill{padding:.9rem 2rem;border:1px solid var(--accent);border-radius:99px}',
+'  font-size:calc(.68rem * var(--bs));letter-spacing:var(--btrack);font-weight:var(--bw);',
+'  text-transform:uppercase;transition:all .3s}',
+'.cta.bt-pill{padding:calc(.9rem * var(--bs)) calc(2rem * var(--bs));border:1px solid var(--accent);border-radius:99px}',
 '.cta.bt-pill:hover{background:var(--accent);color:var(--bg);box-shadow:0 0 26px color-mix(in srgb,var(--accent) 55%,transparent)}',
-'.cta.bt-bare{padding:.4rem 0;border-bottom:1px solid color-mix(in srgb,var(--accent) 55%,transparent)}',
+'.cta.bt-bare{padding:calc(.4rem * var(--bs)) 0;border-bottom:1px solid color-mix(in srgb,var(--accent) 55%,transparent)}',
 '.cta.bt-bare:hover{border-bottom-color:var(--accent);letter-spacing:.26em}',
-'.cta.bt-solid{padding:.95rem 2.2rem;background:var(--accent);color:var(--bg);border-radius:3px;font-weight:600}',
+'.cta.bt-solid{padding:calc(.95rem * var(--bs)) calc(2.2rem * var(--bs));background:var(--accent);color:var(--bg);border-radius:3px;font-weight:600}',
 '.cta.bt-solid:hover{filter:brightness(1.12);box-shadow:0 10px 30px color-mix(in srgb,var(--accent) 40%,transparent)}',
-'.cta.bt-glass{padding:.95rem 2.2rem;border-radius:99px;background:rgba(255,255,255,.07);',
+'.cta.bt-glass{padding:calc(.95rem * var(--bs)) calc(2.2rem * var(--bs));border-radius:99px;background:rgba(255,255,255,.07);',
 '  backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.16)}',
 '.cta.bt-glass:hover{background:rgba(255,255,255,.13);border-color:var(--accent)}',
-'.cta.bt-cut{padding:.95rem 2.2rem;background:rgba(255,255,255,.06);border:1px solid var(--accent);',
+'.cta.bt-cut{padding:calc(.95rem * var(--bs)) calc(2.2rem * var(--bs));background:rgba(255,255,255,.06);border:1px solid var(--accent);',
 '  clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px)}',
 '.cta.bt-cut:hover{background:var(--accent);color:var(--bg)}',
-'.cta.bt-bracket{padding:.95rem 2.4rem}',
+'.cta.bt-bracket{padding:calc(.95rem * var(--bs)) calc(2.4rem * var(--bs))}',
 '.cta.bt-bracket::before,.cta.bt-bracket::after{content:"";position:absolute;width:14px;height:14px}',
 '.cta.bt-bracket::before{top:0;left:0;border-top:1px solid var(--accent);border-left:1px solid var(--accent)}',
 '.cta.bt-bracket::after{bottom:0;right:0;border-bottom:1px solid var(--accent);border-right:1px solid var(--accent)}',
 '.cta.bt-bracket:hover{letter-spacing:.28em}',
-'.cta.bt-neon{padding:.95rem 2.2rem;border-radius:99px;background:rgba(10,14,18,.5)}',
+'.cta.bt-neon{padding:calc(.95rem * var(--bs)) calc(2.2rem * var(--bs));border-radius:99px;background:rgba(10,14,18,.5)}',
 '.cta.bt-neon::before,.cta.bt-neon::after{content:"";position:absolute;inset:0;border-radius:inherit;',
 '  padding:1.5px;pointer-events:none;',
 '  background:conic-gradient(from var(--nba),transparent 0 62%,var(--neon) 78%,#fff 84%,var(--neon) 90%,transparent 100%);',
@@ -2694,13 +2837,7 @@ cfg.inter.cursor?'@media (pointer:fine){body{cursor:none}a,button{cursor:none}}'
 (cfg.inter.cursor?'<div id="cur"></div>\n':'')+nav+'\n<main>\n'+body+'\n</main>\n\n'+
 '<script type="importmap">\n{"imports":{\n'+
 '  "three":"https://unpkg.com/three@0.160.0/build/three.module.js",\n'+
-'  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/",\n'+
-'  "@sparkjsdev/spark":"https://sparkjs.dev/releases/spark/2.1.0/spark.module.js"\n'+
-'},\n"scopes":{\n'+
-'  "https://sparkjs.dev/releases/spark/2.1.0/":{\n'+
-'    "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",\n'+
-'    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"\n'+
-'  }\n}}\n<\/script>\n'+
+'  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"\n}}\n<\/script>\n'+
 '<script type="module">\n'+ runtime(data) +'\n<\/script>\n</body>\n</html>';
 }
 
@@ -2793,18 +2930,17 @@ ENGINE,
 "  holder.scale.setScalar(o.t.s);",
 "  pivot.add(holder);",
 "  holder.userData.__splat = !!isSplat;",
-"  var sd = {root:holder, vis:o.vis, base:o.t};",
-"  seated.push(sd);",
+"  seated.push({root:holder, vis:o.vis, base:o.t});",
 "  if(C.ground.shadow && !light) holder.traverse(function(x){ if(x.isMesh){x.castShadow=true;x.receiveShadow=true;} });",
 "  if(o.fx && o.fx.kind && o.fx.kind !== 'none' && !isSplat){",
-"    MATFX.apply(holder, o.fx.kind, {color:o.fx.color, power:o.fx.power, opacity:o.fx.opacity});",
+"    MATFX.apply(holder, o.fx.kind, {color:o.fx.color, power:o.fx.power,",
+"                                    opacity:o.fx.opacity, light:C.lights.keyPos});",
 "  }",
 "  if(clips && clips.length && !mixer && C.anim.clip>=0 && clips[C.anim.clip] && C.anim.mode!=='off'){",
 "    mixer = new THREE.AnimationMixer(inner);",
 "    action = mixer.clipAction(clips[C.anim.clip]); action.clampWhenFinished=true; action.play();",
 "  }",
 "  done();",
-"  return sd;",
 "}",
 "let SplatLib = null;",
 "async function loadSplat(o){",
@@ -2814,81 +2950,8 @@ ENGINE,
 "  await v.addSplatScene(resolve(o.main), {format:fmt, splatAlphaRemovalThreshold:5, showLoadingUI:false});",
 "  return v;",
 "}",
-"/* .spz : Spark (three r180 isolé, superposé au canvas r160 principal — voir sync dans la boucle) */",
-"var sparkOv = null;",
-"async function ensureSparkOv(){",
-"  if(sparkOv) return sparkOv;",
-"  var T180 = await import('https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js');",
-"  var Spark = await import('@sparkjsdev/spark');",
-"  var canvas = document.createElement('canvas');",
-"  canvas.style.position='fixed'; canvas.style.inset='0'; canvas.style.zIndex='1';",
-"  canvas.style.pointerEvents='none';",
-"  document.getElementById('bg').appendChild(canvas);",
-"  var sRenderer = new T180.WebGLRenderer({canvas:canvas, antialias:true, alpha:true});",
-"  sRenderer.setClearAlpha(0);",
-"  sRenderer.setPixelRatio(Math.min(devicePixelRatio,2));",
-"  sRenderer.setSize(innerWidth, innerHeight);",
-"  var sScene = new T180.Scene();",
-"  var sCamera = new T180.PerspectiveCamera(50, innerWidth/innerHeight, .05, 4000);",
-"  var sparkRenderer = new Spark.SparkRenderer({renderer:sRenderer});",
-"  sScene.add(sparkRenderer);",
-"  sparkOv = {THREE:T180, Spark:Spark, canvas:canvas, renderer:sRenderer, scene:sScene, camera:sCamera};",
-"  return sparkOv;",
-"}",
-"function bytesToDataUrl(bytes){",
-"  return new Promise(function(resolve,reject){",
-"    var reader = new FileReader();",
-"    reader.onload = function(){ resolve(reader.result); };",
-"    reader.onerror = function(){ reject(reader.error); };",
-"    reader.readAsDataURL(new Blob([bytes], {type:'application/octet-stream'}));",
-"  });",
-"}",
-"async function transcodeSpzV4(url){",
-"  var buf = await (await fetch(url)).arrayBuffer();",
-"  var b = new Uint8Array(buf);",
-"  if(b.length<20) return url;",
-"  if(b[0]===0x1f && b[1]===0x8b) return bytesToDataUrl(b);",
-"  var dv = new DataView(buf);",
-"  if(dv.getUint32(0,true)!==0x5053474e) return url;",
-"  if(dv.getUint32(4,true)!==4) return url;",
-"  var fzstdMod = await import('https://cdn.jsdelivr.net/npm/fzstd@0.1.1/+esm');",
-"  var numPoints = dv.getUint32(8,true);",
-"  var shDegree=b[12], fracBits=b[13], flags=b[14], numStreams=b[15];",
-"  var tocOffset = dv.getUint32(16,true);",
-"  var entries=[], off=tocOffset;",
-"  for(var i=0;i<numStreams;i++){",
-"    var comp=Number(dv.getBigUint64(off,true)), uncomp=Number(dv.getBigUint64(off+8,true));",
-"    entries.push([comp,uncomp]); off+=16;",
-"  }",
-"  var pos=off, total=0, chunks=[];",
-"  for(i=0;i<entries.length;i++){",
-"    var out = fzstdMod.decompress(b.subarray(pos,pos+entries[i][0]), new Uint8Array(entries[i][1]));",
-"    chunks.push(out); total+=out.length; pos+=entries[i][0];",
-"  }",
-"  var payload = new Uint8Array(16+total);",
-"  var pdv = new DataView(payload.buffer);",
-"  pdv.setUint32(0,0x5053474e,true); pdv.setUint32(4,3,true); pdv.setUint32(8,numPoints,true);",
-"  payload[12]=shDegree; payload[13]=fracBits; payload[14]=flags; payload[15]=0;",
-"  var w=16; for(i=0;i<chunks.length;i++){ payload.set(chunks[i],w); w+=chunks[i].length; }",
-"  var cs = new CompressionStream('gzip');",
-"  var writer = cs.writable.getWriter();",
-"  writer.write(payload); writer.close();",
-"  var gz = await new Response(cs.readable).arrayBuffer();",
-"  return bytesToDataUrl(new Uint8Array(gz));",
-"}",
-"async function loadSpz(o){",
-"  var ov = await ensureSparkOv();",
-"  var safeUrl = resolve(o.main);",
-"  try{ safeUrl = await transcodeSpzV4(safeUrl); }catch(e){ console.error('Transcodage .spz v4 echoue:', e); }",
-"  var mesh = new ov.Spark.SplatMesh({url:safeUrl});",
-"  ov.scene.add(mesh);",
-"  await mesh.initialized;",
-"  var sd = seat(o, new THREE.Group(), [], true);",
-"  sd.spark = mesh;",
-"}",
 "C.objects.forEach(function(o){",
 "  var url = resolve(o.main);",
-"  if(o.spz){ loadSpz(o).catch(fail); return; }",
 "  if(o.splat){ loadSplat(o).then(function(v){ seat(o, v, [], true); }).catch(fail); return; }",
 "  if(o.kind==='glb'||o.kind==='gltf'){",
 "    var d = new DRACOLoader(); d.setDecoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/');",
@@ -2918,7 +2981,6 @@ ENGINE,
 "  renderer.setSize(innerWidth,innerHeight);",
 "  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();",
 "  if(composer) composer.setSize(innerWidth,innerHeight);",
-"  if(sparkOv){ sparkOv.renderer.setSize(innerWidth,innerHeight); sparkOv.camera.aspect=innerWidth/innerHeight; sparkOv.camera.updateProjectionMatrix(); }",
 "}",
 "addEventListener('resize',resize); resize();",
 "const PATH = makePath(THREE); PATH.set(C.cams, C.view.smooth);",
@@ -2934,7 +2996,10 @@ ENGINE,
 "cards.forEach(function(c){ io.observe(c); });",
 "function startReveal(card){",
 "  const wds = card.querySelectorAll('.wd');",
-"  wds.forEach(function(w,i){ w.style.transitionDelay = Math.min(1.2, i*0.028) + 's'; });",
+"  var mode = (card.className.match(/rv-([a-z]+)/)||[])[1] || 'fade';",
+"  var step = mode==='letters' || mode==='split' ? 0.018",
+"           : mode==='stagger' ? 0.055 : mode==='blur' ? 0.045 : 0.028;",
+"  wds.forEach(function(w,i){ w.style.transitionDelay = Math.min(1.6, i*step) + 's'; });",
 "  const typed = card.querySelector('.typed');",
 "  if(typed && !typed.dataset.done){",
 "    typed.dataset.done='1';",
@@ -2983,7 +3048,7 @@ SPOT_SVG,
 "    var sd = seated[si];",
 "    var pv = PRES.amount(sd.vis, prog, C.nCh);",
 "    var stl = (sd.vis && sd.vis.trans) || 'fade';",
-"    if(stl !== 'fade' && stl !== 'none') PRES.pose(sd.root, pv, stl, sd.base);",
+"    if(stl !== 'fade' && stl !== 'none') PRES.pose(sd.root, pv, stl, sd.base, sd.vis);",
 "    PRES.apply(sd.root, (stl === 'none') ? (pv > .5 ? 1 : 0) : pv);",
 "  }",
 "  if(C.fx.lightning && !reduce){",
@@ -3036,22 +3101,6 @@ SPOT_SVG,
 "  }",
 "  if(composer){ if(filmPass) filmPass.uniforms.uTime.value=T; composer.render(); }",
 "  else renderer.render(scene,camera);",
-"  if(sparkOv){",
-"    for(var ki=0; ki<seated.length; ki++){",
-"      var sk = seated[ki]; if(!sk.spark) continue;",
-"      try{",
-"        sk.root.updateMatrixWorld();",
-"        sk.root.matrixWorld.decompose(sk.spark.position, sk.spark.quaternion, sk.spark.scale);",
-"        sk.spark.visible = sk.root.visible;",
-"      }catch(e){}",
-"    }",
-"    sparkOv.camera.position.copy(camera.position);",
-"    sparkOv.camera.quaternion.copy(camera.quaternion);",
-"    sparkOv.camera.fov = camera.fov; sparkOv.camera.aspect = camera.aspect;",
-"    sparkOv.camera.near = camera.near; sparkOv.camera.far = camera.far;",
-"    sparkOv.camera.updateProjectionMatrix();",
-"    sparkOv.renderer.render(sparkOv.scene, sparkOv.camera);",
-"  }",
 "});"
 ].join('\n');
 }
@@ -3062,6 +3111,7 @@ addEventListener('unhandledrejection', e=>{ console.error('[Atelier] promesse re
 /* ══════════════════════════════════════════════════════════
    DÉMARRAGE
    ══════════════════════════════════════════════════════════ */
+[...$('sFont').options].forEach(o=>{ if(o.value) ensureFont(o.value); });
 stage.style.background = cfg.env.bg;
 applyFog(); rebuildFX(); buildGround(); buildPost();
 syncForm(); renderChapters(); setMode('cam'); markDots();

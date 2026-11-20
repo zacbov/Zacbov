@@ -50,8 +50,7 @@
 {
   "imports": {
     "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-    "@mkkellogg/gaussian-splats-3d": "https://unpkg.com/@mkkellogg/gaussian-splats-3d@0.4.6/build/gaussian-splats-3d.module.js"
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
   }
 }
 </script>
@@ -63,7 +62,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { createPerch } from './assets/oiseaux/oiseaux.js';
-import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
+import { createFraxinelle, createButterflies } from './assets/nature/nature.js';
 
 // ===================== DÉTECTION APPAREIL (perf adaptative) =====================
 // Un téléphone (utilisé en mode AR pour prévisualiser sans casque) a beaucoup
@@ -71,10 +70,10 @@ import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
 // charge. On réduit certains effets coûteux en conséquence.
 let arMode = false; // session AR en cours (voir « VR ENTRY »)
 const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !/OculusBrowser|Quest/i.test(navigator.userAgent);
+const IS_HEADSET = /OculusBrowser|Quest|Pico|Wolvic/i.test(navigator.userAgent);
 const QUALITY = {
   pollenCount: IS_MOBILE ? 60 : 140,
   rayCount: IS_MOBILE ? 2 : 4,
-  wingFlutterFPS: IS_MOBILE ? 20 : 30, // throttle CPU du battement d'ailes (voir plus bas)
 };
 
 const statusEl = document.getElementById('status');
@@ -134,7 +133,10 @@ rig.add(camera);
 rig.position.set(0, 0, 0); // sur Quest 3/2, le repère 'local-floor' gère déjà la hauteur réelle
 scene.add(rig);
 
-const renderer = new THREE.WebGLRenderer({ antialias:true });
+// alpha:true est indispensable sur Quest : la vidéo (couche média WebXR) est composée DERRIÈRE notre
+// rendu ; un rendu opaque la recouvrait entièrement (écran noir à la place du décor).
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setClearColor(0x000000, 0);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.xr.enabled = true;
@@ -172,8 +174,20 @@ const VIDEO_LETTERBOX = 0;     // fraction à rogner en haut ET en bas (ex: 0.05
 // (toutes lancées en parallèle) : 64 aujourd'hui. Garde la liste courte.
 const VIDEO_DIRS = ['./asset/', './assets/', './assets/video/', './video/'];
 const VIDEO_EXTS = ['webm', 'mp4'];
+// Versions de la vidéo, de la préférée à la moins préférée, selon l'appareil. L'original est
+// en 8K VP9 : parfait sur ordinateur, mais un téléphone ne sait pas le décoder et le casque ne
+// peut pas l'envoyer au GPU à chaque image. D'où les copies H.264 4K (casque) et 2K (téléphone).
+// Si une version ne se lit pas, la suivante est essayée. Forcer : ?video=8k | 4k | 2k
+const VIDEO_PARAM = new URLSearchParams(location.search).get('video');
+const VIDEO_ORDER = VIDEO_PARAM === '8k' ? ['', '-4k', '-2k']
+  : VIDEO_PARAM === '4k' ? ['-4k', '-2k', '']
+  : VIDEO_PARAM === '2k' ? ['-2k', '-4k', '']
+  : IS_HEADSET ? ['-4k', '-2k', '']
+  : IS_MOBILE ? ['-2k', '-4k']
+  : ['', '-4k', '-2k'];
 const DECORS = [
-  { label: 'Clairière', names: ['clairiere', 'clairière', 'foret'] },
+  { label: 'Clairière', names: ['clairiere', 'clairière', 'foret'],
+    preferred: VIDEO_ORDER.map((s) => s ? `./assets/clairiere${s}.mp4` : './assets/clairiere.webm') },
 ];
 const AMBIENT_FROM_VIDEO = true;   // la lumière d'ambiance (modèles 3D) prend les couleurs du décor
 
@@ -216,6 +230,7 @@ let decorChoice = 'random';   // 'random' ou index dans decorList
 let decorIndex = -1, decorBusy = false, videoActive = false;
 let decorReady = false, decorRevealed = false, decorRevealWanted = false;
 let decorOpacity = 0;         // 0 = décor invisible, 1 = pleinement visible (fondus)
+let lastVideoTime = -1;
 
 const decorVideo = document.createElement('video');
 decorVideo.loop = true; decorVideo.muted = true; decorVideo.playsInline = true;
@@ -295,10 +310,6 @@ function detachMediaLayer() {
 
 // Applique l'état courant (vidéo ou ciel, couche média ou sphère, opacité)
 function applyDecorDisplay() {
-  if (arMode) { // AR : rien derrière la scène, on voit la pièce
-    decorSphere.visible = false; veil.visible = false; stars.visible = false; scene.background = null;
-    return;
-  }
   if (!videoActive) {
     decorSphere.visible = false; veil.visible = false;
     stars.visible = true; scene.background = skyTexture;
@@ -335,21 +346,29 @@ async function loadDecor(index, { revealNow = false } = {}) {
   decorBusy = true; decorReady = false; decorRevealed = false; decorRevealWanted = revealNow;
   if (videoActive && decorOpacity > 0.01) await tween(decorOpacity, 0, 0.5, setDecorOpacity);
   decorIndex = index;
-  const ok = await new Promise((resolve) => {
-    const onOk = () => { cleanup(); resolve(true); };
+  const tryUrl = (url) => new Promise((resolve) => {
+    const onOk = () => { cleanup(); resolve(decorVideo.videoWidth > 0); };
     const onKo = () => { cleanup(); resolve(false); };
-    const cleanup = () => { decorVideo.removeEventListener('loadeddata', onOk); decorVideo.removeEventListener('error', onKo); };
+    const timer = setTimeout(onKo, 20000);
+    const cleanup = () => { clearTimeout(timer); decorVideo.removeEventListener('loadeddata', onOk); decorVideo.removeEventListener('error', onKo); };
     decorVideo.addEventListener('loadeddata', onOk);
     decorVideo.addEventListener('error', onKo);
-    decorVideo.src = decorList[index].url;
+    decorVideo.src = url;
     decorVideo.load();
     decorVideo.play().catch(() => {});
   });
-  if (!ok) { log('Vidéo illisible : ' + decorList[index].url); setDecorFallback(); decorBusy = false; drawHud(); return; }
+  let ok = false;
+  for (const url of decorList[index].urls || [decorList[index].url]) {
+    ok = await tryUrl(url);
+    if (ok) { decorList[index].url = url; break; }
+    log('Vidéo illisible sur cet appareil : ' + url + ' — version suivante');
+  }
+  if (!ok) { log('Aucune version de la vidéo n’est lisible ici'); setDecorFallback(); decorBusy = false; drawHud(); return; }
+  log('Décor : ' + decorList[index].url.split('/').pop() + ' (' + decorVideo.videoWidth + '×' + decorVideo.videoHeight + ')');
   videoActive = true; decorReady = true; decorBusy = false;
   if (mediaLayerMode) attachMediaLayer(); else applyDecorDisplay();
   if (tutorialPanel.mesh.visible) drawTutorial();
-  if (decorVideo.videoWidth > 4096 && renderer.xr.isPresenting && !mediaLayerMode) {
+  if (decorVideo.videoWidth > 4096 && renderer.xr.isPresenting && !mediaLayerMode && !IS_HEADSET) {
     log('⚠ Vidéo > 4K sans couche média : scintillement probable (voir README)');
   }
   if (decorRevealWanted) revealDecor();
@@ -376,19 +395,24 @@ function nameVariants(name) {
   return [...out];
 }
 async function findDecorFile(decor) {
+  // 1) les versions connues, dans l'ordre de l'appareil (quelques requêtes seulement)
+  const found = [];
+  for (const url of decor.preferred || []) if (await fileExists(url)) found.push(url);
+  if (found.length) return found;
+  // 2) sinon, l'ancienne recherche large (noms, accents, dossiers)
   const candidates = [];
   for (const d of VIDEO_DIRS) for (const n of decor.names) for (const v of nameVariants(n)) for (const e of VIDEO_EXTS) {
     candidates.push(encodeURI(`${d}${v}.${e}`));
   }
   const unique = [...new Set(candidates)];
-  const found = await Promise.all(unique.map(fileExists));
-  const i = found.indexOf(true);  // ordre de priorité : dossier, puis orthographe, puis extension
-  return i >= 0 ? unique[i] : null;
+  const hits = await Promise.all(unique.map(fileExists));
+  const i = hits.indexOf(true);  // ordre de priorité : dossier, puis orthographe, puis extension
+  return i >= 0 ? [unique[i]] : null;
 }
 async function discoverDecors() {
   const urls = await Promise.all(DECORS.map(findDecorFile));
   const list = [], missing = [];
-  DECORS.forEach((d, i) => { if (urls[i]) list.push({ label: d.label, url: urls[i] }); else missing.push(d.names[0]); });
+  DECORS.forEach((d, i) => { if (urls[i]) list.push({ label: d.label, url: urls[i][0], urls: urls[i] }); else missing.push(d.names[0]); });
   $('decorWarning').textContent = !list.length
     ? '⚠ Aucune vidéo de décor trouvée (« clairiere.webm » ou « foret.webm » dans un dossier « asset ») — fond sombre à la place.'
     : missing.length ? '⚠ Décor(s) introuvable(s) : ' + missing.join(', ') + ' (.webm ou .mp4 dans « asset »)' : '';
@@ -775,7 +799,9 @@ function loadImageCORS(url) {
       const cleanUrl = url.replace(/^https?:\/\//, '');
       proxied.src = 'https://images.weserv.nl/?url=' + encodeURIComponent(cleanUrl);
     };
-    img.src = url;
+    // Xeno-canto n'envoie jamais ces en-têtes : on passe directement par le proxy (pas d'erreur CORS en console)
+    if (/xeno-canto\.org/.test(url)) img.onerror();
+    else img.src = url;
   });
 }
 
@@ -1059,6 +1085,29 @@ createPerch({ lite: BIRD_LITE }).then((p) => {
   bird.add(p.group);
   log('Perchoir prêt (' + (BIRD_LITE ? 'version allégée' : 'version complète') + ')');
 }).catch((e) => log('Perchoir indisponible : ' + e.message));
+// ===================== FRAXINELLE + PAPILLONS (assets/nature/nature.js) =====================
+// Une touffe de fraxinelle FIXE (modélisée, plus de splat), à gauche de la branche vue du visiteur.
+// Le bas de la touffe s'efface comme les bouts de la branche. Les papillons (kit fable-butterfly)
+// volent autour et se posent sur ses fleurs et ses folioles.
+const PLANT_TURN_DEG = 15;                    // décalage vers la gauche de la branche (degrés)
+const PLANT_DISTANCE = 1.25;                  // distance au visiteur (m)
+const PLANT_BASE_Y = PERCH_HEIGHT - 0.62;     // pied de la touffe (m) ; 0 = posée au sol
+const PLANT_HEIGHT = 0.8;                     // tige la plus haute (m)
+// Papillons du kit : 0 glasswing (ailes transparentes), 1 longwing orange, 2 piéride blanche
+const BUTTERFLY_SPECIES = BIRD_LITE ? [0, 2] : [0, 1, 2];
+let fraxinelle = null, butterflies = null;
+try {
+  fraxinelle = createFraxinelle({ height: PLANT_HEIGHT, lite: BIRD_LITE });
+  const dir = PERCH_DIRECTION.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(PLANT_TURN_DEG));
+  fraxinelle.group.position.copy(dir).multiplyScalar(PLANT_DISTANCE).setY(PLANT_BASE_Y);
+  fraxinelle.group.rotation.y = Math.atan2(dir.x, dir.z);
+  scene.add(fraxinelle.group);
+  fraxinelle.update(0);
+} catch (e) { log('Fraxinelle indisponible : ' + e.message); }
+createButterflies(renderer, { plant: fraxinelle, species: BUTTERFLY_SPECIES, lite: IS_MOBILE, size: 1.25 })
+  .then((b) => { butterflies = b; scene.add(b.group); log('Papillons prêts'); })
+  .catch((e) => log('Papillons indisponibles : ' + e.message));
+
 // Niveau sonore du chant en cours (0…1), pour que l'oiseau ouvre le bec en rythme
 let birdAnalyser = null, birdLevelPeak = 0.02;
 const birdLevelData = new Uint8Array(512);
@@ -1196,10 +1245,17 @@ async function birdCycleLoop() {
 // volante a son propre "flightSeed" (déphasage aléatoire) pour ne pas voler en
 // parfaite synchronisation avec les autres.
 const flyingCreatures = []; // { obj, kind:'butterfly'|'dragonfly', flightSeed, baseZ }
-function registerFlyingCreature(obj, kind, baseZ = -1, orientationFixDeg = [0, 0, 0]) {
+function registerFlyingCreature(obj, kind, baseZ = -1, orientationFixDeg = [0, 0, 0], axes = null) {
   const fixQuat = new THREE.Quaternion().setFromEuler(
     new THREE.Euler(...orientationFixDeg.map(THREE.MathUtils.degToRad))
   );
+  if (axes) {
+    // axes = { forward, up } du modèle (vers la tête, vers le dos) : on les aligne sur +Z / +Y,
+    // ce que lookAt() attend. Plus besoin de tâtonner rotationDeg.
+    const f = new THREE.Vector3(...axes.forward).normalize(), u = new THREE.Vector3(...axes.up).normalize();
+    const r = new THREE.Vector3().crossVectors(u, f);
+    fixQuat.setFromRotationMatrix(new THREE.Matrix4().makeBasis(r, u, f)).invert();
+  }
   flyingCreatures.push({ obj, kind, flightSeed: Math.random() * 100, baseZ, fixQuat });
 }
 function updateFlyingCreatures(t) {
@@ -1230,16 +1286,6 @@ function updateFlyingCreatures(t) {
 // Objectif : ajouter un futur modèle ne doit demander qu'une entrée dans
 // ASSET_LIBRARY plus bas, sans toucher au reste du code (chargement,
 // animation, dissolution, ombre de contact — tout est déjà branché).
-
-// ----- Gaussian Splats (.ksplat) : un seul DropInViewer partagé pour toutes les scènes splat -----
-const splatViewer = new GaussianSplats3D.DropInViewer({
-  selfDrivenMode: false,
-  camera: camera,
-  renderer: renderer,
-  useBuiltInControls: false,
-  sharedMemoryForWorkers: false // évite les soucis de cross-origin isolation en PWA
-});
-scene.add(splatViewer);
 
 // ----- Modèles animés (.glb) : un mixer par modèle chargé, mis à jour chaque frame -----
 const dracoLoader = new DRACOLoader();
@@ -1274,81 +1320,71 @@ function beautifyModel(model) {
   });
 }
 
-// ----- Battement d'ailes procédural (CPU, fiable) -----
-// Ces modèles scannés (papillon, libellule) n'ont ni squelette ni animation :
-// les ailes sont figées en position ouverte. On simule le vol en pliant les
-// sommets autour d'une charnière au centre du corps, avec une amplitude qui
-// augmente avec l'éloignement au centre (l'extrémité des ailes bouge plus que
-// le corps). Calcul fait directement sur les sommets bruts en CPU (pas de
-// shader GPU via onBeforeCompile, dont le comportement dépendait de subtilités
-// de mise en cache des programmes de Three.js, difficiles à garantir sans
-// pouvoir tester visuellement) — plus lent mais 100% prévisible.
-// EXPÉRIMENTAL : suppose que l'axe X du modèle correspond à l'envergure des
-// ailes (généralement vrai pour un specimen scanné à plat, ailes déployées).
-// Si le résultat ne va pas dans le bon sens, inverse via opts.hingeAxis:'z'.
-const flutterEntries = []; // { meshes:[{posAttr, base}], center, halfSpan, maxAngle, speed, hingeAxis }
+// ----- Battement d'ailes des modèles scannés (dans le shader) -----
+// Ces scans (papillon, libellule) n'ont ni squelette ni animation : leurs ailes sont figées, à plat.
+// Chaque aile tourne ici autour d'une charnière le long du corps, et les DEUX ailes montent et
+// descendent ensemble, vers le dos. (L'ancien code pliait le modèle selon le mauvais axe, faisait
+// monter une aile pendant que l'autre descendait — le papillon se balançait sans battre — et
+// recalculait 300 000 sommets sur le processeur à chaque image.)
+// Repère des sommets bruts de ces deux scans : corps le long de X, ailes le long de Z, dos vers +Y.
+// Pour un autre modèle : opts.spanAxis / opts.upAxis ('x' | 'y' | 'z').
+const flutterEntries = []; // { u (uniformes), kind, hz, seed }
 function attachWingFlutter(model, opts = {}) {
-  const hingeAxis = opts.hingeAxis || 'x';
-  const maxAngle = THREE.MathUtils.degToRad(opts.maxAngleDeg ?? 20);
-  const speed = opts.flapSpeed ?? 8;
-  const coordIdx = hingeAxis === 'z' ? 2 : 0;
-
-  // Centre/halfSpan calculés directement sur les données de sommets BRUTES
-  // (espace local, avant toute transformation) — fiable, ne dépend ni de la
-  // position de vol, ni de l'échelle, ni de la rotation de l'objet dans la scène.
-  // On mesure les 3 axes (pas seulement celui choisi) pour pouvoir diagnostiquer
-  // si le mauvais axe a été supposé pour l'envergure des ailes.
-  let min = { x:Infinity, y:Infinity, z:Infinity }, max = { x:-Infinity, y:-Infinity, z:-Infinity };
-  const meshes = [];
-  let totalVerts = 0;
-  model.traverse((node) => {
-    if (!node.isMesh || !node.geometry) return;
-    const posAttr = node.geometry.attributes.position;
-    if (!posAttr) return;
-    totalVerts += posAttr.count;
-    for (let i = 0; i < posAttr.count; i++) {
-      const x = posAttr.array[i*3], y = posAttr.array[i*3+1], z = posAttr.array[i*3+2];
-      if (x < min.x) min.x = x; if (x > max.x) max.x = x;
-      if (y < min.y) min.y = y; if (y > max.y) max.y = y;
-      if (z < min.z) min.z = z; if (z > max.z) max.z = z;
-    }
-    meshes.push({ posAttr, base: posAttr.array.slice() });
-  });
-  if (!meshes.length) { log('⚠ attachWingFlutter: aucun mesh trouvé (' + (opts.debugName||'?') + ')'); return; }
-
-  const rangeX = max.x-min.x, rangeY = max.y-min.y, rangeZ = max.z-min.z;
-  log(`Battement ${opts.debugName||''} — dimensions locales : X=${rangeX.toFixed(3)} Y=${rangeY.toFixed(3)} Z=${rangeZ.toFixed(3)} (${totalVerts} sommets, hinge=${hingeAxis})`);
-
-  const center = hingeAxis === 'z' ? (min.z+max.z)/2 : (min.x+max.x)/2;
-  const halfSpan = (hingeAxis === 'z' ? rangeZ : rangeX) / 2 || 1;
-
-  flutterEntries.push({ meshes, center, halfSpan, maxAngle, speed, coordIdx });
+  const span = opts.spanAxis || 'z';
+  const up = opts.upAxis || 'y';
+  const u = { uFlap: { value: 0 }, uHinge: { value: opts.hinge ?? 0.0032 }, uBend: { value: opts.bend ?? 0.25 } };
+  const glsl = `uniform float uFlap, uHinge, uBend;
+float wingAngle(float ad){ return uFlap * smoothstep(0.0, 0.004, ad) * (1.0 + uBend * ad / 0.03); }
+vec3 wingFlap(vec3 p){
+  float s = sign(p.${span}); float ad = abs(p.${span}) - uHinge;
+  if (ad <= 0.0) return p;
+  float a = wingAngle(ad); float c = cos(a), si = sin(a);
+  float h = p.${up};
+  p.${span} = s * (uHinge + ad * c - h * si);
+  p.${up} = ad * si + h * c;
+  return p;
 }
-// Throttle : recalculer tous les sommets à 90fps est inutile pour un effet aussi
-// doux — on limite à QUALITY.wingFlutterFPS (30 desktop/Quest, 20 mobile),
-// complètement imperceptible visuellement mais nettement moins coûteux en CPU.
-let lastWingFlutterUpdate = 0;
-function updateWingFlutter(t) {
-  const minInterval = 1 / QUALITY.wingFlutterFPS;
-  if (t - lastWingFlutterUpdate < minInterval) return;
-  lastWingFlutterUpdate = t;
-
-  flutterEntries.forEach(({ meshes, center, halfSpan, maxAngle, speed, coordIdx }) => {
-    const theta0 = Math.sin(t * speed) * maxAngle;
-    meshes.forEach(({ posAttr, base }) => {
-      const arr = posAttr.array;
-      for (let i = 0; i < posAttr.count; i++) {
-        const o = i * 3;
-        const d = base[o + coordIdx] - center;
-        const norm = Math.min(1, Math.abs(d) / halfSpan);
-        const theta = theta0 * norm;
-        const c = Math.cos(theta), s = Math.sin(theta);
-        const y0 = base[o + 1];
-        arr[o + coordIdx] = center + d * c - y0 * s;
-        arr[o + 1] = d * s + y0 * c;
-      }
-      posAttr.needsUpdate = true;
+vec3 wingFlapN(vec3 p, vec3 n){
+  float s = sign(p.${span}); float ad = abs(p.${span}) - uHinge;
+  if (ad <= 0.0) return n;
+  float a = wingAngle(ad); float c = cos(a), si = sin(a);
+  float ns = s * n.${span}, nu = n.${up};
+  n.${span} = s * (ns * c - nu * si);
+  n.${up} = ns * si + nu * c;
+  return n;
+}
+`;
+  let count = 0;
+  model.traverse((node) => {
+    if (!node.isMesh) return;
+    node.frustumCulled = false; // les ailes sortent de la boîte englobante d'origine
+    (Array.isArray(node.material) ? node.material : [node.material]).forEach((m) => {
+      m.onBeforeCompile = (sh) => {
+        Object.assign(sh.uniforms, u);
+        sh.vertexShader = glsl + sh.vertexShader
+          .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nobjectNormal = wingFlapN(position, objectNormal);')
+          .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed = wingFlap(transformed);');
+      };
+      m.customProgramCacheKey = () => 'wingflap-' + span + up;
+      m.needsUpdate = true;
+      count++;
     });
+  });
+  flutterEntries.push({ u, kind: opts.kind || 'butterfly', hz: opts.flapHz ?? 2.2, seed: Math.random() });
+  log('Battement ' + (opts.debugName || '') + ' : ' + count + ' matériau(x)');
+}
+const flapStep = (a, b, x) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+function updateWingFlutter(t) {
+  flutterEntries.forEach((e) => {
+    const ph = t * e.hz * Math.PI * 2 + e.seed * 17;
+    if (e.kind === 'dragonfly') {
+      // libellule : battement rapide et court, sans pause
+      e.u.uFlap.value = 0.05 + 0.32 * Math.sin(ph);
+    } else {
+      // papillon : salves de battements amples, puis un plané ailes légèrement relevées
+      const env = flapStep(-0.25, 0.35, Math.sin(t * (0.9 + e.seed * 0.4) + e.seed * 40));
+      e.u.uFlap.value = env * (0.3 + 0.85 * Math.sin(ph)) + (1 - env) * 0.18;
+    }
   });
 }
 // RealityCapture souvent Z-up / tête en bas une fois importés dans un repère Y-up.
@@ -1396,62 +1432,12 @@ function loadGlbCreature(opts) {
       // d'origine) — si demandé, remplace la position statique par un vol continu.
       if (opts.flightPath) {
         const fixDeg = opts.rotationDeg || opts.flightPath.orientationFixDeg || [0,0,0];
-        registerFlyingCreature(model, opts.flightPath.kind, opts.flightPath.baseZ ?? -1, fixDeg);
+        registerFlyingCreature(model, opts.flightPath.kind, opts.flightPath.baseZ ?? -1, fixDeg, opts.flightPath.axes);
       }
 
       resolve({ model, mixer, gltf });
     }, undefined, (err) => { log('Erreur glb (' + opts.path + '): ' + err.message); reject(err); });
   });
-}
-
-// ----- Chargeur générique .ksplat (via le DropInViewer partagé) -----
-// opts: { position:[x,y,z], scale:number, flip180:bool, materializeOnLoad:bool,
-//         materializeDuration:number, revealSweep:bool (effet de balayage vertical, cf. plus bas) }
-function loadKsplatCreature(opts) {
-  const quat = opts.flip180 ? FLIP_180_X : new THREE.Quaternion();
-  return splatViewer.addSplatScene(opts.path, {
-    position: opts.position || [0, 1.5, -1.5],
-    rotation: [quat.x, quat.y, quat.z, quat.w],
-    scale: opts.scale ? [opts.scale, opts.scale, opts.scale] : [1, 1, 1],
-    showLoadingUI: false
-  }).then(() => {
-    log('Splat chargé : ' + opts.path);
-    if (opts.materializeOnLoad !== false) {
-      if (opts.revealSweep) sweepRevealSplat(opts.materializeDuration || 2.8);
-      else materialize(splatViewer, opts.materializeDuration || 2.5);
-    }
-    return splatViewer;
-  }).catch((e) => { log('Erreur splat (' + opts.path + '): ' + e.message); throw e; });
-}
-
-// ----- Dissolution avancée pour splats : balayage vertical via clipping plane -----
-// Alternative au simple scale-in : le splat apparaît progressivement du bas vers
-// le haut (façon "sortie de terre"), plus organique pour une plante qu'un pop-in.
-// Best-effort : dépend du matériau interne de GaussianSplats3D qui honore (ou non)
-// les clipping planes standard Three.js — à valider visuellement une fois testé,
-// avec repli automatique sur le scale-in classique en cas d'erreur.
-function sweepRevealSplat(duration = 2.8, heightRange = [-0.5, 2.5]) {
-  try {
-    renderer.localClippingEnabled = true;
-    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -heightRange[0]);
-    const materials = [];
-    splatViewer.traverse((o) => { if (o.material) materials.push(o.material); });
-    if (!materials.length) { materialize(splatViewer, duration); return; }
-    materials.forEach((m) => { m.clippingPlanes = [plane]; });
-    splatViewer.visible = true;
-    spawnSparkleBurst(splatViewer.position.clone());
-    const start = performance.now();
-    function step() {
-      const p = Math.min(1, (performance.now() - start) / (duration * 1000));
-      plane.constant = -(heightRange[0] + (heightRange[1] - heightRange[0]) * p);
-      if (p < 1) requestAnimationFrame(step);
-      else materials.forEach((m) => { m.clippingPlanes = []; });
-    }
-    step();
-  } catch (e) {
-    log('Balayage indisponible, repli sur dissolution classique');
-    materialize(splatViewer, duration);
-  }
 }
 
 // ============================================================================
@@ -1460,21 +1446,19 @@ function sweepRevealSplat(duration = 2.8, heightRange = [-0.5, 2.5]) {
 // contact sont déjà branchés génériquement.
 // ============================================================================
 const ASSET_LIBRARY = [
-  { id: 'fraxinelle', type: 'ksplat', path: './assets/models/fraxinelle.ksplat',
-    position: [1.2, 1.5, -1.8], scale: 2.2, flip180: true },
-
   // Modèles scannés (bounding box ~5cm = déjà à l'échelle réelle, scale:1 conservé)
-  { id: 'papillon-glb', type: 'glb', path: './assets/models/papillon.glb',
+  // Casque et téléphone : versions allégées (même scan, ~6× moins de triangles : 51 000 et 79 000)
+  { id: 'papillon-glb', type: 'glb', path: BIRD_LITE ? './assets/models/papillon-leger.glb' : './assets/models/papillon.glb',
     position: [-1.2, 1.5, -1.5], scale: 2,
     rotationDeg: [0, 0, 0], // correction d'orientation statique — à tâtonner (touches 7/8/9, voir README)
-    wingFlutter: { maxAngleDeg: 24, flapSpeed: 6, debugName: 'papillon' }, // battement ample et lent
-    flightPath: { kind: 'butterfly', baseZ: -1 } },
+    wingFlutter: { kind: 'butterfly', flapHz: 2.2, debugName: 'papillon' }, // salves amples, puis plané
+    flightPath: { kind: 'butterfly', baseZ: -1, axes: { forward: [-1, 0, 0], up: [0, 0, 1] } } },
 
-  { id: 'libellule-glb', type: 'glb', path: './assets/models/libellule.glb',
+  { id: 'libellule-glb', type: 'glb', path: BIRD_LITE ? './assets/models/libellule-leger.glb' : './assets/models/libellule.glb',
     position: [0.6, 1.35, -1.4], scale: 2,
     rotationDeg: [0, 0, 0],
-    wingFlutter: { maxAngleDeg: 10, flapSpeed: 16, debugName: 'libellule' }, // battement rapide et discret
-    flightPath: { kind: 'dragonfly', baseZ: -1 } },
+    wingFlutter: { kind: 'dragonfly', flapHz: 7, bend: 0.1, hinge: 0.004, debugName: 'libellule' }, // rapide et court
+    flightPath: { kind: 'dragonfly', baseZ: -1, axes: { forward: [-1, 0, 0], up: [0, 1, 0] } } },
 
   // Exemples prêts à activer dès que les fichiers existent (décommente + adapte) :
   // { id: 'oiseau-glb', type: 'glb', path: './assets/models/oiseau.glb',
@@ -1494,7 +1478,6 @@ ASSET_LIBRARY.forEach((entry) => {
       }
     });
   }
-  else if (entry.type === 'ksplat') loadKsplatCreature(entry);
 });
 
 // ===================== ÉTAT AUDIO PARTAGÉ =====================
@@ -1547,7 +1530,7 @@ $('enterBtn').addEventListener('click', () => enterExperience(vrButtonEl), { onc
 $('enterArBtn').addEventListener('click', () => enterExperience(arButtonEl), { once: true });
 
 // Début/fin de session : bascule entre la couche média (casque) et la sphère WebGL (repli)
-// AR (téléphone, ou passthrough du casque) : on voit la vraie pièce. Le décor vidéo est coupé,
+// AR (téléphone, ou passthrough du casque) : la vidéo est montrée sur la sphère (comme en VR),
 // et la scène est RECALÉE devant soi : sans ça elle reste placée par rapport au point et à la
 // direction du téléphone au lancement (et à une hauteur de sol estimée), donc souvent hors champ.
 let arRecenterIn = 0;
@@ -1563,7 +1546,8 @@ renderer.xr.addEventListener('sessionstart', () => {
   const mode = renderer.xr.getSession().environmentBlendMode;
   arMode = !!mode && mode !== 'opaque';
   arRecenterIn = arMode ? 30 : 0; // quelques images, le temps que le suivi se stabilise
-  if (arMode) { mediaLayerMode = false; log('Mode AR : décor coupé, scène recalée devant vous'); applyDecorDisplay(); return; }
+  // AR (téléphone, ou passthrough du Quest) : la vidéo est affichée sur la sphère, comme en VR sans couche média
+  if (arMode) { mediaLayerMode = false; log('Mode AR : décor vidéo sur sphère, scène recalée devant vous'); applyDecorDisplay(); revealDecor(); return; }
   mediaLayerMode = canUseMediaLayer(renderer.xr.getSession());
   log(mediaLayerMode ? 'Décor : couche média WebXR' : 'Décor : sphère WebGL (couche média indisponible)');
   if (mediaLayerMode && videoActive) attachMediaLayer(); else applyDecorDisplay();
@@ -1594,6 +1578,9 @@ renderer.domElement.addEventListener('wheel', (e) => {
   e.preventDefault();
 }, { passive: false });
 
+// ?debug dans l'adresse : accès console aux objets de la scène (window.__pr)
+if (new URLSearchParams(location.search).has('debug')) window.__pr = { THREE, scene, camera, renderer, flyingCreatures, deskLook, rigBase, get fraxinelle() { return fraxinelle; }, get butterflies() { return butterflies; }, get perch() { return perch; } };
+
 // ===================== ANIMATION =====================
 const clock = new THREE.Clock();
 let t = 0;
@@ -1601,6 +1588,12 @@ let t = 0;
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.1);
   updateTweens(dt);
+  // Texture vidéo : Three la rafraîchit via requestVideoFrameCallback, qui ne se déclenche plus
+  // pendant une session immersive (Quest, téléphone) : la sphère restait figée ou vide.
+  if (videoActive && decorSphere.visible && decorVideo.readyState >= 2 && decorVideo.currentTime !== lastVideoTime) {
+    lastVideoTime = decorVideo.currentTime;
+    decorTexture.needsUpdate = true;
+  }
   updateDecorAmbient(performance.now() / 1000, dt);
   t += dt;
 
@@ -1652,14 +1645,9 @@ renderer.setAnimationLoop(() => {
   updateAnimatedModels(dt);
   updateWingFlutter(t);
 
-  // Le DropInViewer doit être mis à jour manuellement puisque selfDrivenMode:false
-  if (splatViewer.update) splatViewer.update();
-  // Rotation lente continue de la fraxinelle. Note : le splatViewer est partagé
-  // par tous les .ksplat (voir ASSET_LIBRARY) — tant qu'il n'y en a qu'un seul,
-  // cette rotation ne concerne que lui. Si tu ajoutes un second splat plus tard,
-  // il faudra soit accepter qu'il tourne aussi, soit passer à un DropInViewer
-  // séparé par splat pour un contrôle individuel.
-  splatViewer.rotation.y += 0.08 * dt;
+  // Fraxinelle (vent) et papillons fable-butterfly
+  if (fraxinelle) fraxinelle.update(t);
+  if (butterflies) butterflies.update(dt, t, camera.getWorldPosition(perchTmp));
 
   renderer.render(scene, camera);
 });

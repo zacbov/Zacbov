@@ -5,25 +5,27 @@
 // ici : les éléments <audio>/<video> demandent des plages d'octets (requêtes
 // Range, réponses 206) que le cache du Service Worker gère mal, et ces fichiers
 // sont lourds. Le cache HTTP normal du navigateur s'en occupe très bien.
-const CACHE_NAME = 'clairiere-v17';
+const CACHE_NAME = 'clairiere-v18';
 
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   // Modèles 3D (la vidéo de décor et les .mp3 ne sont PAS précachés : voir plus haut)
-  './assets/models/fraxinelle.ksplat',
   './assets/models/papillon.glb',
   './assets/models/libellule.glb',
+  './assets/models/papillon-leger.glb',
+  './assets/models/libellule-leger.glb',
   // Oiseaux modélisés + branche (moteur procédural, pas de fichier de modèle)
   './assets/oiseaux/oiseaux.js',
-  // Dépendances Three.js + GaussianSplats3D (version figée : cache d'abord)
+  // Fraxinelle (modélisée) + papillons du kit fable-butterfly
+  './assets/nature/nature.js',
+  // Dépendances Three.js (version figée : cache d'abord)
   'https://unpkg.com/three@0.160.0/build/three.module.js',
   'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js',
   'https://unpkg.com/three@0.160.0/examples/jsm/loaders/DRACOLoader.js',
   'https://unpkg.com/three@0.160.0/examples/jsm/webxr/VRButton.js',
   'https://unpkg.com/three@0.160.0/examples/jsm/webxr/ARButton.js',
-  'https://unpkg.com/@mkkellogg/gaussian-splats-3d@0.4.6/build/gaussian-splats-3d.module.js',
   // Décodeur Draco (chargé à l'exécution par DRACOLoader pour les .glb compressés)
   'https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/draco_decoder.js',
   'https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/draco_decoder.wasm',

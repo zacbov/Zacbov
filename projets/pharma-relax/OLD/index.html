@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clairière — Relaxation VR</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a1f14">
+<style>
+  html, body { margin:0; padding:0; overflow:hidden; background:#000; height:100%; }
+  canvas { display:block; }
+  #VRButton, #ARButton { display: none !important; } /* déclenchés par nos propres boutons */
+  #overlay {
+    position:fixed; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; color:#eafff0;
+    font-family: system-ui, sans-serif; background:radial-gradient(ellipse at center, #123322, #04140b);
+    z-index: 10;
+  }
+  #overlay h1 { font-weight:300; letter-spacing:2px; margin-bottom:8px; }
+  #overlay p { opacity:0.7; margin-top:0; max-width: 420px; text-align:center; font-size:14px; }
+  #enterBtn {
+    margin-top:24px; padding:16px 40px; font-size:18px; border-radius:40px;
+    border:1px solid #6fd39a; background:rgba(111,211,154,0.12); color:#eafff0;
+    cursor:pointer; letter-spacing:1px; transition: all 0.2s;
+  }
+  #enterBtn:hover { background:rgba(111,211,154,0.25); }
+  #loadBar { width:280px; height:4px; background:rgba(255,255,255,0.15); border-radius:2px; margin-top:26px; overflow:hidden; }
+  #loadFill { height:100%; width:0%; background:#6fd39a; transition:width 0.2s; }
+  #status { position:fixed; bottom:10px; left:10px; color:#8fd; font:12px monospace; opacity:0.5; z-index:5; }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div id="enterStep">
+    <h1>🌿 Clairière</h1>
+    <p>Un espace de calme en réalité virtuelle. Mets ton casque, appuie sur le bouton, et laisse-toi porter par la forêt.</p>
+    <button id="enterBtn">Entrer en VR</button>
+    <button id="enterArBtn" style="margin-top:12px; padding:10px 28px; font-size:14px; border-radius:30px; border:1px solid rgba(111,211,154,0.4); background:transparent; color:#c8ecd8; cursor:pointer;">📱 Essayer en AR (téléphone)</button>
+    <div id="loadBar"><div id="loadFill"></div></div>
+    <p id="decorStatus" style="font-size:12px;opacity:0.55;margin-top:10px;">Décor : recherche de la vidéo…</p>
+    <p id="decorWarning" style="font-size:12px;color:#ffcf6b;max-width:420px;margin:6px auto 0;"></p>
+    <p style="font-size:12px;opacity:0.5;margin-top:20px;">Aucun déplacement requis — reste simplement assis ou debout et regarde autour de toi.</p>
+    <p style="font-size:11px;opacity:0.4;margin-top:6px;">L'AR téléphone nécessite Chrome sur Android (ARCore). Utile pour prévisualiser sans casque.</p>
+  </div>
+</div>
+<div id="status"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+    "@mkkellogg/gaussian-splats-3d": "https://unpkg.com/@mkkellogg/gaussian-splats-3d@0.4.6/build/gaussian-splats-3d.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { VRButton } from 'three/addons/webxr/VRButton.js';
+import { ARButton } from 'three/addons/webxr/ARButton.js';
+import { createPerch } from './assets/oiseaux/oiseaux.js';
+import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
+
+// ===================== DÉTECTION APPAREIL (perf adaptative) =====================
+// Un téléphone (utilisé en mode AR pour prévisualiser sans casque) a beaucoup
+// moins de marge GPU qu'un Quest, dont le GPU XR2 Gen 2 est dédié à ce genre de
+// charge. On réduit certains effets coûteux en conséquence.
+let arMode = false; // session AR en cours (voir « VR ENTRY »)
+const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !/OculusBrowser|Quest/i.test(navigator.userAgent);
+const QUALITY = {
+  pollenCount: IS_MOBILE ? 60 : 140,
+  rayCount: IS_MOBILE ? 2 : 4,
+  wingFlutterFPS: IS_MOBILE ? 20 : 30, // throttle CPU du battement d'ailes (voir plus bas)
+};
+
+const statusEl = document.getElementById('status');
+const loadFill = document.getElementById('loadFill');
+const log = (m) => { statusEl.textContent = m; console.log(m); };
+
+// ===================== CONFIG =====================
+const XENO_CANTO_KEY = 'c8e0566ba6f028debbca0f13853898559847c82e';
+// Espèce de jour (chant via Xeno-canto) et sons de nuit (CC0, fixes)
+const BIRD_SPECIES_LIST = [
+  { common: 'Rougegorge familier', scientific: 'Erithacus rubecula' },
+  { common: 'Merle noir', scientific: 'Turdus merula' },
+  { common: 'Mésange charbonnière', scientific: 'Parus major' },
+  { common: 'Pinson des arbres', scientific: 'Fringilla coelebs' },
+  { common: 'Rossignol philomèle', scientific: 'Luscinia megarhynchos' },
+  { common: 'Chardonneret élégant', scientific: 'Carduelis carduelis' },
+  { common: 'Mésange bleue', scientific: 'Cyanistes caeruleus' },
+  { common: 'Sittelle torchepot', scientific: 'Sitta europaea' },
+  { common: 'Grimpereau des jardins', scientific: 'Certhia brachydactyla' },
+  { common: 'Troglodyte mignon', scientific: 'Troglodytes troglodytes' },
+  { common: 'Pouillot véloce', scientific: 'Phylloscopus collybita' },
+  { common: 'Fauvette à tête noire', scientific: 'Sylvia atricapilla' },
+  { common: 'Grive musicienne', scientific: 'Turdus philomelos' },
+  { common: 'Grive draine', scientific: 'Turdus viscivorus' },
+  { common: 'Étourneau sansonnet', scientific: 'Sturnus vulgaris' },
+  { common: 'Geai des chênes', scientific: 'Garrulus glandarius' },
+  { common: 'Pie bavarde', scientific: 'Pica pica' },
+  { common: 'Corneille noire', scientific: 'Corvus corone' },
+  { common: 'Choucas des tours', scientific: 'Corvus monedula' },
+  { common: 'Pic épeiche', scientific: 'Dendrocopos major' },
+  { common: 'Pic vert', scientific: 'Picus viridis' },
+  { common: 'Coucou gris', scientific: 'Cuculus canorus' },
+  { common: 'Tourterelle turque', scientific: 'Streptopelia decaocto' },
+  { common: 'Pigeon ramier', scientific: 'Columba palumbus' },
+  { common: 'Bruant jaune', scientific: 'Emberiza citrinella' },
+  { common: 'Verdier d\'Europe', scientific: 'Chloris chloris' },
+  { common: 'Tarin des aulnes', scientific: 'Spinus spinus' },
+  { common: 'Bouvreuil pivoine', scientific: 'Pyrrhula pyrrhula' },
+  { common: 'Roitelet huppé', scientific: 'Regulus regulus' },
+  { common: 'Accenteur mouchet', scientific: 'Prunella modularis' },
+  { common: 'Bergeronnette grise', scientific: 'Motacilla alba' },
+  { common: 'Hirondelle rustique', scientific: 'Hirundo rustica' },
+  { common: 'Huppe fasciée', scientific: 'Upupa epops' },
+  { common: 'Loriot d\'Europe', scientific: 'Oriolus oriolus' },
+  { common: 'Faucon crécerelle', scientific: 'Falco tinnunculus' },
+  { common: 'Buse variable', scientific: 'Buteo buteo' },
+];
+const BIRD_CYCLE_INTERVAL = 20; // secondes entre chaque nouvel oiseau
+const BIRD_RANDOM_ORDER = true; // false = séquentiel dans l'ordre de BIRD_SPECIES_LIST
+
+// ===================== SCENE =====================
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.05, 200);
+const rig = new THREE.Group();
+rig.add(camera);
+rig.position.set(0, 0, 0); // sur Quest 3/2, le repère 'local-floor' gère déjà la hauteur réelle
+scene.add(rig);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.xr.enabled = true;
+renderer.xr.setReferenceSpaceType('local-floor'); // évite le flottement : origine = sol réel
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const hemiLight = new THREE.HemisphereLight(0xbfe3c8, 0x2b1f14, 0.9); // sans HDRI, un peu plus fort qu'avant
+scene.add(hemiLight);
+const sun = new THREE.DirectionalLight(0xfff2d0, 0.8);
+sun.position.set(5, 8, 3);
+scene.add(sun);
+
+// Brouillard doux : profondeur, cohérence avec le décor forêt
+// Brouillard de scène retiré (rendait un voile vert perçu comme une brume gênante).
+
+// ============================================================================
+// DÉCOR VIDÉO 360° — remplace les HDRI. UN seul fichier équirectangulaire (.webm ou .mp4).
+// ============================================================================
+// Même rendu que Respire : dans le casque, la vidéo est confiée au compositeur du
+// Quest (couche média WebXR) ; repli automatique sur une sphère WebGL (aperçu PC,
+// AR téléphone, navigateur sans couches). Un `scene.background` Three.js ne se
+// rafraîchit pas pour une vidéo : c'est pour ça qu'on ne l'utilise pas.
+const USE_XR_MEDIA_LAYER = true;
+const VIDEO_STEREO = 'mono';   // 'mono' | 'stereo-top-bottom' | 'stereo-left-right' (couche média seulement)
+const VIDEO_YAW_DEG = -90;     // place le CENTRE de l'image face à l'utilisateur
+const VIDEO_BRIGHTNESS = 0.85; // 1 = tel quel, <1 assombrit (aide la lisibilité du texte)
+const VIDEO_LETTERBOX = 0;     // fraction à rogner en haut ET en bas (ex: 0.0556 si la vidéo contient du 2:1 avec des bandes noires)
+
+// Où chercher le fichier, et sous quels noms (majuscule initiale et accents tolérés :
+// « Clairiere.webm », « foret.mp4 »…). Pour un autre nom : ajoute-le dans `names`.
+// ⚠ Chaque combinaison dossier × nom × orthographe × extension est testée par une requête
+// (toutes lancées en parallèle) : 64 aujourd'hui. Garde la liste courte.
+const VIDEO_DIRS = ['./asset/', './assets/', './assets/video/', './video/'];
+const VIDEO_EXTS = ['webm', 'mp4'];
+const DECORS = [
+  { label: 'Clairière', names: ['clairiere', 'clairière', 'foret'] },
+];
+const AMBIENT_FROM_VIDEO = true;   // la lumière d'ambiance (modèles 3D) prend les couleurs du décor
+
+const $ = (id) => document.getElementById(id);
+async function fileExists(url) {
+  try { const r = await fetch(url, { method: 'HEAD', cache: 'no-store' }); return r.ok; }
+  catch (e) { return false; }
+}
+
+// Animations pilotées par la boucle de rendu (window.requestAnimationFrame ne tourne
+// pas pendant une session VR immersive).
+const tweens = [];
+function tween(from, to, sec, onUpdate) {
+  return new Promise((resolve) => {
+    tweens.push({ from, to, dur: Math.max(0.0001, sec), t: 0, onUpdate, resolve });
+    onUpdate(from);
+  });
+}
+function updateTweens(dt) {
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const tw = tweens[i];
+    tw.t += dt;
+    const k = Math.min(1, tw.t / tw.dur);
+    const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    tw.onUpdate(tw.from + (tw.to - tw.from) * e);
+    if (k >= 1) { tweens.splice(i, 1); tw.resolve(); }
+  }
+}
+
+// Éléments de Respire (étoiles, ciel, tutoriel, aide) qui n'existent pas ici : le bloc
+// vidéo les touche, on lui donne des équivalents inertes.
+const stars = { visible: false };
+const skyTexture = null;
+const tutorialPanel = { mesh: { visible: false } };
+function drawTutorial() {}
+function drawHud() {}
+
+let decorList = [];           // [{ label, url }] — seulement les décors trouvés
+let decorChoice = 'random';   // 'random' ou index dans decorList
+let decorIndex = -1, decorBusy = false, videoActive = false;
+let decorReady = false, decorRevealed = false, decorRevealWanted = false;
+let decorOpacity = 0;         // 0 = décor invisible, 1 = pleinement visible (fondus)
+
+const decorVideo = document.createElement('video');
+decorVideo.loop = true; decorVideo.muted = true; decorVideo.playsInline = true;
+decorVideo.preload = 'auto'; decorVideo.crossOrigin = 'anonymous';
+decorVideo.setAttribute('playsinline', '');
+decorVideo.addEventListener('ended', () => { decorVideo.currentTime = 0; decorVideo.play().catch(() => {}); }); // boucle de secours
+
+const decorTexture = new THREE.VideoTexture(decorVideo);
+decorTexture.colorSpace = THREE.SRGBColorSpace;
+decorTexture.minFilter = THREE.LinearFilter; decorTexture.magFilter = THREE.LinearFilter;
+decorTexture.generateMipmaps = false;
+if (VIDEO_LETTERBOX > 0) { decorTexture.repeat.set(1, 1 - 2 * VIDEO_LETTERBOX); decorTexture.offset.set(0, VIDEO_LETTERBOX); }
+
+const decorMat = new THREE.MeshBasicMaterial({
+  map: decorTexture, color: new THREE.Color(VIDEO_BRIGHTNESS, VIDEO_BRIGHTNESS, VIDEO_BRIGHTNESS),
+  toneMapped: false, transparent: true, opacity: 0, depthWrite: false
+});
+const decorGeo = new THREE.SphereGeometry(60, 64, 48);
+decorGeo.scale(-1, 1, 1); // vue de l'intérieur, sans effet miroir
+const decorSphere = new THREE.Mesh(decorGeo, decorMat);
+decorSphere.position.set(0, 1.6, 0);
+decorSphere.rotation.y = THREE.MathUtils.degToRad(VIDEO_YAW_DEG);
+decorSphere.renderOrder = -10;
+decorSphere.visible = false;
+scene.add(decorSphere);
+
+// Voile noir (mode couche média) : la couche vidéo est DERRIÈRE notre rendu et
+// n'a pas d'opacité réglable — on fait donc les fondus avec un voile noir
+// par-dessus. Il applique aussi VIDEO_BRIGHTNESS.
+const veilMat = new THREE.MeshBasicMaterial({
+  color: 0x000000, side: THREE.BackSide, transparent: true, opacity: 1, depthWrite: false, toneMapped: false
+});
+const veil = new THREE.Mesh(new THREE.SphereGeometry(30, 32, 16), veilMat);
+veil.renderOrder = -9; veil.visible = false;
+scene.add(veil);
+
+let mediaLayerMode = false;   // vrai si la session VR en cours affiche la vidéo par couche média
+let mediaBinding = null, mediaLayer = null;
+
+function canUseMediaLayer(session) {
+  if (!USE_XR_MEDIA_LAYER || VIDEO_LETTERBOX > 0 || !session) return false;
+  if (typeof XRMediaBinding === 'undefined' || typeof XRRigidTransform === 'undefined') return false;
+  if (session.renderState.layers === undefined) return false;      // navigateur sans « layers »
+  const base = renderer.xr.getBaseLayer();
+  return !!base && typeof XRProjectionLayer !== 'undefined' && base instanceof XRProjectionLayer;
+}
+function attachMediaLayer() {
+  const session = renderer.xr.getSession();
+  if (!mediaLayerMode || !session || !videoActive) return;
+  try {
+    if (!mediaBinding) mediaBinding = new XRMediaBinding(session);
+    // Même convention que la sphère : VIDEO_YAW_DEG = -90 ⇒ centre de l'image devant soi.
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(VIDEO_YAW_DEG + 90));
+    const layer = mediaBinding.createEquirectLayer(decorVideo, {
+      space: renderer.xr.getReferenceSpace(),
+      layout: VIDEO_STEREO,
+      transform: new XRRigidTransform({ x: 0, y: 0, z: 0, w: 1 }, { x: q.x, y: q.y, z: q.z, w: q.w }),
+      radius: 0, // 0 = sphère infinie (comme un ciel, sans parallaxe)
+      centralHorizontalAngle: Math.PI * 2, upperVerticalAngle: Math.PI / 2, lowerVerticalAngle: -Math.PI / 2,
+    });
+    const old = mediaLayer;
+    session.updateRenderState({ layers: [layer, renderer.xr.getBaseLayer()] }); // vidéo derrière, notre rendu devant
+    mediaLayer = layer;
+    if (old && old.destroy) { try { old.destroy(); } catch (e) {} }
+  } catch (e) {
+    log('Couche média indisponible, repli sur la sphère WebGL : ' + e.message);
+    mediaLayerMode = false; mediaLayer = null;
+  }
+  applyDecorDisplay();
+}
+function detachMediaLayer() {
+  const session = renderer.xr.getSession();
+  if (session && mediaLayer) { try { session.updateRenderState({ layers: [renderer.xr.getBaseLayer()] }); } catch (e) {} }
+  if (mediaLayer && mediaLayer.destroy) { try { mediaLayer.destroy(); } catch (e) {} }
+  mediaLayer = null;
+}
+
+// Applique l'état courant (vidéo ou ciel, couche média ou sphère, opacité)
+function applyDecorDisplay() {
+  if (arMode) { // AR : rien derrière la scène, on voit la pièce
+    decorSphere.visible = false; veil.visible = false; stars.visible = false; scene.background = null;
+    return;
+  }
+  if (!videoActive) {
+    decorSphere.visible = false; veil.visible = false;
+    stars.visible = true; scene.background = skyTexture;
+    return;
+  }
+  stars.visible = false;
+  if (mediaLayerMode && mediaLayer) {
+    decorSphere.visible = false;
+    scene.background = null;              // rendu transparent → on voit la couche vidéo derrière
+    veil.visible = true;
+    veilMat.opacity = 1 - decorOpacity * VIDEO_BRIGHTNESS;
+  } else {
+    veil.visible = false;
+    scene.background = skyTexture;
+    decorSphere.visible = true;
+    decorMat.opacity = decorOpacity;
+  }
+}
+function setDecorOpacity(v) { decorOpacity = v; applyDecorDisplay(); }
+
+function setDecorFallback() {
+  videoActive = false; decorReady = false; decorRevealed = false; decorOpacity = 0;
+  detachMediaLayer();
+  applyDecorDisplay();
+}
+function revealDecor() {
+  decorRevealWanted = true;
+  if (!decorReady || decorRevealed) return;
+  decorRevealed = true;
+  tween(decorOpacity, 1, 1.8, setDecorOpacity);
+}
+async function loadDecor(index, { revealNow = false } = {}) {
+  if (index < 0 || !decorList.length) { setDecorFallback(); return; }
+  decorBusy = true; decorReady = false; decorRevealed = false; decorRevealWanted = revealNow;
+  if (videoActive && decorOpacity > 0.01) await tween(decorOpacity, 0, 0.5, setDecorOpacity);
+  decorIndex = index;
+  const ok = await new Promise((resolve) => {
+    const onOk = () => { cleanup(); resolve(true); };
+    const onKo = () => { cleanup(); resolve(false); };
+    const cleanup = () => { decorVideo.removeEventListener('loadeddata', onOk); decorVideo.removeEventListener('error', onKo); };
+    decorVideo.addEventListener('loadeddata', onOk);
+    decorVideo.addEventListener('error', onKo);
+    decorVideo.src = decorList[index].url;
+    decorVideo.load();
+    decorVideo.play().catch(() => {});
+  });
+  if (!ok) { log('Vidéo illisible : ' + decorList[index].url); setDecorFallback(); decorBusy = false; drawHud(); return; }
+  videoActive = true; decorReady = true; decorBusy = false;
+  if (mediaLayerMode) attachMediaLayer(); else applyDecorDisplay();
+  if (tutorialPanel.mesh.visible) drawTutorial();
+  if (decorVideo.videoWidth > 4096 && renderer.xr.isPresenting && !mediaLayerMode) {
+    log('⚠ Vidéo > 4K sans couche média : scintillement probable (voir README)');
+  }
+  if (decorRevealWanted) revealDecor();
+  drawHud();
+}
+function pickInitialDecor() {
+  if (!decorList.length) return -1;
+  if (decorChoice === 'random') return Math.floor(Math.random() * decorList.length);
+  return Math.min(decorChoice, decorList.length - 1);
+}
+function nextDecor() {
+  if (decorBusy || decorList.length < 2) return;
+  loadDecor((decorIndex + 1) % decorList.length, { revealNow: true });
+}
+
+// Recherche des décors par NOM, dans tous les dossiers/extensions/orthographes.
+// Les accents sont essayés sous les deux formes Unicode (NFC et NFD : un fichier
+// « forêt » créé sur Mac n'a pas les mêmes octets que sur Windows/Linux).
+function nameVariants(name) {
+  const out = new Set();
+  for (const n of [name, name.charAt(0).toUpperCase() + name.slice(1)]) {
+    out.add(n.normalize('NFC')); out.add(n.normalize('NFD'));
+  }
+  return [...out];
+}
+async function findDecorFile(decor) {
+  const candidates = [];
+  for (const d of VIDEO_DIRS) for (const n of decor.names) for (const v of nameVariants(n)) for (const e of VIDEO_EXTS) {
+    candidates.push(encodeURI(`${d}${v}.${e}`));
+  }
+  const unique = [...new Set(candidates)];
+  const found = await Promise.all(unique.map(fileExists));
+  const i = found.indexOf(true);  // ordre de priorité : dossier, puis orthographe, puis extension
+  return i >= 0 ? unique[i] : null;
+}
+async function discoverDecors() {
+  const urls = await Promise.all(DECORS.map(findDecorFile));
+  const list = [], missing = [];
+  DECORS.forEach((d, i) => { if (urls[i]) list.push({ label: d.label, url: urls[i] }); else missing.push(d.names[0]); });
+  $('decorWarning').textContent = !list.length
+    ? '⚠ Aucune vidéo de décor trouvée (« clairiere.webm » ou « foret.webm » dans un dossier « asset ») — fond sombre à la place.'
+    : missing.length ? '⚠ Décor(s) introuvable(s) : ' + missing.join(', ') + ' (.webm ou .mp4 dans « asset »)' : '';
+  return list;
+}
+
+
+// Barre de chargement = part de la vidéo déjà téléchargée
+decorVideo.addEventListener('progress', () => {
+  try {
+    const b = decorVideo.buffered;
+    if (b.length && decorVideo.duration) loadFill.style.width = Math.min(100, b.end(b.length - 1) / decorVideo.duration * 100).toFixed(0) + '%';
+  } catch (e) { /* pas grave */ }
+});
+
+// Recherche + chargement dès l'ouverture de la page (vidéo muette : lecture auto autorisée),
+// pour qu'elle soit prête quand on appuie sur « Entrer ».
+async function bootDecor() {
+  const res = await discoverDecors();
+  if (Array.isArray(res)) decorList = res;
+  if (!decorList.length) { $('decorStatus').textContent = 'Décor : aucune vidéo trouvée (fond sombre)'; return; }
+  $('decorStatus').textContent = 'Décor : chargement de la vidéo…';
+  await loadDecor(0);
+  const dims = decorVideo.videoWidth ? ' · ' + decorVideo.videoWidth + '×' + decorVideo.videoHeight : '';
+  $('decorStatus').textContent = videoActive
+    ? 'Décor : vidéo prête' + dims
+    : 'Décor : vidéo illisible (codec ou résolution non supportés ?)';
+}
+
+// Lumière d'ambiance des modèles 3D (papillon, libellule, splat…) : sans HDRI il n'y a plus
+// d'éclairage par l'image ; on échantillonne donc la vidéo (zone devant l'utilisateur) pour
+// teinter le ciel/sol de la lumière hémisphérique. Rare (toutes les 15 s) pour ne jamais
+// provoquer d'à-coup dans le casque ; sans effet (couleurs par défaut) si la lecture de
+// l'image est impossible.
+const ambSampleCanvas = document.createElement('canvas'); ambSampleCanvas.width = 16; ambSampleCanvas.height = 8;
+const ambSampleCtx = ambSampleCanvas.getContext('2d', { willReadFrequently: true });
+const ambTop = new THREE.Color(0xbfe3c8), ambBottom = new THREE.Color(0x2b1f14);
+let ambNextSample = 0, ambOk = AMBIENT_FROM_VIDEO;
+function updateDecorAmbient(nowSec, dt) {
+  hemiLight.color.lerp(ambTop, Math.min(1, dt * 0.6));
+  hemiLight.groundColor.lerp(ambBottom, Math.min(1, dt * 0.6));
+  if (!ambOk || !videoActive || decorVideo.readyState < 2 || nowSec < ambNextSample) return;
+  ambNextSample = nowSec + 15;
+  try {
+    const vw = decorVideo.videoWidth, vh = decorVideo.videoHeight;
+    ambSampleCtx.drawImage(decorVideo, vw * 0.25, vh * 0.15, vw * 0.5, vh * 0.7, 0, 0, 16, 8);
+    const d = ambSampleCtx.getImageData(0, 0, 16, 8).data;
+    const acc = [0, 0, 0, 0, 0, 0];
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 16; x++) {
+      const i = (y * 16 + x) * 4, o = y < 4 ? 0 : 3;
+      acc[o] += d[i]; acc[o + 1] += d[i + 1]; acc[o + 2] += d[i + 2];
+    }
+    const n = 64 * 255;
+    const top = new THREE.Color().setRGB(acc[0] / n, acc[1] / n, acc[2] / n, THREE.SRGBColorSpace);
+    const bottom = new THREE.Color().setRGB(acc[3] / n, acc[4] / n, acc[5] / n, THREE.SRGBColorSpace);
+    if (top.r + top.g + top.b < 0.03) return;            // image noire (lecture impossible) : on garde les défauts
+    ambTop.copy(top).lerp(new THREE.Color(0xffffff), 0.25);   // une lumière d'ambiance, pas une copie du décor
+    ambBottom.copy(bottom).multiplyScalar(0.8);
+  } catch (e) { ambOk = false; }                          // image illisible (couche média…) : on n'insiste pas
+}
+
+// ===================== RAYONS DE LUMIÈRE VOLUMÉTRIQUES (god rays légers) =====================
+// Technique légère sans post-processing : texture en dégradé radial (longueur ET
+// largeur, pour un bord doux plutôt qu'un rectangle net), rendu additif.
+function makeRayTexture() {
+  const w = 64, h = 128;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  // Dégradé vertical (intensité qui décroît vers le bas du rayon)
+  ctx.fillStyle = (() => {
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, 'rgba(255,244,200,0.55)');
+    g.addColorStop(0.7, 'rgba(255,244,200,0.15)');
+    g.addColorStop(1, 'rgba(255,244,200,0)');
+    return g;
+  })();
+  ctx.fillRect(0, 0, w, h);
+  // Masque horizontal (dégradé radial) pour adoucir les bords latéraux —
+  // évite l'effet "rectangle plat" visible de face en VR
+  ctx.globalCompositeOperation = 'destination-in';
+  const maskGrad = ctx.createRadialGradient(w/2, h*0.35, 0, w/2, h*0.35, w/2);
+  maskGrad.addColorStop(0, 'rgba(255,255,255,1)');
+  maskGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = maskGrad;
+  ctx.fillRect(0, 0, w, h);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const rayTexture = makeRayTexture();
+const rayMat = new THREE.MeshBasicMaterial({
+  map: rayTexture, transparent:true, depthWrite:false, side:THREE.DoubleSide,
+  blending: THREE.AdditiveBlending, fog:false
+});
+const sunDir = new THREE.Vector3(5, 8, 3).normalize();
+const godRaysGroup = new THREE.Group();
+const rays = [];
+const RAY_COUNT = QUALITY.rayCount; // moins nombreux sur mobile (moins de marge GPU)
+for (let i = 0; i < RAY_COUNT; i++) {
+  const height = 2.6 + Math.random()*1.2;
+  const width = 0.4 + Math.random()*0.35; // plus large, pour un dégradé plus progressif
+  const geo = new THREE.PlaneGeometry(width, height);
+  geo.translate(0, -height/2, 0); // pivot en haut du rayon
+  const ray = new THREE.Mesh(geo, rayMat.clone());
+  const spread = 2.2;
+  ray.position.set(
+    sunDir.x * 3 + (Math.random()-0.5)*spread,
+    3.0 + Math.random()*0.6,
+    sunDir.z * 3 + (Math.random()-0.5)*spread - 1
+  );
+  ray.userData = {
+    baseOpacity: 0.35 + Math.random()*0.2, // plus subtil qu'avant
+    flickerSeed: Math.random()*100, swaySeed: Math.random()*100
+  };
+  godRaysGroup.add(ray);
+  rays.push(ray);
+}
+scene.add(godRaysGroup);
+function updateGodRays(t) {
+  rays.forEach(r => {
+    // Billboard partiel vers la caméra sur l'axe Y : évite l'effet "plan vu de
+    // tranche" qui révèle la platitude en vision stéréo, tout en gardant une
+    // direction générale cohérente avec le soleil (mélange 60% soleil / 40% caméra)
+    const toCam = camera.getWorldPosition(new THREE.Vector3()).sub(r.position).setY(0).normalize();
+    const blended = sunDir.clone().setY(0).normalize().multiplyScalar(0.6).addScaledVector(toCam, 0.4).normalize();
+    const angle = Math.atan2(blended.x, blended.z);
+    r.rotation.y = angle;
+    r.rotation.x = -0.25; // incliné vers le bas, façon rayon qui traverse la canopée
+
+    const flicker = 0.85 + Math.sin(t*0.6 + r.userData.flickerSeed) * 0.15;
+    r.material.opacity = r.userData.baseOpacity * flicker;
+    r.rotation.z = Math.sin(t*0.15 + r.userData.swaySeed) * 0.03;
+  });
+}
+// Texture radiale douce générée par canvas (pas de fichier externe nécessaire)
+function makeRadialTexture(inner, outer) {
+  const size = 128;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  grad.addColorStop(0, inner);
+  grad.addColorStop(1, outer);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// ===================== PARTICULES DE POLLEN / POUSSIÈRE DE LUMIÈRE =====================
+const pollenTexture = makeRadialTexture('rgba(255,250,220,0.9)', 'rgba(255,250,220,0)');
+const POLLEN_COUNT = QUALITY.pollenCount;
+const pollenGeo = new THREE.BufferGeometry();
+const pollenPos = new Float32Array(POLLEN_COUNT * 3);
+const pollenSeed = new Float32Array(POLLEN_COUNT);
+for (let i = 0; i < POLLEN_COUNT; i++) {
+  const ang = Math.random() * Math.PI * 2;
+  const r = Math.random() * 4.5;
+  pollenPos[i*3]   = Math.cos(ang) * r;
+  pollenPos[i*3+1] = Math.random() * 2.6;
+  pollenPos[i*3+2] = Math.sin(ang) * r;
+  pollenSeed[i] = Math.random() * 100;
+}
+pollenGeo.setAttribute('position', new THREE.BufferAttribute(pollenPos, 3));
+const pollenMat = new THREE.PointsMaterial({
+  map: pollenTexture, size: 0.045, transparent: true, opacity: 0.6,
+  depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true
+});
+const pollen = new THREE.Points(pollenGeo, pollenMat);
+scene.add(pollen);
+
+// ===================== OMBRES DE CONTACT (fausse AO sous les créatures volantes) =====================
+const shadowTexture = makeRadialTexture('rgba(10,20,10,0.5)', 'rgba(10,20,10,0)');
+function createContactShadow(baseScale=0.15) {
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({ map: shadowTexture, transparent:true, depthWrite:false, fog:false })
+  );
+  mesh.rotation.x = -Math.PI/2;
+  mesh.userData.baseScale = baseScale;
+  scene.add(mesh);
+  return mesh;
+}
+// Suit une créature au sol, s'assombrit/rétrécit avec la hauteur (ancrage visuel)
+function updateContactShadow(shadowMesh, target, groundY=0.01) {
+  if (!target.visible) { shadowMesh.visible = false; return; }
+  shadowMesh.visible = true;
+  shadowMesh.position.set(target.position.x, groundY, target.position.z);
+  const height = Math.max(0, target.position.y - groundY);
+  const falloff = THREE.MathUtils.clamp(1 - height / 2.2, 0.15, 1);
+  const s = shadowMesh.userData.baseScale * (0.6 + falloff * 0.4);
+  shadowMesh.scale.set(s, s, s);
+  shadowMesh.material.opacity = falloff * 0.6;
+}
+
+// ===================== AUDIO (binaural / positionnel) =====================
+const listener = new THREE.AudioListener();
+camera.add(listener);
+const audioLoader = new THREE.AudioLoader();
+
+function playPositionalSound(url, pos, volume=0.6, loop=false, fadeInDuration=0) {
+  const sound = new THREE.PositionalAudio(listener);
+  audioLoader.load(url, (buffer) => {
+    sound.setBuffer(buffer);
+    sound.setRefDistance(2);
+    sound.setLoop(loop);
+    sound.play();
+    if (fadeInDuration > 0) fadeInSound(sound, volume, fadeInDuration);
+    else sound.setVolume(volume);
+  });
+  const holder = new THREE.Object3D();
+  holder.position.copy(pos);
+  holder.add(sound);
+  scene.add(holder);
+  return sound;
+}
+
+// Ambiance de fond — sons CC0 (BigSoundBank), à déposer dans assets/audio/ :
+// - foret-ambiance.mp3 : https://bigsoundbank.com/UPLOAD/mp3/0100.mp3
+// - foret-ruisseau.mp3 : https://bigsoundbank.com/UPLOAD/mp3/2713.mp3
+const fadingValues = []; // { setter, from, target, start, duration, onComplete }
+function fadeValue(setter, target, duration, from=0) {
+  setter(from);
+  fadingValues.push({ setter, from, target, start: performance.now(), duration: duration*1000 });
+}
+function fadeValueTo(setter, from, target, duration, onComplete) {
+  fadingValues.push({ setter, from, target, start: performance.now(), duration: duration*1000, onComplete });
+}
+function fadeInSound(sound, targetVolume, duration=3) {
+  fadeValue((v) => sound.setVolume(v), targetVolume, duration);
+}
+// Fondu de sortie d'un son (depuis son volume actuel jusqu'à 0), avec arrêt à la fin
+function fadeOutSound(sound, duration=1.5) {
+  return new Promise((resolve) => {
+    const from = sound.getVolume ? sound.getVolume() : 1;
+    fadeValueTo((v) => sound.setVolume(v), from, 0, duration, () => {
+      if (sound.isPlaying) sound.stop();
+      resolve();
+    });
+  });
+}
+function updateFades() {
+  const now = performance.now();
+  for (let i = fadingValues.length - 1; i >= 0; i--) {
+    const f = fadingValues[i];
+    const p = Math.min(1, (now - f.start) / f.duration);
+    f.setter(f.from + (f.target - f.from) * p);
+    if (p >= 1) { fadingValues.splice(i, 1); if (f.onComplete) f.onComplete(); }
+  }
+}
+
+function startAmbience() {
+  // Lit de fond général, non positionnel (partout autour de soi), fondu à l'entrée
+  ambSound = new THREE.Audio(listener);
+  audioLoader.load('./assets/audio/foret-ambiance.mp3', (buffer) => {
+    ambSound.setBuffer(buffer); ambSound.setLoop(true); ambSound.play();
+    fadeInSound(ambSound, 0.15, 4); // -50% par rapport à avant
+  }, undefined, () => log('Ajoute assets/audio/foret-ambiance.mp3 (voir bigsoundbank.com/UPLOAD/mp3/0100.mp3)'));
+
+  // Ruisseau positionnel, placé sur un côté pour un effet binaural marqué, fondu à l'entrée
+  streamSound = playPositionalSound('./assets/audio/foret-ruisseau.mp3', new THREE.Vector3(3, 0.2, -2), 0.5, true, 4);
+}
+
+// ===================== MATÉRIALISATION / DISSOLUTION =====================
+// Anime l'apparition d'un objet (splat, oiseau...) par un scale-in avec léger
+// rebond, accompagné d'une brève pluie d'étincelles pour un effet "dissolution".
+function easeOutBack(x) {
+  const c1 = 1.4, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+}
+const materializations = []; // { obj, targetScale, start, duration, onComplete }
+function materialize(obj, duration=2.2, onComplete=null) {
+  const targetScale = obj.scale.clone();
+  obj.scale.setScalar(0.0001);
+  obj.visible = true;
+  materializations.push({ obj, targetScale, start: performance.now(), duration: duration*1000, onComplete });
+  spawnSparkleBurst(obj.position.clone());
+}
+function updateMaterializations() {
+  const now = performance.now();
+  for (let i = materializations.length - 1; i >= 0; i--) {
+    const m = materializations[i];
+    const p = Math.min(1, (now - m.start) / m.duration);
+    const eased = easeOutBack(p);
+    m.obj.scale.set(m.targetScale.x*eased, m.targetScale.y*eased, m.targetScale.z*eased);
+    if (p >= 1) { m.obj.scale.copy(m.targetScale); materializations.splice(i, 1); if (m.onComplete) m.onComplete(); }
+  }
+}
+
+// Dissolution de sortie (symétrique de materialize) : rétrécit puis cache l'objet,
+// remet son échelle pleine (invisible) pour que le prochain materialize() reparte juste.
+const dematerializations = []; // { obj, fullScale, start, duration, onComplete }
+function dematerialize(obj, duration=1.3, onComplete=null) {
+  const fullScale = obj.scale.clone();
+  dematerializations.push({ obj, fullScale, start: performance.now(), duration: duration*1000, onComplete });
+}
+function updateDematerializations() {
+  const now = performance.now();
+  for (let i = dematerializations.length - 1; i >= 0; i--) {
+    const d = dematerializations[i];
+    const p = Math.min(1, (now - d.start) / d.duration);
+    const s = 1 - p;
+    d.obj.scale.set(d.fullScale.x*s, d.fullScale.y*s, d.fullScale.z*s);
+    if (p >= 1) {
+      d.obj.visible = false;
+      d.obj.scale.copy(d.fullScale); // pleine échelle mais invisible, prêt pour le prochain materialize()
+      dematerializations.splice(i, 1);
+      if (d.onComplete) d.onComplete();
+    }
+  }
+}
+
+const sparkleTexture = makeRadialTexture('rgba(255,255,235,1)', 'rgba(255,255,235,0)');
+function spawnSparkleBurst(position, count=26) {
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(count*3);
+  const vel = new Float32Array(count*3);
+  for (let i = 0; i < count; i++) {
+    pos[i*3] = position.x; pos[i*3+1] = position.y; pos[i*3+2] = position.z;
+    const theta = Math.random()*Math.PI*2, phi = Math.random()*Math.PI;
+    const speed = 0.3 + Math.random()*0.4;
+    vel[i*3]   = Math.sin(phi)*Math.cos(theta)*speed;
+    vel[i*3+1] = Math.cos(phi)*speed + 0.2;
+    vel[i*3+2] = Math.sin(phi)*Math.sin(theta)*speed;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({
+    map: sparkleTexture, size:0.05, transparent:true, opacity:1,
+    depthWrite:false, blending:THREE.AdditiveBlending
+  });
+  const points = new THREE.Points(geo, mat);
+  scene.add(points);
+  sparkleBursts.push({ points, vel, start: performance.now(), duration: 1200 });
+}
+const sparkleBursts = [];
+function updateSparkleBursts(dt) {
+  const now = performance.now();
+  for (let i = sparkleBursts.length - 1; i >= 0; i--) {
+    const b = sparkleBursts[i];
+    const p = (now - b.start) / b.duration;
+    if (p >= 1) { scene.remove(b.points); b.points.geometry.dispose(); b.points.material.dispose(); sparkleBursts.splice(i,1); continue; }
+    const arr = b.points.geometry.attributes.position.array;
+    for (let j = 0; j < b.vel.length/3; j++) {
+      arr[j*3]   += b.vel[j*3]   * dt;
+      arr[j*3+1] += (b.vel[j*3+1] - 0.6*p) * dt; // légère gravité
+      arr[j*3+2] += b.vel[j*3+2] * dt;
+    }
+    b.points.geometry.attributes.position.needsUpdate = true;
+    b.points.material.opacity = 1 - p;
+  }
+}
+
+// ===================== PANNEAU PÉDAGOGIQUE (texte flottant) =====================
+function createInfoPanel(title, body, subtitle='') {
+  const canvas = document.createElement('canvas');
+  canvas.width = 920; canvas.height = 580;
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent:true, opacity:0, depthWrite:false });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.725), material);
+  mesh.visible = false;
+  scene.add(mesh);
+  const panel = { mesh, material, canvas, texture };
+  drawInfoPanel(panel, title, body, subtitle);
+  return panel;
+}
+
+// Charge une image externe en autorisant son usage sur canvas->texture (CORS).
+// Renvoie null en cas d'échec plutôt que de faire planter l'affichage de la fiche.
+function loadImageCORS(url) {
+  return new Promise((resolve) => {
+    if (!url) { resolve(null); return; }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      // Repli : certains serveurs (ex. Xeno-canto) ne renvoient pas d'en-têtes
+      // CORS, ce qui bloque l'usage de l'image comme texture WebGL même si elle
+      // s'affiche très bien dans un <img> classique. On repasse par un proxy
+      // d'image public gratuit (images.weserv.nl) qui ajoute ces en-têtes.
+      const proxied = new Image();
+      proxied.crossOrigin = 'anonymous';
+      proxied.onload = () => resolve(proxied);
+      proxied.onerror = () => resolve(null);
+      const cleanUrl = url.replace(/^https?:\/\//, '');
+      proxied.src = 'https://images.weserv.nl/?url=' + encodeURIComponent(cleanUrl);
+    };
+    img.src = url;
+  });
+}
+
+// Petit badge coloré indiquant le type d'enregistrement (chant/cri/tambourinage...),
+// traduit depuis le champ `type` de Xeno-canto quand disponible.
+function buildRecordingTag(rec) {
+  if (!rec.type) return null;
+  const t = rec.type.toLowerCase();
+  if (t.includes('song')) return 'Chant';
+  if (t.includes('call')) return 'Cri';
+  if (t.includes('drum')) return 'Tambourinage';
+  if (t.includes('alarm')) return 'Alarme';
+  if (t.includes('flight')) return 'En vol';
+  return rec.type.charAt(0).toUpperCase() + rec.type.slice(1);
+}
+
+function drawInfoPanel(panel, title, body, subtitle='', photoImg=null, sonoImg=null, tag=null) {
+  const canvas = panel.canvas;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // ----- Fond en dégradé (plus profond en bas), avec ombre portée douce -----
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 32;
+  ctx.shadowOffsetY = 10;
+  const bgGrad = ctx.createLinearGradient(0, 10, 0, H-10);
+  bgGrad.addColorStop(0, 'rgba(18, 42, 28, 0.90)');
+  bgGrad.addColorStop(1, 'rgba(8, 20, 14, 0.92)');
+  ctx.fillStyle = bgGrad;
+  roundRect(ctx, 10, 10, W-20, H-20, 30); ctx.fill();
+  ctx.restore();
+
+  // Liseré double : lueur douce extérieure + trait net intérieur
+  ctx.strokeStyle = 'rgba(150, 220, 180, 0.22)'; ctx.lineWidth = 8;
+  roundRect(ctx, 10, 10, W-20, H-20, 30); ctx.stroke();
+  ctx.strokeStyle = 'rgba(180, 235, 200, 0.65)'; ctx.lineWidth = 2;
+  roundRect(ctx, 10, 10, W-20, H-20, 30); ctx.stroke();
+
+  // ----- Photo de l'espèce (haut-droit), médaillon avec halo -----
+  const hasPhoto = !!photoImg;
+  const photoBox = { x: W-236, y: 34, w: 200, h: 200, r: 22 };
+  if (hasPhoto) {
+    // Halo doux derrière le médaillon
+    ctx.save();
+    ctx.shadowColor = 'rgba(150,220,180,0.5)';
+    ctx.shadowBlur = 22;
+    ctx.fillStyle = 'rgba(150,220,180,0.15)';
+    roundRect(ctx, photoBox.x-4, photoBox.y-4, photoBox.w+8, photoBox.h+8, photoBox.r+4); ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    roundRect(ctx, photoBox.x, photoBox.y, photoBox.w, photoBox.h, photoBox.r);
+    ctx.clip();
+    const ir = photoImg.width / photoImg.height, br = photoBox.w / photoBox.h;
+    let sx=0, sy=0, sw=photoImg.width, sh=photoImg.height;
+    if (ir > br) { sw = photoImg.height*br; sx = (photoImg.width-sw)/2; }
+    else { sh = photoImg.width/br; sy = (photoImg.height-sh)/2; }
+    ctx.drawImage(photoImg, sx, sy, sw, sh, photoBox.x, photoBox.y, photoBox.w, photoBox.h);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(220,245,230,0.8)'; ctx.lineWidth = 2.5;
+    roundRect(ctx, photoBox.x, photoBox.y, photoBox.w, photoBox.h, photoBox.r); ctx.stroke();
+
+    ctx.font = 'italic 13px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(200,235,210,0.55)';
+    ctx.textAlign = 'center';
+    ctx.fillText('Photo : Wikipedia', photoBox.x + photoBox.w/2, photoBox.y + photoBox.h + 22);
+    ctx.textAlign = 'left';
+  }
+
+  const textMaxWidth = hasPhoto ? photoBox.x - 64 : W - 88;
+
+  // ----- Icône + titre -----
+  ctx.font = '600 44px system-ui, sans-serif';
+  ctx.fillStyle = '#f2fff6';
+  ctx.fillText('🐦 ' + title, 44, 76);
+
+  let cursorY = 76;
+  if (subtitle) {
+    cursorY += 36;
+    ctx.font = 'italic 25px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(205,238,215,0.78)';
+    ctx.fillText(subtitle, 44, cursorY);
+  }
+
+  // Badge du type d'enregistrement (pilule colorée), aligné à droite du titre
+  if (tag) {
+    ctx.font = '600 18px system-ui, sans-serif';
+    const tw = ctx.measureText(tag).width;
+    const padX = 16, pillW = tw + padX*2, pillH = 34;
+    const pillX = Math.min(44 + textMaxWidth - pillW, W - 44 - pillW);
+    const pillY = 30;
+    ctx.fillStyle = 'rgba(150,220,180,0.18)';
+    roundRect(ctx, pillX, pillY, pillW, pillH, pillH/2); ctx.fill();
+    ctx.strokeStyle = 'rgba(180,235,200,0.5)'; ctx.lineWidth = 1.5;
+    roundRect(ctx, pillX, pillY, pillW, pillH, pillH/2); ctx.stroke();
+    ctx.fillStyle = 'rgba(220,250,230,0.95)';
+    ctx.fillText(tag, pillX + padX, pillY + 23);
+  }
+
+  // Séparateur dégradé sous l'en-tête
+  cursorY += 26;
+  const divGrad = ctx.createLinearGradient(44, 0, 44+textMaxWidth, 0);
+  divGrad.addColorStop(0, 'rgba(180,235,200,0.5)');
+  divGrad.addColorStop(1, 'rgba(180,235,200,0)');
+  ctx.strokeStyle = divGrad; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(44, cursorY); ctx.lineTo(44+textMaxWidth, cursorY); ctx.stroke();
+
+  // ----- Corps de texte -----
+  let bodyStartY = cursorY + 40;
+  ctx.font = '23px system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(236,255,242,0.9)';
+  const lines = body.split('\n');
+  const wrapped = [];
+  lines.forEach(line => wrapped.push(...wrapText(ctx, line, textMaxWidth)));
+  wrapped.forEach((line, i) => ctx.fillText(line, 44, bodyStartY + i*34));
+
+  // ----- Sonogramme du chant (bande basse) — image réelle fournie par Xeno-canto -----
+  const sonoBox = { x: 44, y: H-166, w: W-88, h: 116 };
+  if (sonoImg) {
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    roundRect(ctx, sonoBox.x, sonoBox.y-30, sonoBox.w, sonoBox.h+30, 14); ctx.fill();
+    ctx.strokeStyle = 'rgba(150,220,180,0.3)'; ctx.lineWidth = 1.5;
+    roundRect(ctx, sonoBox.x, sonoBox.y-30, sonoBox.w, sonoBox.h+30, 14); ctx.stroke();
+    ctx.font = '600 15px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(210,240,220,0.75)';
+    ctx.fillText('〰 Sonogramme du chant — Xeno-canto', sonoBox.x+14, sonoBox.y-10);
+    // object-fit: contain, centré dans la bande
+    const ir = sonoImg.width / sonoImg.height, br = sonoBox.w / sonoBox.h;
+    let dw = sonoBox.w-20, dh = sonoBox.h-10;
+    if (ir > (dw/dh)) { dh = dw / ir; } else { dw = dh * ir; }
+    const dx = sonoBox.x + (sonoBox.w-dw)/2, dy = sonoBox.y + (sonoBox.h-dh)/2;
+    ctx.fillStyle = 'rgba(255,255,255,0.94)';
+    roundRect(ctx, dx-4, dy-4, dw+8, dh+8, 6); ctx.fill();
+    ctx.drawImage(sonoImg, dx, dy, dw, dh);
+  }
+
+  panel.texture.needsUpdate = true;
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+function wrapText(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = []; let current = '';
+  words.forEach(w => {
+    const test = current ? current + ' ' + w : w;
+    if (ctx.measureText(test).width > maxWidth && current) { lines.push(current); current = w; }
+    else current = test;
+  });
+  if (current) lines.push(current);
+  return lines;
+}
+function showInfoPanel(panel, nearPosition) {
+  // à droite de l'oiseau vu par le visiteur, un peu en retrait pour ne pas le masquer
+  const away = new THREE.Vector3(nearPosition.x, 0, nearPosition.z).normalize();
+  panel.mesh.scale.setScalar(0.6);
+  panel.mesh.position.copy(nearPosition).addScaledVector(away, 0.3).add(new THREE.Vector3(-away.z, 0, away.x).multiplyScalar(0.72));
+  panel.mesh.position.y = nearPosition.y + 0.2;
+  panel.mesh.visible = true;
+  fadeValue((v) => panel.material.opacity = v, 0.95, 1.5);
+}
+function hideInfoPanel(panel, duration=1.3) {
+  return new Promise((resolve) => {
+    const from = panel.material.opacity;
+    fadeValueTo((v) => panel.material.opacity = v, from, 0, duration, () => {
+      panel.mesh.visible = false;
+      resolve();
+    });
+  });
+}
+function billboardPanel(panel) {
+  if (panel.mesh.visible) panel.mesh.lookAt(camera.position);
+}
+
+const birdInfoPanel = createInfoPanel('', '');
+
+// ===================== XENO-CANTO : chant + métadonnées réelles =====================
+async function fetchBirdSong(scientificName) {
+  try {
+    // L'API v3 attend une syntaxe par tags : gen:Genre+sp:espece (pas une recherche libre)
+    const [genus, species] = scientificName.trim().split(/\s+/);
+    const query = `gen:${genus}${species ? '+sp:'+species : ''}`;
+    const url = `https://xeno-canto.org/api/3/recordings?query=${query}&key=${XENO_CANTO_KEY}`;
+    const res = await fetch(url);
+    if (!res.ok) { log('Xeno-canto erreur ' + res.status); return null; }
+    const data = await res.json();
+    if (data.recordings && data.recordings.length) {
+      // On privilégie une qualité correcte (grade A ou B) et un chant type "song"
+      const best = data.recordings.find(r => (r.q === 'A' || r.q === 'B') && r.type?.includes('song')) 
+                 || data.recordings[0];
+      best.fileUrl = best.file.startsWith('http') ? best.file : 'https:' + best.file;
+      // Sonogramme (spectrogramme) fourni directement par Xeno-canto — aucune API
+      // supplémentaire nécessaire pour ça, juste normaliser l'URL (parfois sans protocole).
+      if (best.sono && best.sono.med) {
+        best.sonoUrl = best.sono.med.startsWith('http') ? best.sono.med : 'https:' + best.sono.med;
+      }
+      return best; // enregistrement complet (métadonnées + URL audio + sonogramme)
+    }
+  } catch(e) { log('Xeno-canto indisponible: ' + e.message); }
+  return null;
+}
+
+// ===================== PHOTO DE L'ESPÈCE (Wikipedia REST, gratuit, sans clé) =====================
+// Nouvelle source externe (en plus de Xeno-canto) : l'archive Xeno-canto ne contient
+// que de l'audio, pas de photos. L'API REST publique de Wikipedia fournit une image
+// d'illustration pour la quasi-totalité des espèces d'oiseaux européennes.
+async function fetchSpeciesPhotoUrl(commonNameEn, scientificName) {
+  const tryTitle = async (title) => {
+    try {
+      const res = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title));
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.thumbnail?.source || null;
+    } catch (e) { return null; }
+  };
+  return (await tryTitle(commonNameEn)) || (await tryTitle(scientificName));
+}
+// de l'enregistrement (aucune donnée inventée) : lieu, date, type de chant, enregistreur.
+function buildBirdDescription(rec) {
+  const type = rec.type ? rec.type.toLowerCase() : 'chant';
+  const place = [rec.loc, rec.cnt].filter(Boolean).join(', ');
+  const lines = [];
+  lines.push(`${type.charAt(0).toUpperCase()+type.slice(1)}${place ? ' enregistré à ' + place : ''}.`);
+  if (rec.date) lines.push(`Date : ${rec.date}${rec.time && rec.time !== '?' ? ' à ' + rec.time : ''}`);
+  if (rec.rec) lines.push(`Enregistré par ${rec.rec} — via Xeno-canto`);
+  return lines.join('\n');
+}
+
+// Abeille procédurale retirée (Three.js pur) — les créatures volantes sont
+// désormais les vrais modèles .glb (papillon, libellule) uniquement.
+
+// ===================== OISEAU 3D (placeholder animé — remplaçable par .glb) =====================
+function createBirdPlaceholder() {
+  const bird = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color:0xcc5533 });
+  const body = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.15, 8), bodyMat);
+  body.rotation.z = Math.PI/2;
+  bird.add(body);
+
+  const wingGeo = new THREE.PlaneGeometry(0.12, 0.05);
+  const wingMat = new THREE.MeshStandardMaterial({ color:0x995533, side:THREE.DoubleSide });
+  const wingL = new THREE.Mesh(wingGeo, wingMat); wingL.position.set(0, 0, 0.03);
+  const wingR = new THREE.Mesh(wingGeo, wingMat); wingR.position.set(0, 0, -0.03);
+  bird.add(wingL, wingR);
+  bird.userData = { wingL, wingR };
+  return bird;
+}
+// ===================== PERCHOIR : branche + oiseau modélisé (assets/oiseaux/oiseaux.js) =====================
+// `bird` est l'ancre du perchoir : son origine = les pattes de l'oiseau. Le chant, la fiche
+// et l'ombre s'y réfèrent. L'oiseau de l'espèce jouée arrive en vol, se pose, vit, chante
+// en rythme avec l'enregistrement, puis repart. La branche prend la taille de l'oiseau,
+// et le perchoir se place à une distance adaptée (un roitelet tout près, une buse plus loin).
+const PERCH_DIRECTION = new THREE.Vector3(-0.55, 0, -0.84).normalize(); // devant, un peu à gauche
+const PERCH_HEIGHT = 1.4;   // hauteur des pattes (m) : entre regard assis et regard debout
+const PERCH_TURN_DEG = 28;  // l'oiseau est tourné de trois quarts plutôt que pile de face
+// Version allégée (plumes plus grandes et moins nombreuses) : casque et téléphone.
+// Forcer : ?oiseaux=leger ou ?oiseaux=complet dans l'adresse.
+const BIRD_PARAM = new URLSearchParams(location.search).get('oiseaux');
+const BIRD_LITE = BIRD_PARAM ? BIRD_PARAM !== 'complet' : (IS_MOBILE || /OculusBrowser|Quest|Pico|VR/i.test(navigator.userAgent));
+const bird = new THREE.Group();
+scene.add(bird);
+let perch = null;
+function placePerch() {
+  const d = perch ? perch.viewDistance : 1.2;
+  bird.position.copy(PERCH_DIRECTION).multiplyScalar(d);
+  bird.position.y = PERCH_HEIGHT;
+  bird.lookAt(0, PERCH_HEIGHT, 0);
+  bird.rotateY(THREE.MathUtils.degToRad(PERCH_TURN_DEG));
+}
+placePerch();
+createPerch({ lite: BIRD_LITE }).then((p) => {
+  perch = p;
+  bird.add(p.group);
+  log('Perchoir prêt (' + (BIRD_LITE ? 'version allégée' : 'version complète') + ')');
+}).catch((e) => log('Perchoir indisponible : ' + e.message));
+// Niveau sonore du chant en cours (0…1), pour que l'oiseau ouvre le bec en rythme
+let birdAnalyser = null, birdLevelPeak = 0.02;
+const birdLevelData = new Uint8Array(512);
+function birdVoiceLevel(dt) {
+  if (!birdAnalyser || !birdSongSound || !birdSongSound.isPlaying) return 0;
+  birdAnalyser.analyser.getByteTimeDomainData(birdLevelData);
+  let sum = 0;
+  for (let i = 0; i < birdLevelData.length; i++) { const v = (birdLevelData[i] - 128) / 128; sum += v * v; }
+  const rms = Math.sqrt(sum / birdLevelData.length);
+  // normalisé sur le niveau le plus fort récent : indépendant du volume et de la distance
+  birdLevelPeak = Math.max(rms, birdLevelPeak * Math.exp(-dt * 0.12), 0.004);
+  return Math.min(1, rms / birdLevelPeak);
+}
+const perchTmp = new THREE.Vector3();
+function waitUntil(test, maxSeconds) {
+  return new Promise((resolve) => {
+    const t0 = performance.now();
+    const tick = () => (test() || performance.now() - t0 > maxSeconds * 1000) ? resolve() : setTimeout(tick, 100);
+    tick();
+  });
+}
+
+// Ombre de contact au sol (ancrage visuel)
+const birdShadow = createContactShadow(0.22);
+birdShadow.visible = false; // l'oiseau est sur sa branche, plus au-dessus du sol
+
+// ===================== CYCLE DES OISEAUX (plusieurs espèces, arrivées successives) =====================
+// Toutes les BIRD_CYCLE_INTERVAL secondes : l'oiseau actuel se dissout (fondu de
+// sortie + arrêt du chant), puis le suivant arrive (chant réel Xeno-canto qui
+// démarre en fondu, matérialisation, fiche pédagogique qui apparaît).
+let birdCycleIndex = 0;
+let birdCycleRunning = false;
+let birdShuffleBag = []; // pioche mélangée pour le mode aléatoire (sans répétition immédiate)
+
+// Renvoie l'espèce suivante : séquentielle (dans l'ordre de la liste) ou
+// aléatoire (pioche mélangée, chaque espèce sort une fois avant de rebattre —
+// évite qu'une même espèce revienne deux fois de suite ou trop souvent).
+// ?oiseau=merle (ou un nom scientifique) dans l'adresse : toujours cette espèce (pour l'examiner)
+const BIRD_FORCED = (new URLSearchParams(location.search).get('oiseau') || '').toLowerCase();
+function pickNextSpecies() {
+  if (BIRD_FORCED) {
+    const forced = BIRD_SPECIES_LIST.find((s) => (s.common + ' ' + s.scientific).toLowerCase().includes(BIRD_FORCED));
+    if (forced) return forced;
+  }
+  if (!BIRD_RANDOM_ORDER) {
+    const species = BIRD_SPECIES_LIST[birdCycleIndex % BIRD_SPECIES_LIST.length];
+    birdCycleIndex++;
+    return species;
+  }
+  if (birdShuffleBag.length === 0) {
+    birdShuffleBag = BIRD_SPECIES_LIST.map((_, i) => i);
+    for (let i = birdShuffleBag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [birdShuffleBag[i], birdShuffleBag[j]] = [birdShuffleBag[j], birdShuffleBag[i]];
+    }
+    // Évite que la dernière espèce du tour précédent se retrouve en tête du nouveau tour
+    if (birdShuffleBag.length > 1 && birdShuffleBag[0] === birdCycleIndex) {
+      [birdShuffleBag[0], birdShuffleBag[1]] = [birdShuffleBag[1], birdShuffleBag[0]];
+    }
+  }
+  const idx = birdShuffleBag.pop();
+  birdCycleIndex = idx; // mémorise la dernière espèce tirée (pour la vérif ci-dessus)
+  return BIRD_SPECIES_LIST[idx];
+}
+
+function sleep(seconds) {
+  return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+}
+
+async function showNextBird() {
+  const species = pickNextSpecies();
+
+  const rec = await fetchBirdSong(species.scientific);
+  if (!rec) {
+    log(`Chant indisponible pour ${species.common} (hors-ligne ou Xeno-canto injoignable)`);
+    return; // on retentera au prochain cycle avec l'espèce suivante
+  }
+
+  // L'oiseau est fabriqué (hors champ) et la branche prend sa taille AVANT que le chant démarre
+  const modelled = !!perch && perch.prepare(species.scientific);
+  if (perch && !modelled) log('Pas encore de modèle 3D pour ' + species.common);
+  placePerch();
+
+  birdSongSound = playPositionalSound(rec.fileUrl, bird.position, 0.5, true, 1.5); // fondu d'entrée du chant
+  try { birdAnalyser = new THREE.AudioAnalyser(birdSongSound, 1024); birdLevelPeak = 0.02; } catch (e) { birdAnalyser = null; }
+  log('Chant réel chargé : ' + species.common + ' (Xeno-canto)');
+
+  const title = rec.en || species.common;
+  const scientific = [rec.gen, rec.sp].filter(Boolean).join(' ') || species.scientific;
+  const bodyText = buildBirdDescription(rec);
+  const tag = buildRecordingTag(rec);
+
+  // Affichage immédiat sans photo/sonogramme (ne pas faire attendre l'utilisateur),
+  // puis ré-affichage enrichi dès que les images arrivent.
+  drawInfoPanel(birdInfoPanel, title, bodyText, scientific, null, null, tag);
+
+  // Il arrive en vol et se pose ; la fiche apparaît une fois qu'il est sur la branche
+  if (modelled) perch.arrive();
+  waitUntil(() => !modelled || perch.landed, 6).then(() => sleep(modelled ? 1.2 : 0)).then(() => showInfoPanel(birdInfoPanel, bird.position));
+
+  // Chargement en parallèle : photo de l'espèce (Wikipedia) + sonogramme (Xeno-canto)
+  const [photoUrl, sonoImg] = await Promise.all([
+    fetchSpeciesPhotoUrl(title, scientific),
+    loadImageCORS(rec.sonoUrl)
+  ]);
+  const photoImg = await loadImageCORS(photoUrl);
+  if (photoImg || sonoImg) {
+    drawInfoPanel(birdInfoPanel, title, bodyText, scientific, photoImg, sonoImg, tag);
+  }
+}
+
+async function hideBird() {
+  const tasks = [];
+  if (perch && !perch.away) { perch.leave(); tasks.push(waitUntil(() => perch.away, 5)); } // il s'envole
+  if (birdInfoPanel.mesh.visible) tasks.push(hideInfoPanel(birdInfoPanel, 1.1));
+  if (birdSongSound) tasks.push(fadeOutSound(birdSongSound, 1.3));
+  await Promise.all(tasks);
+}
+
+async function birdCycleLoop() {
+  if (birdCycleRunning) return;
+  birdCycleRunning = true;
+  while (birdCycleRunning) {
+    await showNextBird();
+    await sleep(BIRD_CYCLE_INTERVAL);
+    await hideBird();
+    await sleep(1); // courte pause, décor sans oiseau, avant le suivant
+  }
+}
+
+// ===================== LIBELLULES / PAPILLONS (apparitions successives) =====================
+// ===================== TRAJECTOIRE DE VOL (réutilisée du système procédural d'origine) =====================
+// Même trajectoire orbitale douce que les papillons/libellules générés au tout
+// début du projet, appliquée maintenant aux vrais modèles .glb. Chaque créature
+// volante a son propre "flightSeed" (déphasage aléatoire) pour ne pas voler en
+// parfaite synchronisation avec les autres.
+const flyingCreatures = []; // { obj, kind:'butterfly'|'dragonfly', flightSeed, baseZ }
+function registerFlyingCreature(obj, kind, baseZ = -1, orientationFixDeg = [0, 0, 0]) {
+  const fixQuat = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(...orientationFixDeg.map(THREE.MathUtils.degToRad))
+  );
+  flyingCreatures.push({ obj, kind, flightSeed: Math.random() * 100, baseZ, fixQuat });
+}
+function updateFlyingCreatures(t) {
+  flyingCreatures.forEach(({ obj, kind, flightSeed, baseZ, fixQuat }) => {
+    const isDragon = kind === 'dragonfly';
+    const r = isDragon ? 1.1 : 0.7;
+    const speed = isDragon ? 0.5 : 0.35;
+    const localT = t + flightSeed;
+    const pos = new THREE.Vector3(
+      Math.cos(localT * speed) * r + Math.sin(localT * 1.3) * (isDragon ? 0.15 : 0.25),
+      (isDragon ? 1.1 : 1.3) + Math.sin(localT * (isDragon ? 0.9 : 1.9)) * 0.25,
+      Math.sin(localT * speed) * r + Math.cos(localT * 1.1) * (isDragon ? 0.15 : 0.25) + baseZ
+    );
+    obj.position.copy(pos);
+    const lookTarget = pos.clone().add(new THREE.Vector3(-Math.sin(localT * speed), 0, Math.cos(localT * speed)));
+    obj.lookAt(lookTarget);
+    // Correction d'orientation : un modèle scanné à plat (specimen épinglé) n'a
+    // généralement pas son axe "avant" aligné avec ce que lookAt() attend
+    // nativement (-Z). Si le vol paraît de travers/à l'envers, ajuste
+    // orientationFixDeg dans ASSET_LIBRARY plutôt que de retoucher ce code.
+    obj.quaternion.multiply(fixQuat);
+  });
+}
+
+// ============================================================================
+// BIBLIOTHÈQUE DE MODÈLES — architecture générique pour .glb / .ksplat
+// ============================================================================
+// Objectif : ajouter un futur modèle ne doit demander qu'une entrée dans
+// ASSET_LIBRARY plus bas, sans toucher au reste du code (chargement,
+// animation, dissolution, ombre de contact — tout est déjà branché).
+
+// ----- Gaussian Splats (.ksplat) : un seul DropInViewer partagé pour toutes les scènes splat -----
+const splatViewer = new GaussianSplats3D.DropInViewer({
+  selfDrivenMode: false,
+  camera: camera,
+  renderer: renderer,
+  useBuiltInControls: false,
+  sharedMemoryForWorkers: false // évite les soucis de cross-origin isolation en PWA
+});
+scene.add(splatViewer);
+
+// ----- Modèles animés (.glb) : un mixer par modèle chargé, mis à jour chaque frame -----
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/');
+const gltfLoader = new GLTFLoader();
+gltfLoader.setDRACOLoader(dracoLoader);
+const animatedModels = []; // { mixer, model }
+function updateAnimatedModels(dt) {
+  animatedModels.forEach(({ mixer }) => mixer.update(dt));
+}
+
+// Petites finitions pour que les modèles glb rendent mieux en VR : ombres,
+// intensité d'environnement (cohérence avec la skybox EXR utilisée comme lumière
+// ambiante via scene.environment), et un léger contour lumineux (rim light) façon
+// "sujet qui se détache" sur les silhouettes fines (ailes, pattes, antennes).
+function beautifyModel(model) {
+  model.traverse((node) => {
+    if (!node.isMesh) return;
+    node.castShadow = true;
+    node.receiveShadow = true;
+    if (node.material) {
+      const mats = Array.isArray(node.material) ? node.material : [node.material];
+      mats.forEach((mat) => {
+        if ('envMapIntensity' in mat) mat.envMapIntensity = 1.15;
+        // Rim light subtil : un léger halo émissif sur les bords, très bon marché
+        if (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial) {
+          mat.emissive = mat.emissive || new THREE.Color(0x000000);
+          mat.emissiveIntensity = Math.max(mat.emissiveIntensity || 0, 0.05);
+        }
+      });
+    }
+  });
+}
+
+// ----- Battement d'ailes procédural (CPU, fiable) -----
+// Ces modèles scannés (papillon, libellule) n'ont ni squelette ni animation :
+// les ailes sont figées en position ouverte. On simule le vol en pliant les
+// sommets autour d'une charnière au centre du corps, avec une amplitude qui
+// augmente avec l'éloignement au centre (l'extrémité des ailes bouge plus que
+// le corps). Calcul fait directement sur les sommets bruts en CPU (pas de
+// shader GPU via onBeforeCompile, dont le comportement dépendait de subtilités
+// de mise en cache des programmes de Three.js, difficiles à garantir sans
+// pouvoir tester visuellement) — plus lent mais 100% prévisible.
+// EXPÉRIMENTAL : suppose que l'axe X du modèle correspond à l'envergure des
+// ailes (généralement vrai pour un specimen scanné à plat, ailes déployées).
+// Si le résultat ne va pas dans le bon sens, inverse via opts.hingeAxis:'z'.
+const flutterEntries = []; // { meshes:[{posAttr, base}], center, halfSpan, maxAngle, speed, hingeAxis }
+function attachWingFlutter(model, opts = {}) {
+  const hingeAxis = opts.hingeAxis || 'x';
+  const maxAngle = THREE.MathUtils.degToRad(opts.maxAngleDeg ?? 20);
+  const speed = opts.flapSpeed ?? 8;
+  const coordIdx = hingeAxis === 'z' ? 2 : 0;
+
+  // Centre/halfSpan calculés directement sur les données de sommets BRUTES
+  // (espace local, avant toute transformation) — fiable, ne dépend ni de la
+  // position de vol, ni de l'échelle, ni de la rotation de l'objet dans la scène.
+  // On mesure les 3 axes (pas seulement celui choisi) pour pouvoir diagnostiquer
+  // si le mauvais axe a été supposé pour l'envergure des ailes.
+  let min = { x:Infinity, y:Infinity, z:Infinity }, max = { x:-Infinity, y:-Infinity, z:-Infinity };
+  const meshes = [];
+  let totalVerts = 0;
+  model.traverse((node) => {
+    if (!node.isMesh || !node.geometry) return;
+    const posAttr = node.geometry.attributes.position;
+    if (!posAttr) return;
+    totalVerts += posAttr.count;
+    for (let i = 0; i < posAttr.count; i++) {
+      const x = posAttr.array[i*3], y = posAttr.array[i*3+1], z = posAttr.array[i*3+2];
+      if (x < min.x) min.x = x; if (x > max.x) max.x = x;
+      if (y < min.y) min.y = y; if (y > max.y) max.y = y;
+      if (z < min.z) min.z = z; if (z > max.z) max.z = z;
+    }
+    meshes.push({ posAttr, base: posAttr.array.slice() });
+  });
+  if (!meshes.length) { log('⚠ attachWingFlutter: aucun mesh trouvé (' + (opts.debugName||'?') + ')'); return; }
+
+  const rangeX = max.x-min.x, rangeY = max.y-min.y, rangeZ = max.z-min.z;
+  log(`Battement ${opts.debugName||''} — dimensions locales : X=${rangeX.toFixed(3)} Y=${rangeY.toFixed(3)} Z=${rangeZ.toFixed(3)} (${totalVerts} sommets, hinge=${hingeAxis})`);
+
+  const center = hingeAxis === 'z' ? (min.z+max.z)/2 : (min.x+max.x)/2;
+  const halfSpan = (hingeAxis === 'z' ? rangeZ : rangeX) / 2 || 1;
+
+  flutterEntries.push({ meshes, center, halfSpan, maxAngle, speed, coordIdx });
+}
+// Throttle : recalculer tous les sommets à 90fps est inutile pour un effet aussi
+// doux — on limite à QUALITY.wingFlutterFPS (30 desktop/Quest, 20 mobile),
+// complètement imperceptible visuellement mais nettement moins coûteux en CPU.
+let lastWingFlutterUpdate = 0;
+function updateWingFlutter(t) {
+  const minInterval = 1 / QUALITY.wingFlutterFPS;
+  if (t - lastWingFlutterUpdate < minInterval) return;
+  lastWingFlutterUpdate = t;
+
+  flutterEntries.forEach(({ meshes, center, halfSpan, maxAngle, speed, coordIdx }) => {
+    const theta0 = Math.sin(t * speed) * maxAngle;
+    meshes.forEach(({ posAttr, base }) => {
+      const arr = posAttr.array;
+      for (let i = 0; i < posAttr.count; i++) {
+        const o = i * 3;
+        const d = base[o + coordIdx] - center;
+        const norm = Math.min(1, Math.abs(d) / halfSpan);
+        const theta = theta0 * norm;
+        const c = Math.cos(theta), s = Math.sin(theta);
+        const y0 = base[o + 1];
+        arr[o + coordIdx] = center + d * c - y0 * s;
+        arr[o + 1] = d * s + y0 * c;
+      }
+      posAttr.needsUpdate = true;
+    });
+  });
+}
+// RealityCapture souvent Z-up / tête en bas une fois importés dans un repère Y-up.
+const FLIP_180_X = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI);
+
+// ----- Chargeur générique .glb -----
+// opts: { position:[x,y,z], scale:number, flip180:bool, clipName?:string (sinon 1er clip trouvé),
+//         materializeOnLoad:bool (défaut true), materializeDuration:number }
+function loadGlbCreature(opts) {
+  return new Promise((resolve, reject) => {
+    gltfLoader.load(opts.path, (gltf) => {
+      const model = gltf.scene;
+      model.position.set(...(opts.position || [0, 1.5, -1.5]));
+      if (opts.scale) model.scale.setScalar(opts.scale);
+      if (opts.flip180) model.quaternion.copy(FLIP_180_X);
+      if (opts.rotationDeg && !opts.flightPath) {
+        // Objet statique : la correction d'orientation s'applique directement.
+        const e = new THREE.Euler(...opts.rotationDeg.map(THREE.MathUtils.degToRad));
+        model.quaternion.setFromEuler(e);
+      }
+      beautifyModel(model);
+
+      let mixer = null;
+      if (gltf.animations && gltf.animations.length) {
+        mixer = new THREE.AnimationMixer(model);
+        const clip = opts.clipName
+          ? gltf.animations.find(c => c.name === opts.clipName)
+          : gltf.animations[0];
+        if (clip) mixer.clipAction(clip).play();
+        animatedModels.push({ mixer, model });
+      } else if (opts.wingFlutter) {
+        // Pas d'animation embarquée (squelette absent) : battement simulé par shader
+        attachWingFlutter(model, opts.wingFlutter === true ? {} : opts.wingFlutter);
+      }
+
+      if (opts.materializeOnLoad !== false) {
+        model.visible = false; // materialize() a besoin de partir d'un état caché
+        scene.add(model);
+        materialize(model, opts.materializeDuration || 2.2);
+      } else {
+        scene.add(model);
+      }
+
+      // Trajectoire de vol orbitale (reprend le mouvement des créatures procédurales
+      // d'origine) — si demandé, remplace la position statique par un vol continu.
+      if (opts.flightPath) {
+        const fixDeg = opts.rotationDeg || opts.flightPath.orientationFixDeg || [0,0,0];
+        registerFlyingCreature(model, opts.flightPath.kind, opts.flightPath.baseZ ?? -1, fixDeg);
+      }
+
+      resolve({ model, mixer, gltf });
+    }, undefined, (err) => { log('Erreur glb (' + opts.path + '): ' + err.message); reject(err); });
+  });
+}
+
+// ----- Chargeur générique .ksplat (via le DropInViewer partagé) -----
+// opts: { position:[x,y,z], scale:number, flip180:bool, materializeOnLoad:bool,
+//         materializeDuration:number, revealSweep:bool (effet de balayage vertical, cf. plus bas) }
+function loadKsplatCreature(opts) {
+  const quat = opts.flip180 ? FLIP_180_X : new THREE.Quaternion();
+  return splatViewer.addSplatScene(opts.path, {
+    position: opts.position || [0, 1.5, -1.5],
+    rotation: [quat.x, quat.y, quat.z, quat.w],
+    scale: opts.scale ? [opts.scale, opts.scale, opts.scale] : [1, 1, 1],
+    showLoadingUI: false
+  }).then(() => {
+    log('Splat chargé : ' + opts.path);
+    if (opts.materializeOnLoad !== false) {
+      if (opts.revealSweep) sweepRevealSplat(opts.materializeDuration || 2.8);
+      else materialize(splatViewer, opts.materializeDuration || 2.5);
+    }
+    return splatViewer;
+  }).catch((e) => { log('Erreur splat (' + opts.path + '): ' + e.message); throw e; });
+}
+
+// ----- Dissolution avancée pour splats : balayage vertical via clipping plane -----
+// Alternative au simple scale-in : le splat apparaît progressivement du bas vers
+// le haut (façon "sortie de terre"), plus organique pour une plante qu'un pop-in.
+// Best-effort : dépend du matériau interne de GaussianSplats3D qui honore (ou non)
+// les clipping planes standard Three.js — à valider visuellement une fois testé,
+// avec repli automatique sur le scale-in classique en cas d'erreur.
+function sweepRevealSplat(duration = 2.8, heightRange = [-0.5, 2.5]) {
+  try {
+    renderer.localClippingEnabled = true;
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -heightRange[0]);
+    const materials = [];
+    splatViewer.traverse((o) => { if (o.material) materials.push(o.material); });
+    if (!materials.length) { materialize(splatViewer, duration); return; }
+    materials.forEach((m) => { m.clippingPlanes = [plane]; });
+    splatViewer.visible = true;
+    spawnSparkleBurst(splatViewer.position.clone());
+    const start = performance.now();
+    function step() {
+      const p = Math.min(1, (performance.now() - start) / (duration * 1000));
+      plane.constant = -(heightRange[0] + (heightRange[1] - heightRange[0]) * p);
+      if (p < 1) requestAnimationFrame(step);
+      else materials.forEach((m) => { m.clippingPlanes = []; });
+    }
+    step();
+  } catch (e) {
+    log('Balayage indisponible, repli sur dissolution classique');
+    materialize(splatViewer, duration);
+  }
+}
+
+// ============================================================================
+// BIBLIOTHÈQUE D'ASSETS — ajoute une entrée ici pour chaque futur modèle prêt.
+// Rien d'autre à modifier : chargement, animation, dissolution et ombre de
+// contact sont déjà branchés génériquement.
+// ============================================================================
+const ASSET_LIBRARY = [
+  { id: 'fraxinelle', type: 'ksplat', path: './assets/models/fraxinelle.ksplat',
+    position: [1.2, 1.5, -1.8], scale: 2.2, flip180: true },
+
+  // Modèles scannés (bounding box ~5cm = déjà à l'échelle réelle, scale:1 conservé)
+  { id: 'papillon-glb', type: 'glb', path: './assets/models/papillon.glb',
+    position: [-1.2, 1.5, -1.5], scale: 2,
+    rotationDeg: [0, 0, 0], // correction d'orientation statique — à tâtonner (touches 7/8/9, voir README)
+    wingFlutter: { maxAngleDeg: 24, flapSpeed: 6, debugName: 'papillon' }, // battement ample et lent
+    flightPath: { kind: 'butterfly', baseZ: -1 } },
+
+  { id: 'libellule-glb', type: 'glb', path: './assets/models/libellule.glb',
+    position: [0.6, 1.35, -1.4], scale: 2,
+    rotationDeg: [0, 0, 0],
+    wingFlutter: { maxAngleDeg: 10, flapSpeed: 16, debugName: 'libellule' }, // battement rapide et discret
+    flightPath: { kind: 'dragonfly', baseZ: -1 } },
+
+  // Exemples prêts à activer dès que les fichiers existent (décommente + adapte) :
+  // { id: 'oiseau-glb', type: 'glb', path: './assets/models/oiseau.glb',
+  //   position: [-1.2, 1.8, -1.5], scale: 0.08, clipName: 'FlapWings' },
+];
+
+// Références capturées pour le réglage interactif d'orientation (voir plus bas,
+// touches 7/8/9) — utile le temps de trouver la bonne correction, à retirer une
+// fois les bonnes valeurs de rotationDeg fixées dans ASSET_LIBRARY.
+const debugFlyingRefs = {};
+ASSET_LIBRARY.forEach((entry) => {
+  if (entry.type === 'glb') {
+    loadGlbCreature(entry).then(({ model }) => {
+      if (entry.flightPath) {
+        const ref = flyingCreatures.find(f => f.obj === model);
+        if (ref) debugFlyingRefs[entry.id] = ref;
+      }
+    });
+  }
+  else if (entry.type === 'ksplat') loadKsplatCreature(entry);
+});
+
+// ===================== ÉTAT AUDIO PARTAGÉ =====================
+let birdSongSound = null, streamSound = null, ambSound = null;
+
+// ===================== RÉGLAGE INTERACTIF D'ORIENTATION (temporaire, pour debug) =====================
+// Touches 7/8/9 : fait tourner le papillon de 90° sur X/Y/Z à chaque appui, et
+// affiche la valeur courante dans les logs. Une fois la bonne orientation
+// trouvée, reporte les degrés affichés dans rotationDeg (ASSET_LIBRARY) et
+// retire ce bloc. Mêmes touches en majuscule (Shift+7/8/9) pour la libellule.
+const PRESET_AXES = ['x', 'y', 'z'];
+function nudgeOrientation(id, axisIndex) {
+  const ref = debugFlyingRefs[id];
+  if (!ref) { log('Modèle "' + id + '" pas encore chargé'); return; }
+  const deg = [0, 0, 0];
+  const current = ref.fixQuat.clone();
+  const currentEuler = new THREE.Euler().setFromQuaternion(current);
+  deg[0] = THREE.MathUtils.radToDeg(currentEuler.x);
+  deg[1] = THREE.MathUtils.radToDeg(currentEuler.y);
+  deg[2] = THREE.MathUtils.radToDeg(currentEuler.z);
+  deg[axisIndex] = ((deg[axisIndex] + 90 + 180) % 360) - 180; // +90°, ramené entre -180/180
+  ref.fixQuat.setFromEuler(new THREE.Euler(...deg.map(THREE.MathUtils.degToRad)));
+  log(`${id} rotationDeg: [${deg.map(d => Math.round(d)).join(', ')}]`);
+}
+window.addEventListener('keydown', (e) => {
+  if (e.key === '7') nudgeOrientation('papillon-glb', 0);
+  if (e.key === '8') nudgeOrientation('papillon-glb', 1);
+  if (e.key === '9') nudgeOrientation('papillon-glb', 2);
+  if (e.key === '&' /* Shift+7 sur clavier FR */) nudgeOrientation('libellule-glb', 0);
+  if (e.key === 'é' /* Shift+8 sur clavier FR (variable selon layout) */) nudgeOrientation('libellule-glb', 1);
+});
+
+// ===================== VR ENTRY =====================
+const vrButtonEl = VRButton.createButton(renderer);
+const arButtonEl = ARButton.createButton(renderer, { requiredFeatures: [], optionalFeatures: ['local-floor'] });
+document.body.appendChild(vrButtonEl);
+document.body.appendChild(arButtonEl);
+vrButtonEl.style.left = 'calc(50% - 130px)';
+arButtonEl.style.left = 'calc(50% + 10px)';
+
+function enterExperience(buttonEl) {
+  $('overlay').style.display = 'none';
+  startAmbience();      // sons de forêt (geste utilisateur : lecture autorisée)
+  birdCycleLoop();      // oiseaux + fiches Xeno-canto
+  decorVideo.play().catch(() => {});
+  revealDecor();        // fondu d'apparition (dès que la vidéo est prête)
+  buttonEl.click();
+}
+$('enterBtn').addEventListener('click', () => enterExperience(vrButtonEl), { once: true });
+$('enterArBtn').addEventListener('click', () => enterExperience(arButtonEl), { once: true });
+
+// Début/fin de session : bascule entre la couche média (casque) et la sphère WebGL (repli)
+// AR (téléphone, ou passthrough du casque) : on voit la vraie pièce. Le décor vidéo est coupé,
+// et la scène est RECALÉE devant soi : sans ça elle reste placée par rapport au point et à la
+// direction du téléphone au lancement (et à une hauteur de sol estimée), donc souvent hors champ.
+let arRecenterIn = 0;
+const rigBase = new THREE.Vector3();
+function recenterOnViewer() {
+  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  const yaw = Math.atan2(-fwd.x, -fwd.z);
+  rig.rotation.set(0, -yaw, 0);
+  const p = camera.position.clone().applyEuler(rig.rotation);
+  rigBase.set(-p.x, 1.5 - p.y, -p.z); // l'œil du visiteur se retrouve en (0, 1.5, 0), regard vers -Z
+}
+renderer.xr.addEventListener('sessionstart', () => {
+  const mode = renderer.xr.getSession().environmentBlendMode;
+  arMode = !!mode && mode !== 'opaque';
+  arRecenterIn = arMode ? 30 : 0; // quelques images, le temps que le suivi se stabilise
+  if (arMode) { mediaLayerMode = false; log('Mode AR : décor coupé, scène recalée devant vous'); applyDecorDisplay(); return; }
+  mediaLayerMode = canUseMediaLayer(renderer.xr.getSession());
+  log(mediaLayerMode ? 'Décor : couche média WebXR' : 'Décor : sphère WebGL (couche média indisponible)');
+  if (mediaLayerMode && videoActive) attachMediaLayer(); else applyDecorDisplay();
+  revealDecor();
+});
+renderer.xr.addEventListener('sessionend', () => {
+  arMode = false; arRecenterIn = 0; rig.rotation.set(0, 0, 0); rigBase.set(0, 0, 0);
+  mediaLayerMode = false; mediaLayer = null; mediaBinding = null; // la session les emporte avec elle
+  applyDecorDisplay();
+});
+
+bootDecor();
+
+// ===================== VUE ORDINATEUR (hors casque) =====================
+// Au départ le regard est tourné vers le perchoir ; glisser = tourner la tête, molette = zoom.
+const deskLook = { yaw: Math.atan2(-PERCH_DIRECTION.x, -PERCH_DIRECTION.z) - 0.12, pitch: -0.06, fov: 42, drag: null };
+renderer.domElement.addEventListener('pointerdown', (e) => { deskLook.drag = { x: e.clientX, y: e.clientY }; });
+addEventListener('pointerup', () => { deskLook.drag = null; });
+addEventListener('pointermove', (e) => {
+  if (!deskLook.drag || renderer.xr.isPresenting) return;
+  const k = 0.0022 * deskLook.fov / 50;
+  deskLook.yaw += (e.clientX - deskLook.drag.x) * k;
+  deskLook.pitch = Math.max(-1.3, Math.min(1.3, deskLook.pitch + (e.clientY - deskLook.drag.y) * k));
+  deskLook.drag = { x: e.clientX, y: e.clientY };
+});
+renderer.domElement.addEventListener('wheel', (e) => {
+  deskLook.fov = Math.max(8, Math.min(75, deskLook.fov * (e.deltaY > 0 ? 1.1 : 0.9)));
+  e.preventDefault();
+}, { passive: false });
+
+// ===================== ANIMATION =====================
+const clock = new THREE.Clock();
+let t = 0;
+
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  updateTweens(dt);
+  updateDecorAmbient(performance.now() / 1000, dt);
+  t += dt;
+
+  // Oiseau sur sa branche : il chante avec l'enregistrement et jette un œil au visiteur
+  if (perch) {
+    perch.setVoice(birdVoiceLevel(dt));
+    perch.setAttention(camera.getWorldPosition(perchTmp));
+    perch.update(dt);
+  }
+
+  // Pollen : montée lente + oscillation, recyclage en boucle verticale
+  const posAttr = pollenGeo.attributes.position;
+  for (let i = 0; i < POLLEN_COUNT; i++) {
+    const seed = pollenSeed[i];
+    posAttr.array[i*3]   += Math.sin(t*0.3 + seed) * 0.0006;
+    posAttr.array[i*3+1] += 0.0009;
+    posAttr.array[i*3+2] += Math.cos(t*0.25 + seed) * 0.0006;
+    if (posAttr.array[i*3+1] > 2.6) posAttr.array[i*3+1] = 0;
+  }
+  posAttr.needsUpdate = true;
+
+  // Libellules / papillons : machine à états d'apparitions successives
+  updateFlyingCreatures(t);
+
+  // Rayons de lumière volumétriques (scintillement doux)
+  updateGodRays(t);
+
+  // Respiration douce de l'espace (appliquée au rig, pas à la caméra, pour rester
+  // compatible avec le tracking VR — dérive très subtile, jamais perceptible comme un mouvement)
+  if (arRecenterIn > 0 && renderer.xr.isPresenting && --arRecenterIn === 0) recenterOnViewer();
+  // Ordinateur (hors casque) : regard à hauteur d'yeux, glisser pour tourner, molette pour zoomer
+  if (!renderer.xr.isPresenting) {
+    camera.position.set(0, 1.5, 0);
+    camera.rotation.set(deskLook.pitch, deskLook.yaw, 0, 'YXZ');
+    if (camera.fov !== deskLook.fov) { camera.fov = deskLook.fov; camera.updateProjectionMatrix(); }
+  }
+  rig.position.set(rigBase.x + Math.sin(t * 0.13) * 0.004, rigBase.y + Math.sin(t * 0.25) * 0.006, rigBase.z + Math.cos(t * 0.17) * 0.004);
+
+  // Fondus audio/opacité en cours (ambiance, ruisseau, panneaux...)
+  updateFades();
+
+  // Matérialisation (dissolution d'apparition) des splats/créatures + étincelles
+  updateMaterializations();
+  updateDematerializations();
+  updateSparkleBursts(dt);
+  billboardPanel(birdInfoPanel);
+
+  // Animations des futurs modèles .glb (AnimationMixer) + battement d'ailes procédural
+  updateAnimatedModels(dt);
+  updateWingFlutter(t);
+
+  // Le DropInViewer doit être mis à jour manuellement puisque selfDrivenMode:false
+  if (splatViewer.update) splatViewer.update();
+  // Rotation lente continue de la fraxinelle. Note : le splatViewer est partagé
+  // par tous les .ksplat (voir ASSET_LIBRARY) — tant qu'il n'y en a qu'un seul,
+  // cette rotation ne concerne que lui. Si tu ajoutes un second splat plus tard,
+  // il faudra soit accepter qu'il tourne aussi, soit passer à un DropInViewer
+  // séparé par splat pour un contrôle individuel.
+  splatViewer.rotation.y += 0.08 * dt;
+
+  renderer.render(scene, camera);
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ===================== SERVICE WORKER (mode hors-ligne) =====================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(() => log('Mode hors-ligne activé'));
+  });
+}
+</script>
+</body>
+</html>

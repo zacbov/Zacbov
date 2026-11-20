@@ -11,7 +11,7 @@ TH = {r[0]: r[1] for r in wb['Cas_Cliniques'].iter_rows(min_row=2, max_col=3, va
 lib_theme = {}
 for r in wb['Cas_Cliniques'].iter_rows(min_row=2, values_only=True):
     if r[1]: lib_theme[r[1]] = r[2]
-POPLIB = {'officine': 'Officine'}
+POPLIB = {'officine': 'Officine', 'hospitalier': 'Hospitalier', 'medecine': 'Médecine'}
 wc, wq, wd, wm = (wb[n] for n in ('Cas_Cliniques', 'Questions_Reponses', 'Documents_Examens', 'Medicaments_Interactions'))
 for ws in (wc, wq, wd, wm): purge(ws)
 H, HQ, HD, HM = hdr(wc), hdr(wq), hdr(wd), hdr(wm)
@@ -26,7 +26,7 @@ for c in CAS:
         fiche_origine=f.get('origine'), avatar_plainte=p.get('plainte'), avatar_emotion=p.get('emotion'), avatar_profil=p.get('profil') or None, avatar_zone_partie=z.get('partie'), avatar_zone_cote=z.get('cote'),
         constantes_pas=k.get('pas'), constantes_pad=k.get('pad'), constantes_pouls=k.get('pouls'),
         alertes_conseils='\n'.join(f"Si [{a['si']}] -> {a['rappel']}" for a in c.get('alertes_conseils') or []) or None,
-        nb_questions=len(c['questions']), questions_liste='\n'.join(q['question'] for q in c['questions']), nb_documents=len(c['documents']),
+        nb_questions=len(c['questions']), questions_liste='\n'.join(q['question'] for q in c['questions']), nb_documents=len(c['documents']), specialites=' | '.join(c.get('specialites') or []) or None, reponses_modele_liste='\n'.join(f"R{i}: {q['reponse_modele']}" for i, q in enumerate(c['questions'], 1))[:32000],
         documents_types=', '.join(d['type'] for d in c['documents']), documents_titres=', '.join(d.get('titre', '') for d in c['documents']),
         indices_documents_possibles=', '.join(c['indices']['documents_possibles']), indices_valeurs_chiffrees=c['indices']['valeurs_chiffrees'],
         indices_traitement_nomme=c['indices']['traitement_nomme'], indices_question_verif_traitement=c['indices']['question_verification_traitement'],
@@ -35,15 +35,18 @@ for c in CAS:
         sources_annales=' ; '.join(f"{s['fichier']}: " + ' | '.join(s['ids']) for s in c['sources']), actif=bool(c.get('actif', True)),
         avatar_symptomes=' | '.join(p.get('symptomes') or []) or None)
     if c['indices']['traitement_nomme'] is False: wc.cell(r, H['indices_traitement_nomme'], False)
+    if c.get('a_valider') is False: wc.cell(r, H['a_valider'], False)
     for i, q in enumerate(c['questions'], 1):
         rq = wq.max_row + 1; put(wq, HQ, rq, cas_id=c['id'], theme_id=c['theme'], pop_id=c['pop'], question_ordre=i, question_numero=q['n'], question_type=q['type'], question=q['question'], reponse_modele=q['reponse_modele'])
     for n, d in enumerate(c['documents'], 1):
-        for j, l in enumerate(d['lignes'], 1):
+        for j, l in enumerate(d.get('lignes') or [None], 1):
             rd = wd.max_row + 1; base = dict(cas_id=c['id'], theme_id=c['theme'], doc_num=n, doc_type=d['type'], doc_titre=d.get('titre'), doc_origine=d.get('origine'), ligne_num=j)
             if d['type'] == 'bilan': put(wd, HD, rd, **base, echantillon=l['ech'], analyse_ou_medicament=l['analyse'], resultat_ou_posologie=l['resultat'], unite_ou_duree=l['unite'], valeurs_ref=l['ref'])
+            elif d['type'] == 'compte_rendu':
+                if j == 1: put(wd, HD, rd, **base, texte_ou_details='texte: ' + d['texte'] + (' ; libre: oui' if d.get('libre') else ''))
             elif d['type'] == 'ordonnance':
                 put(wd, HD, rd, **base, analyse_ou_medicament=l['medicament'], resultat_ou_posologie=l['posologie'], unite_ou_duree=l['duree'],
-                    texte_ou_details=' ; '.join(f"{k}: {d[k]}" for k in ('medecin', 'patient', 'date') if d.get(k)) if j == 1 else None)
+                    texte_ou_details=(' ; '.join(f"{k}: {d[k]}" for k in ('medecin', 'patient', 'date') if d.get(k)) + (' ; libre: oui' if d.get('libre') else '')).strip(' ;') or None if j == 1 else None)
     for m in c['connaissances']['medicaments']:
         rm = wm.max_row + 1; put(wm, HM, rm, cas_id=c['id'], theme_id=c['theme'], categorie='Médicament détecté', terme_ou_couple=m['terme'], substances_ou_rubrique=', '.join(m['substances']), origine=c['connaissances']['origine'])
     for i in c['connaissances']['interactions']:

@@ -102,3 +102,33 @@ l'enregistrement, puis s'envole avant le suivant.
 - `?oiseau=merle` : toujours la même espèce, pour l'examiner.
 - Ordinateur : glisser pour tourner la tête, molette pour zoomer.
 - AR : le décor vidéo est coupé et la scène est recalée devant soi au lancement.
+
+## Vidéo en casque et sur téléphone, fraxinelle fixe, papillons (17 novembre 2026)
+
+- **Vidéo 360° en VR (Quest)** : le rendu est maintenant transparent (`alpha: true`). La vidéo
+  passe par une couche média WebXR placée *derrière* le rendu ; un rendu opaque la recouvrait
+  entièrement.
+- **Vidéo sur la sphère (téléphone, AR, casque sans couche média)** : la texture est rafraîchie à
+  chaque image vidéo. Three.js comptait sur `requestVideoFrameCallback`, qui ne se déclenche pas
+  pendant une session immersive.
+- **AR** : la vidéo s'affiche aussi (sur la sphère), et la scène est recalée devant soi.
+- **Trois versions de la vidéo** : `assets/clairiere.webm` (8K VP9, ordinateur),
+  `assets/clairiere-4k.mp4` (H.264, casque), `assets/clairiere-2k.mp4` (H.264, téléphone). Si une
+  version ne se lit pas, la suivante est essayée. Forcer : `?video=8k`, `?video=4k` ou `?video=2k`.
+  Plus de rafale de 404 au démarrage : 3 ou 4 requêtes suffisent.
+- **Fraxinelle** : le splat est remplacé par une touffe modélisée, fixe, à taille réelle, à gauche
+  de la branche (`assets/nature/nature.js`). Réglages : `PLANT_TURN_DEG`, `PLANT_DISTANCE`,
+  `PLANT_BASE_Y` (0 = posée au sol), `PLANT_HEIGHT`. `assets/models/fraxinelle.ksplat` n'est plus
+  utilisé et peut être supprimé du dépôt.
+- **Papillons du kit fable-butterfly** (ky-zo/fable-butterfly, copié dans
+  `assets/nature/nature.js`) : glasswing, longwing orange et piéride. Ils volent par salves de
+  battements, se posent sur les fleurs et les folioles, ouvrent et ferment les ailes, repartent.
+  Choix des espèces : `BUTTERFLY_SPECIES`.
+- **Papillon et libellule GLB** : battement d'ailes refait. Les deux ailes montent et descendent
+  ensemble autour d'une charnière le long du corps, dans le shader (l'ancien code les faisait
+  tourner en sens opposés, selon le mauvais axe, et recalculait 300 000 sommets par image sur le
+  processeur). L'orientation en vol se règle par `axes: { forward, up }`, plus par tâtonnement.
+- **Casque et téléphone** : `papillon-leger.glb` (51 000 triangles au lieu de 326 000) et
+  `libellule-leger.glb` (79 000 au lieu de 305 000), même scan simplifié. Scène complète en mode
+  casque : environ 365 000 triangles (1,19 million sur ordinateur).
+- `?debug` dans l'adresse : `window.__pr` donne accès à la scène depuis la console.

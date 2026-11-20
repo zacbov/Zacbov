@@ -34,6 +34,7 @@
         const cell = (r) => String(r.texte_ou_details || '').split(' | ').map((c) => { const i = c.indexOf(': '); return i < 0 ? ['', c] : [c.slice(0, i), c.slice(i + 2)]; });
         d.colonnes = cell(r0).map((c) => c[0]); d.lignes = L.map((r) => cell(r).map((c) => c[1]));
       } else Object.assign(d, det);
+      if (det.libre !== undefined && d.libre === undefined) d.libre = det.libre;
       d.origine = txt(r0.doc_origine) || '';
       return d;
     });
@@ -67,6 +68,10 @@
     if (!vide(r.peau_maladie)) c.peau = { maladie: txt(r.peau_maladie), stade: vide(r.peau_stade) ? 1 : num(r.peau_stade) };
     if (!vide(r.visage_cote)) c.visage = { side: txt(r.visage_cote) };
     if (!vide(r.alertes_conseils)) c.alertes_conseils = String(r.alertes_conseils).split(/\n+/).map((l) => /^Si \[([\s\S]*)\] -> ([\s\S]*)$/.exec(l.trim())).filter(Boolean).map((m) => ({ si: m[1], rappel: m[2] }));
+    for (const d of c.documents) {                // compte rendu repris de l'énoncé (cas PARHAF) ; « libre : oui » = document remis d'emblée
+      if (d.texte === '@enonce') { const m = /COMPTE RENDU :\n([\s\S]*?)\n— fin du compte rendu —/.exec(c.enonce); d.texte = m ? m[1] : c.enonce; }
+      if (d.libre !== undefined) d.libre = /^(oui|true|vrai|1)$/i.test(String(d.libre));
+    }
     if (!vide(r.donnees_json)) { try { Object.assign(c, JSON.parse(r.donnees_json)); } catch (e) { console.warn('donnees_json illisible pour', c.id, e); } }
     return c;
   }

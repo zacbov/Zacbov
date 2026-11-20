@@ -576,6 +576,7 @@ async function monter(want) {                               // patient homme ou 
   $('avnote').textContent = want === 'femme' ? 'Arrivée de la patiente…' : 'Arrivée du patient…'; $('avnote').style.opacity = 1;
   A = await createAvatar($('stage'), { glb: BASE + (want === 'femme' ? 'patient_femme.glb' : 'patient_homme.glb'), background: BASE + 'decor_pharmacie.webp', tensio: BASE + 'tensiometre-draco.glb', draco: window.AVATAR_DRACO });
   modele = want; window.A = A; appliquerVoix();
+  setTimeout(() => A.gestes && A.gestes(BASE + 'gestes'), 1500);   // mouvements capturés (Mixamo) : attente, parole, réactions, toux
   A.onvoices = () => { if (cas) pickVoice(cas.fiche && cas.fiche.sexe); };
   EQ = createEquip(A, { base: BASE + 'equip/', draco: window.AVATAR_DRACO }); window.EQ = EQ;
   EQ.on((e) => {

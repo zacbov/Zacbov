@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Désert — prototype WebGL (Three r128)</title>
+<style>
+html,body{margin:0;height:100%;background:#0a0a0f;overflow:hidden;font-family:ui-monospace,Menlo,Consolas,monospace;color:#e8dcc8}
+canvas{display:block;width:100vw;height:100vh;touch-action:none}
+#hud{position:fixed;left:12px;top:10px;font-size:11px;line-height:1.6;letter-spacing:.5px;color:#c8a84b;text-shadow:0 1px 3px #000;pointer-events:none;white-space:pre}
+#help{position:fixed;left:12px;bottom:10px;font-size:11px;opacity:.7;text-shadow:0 1px 3px #000;pointer-events:none}
+#tod{position:fixed;right:12px;top:10px;display:flex;gap:6px}
+#tod button{background:rgba(10,10,15,.6);border:1px solid #6a5a2a;color:#c8a84b;padding:6px 12px;font:inherit;font-size:11px;letter-spacing:2px;cursor:pointer;text-transform:uppercase}
+#tod button.on{background:#c8a84b;color:#0a0a0f}
+#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0a0a0f;color:#c8a84b;letter-spacing:4px;font-size:12px;transition:opacity .6s}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="hud"></div>
+<div id="tod"><button data-t="dawn">Aube</button><button data-t="day" class="on">Jour</button><button data-t="sunset">Crépuscule</button></div>
+<div id="help">Glisser : regarder · ZQSD / WASD / flèches : marcher · Maj : courir · F : vol (vue d'ensemble) · Espace : pause du temps</div>
+<div id="load">LECTURE DES DUNES…</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+/* =====================================================================
+   DÉSERT — adaptation WebGL r128 des techniques de « Mirage » (Codevember 2026 / 15)
+   Une seule fonction de hauteur analytique alimente : maillage, rochers, herbe, sol du joueur.
+   Voir desert-optimisations.md pour le détail de chaque optimisation.
+   ===================================================================== */
+const Q=new URLSearchParams(location.search);
+const OPT={shadows:Q.get('shadows')!=='0',rocks:Q.get('rocks')!=='0',scale:+(Q.get('scale')||1)};
+
+/* ---------- bruit (port de noise.js) ---------- */
+function hash3(x,y,z){let h=Math.imul(x,1597334677)^Math.imul(y,3812015801)^Math.imul(z,2798796415);h=Math.imul(h^h>>>16,2246822519);return((h^h>>>13)>>>0)/4294967295}
+const mixf=(p,q,t)=>p+(q-p)*t;
+function noise(x,y,z){const ix=Math.floor(x),iy=Math.floor(y),iz=Math.floor(z);let a=x-ix,c=z-iz;a=a*a*(3-2*a);c=c*c*(3-2*c);
+ const x00=mixf(hash3(ix,iy,iz),hash3(ix+1,iy,iz),a),x01=mixf(hash3(ix,iy,iz+1),hash3(ix+1,iy,iz+1),a);
+ if(y===iy)return mixf(x00,x01,c)*2-1;let b=y-iy;b=b*b*(3-2*b);
+ const x10=mixf(hash3(ix,iy+1,iz),hash3(ix+1,iy+1,iz),a),x11=mixf(hash3(ix,iy+1,iz+1),hash3(ix+1,iy+1,iz+1),a);
+ return mixf(mixf(x00,x10,b),mixf(x01,x11,b),c)*2-1}
+function fbm(x,y,z,o=4){let v=0,a=.5;for(let i=0;i<o;i++){v+=noise(x,y,z)*a;x=x*2.03+13.1;y=y*2.03+7.7;z=z*2.03+5.3;a*=.5}return v}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const smooth=(a,b,v)=>{const t=clamp((v-a)/(b-a),0,1);return t*t*(3-2*t)};
+function rng(seed){let s=seed>>>0;return()=>{s+=0x6d2b79f5;let t=Math.imul(s^s>>>15,1|s);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
+
+/* ---------- hauteur du terrain (dunes asymétriques de Mirage) ---------- */
+const CLEAR={x:0,z:0,r0:34,r1:110};            // plateau plat de départ (le sas / la base)
+function rawDunes(x,z){
+  const warp=noise(x*.0025,3,z*.003)*90+Math.sin(z*.009)*24;
+  const r=Math.hypot(x,z);
+  // la longueur d'onde grandit avec la distance : les anneaux grossiers n'ont jamais d'aliasing
+  const wl=270+730*smooth(900,4200,r);
+  const cycle=(x+z*.58+warp)/wl, ph=cycle-Math.floor(cycle), crest=.77;
+  const ramp=ph<crest?smooth(0,crest,ph):1-smooth(crest,1,ph);   // pente au vent douce, face sous le vent raide
+  return ramp*(32+10*noise(x*.0015,4,z*.0017))+fbm(x*.009,17,z*.009,3)*1.5-3.5;
+}
+const H0=rawDunes(CLEAR.x,CLEAR.z);
+function terrainHeight(x,z){
+  const h=rawDunes(x,z),d=Math.hypot(x-CLEAR.x,z-CLEAR.z);
+  return mixf(H0,h,smooth(CLEAR.r0,CLEAR.r1,d));
+}
+
+/* ---------- raccord entre anneaux (port de terrain-stitch.js) ---------- */
+function stitchEdge(inner,outer){const tri=[];let i=0,j=0;
+ while(i<inner.length-1||j<outer.length-1){
+  if(j===outer.length-1||(i<inner.length-1&&(i+1)/(inner.length-1)<=(j+1)/(outer.length-1))){tri.push(inner[i],inner[++i],outer[j])}
+  else{tri.push(inner[i],outer[j+1],outer[j]);j++}}
+ return tri}
+
+/* ---------- matériau du sable : 100 % procédural, filtré par dérivées ---------- */
+const NOISE_GLSL=`
+float h21(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+ return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y);}`;
+function patchWorldPos(sh,extraFrag,afterColor,afterNormal){
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWP;')
+   .replace('#include <project_vertex>',`#include <project_vertex>
+   #ifdef USE_INSTANCING
+   vWP=(modelMatrix*instanceMatrix*vec4(transformed,1.0)).xyz;
+   #else
+   vWP=(modelMatrix*vec4(transformed,1.0)).xyz;
+   #endif`);
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWP;\n'+NOISE_GLSL+extraFrag)
+   .replace('#include <color_fragment>','#include <color_fragment>\n'+afterColor)
+   .replace('#include <normal_fragment_maps>','#include <normal_fragment_maps>\n'+afterNormal);
+}
+const uPR={value:1};
+function makeSandMaterial(){
+  const m=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,metalness:0});
+  m.onBeforeCompile=sh=>{sh.uniforms.uPR=uPR;
+   patchWorldPos(sh,`uniform float uPR;
+    float gPh,gVis,gDph,gDvis,gBph,gBvis;`,`
+    vec3 P=vWP; float big=vn(P.xz*.009);
+    float phase=P.z*9.5+P.x*2.3+big*14.+sin(P.x*.13)*2.;
+    gPh=phase; gVis=1.-smoothstep(.75,2.,(abs(dFdx(phase))+abs(dFdy(phase)))*uPR);      // anti-scintillement
+    float ripple=pow(sin(phase)*.5+.5,2.)*gVis;
+    float dph=P.z*1.45+P.x*.29+big*6.; gDph=dph; gDvis=1.-smoothstep(.8,2.5,abs(dFdx(dph))+abs(dFdy(dph)));
+    float bph=P.z*.24+P.x*.055+big*4.; gBph=bph; gBvis=1.-smoothstep(.8,2.5,abs(dFdx(bph))+abs(dFdy(bph)));
+    float streaks=vn(P.xz*vec2(.002,.025));
+    vec3 duneC=mix(vec3(.46,.335,.225),vec3(.64,.465,.315),big*.65+.25)*(ripple*.045+.975);
+    duneC*=1.+sin(dph)*gDvis*.032+sin(bph)*gBvis*.035+(streaks-.5)*.16;
+    diffuseColor.rgb=duneC;`,`
+    vec3 Nw=normalize(inverseTransformDirection(normal,viewMatrix));
+    vec3 grad=vec3(cos(P.x*.13)*.26+2.3,0.,9.5)*(sin(gPh)*.5+.5)*cos(gPh)*gVis*.014
+             +vec3(.29,0.,1.45)*cos(gDph)*gDvis*.025+vec3(.055,0.,.24)*cos(gBph)*gBvis*.07;
+    vec3 tang=grad-Nw*dot(grad,Nw);
+    normal=normalize(normal-(viewMatrix*vec4(tang,0.)).xyz);`)};
+  m.customProgramCacheKey=()=>'sand';return m}
+function makeRockMaterial(){
+  const m=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.95,metalness:0});
+  m.onBeforeCompile=sh=>{patchWorldPos(sh,'',`
+    float st=sin(vWP.y*1.7+vn(vWP.xz*.05)*6.)*.5+.5;
+    float gr=vn(vWP.xz*3.+vWP.y*2.);
+    diffuseColor.rgb*=.78+st*.22+(gr-.5)*.12;`,'')};
+  m.customProgramCacheKey=()=>'rock';return m}
+
+/* ---------- rochers : 8 variantes × 3 niveaux de détail (même forme à toute résolution) ---------- */
+function makeRockGeo(seed,detail){
+  let g=new THREE.IcosahedronGeometry(1,detail);const p=g.attributes.position,v=new THREE.Vector3(),o=seed*3.1;
+  for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).normalize();
+   let r=1+fbm(v.x*1.6+o,v.y*1.6+o,v.z*1.6+o,3)*.34+noise(v.x*5+o,v.y*5,v.z*5)*.05;
+   let y=v.y*r*.62; if(y<-.32)y=-.32+(y+.32)*.15;                     // face inférieure aplatie
+   p.setXYZ(i,v.x*r,y,v.z*r)}
+  // normales lissées par position (le détail fin reste arrondi, le plus bas niveau reste facetté)
+  if(detail>=1){const map=new Map(),n=new THREE.Vector3(),a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3();
+   const key=i=>Math.round(p.getX(i)*500)+','+Math.round(p.getY(i)*500)+','+Math.round(p.getZ(i)*500);
+   for(let i=0;i<p.count;i+=3){a.fromBufferAttribute(p,i);b.fromBufferAttribute(p,i+1);c.fromBufferAttribute(p,i+2);
+    n.subVectors(c,b).cross(a.sub(b));for(let k=0;k<3;k++){const kk=key(i+k);const e=map.get(kk)||[0,0,0];e[0]+=n.x;e[1]+=n.y;e[2]+=n.z;map.set(kk,e)}}
+   const nm=new Float32Array(p.count*3);for(let i=0;i<p.count;i++){const e=map.get(key(i)),l=Math.hypot(e[0],e[1],e[2])||1;nm[i*3]=e[0]/l;nm[i*3+1]=e[1]/l;nm[i*3+2]=e[2]/l}
+   g.setAttribute('normal',new THREE.BufferAttribute(nm,3))}
+  else g.computeVertexNormals();
+  g.computeBoundingSphere();return g}
+
+/* ====================================================================== */
+async function main(){
+  const canvas=document.getElementById('c');
+  const R=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+  R.outputEncoding=THREE.sRGBEncoding;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1;
+  R.shadowMap.enabled=OPT.shadows;R.shadowMap.type=THREE.PCFSoftShadowMap;
+  R.shadowMap.autoUpdate=false;                           // ombres en CACHE : mises à jour à la demande seulement
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(52,1,1,90000);
+  scene.fog=new THREE.FogExp2(0xbdb4a4,.000075);
+  const yieldFrame=()=>new Promise(requestAnimationFrame);
+  const sandMat=makeSandMaterial(),rockMat=makeRockMaterial();
+
+  /* --- lumière --- */
+  const sun=new THREE.DirectionalLight(0xffffff,3);sun.castShadow=OPT.shadows;
+  sun.shadow.mapSize.set(2048,2048);const SC=sun.shadow.camera;SC.left=SC.bottom=-130;SC.right=SC.top=130;SC.near=1;SC.far=900;
+  sun.shadow.bias=-.0004;sun.shadow.normalBias=.5;
+  scene.add(sun,sun.target);
+  const hemi=new THREE.HemisphereLight(0x9fb8e0,0x6b4a2a,.6);scene.add(hemi);
+
+  /* --- ciel : un dôme, un seul matériau, collé à la caméra --- */
+  const skyU={uSun:{value:new THREE.Vector3(0,1,0)},uTop:{value:new THREE.Color()},uHor:{value:new THREE.Color()},uSunCol:{value:new THREE.Color()}};
+  const sky=new THREE.Mesh(new THREE.SphereGeometry(60000,24,12),new THREE.ShaderMaterial({uniforms:skyU,side:THREE.BackSide,depthWrite:false,fog:false,
+   vertexShader:'varying vec3 vD;void main(){vD=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+   fragmentShader:`varying vec3 vD;uniform vec3 uSun,uTop,uHor,uSunCol;
+    void main(){vec3 d=normalize(vD);float t=pow(clamp(d.y,0.,1.),.45);vec3 c=mix(uHor,uTop,t);
+     float s=max(dot(d,uSun),0.);c+=uSunCol*(pow(s,600.)*8.+pow(s,12.)*.25);
+     c=mix(c,uHor,smoothstep(.0,-.25,d.y));gl_FragColor=vec4(c,1.);
+     #include <tonemapping_fragment>
+     #include <encodings_fragment>
+    }`}));
+  sky.renderOrder=-10;sky.frustumCulled=false;scene.add(sky);
+
+  /* --- 1. TERRAIN PROCHE : maillage dense, calculé une seule fois --- */
+  const W=1000,N=200;                                            // 1 km, une maille tous les 5 m
+  const near=new THREE.PlaneGeometry(W,W,N,N);near.rotateX(-Math.PI/2);
+  const np=near.attributes.position,grid=new Float32Array(np.count);
+  for(let i=0;i<np.count;i++){const h=terrainHeight(np.getX(i),np.getZ(i));np.setY(i,h);grid[i]=h}
+  near.computeVertexNormals();near.computeBoundingSphere();
+  const ground=new THREE.Mesh(near,sandMat);ground.receiveShadow=true;ground.castShadow=OPT.shadows;
+  ground.matrixAutoUpdate=false;scene.add(ground);
+  document.getElementById('load').textContent='ÉTENDRE L\'HORIZON…';await yieldFrame();
+
+  /* --- 2. ANNEAUX : de plus en plus grossiers jusqu'à 30 km, bords raccordés sommet par sommet --- */
+  const rings=[];let innerHalf=W/2,prev=null;
+  for(const outer of [1500,2800,5000,9000,16000,30000]){
+    const rows=outer<3000?24:28,cols=128,verts=[],idx=[],sides=[];
+    for(let s=0;s<4;s++){const start=verts.length/3;sides.push(start);
+     for(let r=0;r<=rows;r++)for(let c=0;c<=cols;c++){
+      const t=r/rows,u=c/cols*2-1,rr=innerHalf+(outer-innerHalf)*t;
+      const x=s===0?u*rr:s===1?rr:s===2?-u*rr:-rr, z=s===0?-rr:s===1?u*rr:s===2?rr:-u*rr;
+      verts.push(x,terrainHeight(x,z),z)}
+     for(let r=1;r<rows;r++)for(let c=0;c<cols;c++){const a=start+r*(cols+1)+c,b=a+cols+1;idx.push(a,a+1,b,a+1,b+1,b)}}
+    // bord intérieur = exactement les sommets du maillage précédent → aucune fissure
+    const prevPos=prev?prev.geometry.attributes.position:np,prevCols=prev?128:N,prevRows=prev?prev.userData.rows:0;
+    for(let s=0;s<4;s++){const inner=[],outerRow=[];
+     for(let c=0;c<=prevCols;c++){
+      const index=prev?prev.userData.sides[s]+prevRows*(prevCols+1)+c
+        :(s===0?c:s===1?c*(N+1)+N:s===2?N*(N+1)+N-c:(N-c)*(N+1));
+      inner.push(verts.length/3);verts.push(prevPos.getX(index),prevPos.getY(index),prevPos.getZ(index))}
+     for(let c=0;c<=cols;c++)outerRow.push(sides[s]+(cols+1)+c);
+     idx.push(...stitchEdge(inner,outerRow))}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));g.setIndex(idx);
+    // normales par gradient analytique (mêmes valeurs des deux côtés d'un raccord)
+    const nm=new Float32Array(verts.length),st=6;
+    for(let i=0;i<verts.length;i+=3){const x=verts[i],z=verts[i+2];
+     const dx=terrainHeight(x-st,z)-terrainHeight(x+st,z),dz=terrainHeight(x,z-st)-terrainHeight(x,z+st),l=Math.hypot(dx,2*st,dz);
+     nm[i]=dx/l;nm[i+1]=2*st/l;nm[i+2]=dz/l}
+    g.setAttribute('normal',new THREE.BufferAttribute(nm,3));g.computeBoundingSphere();
+    const m=new THREE.Mesh(g,sandMat);m.matrixAutoUpdate=false;m.userData={rows,sides};scene.add(m);rings.push(m);
+    prev=m;innerHalf=outer;await yieldFrame()}
+
+  /* --- hauteur exacte du maillage proche (triangles réels), analytique au-delà --- */
+  const cell=W/N;
+  function heightAt(x,z){
+    const fx=(x+W/2)/cell,fz=(z+W/2)/cell;
+    if(fx<0||fz<0||fx>=N||fz>=N)return terrainHeight(x,z);
+    const ix=Math.floor(fx),iz=Math.floor(fz),u=fx-ix,v=fz-iz,S=N+1;
+    const a=grid[iz*S+ix],b=grid[(iz+1)*S+ix],c=grid[(iz+1)*S+ix+1],d=grid[iz*S+ix+1];
+    return u+v<=1?a+u*(d-a)+v*(b-a):c+(1-u)*(b-c)+(1-v)*(d-c)}
+
+  /* --- 3. ROCHERS : instancing + niveaux de détail choisis à l'écran --- */
+  const rocks=[],NV=8,TIERS=[4,1,0];
+  const rockGeos=[];for(let v=0;v<NV;v++)rockGeos.push(TIERS.map(d=>makeRockGeo(151+v*7919,d)));
+  const rnd=rng(151515),m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),ps=new THREE.Vector3(),sc=new THREE.Vector3();
+  function addRock(x,z,size,flat=.6,tilt=.12){
+    const sx=size*(1+rnd()*.5),sz=size*(1+rnd()*.5),sy=size*flat*(.7+rnd()*.6),y=heightAt(x,z)+sy*.14;
+    e.set((rnd()-.5)*tilt,rnd()*6.283,(rnd()-.5)*tilt);q.setFromEuler(e);ps.set(x,y,z);sc.set(sx,sy,sz);m4.compose(ps,q,sc);
+    const tint=.82+rnd()*.3,mineral=smooth(.2,.8,noise(x*.008,0,z*.008)*.5+.5);
+    rocks.push({x,y,z,rad:Math.max(sx,sz,sy)*1.15,v:(rocks.length*5+Math.floor(rnd()*NV))%NV,m:Float32Array.from(m4.elements),
+      col:[tint*mixf(.72,.95,mineral),tint*mixf(.5,.62,mineral),tint*mixf(.38,.4,mineral)]})}
+  if(OPT.rocks){
+    for(let i=0;i<900;i++){const a=rnd()*6.283,r=60+Math.pow(rnd(),1.6)*260;addRock(Math.cos(a)*r,Math.sin(a)*r,.12+Math.pow(rnd(),3)*.9,.5,.9)} // gravier
+    for(let i=0;i<260;i++){const a=rnd()*6.283,r=70+Math.pow(rnd(),1.3)*600;addRock(Math.cos(a)*r,Math.sin(a)*r,1+Math.pow(rnd(),2.4)*6,.85)}        // blocs
+    for(let i=0;i<90;i++){const a=rnd()*6.283,r=200+rnd()*3500;addRock(Math.cos(a)*r,Math.sin(a)*r,10+Math.pow(rnd(),2)*40,.95,.2)}                  // affleurements
+    for(let i=0;i<34;i++){const a=rnd()*6.283,r=1500+Math.pow(rnd(),1.4)*22000;addRock(Math.cos(a)*r,Math.sin(a)*r,90+r*.008+rnd()*160,.6,.12)}      // mesas
+  }
+  const byV=Array.from({length:NV},()=>0);rocks.forEach(r=>byV[r.v]++);
+  const rockMeshes=[];  // [variante][niveau]
+  for(let v=0;v<NV;v++){rockMeshes.push([]);for(let t=0;t<3;t++){
+    const cap=Math.max(1,byV[v]),mesh=new THREE.InstancedMesh(rockGeos[v][t],rockMat,cap);
+    mesh.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(cap*3),3);
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
+    mesh.frustumCulled=false;mesh.count=0;mesh.castShadow=OPT.shadows&&t===0;mesh.receiveShadow=true;
+    scene.add(mesh);rockMeshes[v].push(mesh)}}
+  const frustum=new THREE.Frustum(),pv=new THREE.Matrix4(),sph=new THREE.Sphere(),counts=Array.from({length:NV},()=>[0,0,0]);
+  let drawnRocks=0,rockShadowDirty=true;
+  function updateRocks(pxK){
+    camera.updateMatrixWorld();pv.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);frustum.setFromProjectionMatrix(pv);
+    for(const c of counts)c[0]=c[1]=c[2]=0;drawnRocks=0;const cp=camera.position;
+    for(const r of rocks){
+      const dx=r.x-cp.x,dy=r.y-cp.y,dz=r.z-cp.z,d=Math.sqrt(dx*dx+dy*dy+dz*dz)+1e-3,px=r.rad/d*pxK;
+      if(px<.7)continue;                                       // plus petit qu'un pixel : supprimé
+      sph.center.set(r.x,r.y,r.z);sph.radius=r.rad;if(!frustum.intersectsSphere(sph))continue; // hors champ : supprimé
+      const t=px>55?0:px>7?1:2,mesh=rockMeshes[r.v][t],k=counts[r.v][t]++;
+      mesh.instanceMatrix.array.set(r.m,k*16);const ca=mesh.instanceColor.array;ca[k*3]=r.col[0];ca[k*3+1]=r.col[1];ca[k*3+2]=r.col[2];drawnRocks++}
+    for(let v=0;v<NV;v++)for(let t=0;t<3;t++){const mesh=rockMeshes[v][t],n=counts[v][t];
+      if(mesh.count!==n&&t===0)rockShadowDirty=true;mesh.count=n;
+      mesh.instanceMatrix.updateRange.offset=0;mesh.instanceMatrix.updateRange.count=n*16;mesh.instanceMatrix.needsUpdate=n>0;
+      mesh.instanceColor.updateRange.offset=0;mesh.instanceColor.updateRange.count=n*3;mesh.instanceColor.needsUpdate=n>0}}
+
+  /* --- 4. HERBE SÈCHE : une touffe de 18 brins, 360 instances autour du départ --- */
+  {const r=rng(15971),pos=[],col=[],idx=[],rc=new THREE.Color('#51462b'),tc=new THREE.Color('#aa9863');
+   for(let b=0;b<18;b++){const a=r()*6.283,lean=.1+r()*.38,h=.23+r()*.55,w=.012+r()*.017,x=Math.cos(a)*r()*.1,z=Math.sin(a)*r()*.1,base=pos.length/3;
+    for(let row=0;row<3;row++){const t=row/2,half=w*(1-t*.98);for(const s of[-1,1]){
+     pos.push(x+Math.cos(a)*lean*t*t-Math.sin(a)*half*s,h*t,z+Math.sin(a)*lean*t*t+Math.cos(a)*half*s);const c=rc.clone().lerp(tc,t);col.push(c.r,c.g,c.b)}}
+    for(const tr of[[0,1,2],[1,3,2],[2,3,4],[3,5,4]])idx.push(...tr.map(i=>base+i))}
+   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.setIndex(idx);g.computeVertexNormals();
+   const mesh=new THREE.InstancedMesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,side:THREE.DoubleSide}),360);
+   const centers=[[-40,-60],[55,-45],[-70,30],[80,70],[10,95],[-20,-120]];
+   for(let i=0;i<360;i++){const c=centers[i%6],a=r()*6.283,rad=Math.pow(r(),.7)*24,x=c[0]+Math.cos(a)*rad,z=c[1]+Math.sin(a)*rad*.7;
+    ps.set(x,heightAt(x,z)-.04,z);e.set(0,r()*6.283,0);q.setFromEuler(e);sc.setScalar(.45+r()*.8);m4.compose(ps,q,sc);mesh.setMatrixAt(i,m4)}
+   mesh.frustumCulled=false;mesh.matrixAutoUpdate=false;mesh.receiveShadow=true;scene.add(mesh)}
+
+  /* --- heures du jour --- */
+  const PRE={
+   dawn:{el:7,az:80,sun:[1,.6,.36],sunI:1.35,top:[.16,.26,.5],hor:[.95,.62,.45],fog:[.78,.55,.42],hemiS:[.5,.55,.75],hemiG:[.4,.26,.18],hemiI:.32,exp:.95,fogD:.00009},
+   day:{el:52,az:140,sun:[1,.94,.82],sunI:1.45,top:[.2,.42,.8],hor:[.78,.82,.86],fog:[.76,.73,.67],hemiS:[.62,.72,.9],hemiG:[.42,.3,.2],hemiI:.38,exp:.9,fogD:.000075},
+   sunset:{el:5,az:250,sun:[1,.4,.16],sunI:1.5,top:[.1,.13,.32],hor:[.95,.5,.3],fog:[.66,.4,.3],hemiS:[.45,.4,.6],hemiG:[.38,.22,.14],hemiI:.3,exp:.95,fogD:.00009}};
+  let cur=JSON.parse(JSON.stringify(PRE.day)),from=null,to=null,tT=0;
+  const lerpV=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+  function applyPreset(p){
+    const el=p.el*Math.PI/180,az=p.az*Math.PI/180,dir=new THREE.Vector3(Math.cos(el)*Math.sin(az),Math.sin(el),Math.cos(el)*Math.cos(az));
+    skyU.uSun.value.copy(dir);skyU.uTop.value.setRGB(...p.top);skyU.uHor.value.setRGB(...p.hor);skyU.uSunCol.value.setRGB(...p.sun);
+    sun.color.setRGB(...p.sun);sun.intensity=p.sunI;sun.userData.dir=dir;
+    hemi.color.setRGB(...p.hemiS);hemi.groundColor.setRGB(...p.hemiG);hemi.intensity=p.hemiI;
+    scene.fog.color.setRGB(...p.fog);scene.fog.density=p.fogD;R.toneMappingExposure=p.exp;rockShadowDirty=true;dirty=true}
+  function setTime(name,instant){from=JSON.parse(JSON.stringify(cur));to=PRE[name];tT=0;if(instant){cur=JSON.parse(JSON.stringify(PRE[name]));to=null;applyPreset(cur)}
+    document.querySelectorAll('#tod button').forEach(b=>b.classList.toggle('on',b.dataset.t===name))}
+  document.querySelectorAll('#tod button').forEach(b=>b.onclick=()=>setTime(b.dataset.t));
+
+  /* --- joueur / caméra --- */
+  const P={x:-18,z:30,y:0,yaw:2.7,pitch:-.05,fly:false,flyH:0};
+  P.y=heightAt(P.x,P.z);
+  const keys={};let drag=null,paused=false,dirty=true,shadowAt={x:1e9,z:1e9},lastCam='';
+  addEventListener('keydown',ev=>{keys[ev.code]=true;if(ev.code==='KeyF'){P.fly=!P.fly;dirty=true}if(ev.code==='Space'){paused=!paused;ev.preventDefault()}});
+  addEventListener('keyup',ev=>keys[ev.code]=false);
+  canvas.addEventListener('pointerdown',ev=>{drag={x:ev.clientX,y:ev.clientY};canvas.setPointerCapture(ev.pointerId)});
+  canvas.addEventListener('pointermove',ev=>{if(!drag)return;P.yaw-=(ev.clientX-drag.x)*.004;P.pitch=clamp(P.pitch-(ev.clientY-drag.y)*.004,-1.4,1.4);drag={x:ev.clientX,y:ev.clientY};dirty=true});
+  canvas.addEventListener('pointerup',()=>drag=null);
+
+  /* --- résolution dynamique (même logique que le correctif d'URANUS-V) --- */
+  let rs=OPT.scale,pt=performance.now(),pst=pt+3500,pn=0,ps2=0,pwait=4000,pup=0;
+  function resize(){const pr=Math.min(devicePixelRatio,1.5)*rs;R.setPixelRatio(pr);R.setSize(innerWidth,innerHeight,false);uPR.value=pr;
+    camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();dirty=true}
+  addEventListener('resize',resize);resize();
+  function perf(){const n=performance.now(),raw=n-pt;pt=n;if(n<pst||raw>250||document.hidden)return;ps2+=raw;if(++pn<45)return;const avg=ps2/pn;pn=0;ps2=0;
+    if(avg>21.5&&rs>.55){rs=Math.max(.55,Math.round((rs-(avg>30?.2:.1))*100)/100);resize();pwait=Math.min(60000,pwait*2);pup=n+pwait;pst=n+800}
+    else if(avg<17.4&&rs<OPT.scale&&n>pup){rs=Math.min(OPT.scale,Math.round((rs+.1)*100)/100);resize();pst=n+800}}
+
+  applyPreset(cur);
+  const hud=document.getElementById('hud');let frames=0,fpsT=performance.now(),fps=0,hudT=0;
+  const fwd=new THREE.Vector3();
+  function frame(now){
+    requestAnimationFrame(frame);
+    if(document.hidden)return;
+    const dt=Math.min(.05,(now-(frame.l||now))/1000);frame.l=now;
+    // déplacement
+    const sp=(keys.ShiftLeft||keys.ShiftRight?14:4.2)*(P.fly?25:1);
+    const f=(keys.KeyW||keys.KeyZ||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.KeyQ||keys.ArrowLeft?1:0);
+    if(f||s){const sy=Math.sin(P.yaw),cy=Math.cos(P.yaw);P.x+=(-sy*f+cy*s)*sp*dt;P.z+=(-cy*f-sy*s)*sp*dt;dirty=true}
+    const gy=heightAt(P.x,P.z),wantH=P.fly?140:1.7;P.flyH+=(wantH-P.flyH)*Math.min(1,dt*3);if(Math.abs(wantH-P.flyH)>.01)dirty=true;
+    P.y+=(gy-P.y)*Math.min(1,dt*12);
+    camera.position.set(P.x,P.y+P.flyH,P.z);camera.rotation.set(P.pitch-(P.fly?.35:0),P.yaw,0,'YXZ');
+    // transition d'heure
+    if(to){tT=Math.min(1,tT+dt/2);const k=tT*tT*(3-2*tT),o={};
+     for(const key of Object.keys(to)){o[key]=Array.isArray(to[key])?lerpV(from[key],to[key],k):mixf(from[key],to[key],k)}
+     cur=o;applyPreset(cur);if(tT>=1)to=null}
+    sky.position.copy(camera.position);
+    // ombres en cache : on ne redessine la carte d'ombres que si le joueur s'est éloigné de 28 m, ou si le soleil / les rochers ont changé
+    if(OPT.shadows){const dx=P.x-shadowAt.x,dz=P.z-shadowAt.z;
+     if(dx*dx+dz*dz>28*28||rockShadowDirty||to){const t=1/2048*260,sx=Math.round(P.x/t)*t,sz=Math.round(P.z/t)*t,gy2=heightAt(sx,sz);
+      sun.target.position.set(sx,gy2,sz);sun.position.copy(sun.userData.dir).multiplyScalar(400).add(sun.target.position);
+      sun.target.updateMatrixWorld();sun.updateMatrixWorld();R.shadowMap.needsUpdate=true;shadowAt={x:P.x,z:P.z};rockShadowDirty=false}}
+    // rendu à la demande : rien ne change → on ne redessine pas
+    const camKey=camera.position.x.toFixed(2)+camera.position.y.toFixed(2)+camera.position.z.toFixed(2)+camera.rotation.x.toFixed(3)+camera.rotation.y.toFixed(3);
+    if(camKey!==lastCam){lastCam=camKey;dirty=true}
+    perf();
+    if(dirty||R.shadowMap.needsUpdate){
+      const pxK=R.domElement.height*.5/Math.tan(camera.fov*Math.PI/360);
+      updateRocks(pxK);R.render(scene,camera);dirty=false;frames++;
+    }
+    if(now-fpsT>1000){fps=Math.round(frames*1000/(now-fpsT));frames=0;fpsT=now;
+      const i=R.info;hud.textContent=`DÉSERT · ${fps} i/s (rendu à la demande)\nappels de dessin ${i.render.calls} · triangles ${(i.render.triangles/1000).toFixed(0)} k\nrochers affichés ${drawnRocks}/${rocks.length} · résolution ×${rs.toFixed(2)}\nposition ${P.x.toFixed(0)}, ${P.z.toFixed(0)} · ${P.fly?'vol':'sol'}`}
+  }
+  window.desert={R,scene,camera,P,heightAt,terrainHeight,rocks,rings,ground,setTime,info:()=>R.info,get dirty(){return dirty},render(){updateRocks(R.domElement.height*.5/Math.tan(camera.fov*Math.PI/360));R.render(scene,camera)}};
+  requestAnimationFrame(frame);
+  const L=document.getElementById('load');L.style.opacity=0;setTimeout(()=>L.remove(),700);window.desert.ready=true;
+}
+main().catch(err=>{console.error(err);document.getElementById('load').textContent='ERREUR : '+err.message});
+</script></body></html>

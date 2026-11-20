@@ -7,11 +7,17 @@ bassin à étang, 10 plantes générées (Fabrique : achillée, aconits, actée,
 - `terrain.js` : ajoute le bassin (`POND`, `pondField`) à `groundHeight`.
 - `fabrique.js`, `plantes.js` : générateurs de géométrie (scripts classiques chargés dans `index.html`).
 - `main.js` : lumières élargies, brouillard plus léger, caméra reculée pour voir le bassin.
-- 1 mètre réel = 2,2 unités (`S` dans `garden.js`). Pour alléger : réduire `36` plantes, le nombre d’arbres, ou `hauteur`.
+- Échelle : 1 mètre = 9 unités (`S` dans `garden.js`), comme les champignons de Spore (1 unité ≈ 10 cm) ; les arbres font ~58 unités. La mousse couvre tout le sol jusqu’à 12 unités (`MOSS_EXTRA`, `MOSS_R` dans `forest.js`). Pour alléger : réduire `MOSS_EXTRA`, les plantes par massif ou le nombre d’arbres.
 
 - Bouton **Encre** (en bas) : bascule le rendu final en gravure noir et blanc (nœud TSL `inkOut` dans `post-processing.js`).
 
 - **Timeline** (barre en bas : ▶ lecture, curseur d’heure, horloge) : `timeline.js`. La nuit (23:00 par défaut, ou `?time=21:30` dans l’adresse) est l’ambiance de Spore ; le jour éteint la bioluminescence, allume un soleil et un ciel. Réglages en tête de fichier : `DAY_EXPOSURE`, palette `PAL`, intensités soleil/hémisphère dans `apply()`.
+
+- `especes.js` : les six champignons de la page « Spore · microscope » (amanite tue-mouches, coprin chevelu, morille, inocybe étoilé, reishi, vesse-de-loup), avec leur géométrie procédurale d’origine (cm → `SM` dans `garden.js`) et leurs couleurs ; matériaux WebGPU avec une lueur nocturne qui s’éteint le jour.
+
+- **Arbres** : `eztree/` est EZ-Tree (https://github.com/dgreenheck/ez-tree, licence MIT, voir `eztree/LICENSE`) adapté pour s’exécuter sans bundler (imports `.js`, JSON → modules, textures par URL). Chênes, frênes et trembles avec écorce et feuilles texturées, re-matérialisés en `MeshStandardNodeMaterial` / `MeshSSSNodeMaterial` (feuilles translucides). Rochers du bassin et fleurs de prairie : `assets/*.glb` de l’app EZ-Tree (compression Draco : le décodeur est téléchargé depuis gstatic ; vérifie la licence de ces modèles avant de publier).
+
+- **Eau** : le matériau du bassin reçoit deux couches de `assets/waternormals.jpg` (carte de normales de Three.js) qui défilent, pour des rides et des reflets mobiles (reflet de l’environnement, pas de reflet planaire : `WaterMesh` de Three.js relance un rendu de scène, risqué avec le pipeline personnalisé de Spore). **Vent** : balancement léger des plantes et des feuillages d’arbres (`positionNode` dans `garden.js`).
 
 Lancer : `npm start` puis http://localhost:8016/ dans un navigateur WebGPU.
 

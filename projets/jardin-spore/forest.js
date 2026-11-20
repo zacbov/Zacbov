@@ -3,7 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createTuftGeometry, createAccentGeometry } from './botany.js';
 import { randomSeed, noise } from './random.js';
 import { createMossDetailLevels, createMossLODMaterials, mossLODReady } from './moss-lod.js';
-import { cushions, groundHeight } from './terrain.js';
+import { cushions, groundHeight, pondField } from './terrain.js';
 import { MUSHROOMS, stemRadius } from './mushrooms.js';
 import { createSubstrate } from './substrate.js';
 export { groundHeight, mossHeight } from './terrain.js';
@@ -58,18 +58,18 @@ function placeLeafClearOfStems(leaf){
 export async function createForest(materials) {
   await mossLODReady;
   const group=new THREE.Group();group.name='Forest floor';
-  const geo=new THREE.PlaneGeometry(18,18,240,240);geo.rotateX(-Math.PI/2);
+  const geo=new THREE.PlaneGeometry(60,60,400,400);geo.rotateX(-Math.PI/2);
   const p=geo.attributes.position;
   for(let i=0;i<p.count;i++)p.setY(i,groundHeight(p.getX(i),p.getZ(i)));
   geo.computeVertexNormals();const floor=new THREE.Mesh(geo,materials.ground);group.add(floor);
   const random=randomSeed(161611),object=new THREE.Object3D(),moss=new THREE.BundleGroup();
   const buckets=Array.from({length:5},()=>new Map());
-  function addTuft(x,z,scale,variant){
+  function addTuft(x,z,scale,variant,cell=.8){
     object.position.set(x,groundHeight(x,z)-.009,z);
     object.rotation.set((random()-.5)*.5,random()*Math.PI*2,(random()-.5)*.5);
     object.scale.set(scale,scale*(.65+random()*.3),scale);object.updateMatrix();
-    const cx=Math.floor(x/.8),cz=Math.floor(z/.8),key=`${cx},${cz}`,bucket=buckets[variant];
-    if(!bucket.has(key))bucket.set(key,{center:new THREE.Vector3((cx+.5)*.8,0,(cz+.5)*.8),matrices:[]});
+    const cx=Math.floor(x/cell),cz=Math.floor(z/cell),key=`${cell}:${cx},${cz}`,bucket=buckets[variant];
+    if(!bucket.has(key))bucket.set(key,{center:new THREE.Vector3((cx+.5)*cell,0,(cz+.5)*cell),matrices:[]});
     bucket.get(key).matrices.push(object.matrix.clone());
   }
   for(let i=0;i<5200;i++){
@@ -79,6 +79,15 @@ export async function createForest(materials) {
     const colony=noise(x*1.3,7,z*1.3);
     if(!clustered&&random()>colony*.95+.15)continue;
     addTuft(x,z,1.2+random()*.65,i%5);
+  }
+  // La mousse couvre tout le sol du jardin (touffes plus grosses et plus espacées au-delà du bosquet),
+  // pour que les plantes poussent dans un tapis et pas sur de la terre nue. Réglages : MOSS_EXTRA, MOSS_R.
+  const MOSS_EXTRA=4500,MOSS_R=12;
+  for(let i=0;i<MOSS_EXTRA;i++){
+    const a=random()*Math.PI*2,r=2.7+(MOSS_R-2.7)*Math.sqrt(random()),x=Math.cos(a)*r,z=Math.sin(a)*r;
+    if(pondField(x,z)<.25||groundHeight(x,z)<-.05)continue;
+    if(random()>noise(x*.6,3,z*.6)*.9+.35)continue;
+    addTuft(x,z,2.6+random()*1.2,i%5,2);
   }
   // Small uneven patches grow right against each stipe, hiding the straight
   // soil intersection without making a continuous artificial ring.

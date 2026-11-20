@@ -24,11 +24,11 @@ export async function startExperiment(){
   const scene=new THREE.Scene();scene.background=new THREE.Color('#010302');scene.fog=new THREE.FogExp2('#010302',.036);
   const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.025,90);
   const controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.dampingFactor=.07;
-  controls.minDistance=1.1;controls.maxDistance=18;controls.maxPolarAngle=Math.PI*.53;
+  controls.minDistance=1.1;controls.maxDistance=34;controls.maxPolarAngle=Math.PI*.53;
   controls.autoRotate=true;controls.autoRotateSpeed=.32;controls.zoomSpeed=.65;
-  function resetView(){controls.target.set(1.6,.9,1.4);camera.position.set(1.7,2.3,9.2);camera.position.sub(controls.target).multiplyScalar(Math.max(1,.95/camera.aspect)).add(controls.target);controls.update();}
+  function resetView(){controls.target.set(2.4,1.6,2.4);camera.position.set(.6,3.4,13);camera.position.sub(controls.target).multiplyScalar(Math.max(1,.95/camera.aspect)).add(controls.target);controls.update();}
   resetView();
-  const materials=createMaterials(),mushrooms=createMushrooms(materials),forest=await createForest(materials),garden=createGarden(materials);
+  const materials=createMaterials(),mushrooms=createMushrooms(materials),forest=await createForest(materials),garden=await createGarden(materials);
   const environmentMaterials=[...Object.values(materials).filter(value=>value.isMaterial),...forest.mossLOD.materials];
   scene.add(forest.group,mushrooms.group,garden.group);environmentMaterials.push(...garden.materials);
   const back=new THREE.SpotLight('#ffbd99',30,20,Math.PI*.40,.65,2);back.position.set(-.4,1.6,-2.4);back.target.position.set(0,1.15,0);

@@ -5,18 +5,32 @@ Le patient parle avec une voix neuronale Piper calculée dans le navigateur, et 
 (Whisper, lui aussi dans le navigateur). Rien n'est envoyé ailleurs que le site lui-même ; ça fonctionne sur GitHub Pages.
 
 1. Installer les modèles (une seule fois)
-   Les moteurs sont fournis (dossier voix/moteur, 40 Mo). Les modèles (150 Mo) sont à récupérer :
+   Les moteurs sont fournis (dossier voix/moteur, 40 Mo). Les modèles (≈ 360 Mo en tout) sont à récupérer :
    - sur GitHub : onglet Actions > « Voix locales » > Run workflow (le dépôt reçoit voix/piper et voix/whisper-base) ;
    - ou sur le PC : clic droit sur outils/telecharger_voix.ps1 > Exécuter avec PowerShell, puis envoyer le dossier voix.
    Fichiers attendus :
-     voix/piper/fr_FR-upmc-medium.onnx (77 Mo) + .onnx.json      (voix « Jessica » et « Pierre »)
+     voix/piper/fr_FR-upmc-medium.onnx (77 Mo) + .onnx.json      (Jessica, Pierre)
+     voix/piper/fr_FR-mls-medium.onnx (77 Mo) + .onnx.json       (15 voix retenues : femmes et hommes de tous âges)
+     voix/piper/fr_FR-siwis-medium.onnx (63 Mo) + .onnx.json     (femme adulte)
+     voix/piper/fr_FR-tom-medium.onnx (64 Mo) + .onnx.json       (homme adulte)
+     (+ MODEL_CARD_*.txt : licence de chaque voix). Un modèle absent est simplement ignoré.
      voix/whisper-base/*.json + onnx/encoder_model_quantized.onnx + onnx/decoder_model_merged_quantized.onnx (77 Mo)
    Chaque fichier fait moins de 100 Mo : pas besoin de Git LFS.
 
 2. Utilisation
    - Bouton de voix (au-dessus du patient) : « Voix locale » -> « Voix du navigateur » -> « Muet ». Le choix est mémorisé.
      Sans modèle Piper, la page reste sur la voix du navigateur (voix Windows), comme avant.
-   - Patiente : voix Jessica ; patient : voix Pierre (selon le sexe de la fiche).
+   - Voix choisie selon le sexe et l'âge de la fiche (toujours la même pour un cas donné, variée d'un cas à l'autre) :
+       femme ≥ 70 ans : mls 12709, 8778, 12713 ; 55–69 ans : mls 9121 ;
+       femme 30–54 ans : Siwis, Jessica (prioritaires), mls 1474, 4512, 13634, 6128, 5232, 12823 ; < 30 ans : mls 5612 ;
+       homme ≥ 70 ans : mls 7423 (prioritaire), 9242 ; 55–69 ans : mls 10065 ;
+       homme 30–54 ans : Tom, Pierre (prioritaires), mls 1840 ; < 30 ans : mls 12501.
+       Enfant (< 15 ans) : voix adulte, c'est le parent qui parle. Tranche vide -> tranche voisine.
+     5612, rangée par erreur parmi les hommes dans la liste de départ, est une voix de jeune femme : classée côté femmes.
+   - Outils > « Voix des patients (écouter, imposer) » : écoute de chaque voix (▶) et choix d'une voix imposée à tous
+     les cas (mémorisé dans ce navigateur) ou retour à « Automatique ».
+   - Une voix d'un nouveau modèle se télécharge à sa première utilisation (60 à 77 Mo), puis reste en cache. Deux modèles
+     au plus restent chargés en mémoire.
    - Le texte est dit phrase par phrase : la première phrase part dès qu'elle est calculée (environ 0,3 à 1 s).
    - Les lèvres suivent le texte et s'ouvrent selon le volume réel du son.
    - Micro (à gauche de « Envoyer », visible seulement si Whisper est installé) : un clic pour parler, un second pour
@@ -29,3 +43,6 @@ Le patient parle avec une voix neuronale Piper calculée dans le navigateur, et 
    - Piper (MIT), piper_phonemize/espeak-ng (GPL v3, données de prononciation), onnxruntime-web (MIT),
      transformers.js (Apache 2.0), Whisper (MIT).
    - Voix fr_FR-upmc-medium : jeu de données UPMC (Pierre et Jessica), CC BY-SA 4.0 — à créditer dans la page « À propos ».
+   - Voix fr_FR-mls-medium : Multilingual LibriSpeech (livres audio LibriVox), CC BY 4.0.
+   - Voix fr_FR-siwis-medium : base SIWIS (Idiap), CC BY 4.0.
+   - Voix fr_FR-tom-medium : vérifier la licence dans voix/piper/MODEL_CARD_tom.txt après téléchargement.

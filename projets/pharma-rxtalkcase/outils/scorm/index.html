@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Séance de cas cliniques</title>
+<style>
+:root{--fond:#0f1a17;--bande:#16241f;--txt:#e9f1ec;--doux:#9db3a8;--vert:#3ecf8e;--rouge:#ef6b6b}
+html,body{margin:0;height:100%;background:var(--fond);color:var(--txt);font:15px/1.4 system-ui,sans-serif}
+#bande{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;padding:.5rem 1rem;background:var(--bande);border-bottom:1px solid #2a3c35}
+#bande b{font-size:1rem} #prog{display:flex;gap:.35rem} .pt{width:14px;height:14px;border-radius:50%;border:2px solid var(--doux)} .pt.ok{background:var(--vert);border-color:var(--vert)} .pt.ko{background:var(--rouge);border-color:var(--rouge)}
+#etat{color:var(--doux)} #fin{display:none;padding:2rem;max-width:720px;margin:auto} #fin table{border-collapse:collapse;width:100%} #fin td,#fin th{border-bottom:1px solid #2a3c35;padding:.4rem;text-align:left}
+button{background:var(--vert);color:#062014;border:0;border-radius:8px;padding:.5rem .9rem;font-weight:600;cursor:pointer}
+iframe{display:block;width:100%;height:calc(100% - 52px);border:0}
+</style></head>
+<body>
+<div id="bande"><b id="titre">Séance</b><div id="prog"></div><span id="etat">Connexion à la plateforme…</span></div>
+<iframe id="app" title="Cas cliniques" allow="microphone; autoplay; fullscreen"></iframe>
+<div id="fin"></div>
+<script src="config.js"></script>
+<script src="seance.js"></script>
+</body></html>

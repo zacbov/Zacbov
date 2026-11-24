@@ -3,6 +3,7 @@
    - couches peintes dans la texture de la peau (plein, plaques, marbré, anneau).
    Les zones de l'atlas (sphères dans le repère de son propre corps) sont redéfinies ici sur le squelette du patient. */
 import * as THREE from 'three';
+const comp = (a, i, k) => (k === 0 ? a.getX(i) : k === 1 ? a.getY(i) : k === 2 ? a.getZ(i) : a.getW(i));   // attributs simples ou entrelacés
 
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 let CAT = null, FICHES = {};
@@ -129,7 +130,7 @@ export function createPeau(A) {
         for (const s of sph) { const d = P.distanceTo(s.c); if (d > s.R) continue; if (s.dir) { N.fromBufferAttribute(Na, i).applyMatrix3(Nm).normalize(); if (N.dot(s.dir) < s.md) continue; } ok = { s, d: d / s.R }; break; }
         if (!ok) continue;
         N.fromBufferAttribute(Na, i).applyMatrix3(Nm).normalize();
-        let bi = 0, bw = -1; for (let k = 0; k < 4; k++) { const w = Sw.getComponent(i, k); if (w > bw) { bw = w; bi = Si.getComponent(i, k); } }
+        let bi = 0, bw = -1; for (let k = 0; k < 4; k++) { const w = comp(Sw, i, k); if (w > bw) { bw = w; bi = comp(Si, i, k); } }
         out.push({ m, i, p: P.clone(), n: N.clone(), u: Ua.getX(i), v: Ua.getY(i), d: ok.d, bone: bi });
       }
     }

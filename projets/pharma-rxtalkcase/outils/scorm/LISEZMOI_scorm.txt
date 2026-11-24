@@ -1,0 +1,33 @@
+NOTATION SCORM (Moodle et autres plateformes) — séance de cas notés
+====================================================================
+
+Principe
+- Un petit paquet SCORM 1.2 (quelques Ko) est déposé dans Moodle. Il affiche l'outil en ligne (GitHub Pages) dans un
+  cadre et transmet les notes à Moodle. L'outil n'est pas copié dans Moodle : toute mise à jour du site s'applique.
+- L'étudiant fait N cas. Chaque cas se termine par « Terminer et débriefer » : la note /20 de l'évaluateur (IA) est
+  envoyée au paquet, qui l'enregistre dans Moodle.
+- Score Moodle = moyenne des notes ramenée sur 100 (12/20 -> 60/100). Statut : « incomplet » tant que les N cas ne sont
+  pas faits, puis « réussi » si la moyenne atteint le seuil, sinon « échoué ».
+- Chaque cas devient une « interaction » visible dans les rapports SCORM de Moodle (identifiant du cas, note, durée).
+- Reprise : si l'étudiant ferme la fenêtre, les cas déjà notés sont conservés (suspend_data) et il reprend où il en était.
+
+Créer un paquet
+  python3 outils/scorm/creer_scorm.py --n 3 --pop officine --seuil 10 --titre "Officine — séance 1"
+  Options : --n (nombre de cas, 1 à 20), --pop (officine, hospitalier, medecine, industrie_recherche ; vide = libre),
+  --theme (identifiant de thème, ex. infectiologie), --seuil (moyenne /20 pour réussir), --app (adresse de l'outil).
+  Le parcours et le thème choisis sont imposés et verrouillés dans l'outil pendant la séance.
+  Paquet prêt à l'emploi fourni : seance_tous_3cas.zip (3 cas, tous parcours, seuil 10/20).
+
+Dans Moodle
+  Ajouter une activité > Paquetage SCORM > déposer le zip. Réglages conseillés :
+  - Affichage : « Nouvelle fenêtre » (plus de place pour le patient 3D), ou « Page courante » ;
+  - Note : « Note la plus haute » ou « Moyenne des tentatives » selon votre choix ; note maximale 100 ;
+  - Tentatives : à votre convenance (une nouvelle tentative = nouvelle séance de N cas).
+
+Limites (à connaître)
+- La note vient de l'évaluateur IA (débriefing) : c'est une note d'entraînement, pas une note d'examen certifiante.
+- Si l'IA ne rend pas de note (panne), le cas compte sans note et n'entre pas dans la moyenne.
+- Un étudiant très technique pourrait falsifier un message dans son navigateur : l'outil vérifie l'origine des messages,
+  mais aucune notation faite dans le navigateur n'est infalsifiable.
+- L'outil doit être en ligne (GitHub Pages) et accessible depuis le réseau des étudiants.
+- Testé avec une plateforme simulée SCORM 1.2 et SCORM 2004 (le paquet sait parler aux deux), pas encore dans votre Moodle.

@@ -6,7 +6,14 @@ import creerPhonemiseur from './moteur/piper_phonemize.mjs';
 const B = new URL('./', import.meta.url).href;
 ort.env.wasm.wasmPaths = B + 'moteur/';
 ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;   // GitHub Pages : pas d'isolation, 1 fil
-let cfg = null, sess = null, ph = null;
+let ph = null; const modeles = new Map();   // plusieurs voix : une session ONNX par modèle, chargée à la première demande
+async function fichier(url) {                 // modèle gardé dans le cache du navigateur (Cache Storage) : téléchargé une seule fois
+  try {
+    const c = await caches.open('voix-locales-v1'); let r = await c.match(url);
+    if (!r) { r = await fetch(url); if (!r.ok) throw new Error(url + ' : ' + r.status); await c.put(url, r.clone()); }
+    return new Uint8Array(await r.arrayBuffer());
+  } catch (e) { const r = await fetch(url); if (!r.ok) throw new Error(url + ' : ' + r.status); return new Uint8Array(await r.arrayBuffer()); }
+}
 
 async function phonemiseur() {
   if (ph) return ph;
@@ -22,14 +29,31 @@ async function phonemiseur() {
   return ph;
 }
 
+function modele(nom) {
+  if (modeles.has(nom)) { const p = modeles.get(nom); modeles.delete(nom); modeles.set(nom, p); }   // remis en tête (le plus récent)
+  else {
+    const p = (async () => {
+      const cfg = await (await fetch(B + 'piper/' + nom + '.onnx.json')).json();
+      const sess = await ort.InferenceSession.create(await fichier(B + 'piper/' + nom + '.onnx'), { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
+      return { cfg, sess };
+    })();
+    p.catch(() => modeles.delete(nom));
+    modeles.set(nom, p);
+    while (modeles.size > 2) {               // mémoire : deux voix chargées au plus (~80 Mo chacune), la plus ancienne est libérée
+      const [vieux, q] = modeles.entries().next().value; modeles.delete(vieux);
+      q.then((m) => m.sess.release && m.sess.release()).catch(() => {});
+    }
+  }
+  return modeles.get(nom);
+}
+
 self.onmessage = async ({ data: d }) => {
   try {
     if (d.type === 'init') {
-      cfg = await (await fetch(B + 'piper/' + d.modele + '.onnx.json')).json();
-      sess = await ort.InferenceSession.create(B + 'piper/' + d.modele + '.onnx', { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
-      await phonemiseur();
-      self.postMessage({ type: 'pret', locuteurs: cfg.speaker_id_map || {} });
+      const { cfg } = await modele(d.modele); await phonemiseur();
+      self.postMessage({ type: 'pret', id: d.id, modele: d.modele, locuteurs: cfg.speaker_id_map || {} });
     } else if (d.type === 'dire') {
+      const { cfg, sess } = await modele(d.modele);
       const ids = (await phonemiseur())(d.texte, cfg.espeak.voice);
       if (!ids.length) return self.postMessage({ type: 'audio', id: d.id, pcm: new Float32Array(0), sr: cfg.audio.sample_rate });
       const I = cfg.inference, entrees = {
@@ -37,7 +61,7 @@ self.onmessage = async ({ data: d }) => {
         input_lengths: new ort.Tensor('int64', BigInt64Array.from([BigInt(ids.length)]), [1]),
         scales: new ort.Tensor('float32', Float32Array.from([I.noise_scale, I.length_scale / (d.vitesse || 1), I.noise_w]), [3]),
       };
-      if (Object.keys(cfg.speaker_id_map || {}).length) entrees.sid = new ort.Tensor('int64', BigInt64Array.from([BigInt(d.sid || 0)]), [1]);
+      if (cfg.num_speakers > 1 || Object.keys(cfg.speaker_id_map || {}).length) entrees.sid = new ort.Tensor('int64', BigInt64Array.from([BigInt(d.sid || 0)]), [1]);
       const t0 = performance.now(), r = await sess.run(entrees), pcm = Float32Array.from(r.output.data);
       self.postMessage({ type: 'audio', id: d.id, pcm, sr: cfg.audio.sample_rate, ms: Math.round(performance.now() - t0) }, [pcm.buffer]);
     }

@@ -1,0 +1,29 @@
+Conversion d'un MetaHuman (Unreal, « Export > DCC Export ») en patient de l'avatar (patient_xxx.glb)
+
+Entrée : le dossier exporté (head.dna, body.dna, Maps/, Masks/). Le FBX n'est pas utilisé.
+
+1. OpenRigLogic (Epic Games, licence MIT) : https://github.com/EpicGames/openriglogic
+   cmake .. -DRL_BUILD_PYTHON_WRAPPER=3.13 -DCMAKE_BUILD_TYPE=Release -DREAD_ONLY_SOURCE_TREE=ON ; cmake --build .
+   (SWIG récent : définir SWIG_EXPAND_AND_QUOTE_STRING dans python/riglogic/RigLogic.i si la compilation échoue).
+   env.py indique où sont les modules dna et riglogic compilés.
+2. python3 bake.py <dossier> 1 0 amanda.pkl
+   Tête au niveau de détail 1, corps au niveau 0. RigLogic évalue chaque expression de l'avatar (table EXPR :
+   commandes MetaHuman CTRL_expressions) ; la peau est déformée par les articulations du visage + formes
+   correctives, puis enregistrée comme forme simple (morph) : tête, dents, cils, yeux.
+3. python3 build_amanda.py amanda.pkl amanda_s1.blend (Blender en module Python)
+   Squelette mixamorig (noms attendus par avatar.js) posé sur les articulations de la DNA ; poids de la DNA
+   regroupés par os ; passage de la pose A à la pose T.
+4. python3 textures.py <dossier> amanda.pkl tex/
+   Sous-vêtements peints retirés (corps et bretelles du cou), sourcils peints (absents de l'export), iris
+   réduit (MetaHuman le réduit dans son matériau), cuir chevelu teinté sous les cheveux, tailles web.
+5. python3 stage2.py amanda_s1.blend tex/ femme_rig.blend amanda_s2.blend
+   Cheveux et chouchou de la patiente v5 recalés sur le crâne ; vêtements et matériel médical recalculés avec
+   les règles de femme/build.py (le corps est ramené au gabarit v5, puis l'inverse) ; mastectomie.
+6. textures.py une seconde fois (le cuir chevelu dépend des cheveux), puis export glTF et Draco :
+   python3 femme/export.py amanda_s2.blend amanda_full.glb ; gltf-transform draco amanda_full.glb patient_amanda.glb
+
+Dans la page : ?patiente=amanda (mémorisé), ?patiente=v5 pour revenir à la patiente d'origine.
+
+Autre personnage (ex. MHC_Crowd84) : mêmes étapes dans un dossier à part, avec
+  export MH_SRC=<dossier DCC Export> MH_HAIR=96,50,28     (couleur des cheveux et du cuir chevelu, R,G,B)
+puis ajouter son nom à la liste de PATIENTE_GLB dans index.html (?patiente=<nom>).

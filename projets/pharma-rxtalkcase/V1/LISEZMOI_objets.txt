@@ -1,0 +1,145 @@
+PATIENT 3D + RÉSERVE — noms des fichiers d'objets
+
+Modèles de patients (dans avatar/) : patient_homme.glb, patient_femme.glb
+(la patiente est chargée automatiquement pour les cas « Femme »).
+Déposer les .glb (Draco accepté) dans  avatar/equip/  à côté de cas-chat.html.
+Chaque objet doit être à l'échelle réelle (1 unité = 1 m), centré, debout selon +Y.
+
+Action                         | Fichier(s)
+-------------------------------|------------------------------------------------
+Vaccination                    | seringue.glb
+TROD angine (pharyngé)         | abaisse_langue.glb   (+ cassette dessinée)
+TROD Covid/grippe (naso)       | (écouvillon + cassette dessinés, pas de fichier)
+Thermomètre                    | thermometre.glb
+Oxymètre de pouls              | oxymetre.glb         (facultatif, sinon dessiné)
+Pèse-personne                  | balance.glb
+Mètre ruban                    | metre_ruban.glb
+Lecteur de glycémie            | glucometre.glb
+Tensiomètre                    | ../tensiometre-draco.glb (inchangé)
+Chambre d'inhalation           | chambre_inhalation.glb (facultatif, sinon dessinée)
+Nébuliseur                     | nebuliseur.glb       (facultatif, sinon dessiné)
+Masque d'apnée (PPC)           | masque_ppc.glb       (facultatif, sinon dessiné)
+Désinfection + pansement       | pansement.glb, bande.glb (+ antiseptique et compresses dessinés)
+Retrait de tique               | tire_tique.glb
+Réanimation                    | dae.glb, bavu.glb
+Injection IV (hôpital)         | catheter.glb, seringue.glb
+Orthèse de pouce               | orthese_pouce.glb
+Releveur                       | releveur.glb
+Semelles                       | semelles.glb
+Collier cervical               | colliers.glb
+Poche de stomie                | stomie.glb
+Perfusion                      | perfusion.glb
+Bas de contention              | (couche du modèle patient_femme.glb)
+Ceinture lombaire              | (couche du modèle patient_femme.glb)
+Corset d'immobilisation        | (couche du modèle patient_femme.glb)
+Prothèse mammaire + soutien-gorge post-mastectomie | (couches du modèle patient_femme.glb)
+
+Les fichiers fournis sont déjà compressés (Draco + textures WebP).
+Si vous en remplacez un, gardez la même orientation et la même taille réelle,
+sinon le placement sur le patient sera décalé.
+
+Lésions de peau (avatar/peau.js + avatar/peau.json) : 33 maladies de peau reprises de CorpoAtlas
+(lésions en relief + couches peintes, 3 stades). Un cas peut imposer sa lésion :
+  "peau": { "maladie": "psoriasis", "stade": 1 }      (stade 0, 1 ou 2)
+Clés disponibles : voir avatar/peau.json (acne, varicelle, psoriasis, gale, impetigo, urticaire-chronique,
+dermatite-atopique-eczema, cellulite-infectieuse, brulures, molluscum-contagieux, ...).
+Décodeur Draco local (facultatif) : draco_decoder.wasm, draco_wasm_wrapper.js, draco_decoder.js dans avatar/draco/
+et <script>window.AVATAR_DRACO = 'avatar/draco/';</script> avant le script module de cas-chat.html.
+
+Cas VI001 à VI025 (« ce que voit le pharmacien ») : champs du cas utilisés par le patient 3D
+  "peau": { "maladie": "<clé de avatar/peau.json>", "stade": 0|1|2 }   lésion affichée
+  "visage": { "side": "Right"|"Left", "central": false }              paralysie faciale
+  "decouvrir": "jambes"|"buste"|"poitrine"                            zone à faire découvrir (consentement)
+  "gestes_attendus": [ids de la réserve]                              (réservé au futur score)
+  "atlas": "<clé CorpoAtlas>"                                         fiche affichée au débriefing
+Documents : type "lame" (DICOM NCI IDC, OpenSeadragon) et "imagerie" (visualiseur OHIF) ; "libre": true = disponible d'emblée.
+
+Lit d'hôpital : avatar/lit_hopital.glb (Draco). Les cas hospitaliers qui ont un patient visible (champ peau ou visage) l'affichent couché sur le lit.
+Bouton « Revoir dans 3 jours » : la lésion passe au stade suivant et le patient raconte l'évolution (balise « (Situation : …) » côté worker).
+Champ "alertes_conseils" : [{ "si": motif, "rappel": texte }] = conseils à risque signalés au débriefing.
+
+Voir l'intérieur (patiente uniquement) : avatar/interieur_femme.glb (2,6 Mo, Draco).
+Organes de CorpoAtlas (corps féminin Visible Human, HRA) recalés sur la patiente : squelette (sans côtes ni crâne,
+absents des données de l'atlas), poumons, cœur et vaisseaux, digestif, reins et voies urinaires, appareil génital,
+cerveau et moelle. Les structures des bras sont exclues (bras le long du corps dans l'atlas, en T chez la patiente).
+Chaque organe est accroché à un os de la patiente : il suit la posture (assise, couchée sur le lit, gestes).
+Bouton « Voir l'intérieur » : peau et vêtements en transparence, cases à cocher par appareil.
+API : await A.interieur(true|false, url, ['poumons','vaisseaux',...]).
+
+v10 — Choix de la taille, réactions de la patiente, mode « expliquer au patient »
+Taille : bas de contention, ceinture lombaire et corset se choisissent sur mesures. Le mètre ruban se dépose
+sur la cheville (B), le mollet (C), la cuisse (bas) ou la taille (ceinture, corset) ; anneau et valeur affichés.
+Poser l'orthèse sans mesure est refusé. Fenêtre de choix : tableau des tailles (et classes pour les bas),
+classe prescrite et taille jugées ; trop petite = serre, trop grande = glisse, sur mesure si hors tableau.
+Mesures du cas : lues dans l'énoncé (« cheville 23 cm », « mollet 35 cm », « classe 3 »), sinon tirées de façon
+stable d'après l'identifiant du cas (plus fortes si œdème ou lymphœdème).
+Réactions : la patiente réagit aux gestes (piqûre, écouvillon, froid du mètre ruban…), aux erreurs d'endroit
+(de plus en plus inquiète si elles se répètent), à une taille inadaptée et à l'absence de mesure.
+Table REACTIONS dans avatar/objets.js (répliques modifiables).
+Expliquer au patient : bouton du chat. Ouvre la vue intérieure (patiente), la patiente pose des questions naïves
+et demande le sens des mots techniques ; « Fin de l'explication » : elle reformule ce qu'elle a compris et une
+carte note l'explication sur 10 (mots techniques non expliqués avec équivalent simple, longueur des phrases,
+vérification de la compréhension, image, consignes concrètes). Carte reprise au débriefing.
+Aucune modification du worker (règle « Situation » de la v8).
+
+v11 — corrections de l'audit
+- Débriefing : la carte « Votre explication » ne bloque plus la fin du débriefing (fiche CorpoAtlas de retour).
+- Patient homme : quand le sweat ou le débardeur est retiré, bras et torse sont reconstruits à partir des vêtements
+  (le modèle n'a pas de peau dessous) : plus de bras détachés.
+- « Regarder de près » sur un patient couché : caméra au-dessus du lit, côté visible de la lésion (talons vus de côté).
+- Vaccin chez la patiente : manches relevées (la peau du deltoïde est visible).
+- Cathéter : pansement à plat sur la peau, embout côté poignet ; la seringue se branche sur l'embout (les deux modèles).
+- Patiente : vraie ouverture de bouche (forme « BoucheOuverte » ajoutée à patient_femme.glb), utilisée pour le TROD angine.
+- Semelles : la patiente retire ses chaussures, semelle présentée sous le pied.
+- Collier cervical : posé sur le haut du thorax, menton sur l'appui, resserré sur un cou fin ; taille jugée sur la hauteur
+  épaule–menton (homme : taille 2, patiente : taille 4).
+- Caméra : le recul automatique attend la fin du changement de posture (chambre d'inhalation de nouveau de trois quarts).
+- Lésions : un stade sans taches ne peint plus toute la zone (psoriasis) ; vésicules et bulles en relief brillant.
+- Réanimation : torse dénudé (haut et soutien-gorge retirés), électrode sous la clavicule au-dessus du sein.
+
+v12
+- Collier cervical remis à l'endroit et tourné : plastron large en bas sur le thorax, appui du menton devant,
+  côtés qui montent vers les oreilles (comme un collier rigide type Stifneck / Philadelphia).
+- Réanimation : le T-shirt reste en place, les électrodes se posent par-dessus.
+
+v13
+- Les cas sont lus dans le classeur cas_cliniques_complet.xlsx (à côté de index.html), via SheetJS et cas-xlsx.js.
+  cas_cliniques.json n'est plus nécessaire ; s'il est présent, il ne sert qu'en secours si le classeur manque.
+  Le classeur reconstruit les 1860 cas à l'identique du JSON (vérifié champ par champ).
+  Nouvelles colonnes dans Cas_Cliniques : actif (FAUX = cas retiré de l'outil), avatar_symptomes, donnees_json (réservé).
+  Onglet Mode_emploi : séparateurs et règles de saisie.
+- Vue intérieure : avatar/interieur_femme.glb (4,5 Mo) réunit les organes HRA VH_F de CorpoAtlas et les compléments
+  Z-Anatomy (os dont côtes et crâne, muscles, nerfs, vaisseaux, lymphe, glandes), bras compris. Les structures sont
+  habillées sur le squelette de la patiente : elles suivent toutes les postures (gestes, lit, comptoir).
+  Cases à cocher : Muscles et Lymphe décochés au départ. Licence Z-Anatomy : CC BY-SA 4.0 (Lluís Vinent Juanico,
+  d'après BodyParts3D © DBCLS) ; HRA VH_F : CC BY 4.0.
+- Patiente : bouche plus ouverte (TROD), abaisse-langue et écouvillon dirigés dans la bouche.
+- Mains : bras détendus le long du corps au repos (plus de mains sur les hanches), surprise mains à hauteur de poitrine,
+  poignets dans l'axe de l'avant-bras sur la table.
+- BAVU : masque sur le nez et la bouche, ballon et réservoir au-dessus du thorax.
+
+v14
+- Cas Synthea : 70 nouveaux cas d'officine (SY001 à SY070) générés à partir de patients synthétiques Synthea
+  (Apache 2.0), traduits en médicaments commercialisés en France (noms vérifiés dans la BDPM). Ils sont dans le classeur
+  avec actif = FAUX et a_valider = VRAI : à relire, puis passer actif à VRAI pour les publier.
+- Base des médicaments : Outils > « Base des médicaments (BDPM, ANSM) » (et bouton BDPM sur chaque ligne d'ordonnance).
+  bdpm.json (8 Mo, 1,1 Mo compressé par GitHub Pages, chargé seulement à l'ouverture) : 13 516 spécialités commercialisées,
+  composition, présentations (taux, prix), groupe générique, SMR/ASMR, conditions de délivrance, tensions et ruptures.
+  Données issues de Gizmo091/fr.gouv.medicaments.rest (extraction de juillet 2025) : lancer une fois l'action
+  « Base des médicaments » (onglet Actions du dépôt) pour récupérer la base du mois ; ensuite elle se met à jour le 3
+  de chaque mois. Script : outils/bdpm_build.py ; action : .github/workflows/bdpm.yml.
+- RCP et notice : demandés au worker (nouveau mode « rcp »), qui relaie medicaments-api (giygas) et met en cache 7 jours.
+  REDÉPLOYER cas-worker.js (le mode rcp et l'en-tête X-Essais sont nouveaux). Variable facultative MEDOC_API.
+- Voix locales : voir LISEZMOI_voix.txt.
+- Mains : butées anatomiques du poignet (flexion 70°, extension 60°, inclinaisons 25°) et de la rotation de l'avant-bras.
+
+v15
+- Patient (homme) : bouton « Voir l'intérieur » disponible, avec avatar/interieur_homme.glb (4,5 Mo), construit à partir du
+  calque Homme de CorpoAtlas v31 : prostate et ses zones, vésicules séminales, conduits éjaculateurs, urètre masculin
+  (HRA VH_M, CC BY 4.0), testicules, épididymes, conduits déférents, corps caverneux et spongieux, gland et vaisseaux
+  (Z-Anatomy, CC BY-SA 4.0). Les structures propres à la femme sont retirées (même liste que l'atlas) ; le reste du corps
+  est le modèle de référence de l'atlas, comme en mode Homme de CorpoAtlas (bassin compris).
+  Recalage : tronc entre la peau masculine de l'atlas et les vêtements du patient (son modèle n'a pas de peau sous les
+  vêtements), bras et jambes segment par segment sur ses articulations ; les organes suivent toutes ses postures.
+- La page choisit interieur_femme.glb ou interieur_homme.glb selon le sexe de l'avatar ; « Expliquer au patient » montre
+  aussi l'intérieur chez l'homme.

@@ -1,0 +1,31 @@
+VOIX LOCALES — gratuites, hors ligne, sans service extérieur
+=============================================================
+
+Le patient parle avec une voix neuronale Piper calculée dans le navigateur, et l'étudiant peut dicter ses réponses
+(Whisper, lui aussi dans le navigateur). Rien n'est envoyé ailleurs que le site lui-même ; ça fonctionne sur GitHub Pages.
+
+1. Installer les modèles (une seule fois)
+   Les moteurs sont fournis (dossier voix/moteur, 40 Mo). Les modèles (150 Mo) sont à récupérer :
+   - sur GitHub : onglet Actions > « Voix locales » > Run workflow (le dépôt reçoit voix/piper et voix/whisper-base) ;
+   - ou sur le PC : clic droit sur outils/telecharger_voix.ps1 > Exécuter avec PowerShell, puis envoyer le dossier voix.
+   Fichiers attendus :
+     voix/piper/fr_FR-upmc-medium.onnx (77 Mo) + .onnx.json      (voix « Jessica » et « Pierre »)
+     voix/whisper-base/*.json + onnx/encoder_model_quantized.onnx + onnx/decoder_model_merged_quantized.onnx (77 Mo)
+   Chaque fichier fait moins de 100 Mo : pas besoin de Git LFS.
+
+2. Utilisation
+   - Bouton de voix (au-dessus du patient) : « Voix locale » -> « Voix du navigateur » -> « Muet ». Le choix est mémorisé.
+     Sans modèle Piper, la page reste sur la voix du navigateur (voix Windows), comme avant.
+   - Patiente : voix Jessica ; patient : voix Pierre (selon le sexe de la fiche).
+   - Le texte est dit phrase par phrase : la première phrase part dès qu'elle est calculée (environ 0,3 à 1 s).
+   - Les lèvres suivent le texte et s'ouvrent selon le volume réel du son.
+   - Micro (à gauche de « Envoyer », visible seulement si Whisper est installé) : un clic pour parler, un second pour
+     arrêter ; le texte transcrit s'ajoute dans la zone de saisie, à relire avant envoi. Le premier usage charge le modèle
+     (une fois, ensuite le navigateur le garde en cache). Le navigateur demande l'autorisation du micro.
+   - Whisper « base » reconnaît bien le français courant, moins bien les noms de médicaments rares : relire avant d'envoyer.
+     Le modèle « small », plus précis, dépasse la limite de 100 Mo par fichier de GitHub.
+
+3. Licences
+   - Piper (MIT), piper_phonemize/espeak-ng (GPL v3, données de prononciation), onnxruntime-web (MIT),
+     transformers.js (Apache 2.0), Whisper (MIT).
+   - Voix fr_FR-upmc-medium : jeu de données UPMC (Pierre et Jessica), CC BY-SA 4.0 — à créditer dans la page « À propos ».

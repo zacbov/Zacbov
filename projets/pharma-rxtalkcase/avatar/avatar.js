@@ -51,7 +51,8 @@ export const GESTURES = {
   repos: (D, s, o) => hang(D, o),                                                                           // bras détendus le long du corps, coudes à peine pliés (au comptoir)
   hanches: (D, s, o) => hip(D, o),                                                                          // mains sur les hanches
   explique: (D, s, o) => s === 'Right' ? { w: P(o, 0.19, D.chestY - 0.1, D.zf(D.chestY) + 0.2), pole: P(o, 0.6, -1, -0.3), fing: P(o, 0.1, 0.25, 1), palm: P(o, -0.55, 0.8, 0), curl: 0.25, thumb: 0.1, suit: 0.35 } : hang(D, o),
-  surprise: (D, s, o) => ({ w: P(o, 0.14, D.chestY - 0.06, D.zf(D.chestY) + 0.11), pole: P(o, 0.45, -1, -0.15), fing: P(o, 0.1, 1, 0.15), palm: P(o, -0.4, 0, 1), curl: 0.3, thumb: 0.15, suit: 0.1 }),   // mains levées, paumes vers l'avant
+  surprise: (D, s, o) => ({ w: P(o, 0.15, D.chestY - 0.13, D.zf(D.chestY - 0.1) + 0.12), pole: P(o, 0.55, -1, -0.25), fing: P(o, 0.15, 0.75, 0.6), palm: P(o, -0.25, -0.15, 1), curl: 0.12, thumb: 0.1, suit: 0.55 }),   // mains un peu levées devant le ventre, paumes vers l'avant, poignets dans l'axe
+  jointes: (D, s, o) => ({ w: P(o, 0.05, D.hipsY + 0.01, D.zf(D.hipsY) + 0.1), pole: P(o, 1, -0.7, -0.15), fing: P(o, -0.75, -0.6, 0.15), palm: P(o, -0.25, 0.1, -1), curl: 0.4, thumb: 0.25, suit: 0.7 }),   // attente : mains jointes devant le bas-ventre
   abattu: (D, s, o) => ({ ...hang(D, o), curl: 0.35, shrug: -0.2 }),                                       // bras ballants, épaules affaissées
   ouvert: (D, s, o) => ({ w: P(o, 0.22, D.hipsY + 0.14, D.zf(D.hipsY + 0.1) + 0.17), pole: P(o, 0.6, -1, -0.2), fing: P(o, 0.3, 0.1, 1), palm: V3(0, 1, 0.1), curl: 0.25, thumb: 0.05, suit: 0.5 }),   // paumes ouvertes vers le haut
   poings: (D, s, o) => ({ w: P(o, D.hx(D.hipsY) + 0.07, D.hipsY + 0.05, 0.07), pole: P(o, 0.5, 0, -1), fing: V3(0, -1, 0.25), palm: P(o, -1, 0, 0), curl: 0.9, thumb: 0.6, shrug: 0.2, suit: 0.8 }),   // poings serrés le long du corps, bras tendus
@@ -65,7 +66,7 @@ export const GESTURES = {
 };
 /* parties du corps : la paume se pose sur la zone (main opposée pour l'épaule, le bras et la poitrine). Le bras touché est lu sur le squelette, donc la main suit sa position réelle. */
 export const TOUCH = {
-  front: (D, s, o, R) => ({ hand: 'Right', c: D.forehead.clone(), n: V3(0, 0.25, 1), fing: V3(1, 0.35, 0), pole: P(-1, 0.5, -1, 0.1), curl: 0.2 }),
+  front: (D, s, o, R) => ({ hand: 'Right', c: D.forehead.clone().add(V3(0, 0.02, -0.005)), n: V3(0, 0.35, 1), fing: V3(1, 0.3, 0), pole: P(-1, 1, -0.15, 0.35), curl: 0.2 }),   // coude écarté sur le côté, avant-bras presque horizontal
   gorge: (D, s, o, R) => ({ hand: 'Right', c: V3(0, D.neckY - 0.03, D.neckFront), n: V3(0, -0.15, 1), fing: V3(1, 0.45, 0), pole: P(-1, 0.4, -1, 0.1), curl: 0.4 }),
   poitrine: (D, s, o, R) => { const big = D.bust > 0.012, { c, n } = surf(D, big ? (D.chestY + D.shoulderY) / 2 + 0.02 : D.chestY + 0.03, big ? 0.3 : 0.45, o); return { hand: s === 'Left' ? 'Right' : 'Left', c, n, fing: V3(o * 0.5, 0.85, 0), pole: P(-o, 0.3, -1, big ? 1 : 0.45), curl: 0.12 }; },
   ventre: (D, s, o, R) => { const { c, n } = surf(D, D.hipsY + 0.11, s === 'Left' ? 0.35 : -0.2, D.sideSign.Left); return { hand: 'Right', c, n, fing: V3(D.sideSign.Left, -0.3, 0), pole: P(D.sideSign.Right, 0.9, -0.6, -0.3), curl: 0.15 }; },
@@ -188,7 +189,7 @@ export class Rig {
       const n0 = palmModel.clone().transformDirection(M); n0.sub(ax.clone().multiplyScalar(n0.dot(ax)));
       if (n0.lengthSq() > 1e-6) {
         n0.normalize(); const r = ax.clone().cross(n0), x = Fw.dot(ax), y = Fw.dot(n0), z = Fw.dot(r);
-        const fl = clamp(Math.atan2(y, Math.max(x, 1e-3)), -1.05, 1.22), dv = clamp(Math.atan2(z, Math.max(x, 1e-3)), -0.44, 0.44);
+        const sp = this.souple ? 1.3 : 1, fl = clamp(Math.atan2(y, Math.max(x, 1e-3)), -1.05 * sp, 1.22 * sp), dv = clamp(Math.atan2(z, Math.max(x, 1e-3)), -0.44 * sp, 0.44 * sp);   // contact (main posée) : butées plus larges
         Fw = ax.clone().add(n0.multiplyScalar(Math.tan(fl))).add(r.multiplyScalar(Math.tan(dv))).normalize();
       }
     }
@@ -196,7 +197,7 @@ export class Rig {
     const proj = (v) => v.clone().sub(ax.clone().multiplyScalar(v.dot(ax))).normalize();          // pronation / supination : la moitié par l'avant-bras, le reste par le poignet
     const cur = proj(this.palmL[s].clone().applyQuaternion(H.getWorldQuaternion(new THREE.Quaternion()))), tgt = proj(Nw);
     const roll = Math.atan2(cur.clone().cross(tgt).dot(ax), cur.dot(tgt));
-    this.setWorldQ(F, new THREE.Quaternion().setFromAxisAngle(ax, clamp(roll * 0.85, -1.6, 1.6)).multiply(F.getWorldQuaternion(new THREE.Quaternion())));   // la rotation de l'avant-bras porte presque toute la supination : le poignet ne se tord plus
+    this.setWorldQ(F, new THREE.Quaternion().setFromAxisAngle(ax, clamp(roll * 0.6, -1.05, 1.05)).multiply(F.getWorldQuaternion(new THREE.Quaternion())));   // la rotation de l'avant-bras porte presque toute la supination : le poignet ne se tord plus
     const hq = H.getWorldQuaternion(new THREE.Quaternion()), fw = this.fingL[s].clone().applyQuaternion(hq), nw = this.palmL[s].clone().applyQuaternion(hq);
     nw.sub(fw.clone().multiplyScalar(nw.dot(fw))).normalize();
     const Mc = new THREE.Matrix4().makeBasis(fw, nw, fw.clone().cross(nw)), Mt = new THREE.Matrix4().makeBasis(Fw, Nw, Fw.clone().cross(Nw));
@@ -240,6 +241,7 @@ const NEG = new Set(['tristesse', 'colere', 'peur', 'degout', 'douleur', 'fatigu
 export async function createAvatar(el, opts = {}) {
   const o = { glb: 'avatar/patient_homme.glb', background: 'avatar/decor_pharmacie.webp', tensio: 'avatar/tensiometre-draco.glb', draco: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/', interactive: false, view: 'buste', ...opts };
   el.style.position = el.style.position || 'relative'; if (o.background) el.style.background = `#13201b url(${o.background}) center/cover no-repeat`;
+  let API_SOL = null;
   const canvas = document.createElement('canvas'); canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block' + (o.interactive ? '' : ';pointer-events:none'); el.prepend(canvas);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(28, 1, 0.05, 20);
@@ -249,10 +251,23 @@ export async function createAvatar(el, opts = {}) {
   const ro = new ResizeObserver(fit); ro.observe(el); fit();
   const gltf = await new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath(o.draco || 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/')).setMeshoptDecoder(MeshoptDecoder).loadAsync(o.glb); scene.add(gltf.scene);
   const rig = new Rig(gltf.scene), names = Object.keys(rig.dict || {}), D = rig.D, look = V3(0, 1.4, 0);
-  const API = { names, manual: {}, rig, scene, camera, controls, THREE, emotion: 'neutre', gesture: null, D, profil: '', muted: false, rate: 1, voiceIndex: 0, speaking: false, extras: [] };
+  {                                                                    // sol sous les pieds : carrelage clair qui se fond dans le décor + ombre de contact
+    const tex = (dessin) => { const c = document.createElement('canvas'); c.width = c.height = 512; dessin(c.getContext('2d')); const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx; };
+    const sol = tex((g) => {
+      g.fillStyle = '#d9d4cb'; g.fillRect(0, 0, 512, 512); g.strokeStyle = 'rgba(120,110,95,0.35)'; g.lineWidth = 2;
+      for (let i = 0; i <= 512; i += 64) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, 512); g.moveTo(0, i); g.lineTo(512, i); g.stroke(); }
+      const r = g.createRadialGradient(256, 256, 60, 256, 256, 256); r.addColorStop(0, 'rgba(0,0,0,0)'); r.addColorStop(1, 'rgba(0,0,0,1)');
+      g.globalCompositeOperation = 'destination-out'; g.fillStyle = r; g.fillRect(0, 0, 512, 512);
+    });
+    const ombre = tex((g) => { const r = g.createRadialGradient(256, 256, 0, 256, 256, 256); r.addColorStop(0, 'rgba(0,0,0,0.55)'); r.addColorStop(0.5, 'rgba(0,0,0,0.25)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 512, 512); });
+    const y0 = new THREE.Box3().setFromObject(gltf.scene).min.y;
+    const plan = (taille, map, y, ordre) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(taille, taille), new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, toneMapped: false })); m.rotation.x = -Math.PI / 2; m.position.y = y; m.renderOrder = ordre; m.name = 'Sol'; scene.add(m); return m; };
+    API_SOL = [plan(3.2, sol, y0 - 0.002, -2), plan(0.75, ombre, y0 - 0.001, -1)];
+  }
+  const API = { sol: API_SOL, names, manual: {}, rig, scene, camera, controls, THREE, emotion: 'neutre', gesture: null, D, profil: '', muted: false, rate: 1, voiceIndex: 0, speaking: false, extras: [] };
   function view(kind = o.view) {
     const h = rig.local('Head'), face = kind === 'visage';                // position de la tête debout (indépendante d'une transition en cours)
-    look.set(h.x, h.y - (face ? 0.02 : 0.27), h.z); camera.position.set(h.x, h.y + (face ? 0.02 : -0.1), h.z + (face ? 0.8 : 1.75));
+    look.set(h.x, h.y - (face ? 0.02 : 0.3), h.z); camera.position.set(h.x, h.y + (face ? 0.02 : -0.08), h.z + (face ? 0.8 : 2.1));
     if (controls) { controls.target.copy(look); controls.update(); } else camera.lookAt(look);
   }
   view();
@@ -264,13 +279,17 @@ export async function createAvatar(el, opts = {}) {
   let touchState = null;
   API.touch = (part, side = 'Right', sec = 5) => { touchState = TOUCH[part] ? { part, side, until: performance.now() / 1000 + sec } : null; };
   API.say = (text, opt = {}) => new Promise((resolve) => {
-    const txt = (text || '').trim(); if (!txt) return resolve();
-    if (opt.emotion) API.emotion = opt.emotion; VQ = visemes(txt); charPos = 0; cps = 14 * API.rate; lastB = null;
+    const brut = (text || '').trim(); if (!brut) return resolve();
+    if (/touss|\btoux\b|\bkof\b|\*toux/i.test(brut)) API.tousser();
+    const txt = brut.replace(/\*[^*\n]{1,300}\*/g, ' ').replace(/\*/g, '').replace(/\s{2,}/g, ' ').replace(/\s+([,.!?…])/g, '$1').trim();   // didascalies *soupire* : jouées, pas lues
+    if (opt.emotion) API.emotion = opt.emotion; API._relance = true; API._phrase = (API._phrase || 0) + 1;
+    if (!txt) return resolve();
+    VQ = visemes(txt); charPos = 0; cps = 14 * API.rate; lastB = null;
     const end = () => { API.speaking = false; resolve(); };
     const V = API.voixExterne;                                    // voix locale (Piper) : audio synthétisé dans la page, lèvres sur l'enveloppe du son
     if (V && !API.muted && V.active()) {
       if (hasTTS) speechSynthesis.cancel(); if (ext) ext.stop();
-      API.speaking = true; const e = ext = V.parler(txt, { sexe: API.voixSexe, vitesse: API.rate });
+      API.speaking = false; const e = ext = V.parler(txt, { sexe: API.voixSexe, vitesse: API.rate });   // bouche et gestes de parole : seulement quand le son part (voir boucle)
       e.fin.then(() => { if (ext === e) { ext = null; end(); } }, (err) => { console.warn('Voix locale indisponible, repli sur la voix du navigateur', err); if (ext === e) ext = null; V.desactiver && V.desactiver(); API.speaking = false; API.say(txt).then(resolve); });
       return;
     }
@@ -281,6 +300,9 @@ export async function createAvatar(el, opts = {}) {
     speechSynthesis.speak(u);
   });
   API.stop = () => { if (hasTTS) speechSynthesis.cancel(); if (ext) { ext.stop(); ext = null; } API.speaking = false; touchState = null; };
+  API.gestes = (url) => chargerGestes(url).catch((e) => { console.warn('Gestes capturés indisponibles :', e); return null; });
+  API.jouer = (nom, o) => jouer(nom, o);
+  API.tousser = () => { MC.toux = { t0: last || performance.now() / 1000 }; };
   API.view = view; API.canvas = canvas; API.root = gltf.scene; API.renderer = renderer; API.flip = () => { gltf.scene.rotation.y += Math.PI; }; API.resize = fit;
   API.dispose = () => { renderer.setAnimationLoop(null); ro.disconnect(); API.stop(); renderer.dispose(); canvas.remove(); };
   // --- prise de tension : patient assis, brassard sur le haut du bras gauche, tensiomètre au premier plan ---
@@ -340,7 +362,7 @@ export async function createAvatar(el, opts = {}) {
       API.posture = 'couche'; return;
     }
     const h = rig.local('Head'), face = o.view === 'visage';
-    API.stage = { seat: 0, arms: null, table: false, cam: { pos: V3(h.x, h.y + (face ? 0.02 : -0.1), h.z + (face ? 0.8 : 1.75)), look: V3(h.x, h.y - (face ? 0.02 : 0.27), h.z) } };
+    API.stage = { seat: 0, arms: null, table: false, cam: { pos: V3(h.x, h.y + (face ? 0.02 : -0.08), h.z + (face ? 0.8 : 2.1)), look: V3(h.x, h.y - (face ? 0.02 : 0.3), h.z) } };
     API.posture = 'debout'; setTimeout(() => { if (API.posture === 'debout' && !API.stage.seat) { API.stage.cam = null; camInit = false; view(); } }, 2500);
   };
   function placeCuff() {
@@ -356,9 +378,85 @@ export async function createAvatar(el, opts = {}) {
   }
   // --- animation ---
   const st = { Left: null, Right: null }, emoW = {}, cur = {}, AX = { x: V3(1, 0, 0), y: V3(0, 1, 0), z: V3(0, 0, 1) };
-  let nextBlink = 1.5, blinkT = -9, last = 0, sacc = [0, 0], nextSacc = 2, headS = [0, 0, 0];
+  /* ---------- capture de mouvement : animations Mixamo reciblées sur le patient ----------
+     gestes.json/.bin : pour chaque os et chaque image, rotation « delta » dans le monde (pose animée × repos⁻¹, Y-haut).
+     Reciblage : rotation du patient = delta × sa rotation de repos (les deux squelettes sont en T au repos).
+     La couche donne la pose de fond (attente, parole, réactions) ; les gestes précis (toucher une zone, objets,
+     tension, assis, allongé) restent calculés par IK et prennent la main bras par bras. */
+  const MC = { clips: null, w: 0, amp: 0.5, bras: { Left: 0, Right: 0 }, cour: null, prec: null, fondu: 1, react: null, toux: null };
+  {
+    for (const k in rig.bones) rig.bones[k].quaternion.copy(rig.tpose[k]);
+    gltf.scene.updateMatrixWorld(true);
+    const rq = gltf.scene.getWorldQuaternion(new THREE.Quaternion()).invert();
+    MC.W0 = {}; MC.par = {}; MC.PQ0 = {};
+    for (const k in rig.bones) {
+      const b = rig.bones[k]; MC.W0[k] = rq.clone().multiply(b.getWorldQuaternion(new THREE.Quaternion()));
+      const pk = Object.keys(rig.bones).find((n) => rig.bones[n] === b.parent); MC.par[k] = pk || null;
+      if (!pk) MC.PQ0[k] = rq.clone().multiply(b.parent.getWorldQuaternion(new THREE.Quaternion()));
+    }
+    const prof = (k) => { let d = 0, b = rig.bones[k]; while (b.parent && b.parent.isBone) { d++; b = b.parent; } return d; };
+    MC.ordre = Object.keys(rig.bones).sort((a, b) => prof(a) - prof(b));
+    const H = rig.bones.Hips; MC.hips0 = H.position.clone();
+    const sol = new THREE.Box3().setFromObject(gltf.scene).min.y, hy = gltf.scene.worldToLocal(H.getWorldPosition(V3(0, 0, 0))).y;
+    MC.hH = hy - gltf.scene.worldToLocal(V3(0, sol, 0)).y;
+    MC.parInv = new THREE.Matrix4().copy(gltf.scene.matrixWorld).invert().multiply(H.parent.matrixWorld).invert();   // repère du patient -> repère du parent du bassin
+    const sInv = new THREE.Matrix4().copy(gltf.scene.matrixWorld).invert();
+    MC.M0i = { Hips: sInv.clone().multiply(H.matrixWorld).invert(), Spine2: sInv.clone().multiply(rig.bones.Spine2.matrixWorld).invert() };
+  }
+  const _mH = new THREE.Matrix4(), _mS = new THREE.Matrix4(), _sInv = new THREE.Matrix4(), _qH = new THREE.Quaternion(), _qS = new THREE.Quaternion(), _qT = new THREE.Quaternion(), _p1 = V3(0, 0, 0), _p2 = V3(0, 0, 0);
+  function suivreCorps(spec, D) {                     // cibles des mains calculées au repos -> suivent le bassin (bas) et le haut du tronc (haut)
+    const a = lisse(D.hipsY, D.chestY, spec.w ? spec.w.y : D.hipsY);
+    const move = (v) => { _p1.copy(v).applyMatrix4(_mH); _p2.copy(v).applyMatrix4(_mS); return v.copy(_p1.lerp(_p2, a)); };
+    const turn = (v) => { _qT.copy(_qH).slerp(_qS, a); return v.applyQuaternion(_qT); };
+    if (spec.w) move(spec.w); if (spec.c) move(spec.c);
+    for (const k of ['pole', 'fing', 'palm', 'n']) if (spec[k] && spec[k].isVector3) turn(spec[k]);
+    return spec;
+  }
+  async function chargerGestes(url) {
+    const [m, b] = await Promise.all([fetch(url + '.json').then((r) => r.json()), fetch(url + '.bin').then((r) => r.arrayBuffer())]);
+    const C = {};
+    for (const [n, c] of Object.entries(m.clips)) {
+      const ix = {}; c.os.forEach((o, i) => { if (rig.bones[o]) ix[o] = i; });
+      C[n] = { n, images: c.images, nb: c.os.length, ix, q: new Int16Array(b, c.q, c.images * c.os.length * 4), h: new Int16Array(b, c.h, c.images * 3) };
+    }
+    MC.clips = C; return C;
+  }
+  const _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion();
+  function deltaQ(c, j, fr, out) { const o = (fr * c.nb + j) * 4; return out.set(c.q[o] / 32767, c.q[o + 1] / 32767, c.q[o + 2] / 32767, c.q[o + 3] / 32767).normalize(); }
+  function echantillon(c, tt, boucle, out) {          // out[k] = rotation locale du patient ; out._h = déplacement du bassin
+    const x = boucle ? ((tt * 30) % c.images + c.images) % c.images : clamp(tt * 30, 0, c.images - 1.001), i0 = Math.floor(x), i1 = boucle ? (i0 + 1) % c.images : Math.min(i0 + 1, c.images - 1), f = x - i0;
+    const Wd = {};
+    for (const k of MC.ordre) {
+      const j = c.ix[k]; if (j === undefined) continue;
+      const d = deltaQ(c, j, i0, _qa).slerp(deltaQ(c, j, i1, _qb), f), Wt = d.clone().multiply(MC.W0[k]);
+      const pk = MC.par[k], PW = pk ? (Wd[pk] || MC.W0[pk]) : MC.PQ0[k];
+      out[k] = (out[k] || new THREE.Quaternion()).copy(PW).invert().multiply(Wt); Wd[k] = Wt;
+    }
+    const h0 = i0 * 3, h1 = i1 * 3, hv = (o) => (c.h[h0 + o] * (1 - f) + c.h[h1 + o] * f) / 8000;
+    out._h = V3(hv(0), hv(1), hv(2)).multiplyScalar(MC.hH); out._W = Wd; return out;
+  }
+  function jouer(nom, o = {}) {                       // réaction ponctuelle (o.boucle : devient la pose de fond)
+    if (!MC.clips || !MC.clips[nom]) return false;
+    MC.react = { nom, t0: performance.now() / 1000, dur: MC.clips[nom].images / 30, fondu: o.fondu || 0.4 }; return true;
+  }
+  const PAROLE = ['Talking', 'Talking_1', 'Talking_2', 'Talking_3'];
+  const REACTION = { surprise: 'Reacting', joie: 'Thankful', doute: 'Thinking', gene: 'Shrugging' };
+  const FOND = { fatigue: 'Dizzy_Idle', douleur: 'Dizzy_Idle' };
+  const MC_OS_BRAS = (s) => [s + 'Shoulder', s + 'Arm', s + 'ForeArm', s + 'Hand', ...Object.keys(rig.bones).filter((k) => k.startsWith(s + 'Hand') && k !== s + 'Hand')];
+  const MC_TRONC = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'LeftToeBase', 'RightUpLeg', 'RightLeg', 'RightFoot', 'RightToeBase'];
+  const poseA = {}, poseB = {}, poseR = {}, poseT = {};
+  let nextBlink = 1.5, blinkT = -9, last = 0, sacc = [0, 0], nextSacc = 2, headS = [0, 0, 0], eT0 = 0, ePrev = null, gPrev = null, gT0 = 0;
+  /* les émotions fortes sont des réactions : le geste dure quelques secondes puis le patient revient à une attitude d'attente,
+     et le visage garde une version atténuée de l'émotion */
+  const BREF = { surprise: 2.2, protege: 3.5, poings: 3, ouvert: 2.5, reflexion: 4, heure: 3, ventre: 5, explique: 99 };
+  const CALME = { anxieux: 'jointes', peur: 'jointes', gene: 'jointes', doute: 'jointes' };
+  const VIF = { surprise: [2.5, 0.25], peur: [4, 0.5], colere: [4, 0.45], douleur: [6, 0.6], anxieux: [5, 0.7], joie: [4, 0.55] };   // durée pleine, puis part gardée
+  const lisse = (a, b, x) => { const u = clamp((x - a) / (b - a), 0, 1); return u * u * (3 - 2 * u); };
   renderer.setAnimationLoop((ms) => {
     const t = ms / 1000, dt = Math.min(0.1, t - last || 0.016); last = t; const E = EMOTIONS[API.emotion] || EMOTIONS.neutre, neg = NEG.has(API.emotion);
+    if (API.emotion !== ePrev || API._relance) { ePrev = API.emotion; eT0 = t; gT0 = t; API._relance = false; }
+    const vif = VIF[API.emotion], fI = vif ? 1 - (1 - vif[1]) * lisse(vif[0], vif[0] + 1.5, t - eT0) : 1;
+    if (ext && !API.speaking && (!ext.demarre || ext.demarre())) API.speaking = true;   // voix locale : la synthèse de la 1re phrase prend 0,3 à 2 s
     if (rig.body) {                                                                      // visage
       const tw = {}, add = (obj, kk = 1) => { for (const n in obj) tw[n] = (tw[n] || 0) + obj[n] * kk * (neg && n.startsWith('Smile_') ? 0.25 : 1); };
       if (API.speaking && ext) {                                        // voix locale : position réelle dans le texte, ouverture selon le volume
@@ -366,7 +464,7 @@ export async function createAvatar(el, opts = {}) {
         add(VIS[VQ[i] || '_'], (1 - f) * a); add(VIS[VQ[i + 1] || '_'], f * a);
       } else if (API.speaking) { charPos += cps * dt; const i = Math.floor(charPos), f = charPos - i; add(VIS[VQ[i] || '_'], 1 - f); add(VIS[VQ[i + 1] || '_'], f); if (i > VQ.length + 2) API.speaking = false; }
       for (const n of new Set([...Object.keys(E.face), ...Object.keys(emoW)])) emoW[n] = (emoW[n] || 0) + ((E.face[n] || 0) - (emoW[n] || 0)) * (1 - Math.exp(-dt * 6));
-      for (const n in emoW) tw[n] = (tw[n] || 0) + emoW[n] * (API.speaking && MOUTH.test(n) ? 0.45 : 1);
+      for (const n in emoW) tw[n] = (tw[n] || 0) + emoW[n] * fI * (API.speaking && MOUTH.test(n) ? 0.45 : 1);
       if (t > nextBlink) { blinkT = t; nextBlink = t + (2.5 + Math.random() * 3) / (E.blink || 1); }
       const x = (t - blinkT) / 0.18, bw = x >= 0 && x < 1 ? Math.sin(x * Math.PI) : 0;
       for (const n of names) {
@@ -377,34 +475,102 @@ export async function createAvatar(el, opts = {}) {
         for (const mm of rig.morphs) { const ix = mm.morphTargetDictionary[n]; if (ix !== undefined) mm.morphTargetInfluences[ix] = val; }   // un visage à plusieurs matériaux = plusieurs maillages
       }
     }
-    const g0 = API.gesture || E.gesture, gn = API.speaking && g0 === 'repos' ? 'explique' : g0, k = 1 - Math.exp(-dt * 5);   // tronc, tête, regard
-    rig.turn('Spine1', AX.x, Math.sin(t * 1.4) * 0.012);
+    let g0 = API.gesture || E.gesture; if (g0 !== gPrev) { gPrev = g0; gT0 = t; }
+    /* capture de mouvement : fond (attente / parole) + réaction en cours, fondus */
+    let MP = null;
+    {
+      const SG0 = API.stage, debout = (SG0.seat || 0) < 0.05 && (SG0.lie || 0) < 0.05 && seat < 0.05 && lie < 0.05 && !SG0.arms && !SG0.noMocap && !API.mocapOff;
+      MC.w += ((MC.clips && debout ? 1 : 0) - MC.w) * (1 - Math.exp(-dt * (debout ? 2.5 : 6)));
+      if (MC.clips && MC.w > 0.002) {
+        if (t - eT0 < 0.05 && MC.relanceEmo !== eT0) { MC.relanceEmo = eT0; const r = REACTION[API.emotion]; if (r) jouer(r); }
+        const fond = API.speaking ? (MC.parole && API._phrase === MC.phraseId ? MC.parole : (MC.phraseId = API._phrase, MC.parole = PAROLE[Math.floor(Math.random() * PAROLE.length)])) : (FOND[API.emotion] || 'Idle');
+        if (!MC.cour || MC.cour.nom !== fond) { MC.prec = MC.cour; MC.cour = { nom: fond, t0: t }; MC.fondu = 0; }
+        MC.fondu = Math.min(1, MC.fondu + dt / 0.6);
+        echantillon(MC.clips[MC.cour.nom], t - MC.cour.t0, true, poseA);
+        if (MC.prec && MC.fondu < 1) { echantillon(MC.clips[MC.prec.nom], t - MC.prec.t0, true, poseB); for (const k in poseA) if (poseB[k] && k[0] !== '_') poseA[k].slerp(poseB[k], 1 - MC.fondu); poseA._h.lerp(poseB._h, 1 - MC.fondu); }
+        if (API.speaking && API.emotion === 'colere') { echantillon(MC.clips.Standing_Arguing, t - MC.cour.t0, true, poseT); for (const k in poseA) if (poseT[k] && k[0] !== '_') poseA[k].slerp(poseT[k], 0.5); }   // colère : dispute atténuée de moitié
+        let rw = 0;
+        if (MC.react) {
+          const R_ = MC.react, tt = Math.max(0, performance.now() / 1000 - R_.t0);
+          if (tt > R_.dur) MC.react = null;
+          else { rw = Math.min(1, tt / R_.fondu, (R_.dur - tt) / R_.fondu); echantillon(MC.clips[R_.nom], tt, false, poseR); for (const k in poseA) if (poseR[k] && k[0] !== '_') poseA[k].slerp(poseR[k], rw); poseA._h.lerp(poseR._h, rw); }
+        }
+        MP = poseA; MC.rw = rw;
+      }
+    }
+    if (BREF[g0] && t - gT0 > BREF[g0] && !(API.speaking && g0 === API.gesture)) g0 = CALME[API.emotion] || 'repos';   // retour à l'attente
+    const gn = API.speaking && g0 === 'repos' ? 'explique' : g0, k = 1 - Math.exp(-dt * (g0 === gPrev ? 5 : 2.5));   // tronc, tête, regard (retour au calme plus lent)
+    rig.bones.Spine2.quaternion.copy(rig.tpose.Spine2);   // os sans réglage procédural : remis au repos à chaque image (sinon la toux s'accumule)
+    rig.turn('Spine1', AX.x, Math.sin(t * 1.4) * 0.012); rig.turn('Spine', AX.z, Math.sin(t * 0.27) * 0.012);   // respiration, léger balancement
     const HL = API.stage.headLock ? 0.15 : 1, jit = HL * (E.jitter || 0) * Math.sin(t * 7), hp = (E.head || [0, 0, 0]).map((v) => v * HL);   // collier cervical : tête maintenue headS = headS.map((v, i) => v + (hp[i] - v) * k);
     rig.turn('Neck', AX.y, HL * Math.sin(t * 0.6) * 0.02 + jit + headS[1] * 0.5); rig.turn('Neck', AX.x, headS[0] * 0.5, true);
     rig.turn('Head', AX.x, HL * (Math.sin(t * 0.9) * 0.01 + (API.speaking ? Math.sin(t * 5.5) * 0.025 : 0)) + headS[0] * 0.5); rig.turn('Head', AX.y, headS[1] * 0.5, true); rig.turn('Head', AX.z, headS[2], true);
     if (API.stage.headPitch) { API._hp = (API._hp || 0) + (API.stage.headPitch - (API._hp || 0)) * k; } else API._hp = (API._hp || 0) * (1 - k);
+    if (MP) {                                                                           // tronc et jambes : pose capturée ; les inclinaisons de tête de l'émotion s'ajoutent
+      MC.amp += ((API.speaking || MC.rw > 0.05 ? 1 : 0.5) - MC.amp) * (1 - Math.exp(-dt * 2));   // attente : balancement réduit de moitié
+      for (const k of MC_TRONC.slice(0, 6)) if (MP[k] && rig.bones[k]) rig.bones[k].quaternion.slerp(MP[k], MC.w * MC.amp);
+      const hx = clamp(MP._h.x, -0.08, 0.08), hz = clamp(MP._h.z, -0.08, 0.08), hp_ = V3(0, 0, 0).applyMatrix4(MC.parInv), hv = V3(hx, MP._h.y, hz).applyMatrix4(MC.parInv).sub(hp_);
+      rig.bones.Hips.position.copy(MC.hips0).addScaledVector(hv, MC.w * MC.amp);
+      rig.turn('Head', AX.x, headS[0] * 0.5 * MC.w, true); rig.turn('Head', AX.y, headS[1] * 0.5 * MC.w, true); rig.turn('Head', AX.z, headS[2] * MC.w, true);
+    } else if (rig.bones.Hips.position.distanceToSquared(MC.hips0) > 1e-12) rig.bones.Hips.position.copy(MC.hips0);
+    if (MC.toux) {                                                                      // quinte de toux : mouvement relatif du haut du corps, quelle que soit la posture
+      const tt = Math.max(0, t - MC.toux.t0), c = MC.clips && MC.clips.Laying_Severe_Cough;
+      if (!c || tt > c.images / 30) MC.toux = null;
+      else {
+        const fr = Math.min(c.images - 1, Math.floor(tt * 30)), aw = Math.min(1, tt / 0.3, (c.images / 30 - tt) / 0.3), h0 = deltaQ(c, c.ix.Hips, 0, new THREE.Quaternion()), rq = gltf.scene.getWorldQuaternion(new THREE.Quaternion());
+        const OS = ['Spine', 'Spine1', 'Spine2', 'Neck', 'Head'], avant = OS.map((k) => rig.bones[k].getWorldQuaternion(new THREE.Quaternion()));   // orientations avant la toux
+        OS.forEach((k, n) => {
+          const j = c.ix[k]; if (j === undefined) return;
+          const dr = deltaQ(c, j, fr, new THREE.Quaternion()).multiply(deltaQ(c, j, 0, new THREE.Quaternion()).invert());      // relatif à la 1re image
+          const dc = h0.clone().invert().multiply(dr).multiply(h0);                                                     // exprimé dans le repère du corps
+          const dw = new THREE.Quaternion().slerp(dc, aw * (lie > 0.5 ? 0.32 : 0.28));   // le clip est une quinte allongée (le buste se redresse) : atténuée, surtout debout
+          rig.setWorldQ(rig.bones[k], rq.clone().multiply(dw).multiply(rq.clone().invert()).multiply(avant[n]));         // orientation visée = delta complet × orientation d'origine
+        });
+      }
+    }
     if (Math.abs(API._hp || 0) > 1e-3) { const hb = rig.bones.Head, ax = V3(1, 0, 0).transformDirection(gltf.scene.matrixWorld); rig.turn('Neck', ax, API._hp * 0.45, true); rig.root.updateMatrixWorld(true); rig.turn('Head', ax, API._hp * 0.55, true); }   // tête basculée (prélèvement nasal)
     if (t > nextSacc) { sacc = [(Math.random() - 0.5) * 0.12, (Math.random() - 0.5) * 0.08]; nextSacc = t + 1.5 + Math.random() * 2.5; }
     for (const e of ['LeftEye', 'RightEye']) { rig.turn(e, AX.y, sacc[0]); rig.turn(e, AX.x, sacc[1], true); }
     const SG = API.stage; seat += ((SG.seat || 0) - seat) * (1 - Math.exp(-dt * 4)); lie += ((SG.lie || 0) - lie) * (1 - Math.exp(-dt * 3));
     gltf.scene.position.y = -(SG.drop ?? 0.43) * seat + (SG.bedY ?? 0.15) * lie; gltf.scene.rotation.x = -Math.PI / 2 * lie;            // posture assise ; allongé sur le dos (réanimation)            // posture assise
     for (const s of ['Left', 'Right']) { rig.turn(s + 'UpLeg', AX.x, -1.45 * seat); rig.turn(s + 'Leg', AX.x, (SG.knee ?? 1.5) * seat); rig.turn(s + 'Foot', AX.x, (SG.ankle || 0) * seat); }
+    if (MP) for (const k of MC_TRONC.slice(6)) if (MP[k] && rig.bones[k]) rig.bones[k].quaternion.slerp(MP[k], MC.w);   // jambes capturées (debout seulement)
     if (table) { table.visible = !!SG.table && seat > 0.5; stool.visible = seat > 0.5; }
     if (SG.cam) {                                                                        // caméra de la scène, avec transition douce
       if (!camInit) { camPos.copy(camera.position); camLook.copy(look); camInit = true; }
       const kc = 1 - Math.exp(-dt * 3); camPos.lerp(SG.cam.pos, kc); camLook.lerp(SG.cam.look, kc); camera.position.copy(camPos); camera.lookAt(camLook);
     }
     if (touchState && t > touchState.until && !API.speaking) touchState = null;          // bras et mains
+    rig.root.updateMatrixWorld(true); _sInv.copy(gltf.scene.matrixWorld).invert();
+    _mH.copy(_sInv).multiply(rig.bones.Hips.matrixWorld).multiply(MC.M0i.Hips); _mS.copy(_sInv).multiply(rig.bones.Spine2.matrixWorld).multiply(MC.M0i.Spine2);
+    _mH.decompose(_p1, _qH, _p2); _mS.decompose(_p1, _qS, _p2);
     const G = GESTURES[gn] || GESTURES.repos, tch = touchState && TOUCH[touchState.part] ? touchState : null, th = tch ? TOUCH[tch.part](D, tch.side, rig.out[tch.side], rig).hand : null;
     for (const s of th === 'Left' ? ['Right', 'Left'] : ['Left', 'Right']) {             // la main qui touche est placée en dernier (elle peut viser l'autre bras)
       const raw = SG.arms && SG.arms(D, s, rig.out[s]) ? SG.arms(D, s, rig.out[s]) : s === th ? { ...TOUCH[tch.part](D, tch.side, rig.out[tch.side], rig) } : G(D, s, rig.out[s]), spec = resolveSpec(raw);
+      if (MP && !SG.arms && !(s === th && tch.part === 'bras')) suivreCorps(spec, D);   // 'bras' vise déjà l'os animé
       if (!spec.fing) { spec.fing = V3(0, -1, 0); spec.palm = V3(-rig.out[s], 0, 0); }
       if (!st[s]) st[s] = { w: spec.w.clone(), pole: spec.pole.clone(), fing: spec.fing.clone(), palm: spec.palm.clone(), curl: spec.curl || 0, thumb: spec.thumb || 0, shrug: spec.shrug || 0, suit: spec.suit || 0 };
       const q = st[s], kk = s === th ? 1 - Math.exp(-dt * 7) : k; q.w.lerp(spec.w, kk); q.pole.lerp(spec.pole, kk); q.fing.lerp(spec.fing, kk).normalize(); q.palm.lerp(spec.palm, kk).normalize();
       for (const key of ['curl', 'thumb', 'shrug', 'suit']) q[key] = (q[key] || 0) + ((spec[key] || 0) - (q[key] || 0)) * kk;
       const beat = API.speaking && s === 'Right' && gn === 'explique' && s !== th ? Math.sin(t * 4) : 0, w = q.w.clone(); w.y += beat * 0.03; w.z += beat * 0.015;
-      q.plat = !!spec.plat; rig.reach(s, w, q.pole, q.shrug, q.fing, q.palm, q.suit, q.plat); rig.curl(s, q.curl, q.thumb);
+      q.plat = !!spec.plat; rig.souple = !!raw.c; rig.reach(s, w, q.pole, q.shrug, q.fing, q.palm, q.suit, q.plat);
+      {                                                                                  // le coude ne rentre pas dans le tronc : sinon on l'écarte (vers l'extérieur et l'avant) et on refait l'IK
+        rig.root.updateMatrixWorld(true); const el = rig.local(s + 'ForeArm');
+        if (el.y > D.hipsY - 0.12 && el.y < D.shoulderY + 0.02 && D.hx(el.y) > 0.05) {
+          const rx = D.hx(el.y) + 0.04, zf = D.zf(el.y) + 0.04, zb = D.zb(el.y) - 0.02, zc = (zf + zb) / 2, rz = Math.max((zf - zb) / 2, 0.06), u = el.x / rx, v = (el.z - zc) / rz, r = Math.hypot(u, v);
+          if (r < 1) {
+            const dir = V3(u / rx, 0, Math.max(v, 0.2) / rz).normalize(), pole2 = q.pole.clone().normalize().addScaledVector(dir, 1.5 + 3 * (1 - r)).normalize();
+            rig.reach(s, w, pole2, q.shrug, q.fing, q.palm, q.suit, q.plat); q.pole.lerp(pole2, 0.1);
+          }
+        }
+      } rig.curl(s, q.curl, q.thumb);
+      if (MP) {                                                                          // bras libre (attente, parole, réaction) : il suit la capture
+        const libre = !SG.arms && s !== th && ((gn === 'explique' && API.speaking) || MC.rw > 0.3 || (BREF[gn] && REACTION[API.emotion]));
+        MC.bras[s] += ((libre ? 1 : 0) - MC.bras[s]) * (1 - Math.exp(-dt * 4)); const bw_ = MC.bras[s] * MC.w;
+        if (bw_ > 0.002) for (const k of MC_OS_BRAS(s)) if (MP[k] && rig.bones[k]) rig.bones[k].quaternion.slerp(MP[k], bw_);
+      } else MC.bras[s] = 0;
     }
+    if (Number.isNaN(rig.bones.Spine2.quaternion.w) || Number.isNaN(rig.bones.Hips.position.y)) { for (const k in rig.bones) rig.bones[k].quaternion.copy(rig.tpose[k]); rig.bones.Hips.position.copy(MC.hips0); for (const s in st) st[s] = null; console.warn('pose invalide : remise au repos'); }   // garde-fou
     if (T && T.cuff.visible) placeCuff();
     for (const fn of API.extras) fn(t, dt);
     if (controls) controls.update(); renderer.render(scene, camera);
@@ -436,6 +602,27 @@ export async function createAvatar(el, opts = {}) {
     const meshOf = (o) => { let m = null; if (o) o.traverse((c) => { if (!m && c.isSkinnedMesh) m = c; }); return m; };
     const sw = meshOf(sweat), sh = meshOf(shirt); if (!sw || !body0) return null;
     const mat = new THREE.MeshStandardMaterial({ color: 0xc28a68, roughness: 0.62 });
+    const boneMesh0 = (m, n) => { const i = m.skeleton.bones.indexOf(rig.bones[n]); if (i < 0) return null; const M = m.bindMatrixInverse.clone().multiply(m.skeleton.boneInverses[i].clone().invert()); return new THREE.Vector3().setFromMatrixPosition(M); };
+    /* manches du sweat : au-delà du coude, la manche suit l'avant-bras (les poids d'origine la gardaient sur le bras :
+       coude très plié = manche écrasée et avant-bras nu qui sort du tronc) */
+    const GET = [(a, i) => a.getX(i), (a, i) => a.getY(i), (a, i) => a.getZ(i), (a, i) => a.getW(i)];
+    for (const m of [sw]) {
+      const si = m.geometry.attributes.skinIndex, swt = m.geometry.attributes.skinWeight, pos = m.geometry.attributes.position, B = m.skeleton.bones;
+      for (const s of ['Left', 'Right']) {
+        const iA = B.indexOf(rig.bones[s + 'Arm']), iF = B.indexOf(rig.bones[s + 'ForeArm']), e = boneMesh0(m, s + 'ForeArm'), a0 = boneMesh0(m, s + 'Arm'), h = boneMesh0(m, s + 'Hand');
+        if (iA < 0 || iF < 0 || !e || !a0 || !h) continue;
+        const ax = h.clone().sub(a0).normalize(), te = e.clone().sub(a0).dot(ax), v = new THREE.Vector3();
+        for (let i = 0; i < pos.count; i++) {
+          v.fromBufferAttribute(pos, i); const d = v.clone().sub(a0), tt = d.dot(ax); if (d.clone().addScaledVector(ax, -tt).length() > 0.12) continue;   // hors de la manche
+          const f = clamp((tt - te + 0.035) / 0.07, 0, 1); if (f <= 0) continue;
+          let wA = 0, wF = 0; const keep = [];
+          for (let k = 0; k < 4; k++) { const b = GET[k](si, i), w = GET[k](swt, i); if (b === iA) wA += w; else if (b === iF) wF += w; else if (w > 0) keep.push([b, w]); }
+          const mv = wA * f; wA -= mv; wF += mv; const L = [[iA, wA], [iF, wF], ...keep].filter((x) => x[1] > 1e-4).sort((p, q) => q[1] - p[1]).slice(0, 4), S = L.reduce((p, x) => p + x[1], 0) || 1;
+          const c = [0, 1, 2, 3].map((k) => L[k] || [0, 0]); si.setXYZW(i, c[0][0], c[1][0], c[2][0], c[3][0]); swt.setXYZW(i, c[0][1] / S, c[1][1] / S, c[2][1] / S, c[3][1] / S);
+        }
+      }
+      for (const a of [si, swt]) { if (a.isInterleavedBufferAttribute) a.data.needsUpdate = true; else a.needsUpdate = true; }
+    }
     const boneMesh = (m, n) => { const i = m.skeleton.bones.indexOf(rig.bones[n]); if (i < 0) return null; const M = m.bindMatrixInverse.clone().multiply(m.skeleton.boneInverses[i].clone().invert()); return new THREE.Vector3().setFromMatrixPosition(M); };
     function peau(src, garde, retrait) {                     // copie filtrée d'un vêtement : mêmes os et poids, sommets rentrés le long des normales
       const g = src.geometry, P = g.attributes.position, Nn = g.attributes.normal, idx = g.index ? g.index.array : [...Array(P.count).keys()], keep = [];

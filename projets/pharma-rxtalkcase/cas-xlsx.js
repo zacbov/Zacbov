@@ -33,6 +33,7 @@
         if (txt(r0.analyse_ou_medicament)) d.sous_titre = txt(r0.analyse_ou_medicament);
         const cell = (r) => String(r.texte_ou_details || '').split(' | ').map((c) => { const i = c.indexOf(': '); return i < 0 ? ['', c] : [c.slice(0, i), c.slice(i + 2)]; });
         d.colonnes = cell(r0).map((c) => c[0]); d.lignes = L.map((r) => cell(r).map((c) => c[1]));
+        if (/^libre: ?(oui|true|vrai|1)$/i.test(txt(r0.unite_ou_duree) || '')) d.libre = true;   // tableau remis d'emblée
       } else Object.assign(d, det);
       if (det.libre !== undefined && d.libre === undefined) d.libre = det.libre;
       d.origine = txt(r0.doc_origine) || '';

@@ -143,3 +143,175 @@ v15
   vêtements), bras et jambes segment par segment sur ses articulations ; les organes suivent toutes ses postures.
 - La page choisit interieur_femme.glb ou interieur_homme.glb selon le sexe de l'avatar ; « Expliquer au patient » montre
   aussi l'intérieur chez l'homme.
+
+v16
+- Fenêtre du patient : 50 % de la largeur de la page ; cadrage debout un peu plus large (tête entière).
+- Sol carrelé sous les pieds (se fond dans le décor) avec ombre de contact.
+- Performances :
+  - classeur lu dans un worker (cas-xlsx-worker.js) : la page ne se fige plus ~2 s au démarrage ; les cas analysés sont
+    gardés dans IndexedDB et réutilisés tant que le classeur n'a pas changé (≈ 0,2 s au lieu de 3,5 s) ;
+  - SheetJS n'est plus chargé par la page (seulement par le worker, ou en secours) ;
+  - voix locale : préchargement différé (après la page et le classeur) ; modèle gardé dans le cache du navigateur ;
+  - worker IA (à redéployer) : délai de 12 s (15 s pour la liste des informations clés) avant de passer au modèle suivant,
+    et la liste des informations clés se replie sur Gemini/Ministral quand les modèles Gemma sont saturés (erreur 503 vue
+    dans l'enregistrement réseau).
+
+v17
+- Voix sur GitHub : le dépôt contient bien les modèles, mais avatar/avatar.js en ligne est une ancienne version (sans le
+  lien vers la voix locale) : remplacer TOUT le dossier avatar/ (avatar.js, equip.js, objets.js, reserve.js…).
+  Testé ici avec le vrai modèle Piper tiré du dépôt : la voix est produite. Le premier morceau de phrase est désormais
+  coupé à la virgule pour que le son démarre plus tôt.
+- IA : retour à reasoning_effort « low » (comme avant la v14) ; « minimal » ralentissait. Redéployer cas-worker.js.
+- Réserve : les objets 3D se chargent ~6 s après la page (ou dès la première ouverture).
+- Gestes : l'antiseptique, la compresse, la seringue du vaccin et le tire-tique s'effacent 2 à 3 s après usage ;
+  le pansement et la bande de gaze se remplacent l'un l'autre. Ils restent comptés comme gestes faits.
+
+v18 — gestes plus naturels
+- Les gestes forts sont des réactions : surprise, mains protectrices, poings, paumes ouvertes, main sous le menton,
+  montre, main sur le ventre durent 2 à 5 s, puis le patient revient à une attitude d'attente (bras détendus ; mains
+  jointes devant le bas-ventre s'il est anxieux, a peur, est gêné ou dans le doute). Chaque nouvelle réplique relance
+  brièvement le geste. Le visage garde ensuite une version atténuée de l'émotion (surprise 25 %, peur 50 %…).
+- Surprise plus mesurée : mains à hauteur du ventre, poignets dans l'axe des avant-bras.
+- Le coude ne rentre plus dans le tronc (main sur la gorge, le menton, la poitrine) : il est écarté vers l'extérieur et
+  l'avant, et l'IK est refaite.
+- Manches du sweat (patient) : au-delà du coude, la manche suit l'avant-bras ; elle ne s'écrase plus quand le coude est
+  très plié (avant-bras nu qui sortait du tronc).
+- Main sur le front : coude écarté sur le côté, paume sur le front (et non devant les yeux).
+- Rotation de l'avant-bras réduite (moins de torsion de la manche), butées du poignet élargies quand la main est posée.
+- Respiration et léger balancement du tronc en permanence.
+
+v19 — mouvements capturés (Mixamo)
+- avatar/gestes.json + gestes.bin (1,1 Mo) : vos 13 animations Mixamo, converties par outils/export_anim.py (Blender)
+  et reciblées dans la page sur le patient et la patiente (les deux squelettes Mixamo sont en T au repos).
+- Debout, le corps entier suit ces mouvements :
+    attente : Idle (fatigue ou douleur : Dizzy_Idle) ;
+    parole : Talking, Talking_1, _2 ou _3, tiré au hasard à chaque réplique (colère : moitié Standing_Arguing) ;
+    réactions à une nouvelle émotion : surprise → Reacting, joie → Thankful, doute → Thinking, gêne → Shrugging.
+- Toux : quand la réplique parle de toux (« je tousse », « toux », « kof »), une quinte tirée de Laying_Severe_Cough
+  secoue le haut du corps, debout comme allongé (amplitude réduite).
+- Les gestes précis restent calculés (IK) et prennent la main bras par bras : toucher une zone, mains jointes de
+  l'anxieux, objets de la réserve, tension ; assis, allongé, à table : mouvements capturés coupés.
+- Kick_To_The_Groin n'est pas déclenché automatiquement (trop violent pour une douleur ordinaire) :
+  disponible par A.jouer('Kick_To_The_Groin').
+- Ajouter une animation : déposer le FBX dans un dossier, relancer outils/export_anim.py (Blender), puis l'associer
+  dans avatar.js (REACTION, FOND ou PAROLE).
+
+v20 — cas PARHAF, lot 1 : sortie d'hospitalisation à l'officine
+- Source : PARHAF v1.0 (Health Data Hub, projet PARTAGES), comptes rendus de patients fictifs rédigés et relus par des
+  médecins, licence CC BY 4.0 / Etalab 2.0 — mention à conserver (onglet « À propos » ou pied de page).
+- 1 506 cas PO0001 à PO1506 (parcours Officine), actifs : patient qui sort de l'hôpital avec son ordonnance de sortie
+  (2 médicaments ou plus reconnus dans la BDPM) et sa lettre de sortie. Documents remis d'emblée : ordonnance de sortie
+  + compte rendu complet. 5 questions : comparaison entrée/sortie (conciliation), interactions (thésaurus ANSM,
+  version structurée 2019 — scossin/pddiansm), terrain (âge, biologie citée, allergies, antécédents), conseils par
+  classe de médicament, suivi prévu (conclusion du compte rendu).
+- Thèmes : rattachés aux thèmes existants selon le service (pneumologie -> Pneumologie et ORL, etc.).
+- Outils : outils/parhaf.py (conversion), outils/ajout_cas.py (ajout au classeur).
+
+v21 — cas PARHAF, lots 2 et 3 : pharmacie hospitalière et médecine
+- Classeur complet : 6 119 cas (1 860 d'origine + 70 Synthea + 1 506 PO + 1 860 PH + 893 PM), tous actifs. Les 1 860 cas
+  d'origine sont relus à l'identique (0 écart). Le classeur passe à ~20 Mo : le premier chargement est plus long, les
+  suivants viennent du cache du navigateur (IndexedDB).
+- Lot 2, PH0001 à PH1860 (parcours Hospitalier) : cancérologie, hématologie, réanimation, chirurgie, anatomopathologie…
+  Dossier consultable d'emblée (compte rendu + ordonnance de sortie s'il y en a une + documents annexes : anapath,
+  biologie moléculaire, compte rendu opératoire). Questions selon le dossier : situation, recensement des médicaments
+  cités (avec la phrase du compte rendu), interactions (thésaurus ANSM), vigilance anticancéreux (protocoles FOLFOX,
+  FOLFIRINOX, R-CHOP, ABVD… développés molécule par molécule ; DPD avant fluoropyrimidine, FEVG avant anthracycline ou
+  anti-HER2, VHB avant anti-CD20, toxicités des immunothérapies et inhibiteurs de kinase), biomarqueurs (RAS, BRAF,
+  HER2, EGFR, PD-L1, MSI…) ou suites d'un résultat d'anatomopathologie (RCP, bilans préalables), prise en charge
+  péri-opératoire (antibioprophylaxie, anticoagulation préventive, antalgie, antithrombotiques au long cours),
+  conseils au patient, suivi.
+- Lot 3, PM0001 à PM0893 (parcours Médecine) : diagnostic masqué. Le patient ouvre la consultation avec une plainte à
+  la première personne tirée de l'histoire de la maladie (« j'ai mal au ventre depuis plusieurs jours » ; les signes
+  niés dans le compte rendu sont écartés). Les documents ne sont pas remis d'emblée. Questions : diagnostic et
+  éléments, examens et résultats, prise en charge, traitements prescrits et vigilance.
+- Comptes rendus très longs (tableaux de biologie moléculaire) : espaces resserrés pour tenir dans une cellule Excel
+  (32 767 caractères au plus) ; au-delà, documents annexes abrégés avec la mention « […] abrégés pour l'outil ».
+- Mention de la source à conserver : « PARHAF v1.0 (Health Data Hub), CC BY 4.0 ».
+- Régénérer : python3 outils/parhaf.py patients.json DOSSIER_TXT bdpm.json THESAURUS LOT sortie.json
+  (LOT = officine, hospitalier ou medecine), puis python3 outils/ajout_cas.py classeur.xlsx sortie.json classeur.xlsx.
+
+v22–v23 — voix et parole
+- 20 voix Piper choisies selon le sexe et l'âge du patient (voir LISEZMOI_voix.txt) ; Outils > « Voix des patients ».
+- La bouche et les gestes de parole attendent que le son démarre réellement (plus d'avance sur la voix).
+
+v24 — imagerie des tumeurs (scanner, IRM)
+- Dossier imagerie/ : visionneuse.js (visionneuse intégrée, sans service extérieur), tumeurs.json (38 séries, contours),
+  une planche JPEG par série (26 Mo en tout), SOURCES.txt (crédits et licences, CC BY).
+- 15 types de tumeurs : poumon (adénocarcinome, épidermoïde, cancer bronchique), rein (dont cellules claires), carcinome
+  hépatocellulaire, métastases hépatiques, sein (IRM), prostate (IRM T2), glioblastome (IRM T1 injectée), pancréas,
+  endomètre (IRM), sarcome des tissus mous (IRM), corticosurrénalome, adénopathies médiastinales (lymphomes).
+  Images de vrais patients anonymisés (TCIA, via NCI Imaging Data Commons) ; contour d'expert ou automatique (IA BAMF),
+  indiqué sous l'image.
+- 496 cas reçoivent un document « imagerie » (scanner ou IRM) d'après le type de tumeur cité dans le cas :
+  hospitalier 436 (dossier consultable d'emblée, légende « Illustration : … ») ; médecine 60 (à demander au patient,
+  légende neutre pour ne pas livrer le diagnostic). Officine : aucun. Antécédents familiaux et diagnostics seulement
+  évoqués dans les réponses ne comptent pas.
+- Visionneuse : molette, glisser vertical, flèches ou curseur pour changer de coupe ; la série s'ouvre au-dessus de la
+  lésion : à l'étudiant de la trouver. « Montrer la lésion » dessine le contour (rouge ; œdème en pointillés jaunes pour
+  le glioblastome) et va à la coupe où elle est la plus grande, avec son plus grand diamètre. Barre d'échelle 1 cm.
+- Mention sous chaque image : image d'un autre patient, choisie pour illustrer le même type de tumeur (ni les mesures ni
+  le côté du compte rendu).
+- Écartés à la relecture : col de l'utérus (contour ambigu : utérus entier ?), une lésion de 7 mm, un foie contouré en
+  entier, une IRM prostatique oblique.
+- Régénérer : outils/imagerie/ (choix, téléchargement IDC, rendu, catalogue) puis
+  python3 outils/ajout_imagerie.py classeur.xlsx imagerie/tumeurs.json classeur.xlsx.
+
+v25 — parcours Industrie et recherche (63 cas, IR001 à IR063)
+- Cas rédigés d'après les cours IR3-IR5 (qualité, CAPA, vigilances et PGR, accès au marché, accès dérogatoires, MTI,
+  médico-économie, recherche clinique, dispositifs médicaux) et les études de cas UEIR5, sans reprendre les sujets.
+  Un collègue (joué par l'IA) sollicite le pharmacien du laboratoire ; pas de patient en 3D (mode « appel »).
+- 8 thèmes : contrôle qualité (8), stabilité et galénique (7), assurance qualité et CAPA (7), pharmacovigilance (7),
+  essais cliniques (6, protocoles réels de ClinicalTrials.gov : DAPA-ICU, CARD-AXA, INAVO123, HARMONi-7, JOURNEY),
+  accès au marché et médico-économie (6), dispositifs médicaux (2), projets de développement (20 : 4 projets fictifs
+  — thérapie génique AAV dans la CMT1A, ADC anti-B7-H3 dans le cancer de la prostate, CAR-NK anti-CD19 dans le lupus,
+  vésicules de cellules stromales dans la dysplasie bronchopulmonaire — vus par les 5 « business units » :
+  non clinique, pharmaceutique, clinique, réglementaire, médico-économie).
+- Réponses calculées par programme (exactes) : uniformité de teneur (Ph. Eur. 2.9.40, stades 1 et 2), dissolution
+  (S1/S2/S3), durée de conservation (ICH Q1E, borne à 95 %), Arrhenius, f2, PRR (critères d'Evans), RDCR, MACO, AMDEC.
+- Statut : actifs pour être testés, mais « à valider » (a_valider = VRAI) : relecture par un enseignant à prévoir.
+  Les noms de médicaments des cas de qualité sont fictifs.
+- Nouveau type de document pris en charge : « tableau » remis d'emblée (colonne unite_ou_duree = « libre: oui »).
+- Régénérer : python3 outils/industrie.py lot.json puis python3 outils/ajout_cas.py classeur.xlsx lot.json classeur.xlsx.
+
+v26 — notation SCORM, imagerie complétée, lames d'anatomopathologie
+- Notation SCORM (Moodle) : scorm.js (côté outil, inactif sans ?scorm=1 dans l'adresse) et outils/scorm/ (paquet à
+  déposer dans Moodle, script creer_scorm.py, mode d'emploi LISEZMOI_scorm.txt). Paquet prêt : seance_tous_3cas.zip.
+  Score = moyenne des notes /20 de l'évaluateur, ramenée sur 100 ; statut réussi/échoué selon le seuil ; un cas = une
+  interaction ; reprise de séance. Testé sur une plateforme simulée (SCORM 1.2 et 2004), pas encore dans Moodle.
+- Imagerie : 52 séries, 21 types (avant : 38 et 15). Nouveaux : ovaire, côlon-rectum, estomac, vessie, ORL, lésion
+  vertébrale (sert aussi pour le myélome, à titre d'illustration), et 3 IRM du sein de plus (diffusion, ACRIN 6698).
+  Les nouvelles séries viennent de l'essai NCI-MATCH : lésion contourée par les radiologues, histologie non fournie
+  (indiqué sous l'image). 811 cas ont un document d'imagerie (hospitalier 736, médecine 75). Les intitulés CIM-10
+  (« Tumeur maligne du… ») sont maintenant reconnus.
+- Lames d'anatomopathologie : imagerie/lames.json (84 lames HES de diagnostic, TCGA, 3 par type, 28 types) et
+  imagerie/lames/ (une vue d'ensemble JPEG par lame, 11 Mo). 324 cas hospitaliers avec compte rendu d'anatomopathologie
+  reçoivent un document « Lame histologique (HES) », remis d'emblée. Le type est choisi d'après l'intitulé du cas (site)
+  et le compte rendu (histologie) ; pour une métastase, la lame montre la tumeur primitive citée (légende « tumeur
+  primitive »). Sans lame : hémopathies (leucémies, myélome, lymphomes autres que B diffus à grandes cellules), in situ,
+  tumeurs à évolution incertaine, cancers cutanés non mélanocytaires, poumon neuroendocrine ou sans type, métastases
+  d'origine non précisée (111 cas).
+- Visualiseur des lames : zoom en tuiles par le serveur public d'IDC, comme dans CorpoAtlas ; si ce serveur ne répond
+  pas (15 s) ou refuse, la vue d'ensemble locale s'affiche avec la mention « zoom indisponible ».
+- Correction : le débriefing plantait quand les traitements de la fiche étaient une liste.
+- Régénérer les lames : outils/lames/choix_lames.py et vignettes.py, puis
+  python3 outils/ajout_lames.py classeur.xlsx imagerie/lames.json classeur.xlsx (--essai pour voir sans écrire).
+
+v27 — corrections après essai local, patiente MetaHuman (Amanda)
+- Postures : au repos, les bras restent sur la pose calculée (bras détendus, mains contre les cuisses) au lieu du
+  clip Mixamo « Idle » qui les portait en arrière ; les cibles des mains suivent le bassin et le haut du tronc
+  (fini les mains figées pendant que le corps se balance) ; balancement d'attente réduit de moitié ; mains jointes
+  plus hautes, coudes vers l'extérieur. La capture garde la parole et les réactions.
+- Voix : les didascalies entre astérisques (*soupire…*) ne sont plus lues ; affichées en italique dans la bulle.
+- « Regarder de près » : second clic = vue normale (bouton « Vue normale »).
+- Peau (peau.js) : lecture des poids compatible avec les attributs entrelacés ; « Regarder de près » et la peinture
+  des lésions échouaient sur ces modèles.
+- Lames : message explicite si la vue d'ensemble (imagerie/lames/) est introuvable.
+- SCORM : le paquet signale au bout de 20 s si l'outil en ligne ne répond pas (version sans scorm.js).
+  seance_tous_3cas.zip régénéré.
+- Patiente MetaHuman « Amanda » : avatar/patient_amanda.glb (5,1 Mo), activée par ?patiente=amanda dans l'adresse
+  (mémorisé ; ?patiente=v5 pour revenir). Construite depuis l'export DCC (head.dna, body.dna) : visage et corps
+  MetaHuman, 36 expressions calculées par RigLogic, squelette compatible (gestes, capture, matériel médical),
+  vêtements et matériel recalculés, cheveux de la patiente v5 recalés. Chaîne : outils/metahuman/.
+  Licence MetaHuman (Epic Games) : usage autorisé hors Unreal.
+- Deuxième patiente MetaHuman : avatar/patient_crowd84.glb (5,2 Mo, MHC_Crowd84 : femme d'âge moyen, cheveux auburn,
+  yeux bleus), ?patiente=crowd84. Même chaîne, sans retouche ; cheveux de la v5 teints (MH_HAIR).

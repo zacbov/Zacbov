@@ -37,7 +37,7 @@ export function createCaptureSession({ renderSize=RENDER_SIZE, particles=PARTICL
     if(!overlays)return;
     ctx.save();ctx.font='15px ui-monospace, SFMono-Regular, Menlo, monospace';ctx.letterSpacing='1.7px';
     ctx.textBaseline='middle';ctx.fillStyle='#c9c9b9';ctx.shadowColor='#000';ctx.shadowBlur=12;
-    ctx.fillText('CODEVEMBER 2026 / 16 / SPORE',28,32);
+    ctx.fillText('JARDIN DES SIMPLES',28,32);
     ctx.textAlign='right';ctx.font='14px ui-monospace, SFMono-Regular, Menlo, monospace';ctx.letterSpacing='1px';
     ctx.fillText('SETTINGS',SIZE-28,32);ctx.restore();
   }

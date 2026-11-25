@@ -22,13 +22,14 @@ export function createPostProcessing(renderer,scene,camera,spores,materials,disp
   const strength=materials.sss.mul(.85).clamp(0,1).mul(valid);
   const transported=beauty.rgb.add(diffused.rgb.sub(scatter.rgb).mul(tissue.rgb).mul(strength)).max(0);
   const lit=rtt(vec4(transported,1),null,null,{depthBuffer:false});
-  const distance=depthAt(screenUV).sub(focus).abs().sub(.65).max(0);
+  const tol=focus.mul(.1).max(.65);   // zone nette proportionnelle à la distance de mise au point
+  const distance=depthAt(screenUV).sub(focus).abs().sub(tol).max(0);
   const gather=Fn(()=>{
-    const at=uv(),z=depthAt(at),coc=z.sub(focus).abs().sub(.65).max(0).smoothstep(0,1.3);
+    const at=uv(),z=depthAt(at),coc=z.sub(focus).abs().sub(tol).max(0).smoothstep(0,tol.mul(2)),k=z.lessThan(focus).select(float(4),float(1));   // k : avant-plan (plus près que la mise au point) 4x plus flou
     const total=lit.sample(at).rgb.toVar(),weight=float(1).toVar();
     Loop(24,({i})=>{
       const angle=float(i).mul(2.399963),radius=float(i).add(.5).div(24).sqrt();
-      const tap=at.add(vec2(angle.cos(),angle.sin()).mul(radius).mul(coc).mul(aperture).mul(inverseSize));
+      const tap=at.add(vec2(angle.cos(),angle.sin()).mul(radius).mul(coc).mul(aperture).mul(k).mul(inverseSize));
       const tz=depthAt(tap);
       const w=tz.sub(z).abs().smoothstep(.2,.8).oneMinus();
       total.addAssign(lit.sample(tap).rgb.mul(w));weight.addAssign(w);
@@ -52,7 +53,7 @@ export function createPostProcessing(renderer,scene,camera,spores,materials,disp
     });
     return total.add(lit.rgb.mul(weight.clamp().oneMinus()));
   });
-  const defocused=rtt(vec4(mix(lit.rgb,resolveBlur(),distance.smoothstep(0,.9)),1),null,null,{depthBuffer:false});
+  const defocused=rtt(vec4(mix(lit.rgb,resolveBlur(),distance.smoothstep(0,tol)),1),null,null,{depthBuffer:false});
   // Color and depth now share the same scene jitter. TRAA also stabilizes the
   // depth-of-field edges, instead of blurring an already unjittered image.
   const temporal=useTemporal?traa(defocused,depth,scenePass.getTextureNode('velocity'),camera):null;

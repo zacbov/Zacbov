@@ -20,7 +20,7 @@ const lame=(L,W,o)=>{o=o||{};const pf=o.pf||pOv,fo=o.fold===undefined?.18:o.fold
  return grille(o.nu||6,o.nv||4,(u,v,s)=>{const vv=v*2-1,p=pf(u),w=W*p*(1+th*((u*(o.nt||14))%1-.5)),a=tw*u,x=vv*w+as*w*u,z=Math.abs(vv)*w*fo-dr*L*u*u+wv*W*Math.sin(u*(o.wk||11)+vv*2)*Math.abs(vv)*p;
   return[x*Math.cos(a),u*L*(1-.1*dr*u),z+x*Math.sin(a)-s*.0012]})};
 const palme=(L,n,sp,sg,mn,o)=>{o=o||{};const th=[];for(let k=0;k<n;k++)th.push((k/(n-1)-.5)*sp);
- return grille(4,34,(u,v,s)=>{const ph=Math.max(-1.5,Math.min(1.5,(v-.5)*(sp+sg*3.4)));let lb=0;for(const t of th)lb=Math.max(lb,Math.exp(-Math.pow((ph-t)/sg,2)));
+ return grille(5,44,(u,v,s)=>{const ph=Math.max(-1.5,Math.min(1.5,(v-.5)*(sp+sg*3.4)));let lb=0;for(const t of th)lb=Math.max(lb,Math.exp(-Math.pow((ph-t)/sg,2)));
   const r=u*L*(mn+(1-mn)*lb);return[Math.sin(ph)*r,Math.cos(ph)*r,-r*r*(o.cup===undefined?.8:o.cup)/L+(o.crin===undefined?.5:o.crin)*Math.sin(r*120+ph*9)*.003*u-s*.0012]})};
 const _m=new T.Matrix4(),_e=new T.Euler(),_f=new T.Vector3(),_s=new T.Vector3(),_n=new T.Vector3(),_u=new T.Vector3(0,1,0),_q=new T.Quaternion();
 function put(b,mat,g,x,y,z,az,el,roll){_f.set(Math.sin(az)*Math.cos(el),Math.sin(el),Math.cos(az)*Math.cos(el));_s.crossVectors(_f,_u);if(_s.lengthSq()<1e-6)_s.set(1,0,0);_s.normalize();_n.crossVectors(_s,_f);

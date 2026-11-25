@@ -141,14 +141,22 @@ function lycoperdon(rng,o,M){const grp=new THREE.Group(),prof=smoothProfile([[.0
 function materiaux(night){const glow=night.mul(.2).add(.02),mk=(rough,coat)=>{const m=new THREE.MeshPhysicalNodeMaterial({vertexColors:true,roughness:rough,clearcoat:coat||0,clearcoatRoughness:.4,side:THREE.DoubleSide});m.emissiveNode=vertexColor().mul(glow);return m};
   return{cap:mk(.4,.18),flesh:mk(.62),matte:mk(.92),lacq:mk(.3,1)}}
 
-export function createSpeciesMushrooms(night){
+export async function createSpeciesMushrooms(night,tick){
   const M=materiaux(night),R=mulberry32,out={};
   const grp=(seed,fn)=>{const g=new THREE.Group();fn(R(seed),g);return g};
   const add=(g,f,x,z,ry,rx=0,rz=0)=>{f.position.set(x,0,z);f.rotation.set(rx,ry,rz);g.add(f)};
   out.amanita=grp(1000,(r,g)=>{add(g,amanita(r,{R:5,capY:9.2,capH:1.7,uD:.7,inc:.25,stemR:1,bulbR:1.95,bY:.55,bRy:1.25,nW:200,wD:.6,gD:.75,ring:1.6},M),0,0,.4,.04,-.05);add(g,amanita(r,{R:2.5,capY:2.4,capH:1.9,uD:1.1,inc:.95,stemR:.85,bulbR:1.5,bY:.4,bRy:.95,nW:140,wD:.42,gD:.4,ring:0},M),5.2,-2.6,1.4,.12,.1)});
+  if(tick)await tick('coprinus',1,6);
   out.coprinus=grp(1077,(r,g)=>{add(g,coprinus(r,{Hc:9.5,Rc:2.3,my:5.4,stemR:.62,ink:.15,flare:0,ringY:2.4},M),0,0,.3,.03,-.03);add(g,coprinus(r,{Hc:6.4,Rc:1.95,my:2,stemR:.52,ink:0,flare:0,ringY:0},M),3.4,2.4,1.2,.08,.1);add(g,coprinus(r,{Hc:7.4,Rc:2.35,my:4.6,stemR:.56,ink:.85,flare:.4,ringY:1.2},M),-3.6,-1.6,2.2,-.06,.12)});
+  if(tick)await tick('morchella',2,6);
   out.morchella=grp(1154,(r,g)=>{add(g,morel(r,{hb:4.2,Hh:7.6,Rm:2.7,depth:.42},M),0,0,.5,0,-.04);const b=morel(r,{hb:4.2,Hh:7,Rm:2.5,depth:.42},M);b.scale.setScalar(.62);add(g,b,-4.4,-2.6,2,.05,.1)});
+  if(tick)await tick('inocybe',3,6);
   out.inocybe=grp(1231,(r,g)=>{add(g,inocybe(r,{R:2,capY:5.3,capH:1.35,uD:.25,umbo:.38,stemR:.34,gD:.4},M),0,0,.2,.05,-.08);add(g,inocybe(r,{R:1.5,capY:3.6,capH:1.15,uD:.2,umbo:.32,stemR:.27,gD:.3},M),2.6,1.6,1,.12,.14);add(g,inocybe(r,{R:.95,capY:2,capH:.95,uD:.12,umbo:.25,stemR:.2,gD:.2},M),-1.8,2,2.3,-.1,.06)});
+  if(tick)await tick('ganoderma',4,6);
   out.ganoderma=grp(1308,(r,g)=>{add(g,ganoderma(r,{stipe:[[0,-.4,0],[.15,1.6,.1],[.6,3.4,0],[1.4,4.7,-.2]],sR:.62,cap:true,R:5,yaw:-.15,tilt:.1},M),0,0,0);add(g,ganoderma(r,{stipe:[[0,-.3,0],[-.2,1.3,.1],[-.1,2.4,.4],[.3,3.2,.8]],sR:.42,cap:false},M),-3.2,2.8,0)});
+  if(tick)await tick('lycoperdon',5,6);
   out.lycoperdon=grp(1385,(r,g)=>{const p=(o,x,z,s,ry,rx,rz)=>{const f=lycoperdon(r,o,M);f.scale.setScalar(s);add(g,f,x,z,ry,rx,rz)};p({},0,0,1,0,.03,-.05);p({old:1},3.6,-1.6,.92,1,-.08,.1);p({},-2.9,1.9,.68,2,.12,.08);p({},1.7,3.1,.45,3,-.1,-.15)});
+  if(tick)await tick('fin',6,6);
   out.materials=Object.values(M);return out}
+
+export {TAU,clamp,lerp,sstep,mulberry32,noise3,fbm3,mix3,toLin,tubeGeo,lathe,alignQuat,placed,finish,colorize};

@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 
 // Cycle jour / nuit. La nuit reproduit exactement l'ambiance de Spore (champignons, mousse et spores lumineux) ;
 // le jour éteint la bioluminescence, allume le soleil et un ciel, et laisse les plantes à leurs vraies couleurs.
-const DAY_EXPOSURE=3;            // multiplicateur d'exposition en plein jour
+const DAY_EXPOSURE=1.2,DAY_SAT=.9,DAY_WARM=.75;   // le jour : exposition ×1,2, saturation +0,9, chaleur +0,75 (en plus de vos curseurs)
 const PAL=[[-.25,'#010302','#010302'],[-.02,'#0c1633','#7a3f3a'],[.1,'#26396b','#e0825a'],[.3,'#4a7ac4','#f0c8a0'],[.7,'#5b93d8','#cfe0ee']];
 const ss=(a,b,x)=>{x=Math.max(0,Math.min(1,(x-a)/(b-a)));return x*x*(3-2*x)};
 export function createTimeline({scene,renderer,materials,spores,post,lights,garden,target}){
@@ -25,6 +25,7 @@ export function createTimeline({scene,renderer,materials,spores,post,lights,gard
     materials.glow.value=(+$('glow').value||1)*(.1+.9*n);
     spores.brightness.value=(+$('brightness').value||4)*(.25+.75*n);
     renderer.toneMappingExposure=(+$('exposure').value||.5)*(1+(DAY_EXPOSURE-1)*d);
+    const gr=post&&post.tone&&post.tone.grade;if(gr){gr.saturation.value=(+$('saturation').value||1)+DAY_SAT*d;gr.warmth.value=(+$('warmth').value||0)+DAY_WARM*d}
     if(post&&post.glow&&post.glow.strength)post.glow.strength.value=.3*(.4+.6*n);
     const m=Math.round(hour*60)%1440;clock.textContent=String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
   }

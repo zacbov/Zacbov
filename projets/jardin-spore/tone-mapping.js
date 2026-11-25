@@ -17,7 +17,7 @@ export const acesHDR = Fn(([rgb, exposure, headroom]) => {
 });
 
 export const EXPOSURE_DEFAULT = .5;
-export const GRADE_DEFAULTS = Object.freeze({saturation:1,contrast:1.15,warmth:1,tint:.43});
+export const GRADE_DEFAULTS = Object.freeze({saturation:1.1,contrast:1.5,warmth:.25,tint:.43});
 
 export function createToneMapping(){
   const exposure=uniform(EXPOSURE_DEFAULT),headroom=uniform(1);

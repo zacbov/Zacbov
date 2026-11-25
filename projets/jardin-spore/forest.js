@@ -58,7 +58,7 @@ function placeLeafClearOfStems(leaf){
 export async function createForest(materials) {
   await mossLODReady;
   const group=new THREE.Group();group.name='Forest floor';
-  const geo=new THREE.PlaneGeometry(60,60,400,400);geo.rotateX(-Math.PI/2);
+  const geo=new THREE.PlaneGeometry(110,110,480,480);geo.rotateX(-Math.PI/2);
   const p=geo.attributes.position;
   for(let i=0;i<p.count;i++)p.setY(i,groundHeight(p.getX(i),p.getZ(i)));
   geo.computeVertexNormals();const floor=new THREE.Mesh(geo,materials.ground);group.add(floor);
@@ -82,13 +82,12 @@ export async function createForest(materials) {
   }
   // La mousse couvre tout le sol du jardin (touffes plus grosses et plus espacées au-delà du bosquet),
   // pour que les plantes poussent dans un tapis et pas sur de la terre nue. Réglages : MOSS_EXTRA, MOSS_R.
-  const MOSS_EXTRA=4500,MOSS_R=12;
-  for(let i=0;i<MOSS_EXTRA;i++){
-    const a=random()*Math.PI*2,r=2.7+(MOSS_R-2.7)*Math.sqrt(random()),x=Math.cos(a)*r,z=Math.sin(a)*r;
+  const scatterMoss=(n,r0,r1,s0,s1)=>{for(let i=0;i<n;i++){
+    const a=random()*Math.PI*2,r=r0+(r1-r0)*Math.sqrt(random()),x=Math.cos(a)*r,z=Math.sin(a)*r;
     if(pondField(x,z)<.25||groundHeight(x,z)<-.05)continue;
-    if(random()>noise(x*.6,3,z*.6)*.9+.35)continue;
-    addTuft(x,z,2.6+random()*1.2,i%5,2);
-  }
+    addTuft(x,z,s0+random()*(s1-s0),i%5,2);}};
+  scatterMoss(7000,2.7,9,1.7,2.5);     // autour du bosquet : touffes petites et serrées
+  scatterMoss(4000,9,18,3,4.2);        // plus loin : touffes plus grosses et espacées (réglages : nombre, rayons, tailles)
   // Small uneven patches grow right against each stipe, hiding the straight
   // soil intersection without making a continuous artificial ring.
   for(const m of MUSHROOMS){

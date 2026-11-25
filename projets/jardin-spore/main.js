@@ -6,14 +6,17 @@ import { createMushrooms } from './mushrooms.js';
 import { createForest, groundHeight } from './forest.js';
 import { createGarden } from './garden.js';
 import { createTimeline } from './timeline.js';
+import { createLoader } from './loading.js';
+import { POND } from './terrain.js';
 import { createSpores } from './spores.js';
 import { createPostProcessing } from './post-processing.js';
 import { createDisplayRenderer, createDisplayOutput } from './display-output.js';
 import { EXPOSURE_DEFAULT } from './tone-mapping.js';
 
 export async function startExperiment(){
-  const canvas=document.querySelector('canvas'),status=document.querySelector('#status');
-  if(!navigator.gpu)throw new Error('This scene needs WebGPU. Open it in a WebGPU-capable browser.');
+  const canvas=document.querySelector('canvas'),status=document.querySelector('#status'),loader=createLoader();window.__loader=loader;
+  if(!navigator.gpu)throw new Error('Cette scène demande WebGPU : ouvre la page dans un navigateur compatible (Chrome ou Edge récent).');
+  await loader.report(.02,'Initialisation du moteur graphique');
   const renderer=await createDisplayRenderer({canvas,antialias:false,powerPreference:'high-performance'});
   const displayOutput=createDisplayOutput(renderer);
   renderer.toneMapping=THREE.NoToneMapping;renderer.toneMappingExposure=EXPOSURE_DEFAULT;
@@ -22,24 +25,32 @@ export async function startExperiment(){
   const meshlets=new MossDrawingPipeline({lodThreshold:1,occlusionCulling:true});
   renderer.drawingPipeline=meshlets;
   const scene=new THREE.Scene();scene.background=new THREE.Color('#010302');scene.fog=new THREE.FogExp2('#010302',.036);
-  const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.025,90);
+  const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.025,200);
   const controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.dampingFactor=.07;
-  controls.minDistance=1.1;controls.maxDistance=34;controls.maxPolarAngle=Math.PI*.53;
+  controls.minDistance=2.2;controls.maxDistance=70;controls.maxPolarAngle=Math.PI*.53;
   controls.autoRotate=true;controls.autoRotateSpeed=.32;controls.zoomSpeed=.65;
-  function resetView(){controls.target.set(2.4,1.6,2.4);camera.position.set(.6,3.4,13);camera.position.sub(controls.target).multiplyScalar(Math.max(1,.95/camera.aspect)).add(controls.target);controls.update();}
+  function resetView(){controls.target.set(1.2,1.3,.6);camera.position.set(.6,3.2,9.8);camera.position.sub(controls.target).multiplyScalar(Math.max(1,.95/camera.aspect)).add(controls.target);controls.update();}
   resetView();
-  const materials=createMaterials(),mushrooms=createMushrooms(materials),forest=await createForest(materials),garden=await createGarden(materials);
+  await loader.report(.08,'Matériaux et champignons');
+  const materials=createMaterials(),mushrooms=createMushrooms(materials);
+  await loader.report(.12,'Mousse du sol (étape la plus longue)');
+  const forest=await createForest(materials);
+  await loader.report(.4,'Jardin');
+  const garden=await createGarden(materials,(p,l)=>loader.report(.4+.38*p,l));
   const environmentMaterials=[...Object.values(materials).filter(value=>value.isMaterial),...forest.mossLOD.materials];
   scene.add(forest.group,mushrooms.group,garden.group);environmentMaterials.push(...garden.materials);
   const back=new THREE.SpotLight('#ffbd99',30,20,Math.PI*.40,.65,2);back.position.set(-.4,1.6,-2.4);back.target.position.set(0,1.15,0);
   scene.add(back,back.target);
   const blue=new THREE.PointLight('#83d5ff',16,14,2);blue.position.set(2,2.4,-1.6);scene.add(blue);
   const lightRig=new THREE.Group();lightRig.name='Orbiting macro light';lightRig.add(back,back.target,blue);scene.add(lightRig);
-  status.textContent='Filling the air with spores…';
+  await loader.report(.8,'Spores en suspension');
   await new Promise(resolve=>setTimeout(resolve,30));
   const spores=createSpores(4194304,materials.optics);
   const post=createPostProcessing(renderer,scene,camera,spores,materials,displayOutput);
+  await loader.report(.84,'Post-traitement');
   const inkButton=document.getElementById('ink');inkButton.addEventListener('click',()=>{const on=post.ink.value<.5;post.ink.value=on?1:0;inkButton.setAttribute('aria-pressed',String(on))});
+  const goTo=(t,p)=>{controls.target.set(...t);camera.position.set(...p);controls.update()};
+  document.getElementById('v-grove').onclick=()=>goTo([1.2,1.3,.6],[.6,3.2,9.8]);document.getElementById('v-pond').onclick=()=>goTo([POND.x,.6,POND.z],[POND.x-4,4,POND.z+15]);
   const timeline=createTimeline({scene,renderer,materials,spores,post,lights:{back,blue},garden,target:controls.target});
   const settings={paused:matchMedia('(prefers-reduced-motion: reduce)').matches,adaptive:true,orbit:true,resolution:1.5};
   const metrics={frames:0,fps:0,frameMs:0,particleCount:spores.count,adjustments:[],device:renderer.backend.device.adapterInfo??null};
@@ -119,11 +130,15 @@ export async function startExperiment(){
     if(e.code==='KeyR')resetView();if(e.code==='KeyH')document.body.classList.toggle('hide-ui');
   });
   document.addEventListener('visibilitychange',()=>{last=0;frameWindow=[];settleUntil=performance.now()+4000;});
-  renderer.onDeviceLost=info=>{status.hidden=false;status.textContent=`Graphics device lost: ${info.message}. Reload to restart.`;};
-  status.textContent='Preparing light and meshlets…';
+  renderer.onDeviceLost=info=>{loader.fail(new Error('Le pilote graphique a été réinitialisé ('+info.message+'). Recharge la page.'))};
+  await loader.report(.88,'Compilation des shaders');
+  try{await renderer.compileAsync(scene,camera)}catch(e){console.warn('compileAsync indisponible',e)}
+  await loader.report(.94,'Préparation de la lumière et de la mousse');
   spores.step(renderer,1/60);render();
   await renderer.backend.device.queue.onSubmittedWorkDone();
   status.hidden=true;
+  await loader.report(.97,'Textures et modèles');
+  await loader.done();
   function frame(now){
     requestAnimationFrame(frame);
     if(document.hidden||manual){last=0;return;}

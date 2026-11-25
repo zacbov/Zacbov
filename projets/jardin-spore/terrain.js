@@ -16,7 +16,7 @@ export function mossHeight(x,z){
 }
 
 // Shared by the terrain, plant placement and the buried mushroom bases.
-export const POND={x:13,z:-13,rx:7,rz:5};
+export const POND={x:9.5,z:-5.5,rx:4.6,rz:3.3};
 // Négatif à l’intérieur du bassin.
 export function pondField(x,z){const dx=(x-POND.x)/POND.rx,dz=(z-POND.z)/POND.rz;return Math.hypot(dx,dz)-1+.12*Math.sin(Math.atan2(dz,dx)*3+1)}
 export function groundHeight(x,z){

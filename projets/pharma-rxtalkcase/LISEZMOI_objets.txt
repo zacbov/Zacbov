@@ -315,3 +315,104 @@ v27 — corrections après essai local, patiente MetaHuman (Amanda)
   Licence MetaHuman (Epic Games) : usage autorisé hors Unreal.
 - Deuxième patiente MetaHuman : avatar/patient_crowd84.glb (5,2 Mo, MHC_Crowd84 : femme d'âge moyen, cheveux auburn,
   yeux bleus), ?patiente=crowd84. Même chaîne, sans retouche ; cheveux de la v5 teints (MH_HAIR).
+
+v28 — corrections après deuxième essai
+- Peau : la détection des lésions dans le texte ignorait les négations (« aucune allergie médicamenteuse », « pas
+  d'escarre ») ; 429 cas recevaient une lésion, dont PO0516 (bras rouge foncé). Négations, « risque »,
+  « prévention », antécédents écartés ; l'allergie médicamenteuse n'est plus devinée d'après le texte. 244 cas
+  gardent une lésion réellement décrite.
+- Gestes : le patient montre l'endroit douloureux brièvement (2,4 s) quand la voix démarre, puis reprend sa pose.
+  Toucher du bras : avant-bras devant la poitrine (coude en avant). Mains jointes : cible gardée à portée du bras
+  (coude plié, quelle que soit la morphologie : Amanda). Attente : balancement à 30 % et clip ralenti (× 0,6).
+- Éclairage : ambiance réduite, plafonnier chaud de trois quarts, appoint froid, contre-jour, reflets d'une pièce
+  (RoomEnvironment, intensité 0,35) : modelé plus naturel, pas plus de lumière.
+- Voix : modèle mls (15 voix) toujours gardé en mémoire, deux autres modèles au plus ; un modèle n'est libéré
+  qu'après la fin des synthèses en cours ; en cas d'échec, mémoire libérée et nouvel essai. Le panneau Voix indique
+  « préparation de la voix… » puis l'erreur éventuelle. Première phrase coupée plus court (virgule, sinon quelques
+  mots) et modèle préchauffé à l'arrivée du patient : la voix part plus vite. Trois échecs de suite seulement font
+  passer à la voix du navigateur (avant : dès le premier).
+- Worker : ministral en dernier dans les deux chaînes (si la variable MODELS est définie dans Cloudflare, c'est elle
+  qui fixe l'ordre).
+- Amanda : iris noisette (l'ambre très saturé faisait peu naturel).
+
+v29 — Gemma gratuit sur Cloudflare (en essai) et version hors ligne
+- Worker : fournisseur « cloudflare » (Gemma 4 26B de Workers AI, gratuit jusqu'à 10 000 neurons/jour, environ
+  13 cas). Rien ne change tant que la liaison Workers AI « AI » n'est pas ajoutée au worker. Une fois ajoutée :
+  essai avec ?ia=cloudflare dans l'adresse (mémorisé ; ?ia=auto pour revenir) : Gemma Cloudflare passe en premier,
+  la chaîne Google reste derrière en secours (quota épuisé, lenteur > 12 s). Sans ?ia : Google d'abord, Gemma
+  Cloudflare ensuite en secours, ministral en dernier. La ligne du modèle (sous le titre) affiche qui a répondu.
+- Version hors ligne : index_hors_ligne.html + lib\ (three.js, SheetJS, police Atkinson Hyperlegible) +
+  outils/hors_ligne/ (lancer_hors_ligne.bat, telecharger_modele.ps1, preparer_hors_ligne.py, LISEZMOI_hors_ligne.txt).
+  llama-server (llama.cpp) sert le site et Gemma 4 (26B-A4B ou 12B) sur le PC ; le worker tourne dans la page.
+  Testé ici sans aucune connexion avec un faux llama-server : patient, débriefing, avatar, police ; aucune requête
+  vers Internet. Pas testé avec le vrai llama-server ni la GTX 1080.
+
+v30 (24/11/2026)
+- Patientes MetaHuman habillées avec les vêtements fournis : jean « mom », t-shirt (bleu-gris pour Amanda, vert sauge
+  pour Crowd84). Coiffures : ponytail fourni (Amanda, noir) et carré dégradé du hair pack (Crowd84, auburn). Iris
+  d'Amanda brun foncé. Chaîne : outils/metahuman/vet.py (voir LISEZMOI_metahuman.txt).
+- Écran de préchargement (precharge.js, chargé en premier dans index.html) : patients 3D, décor, tensiomètre, gestes,
+  lésions de peau, classeur des cas, décodeur Draco, avec progression. Gardés dans le navigateur (Cache Storage) ;
+  à la visite suivante, une requête HEAD vérifie que le fichier n'a pas changé (ETag / date). « Entrer sans attendre »
+  laisse finir en arrière-plan ; les requêtes de l'application vers ces fichiers sont servies par le préchargement.
+- Homme âgé (scans fournis) : pas encore intégré (scans bruts de 1,2 à 1,6 M de sommets, sans squelette ni expressions).
+
+v31 (24/11/2026)
+- Patient homme : corps complet (scan fourni, recalé sur son squelette, t-shirt de compression repeint en peau,
+  cuissard gardé comme sous-vêtement). Buste ou jambes découverts : on voit le vrai corps (fini les bras et le torse
+  reconstitués à partir des manches). Chaîne : outils/homme_corps/.
+- Posture : le déhanché capturé s'accumulait d'une image à l'autre (bassin et jambes jamais remis au repos) et
+  atteignait 6° d'inclinaison ; corrigé, et amplitude réduite (attente 30 %, parole 50 %). Inclinaison mesurée ≤ 1°.
+- Vêtements : soutien-gorge et culotte rentrés sous le t-shirt et le jean (tache rose au centre de la poitrine).
+
+v32 (25/11/2026) — retours de Tice
+- Décor : la photo de la pharmacie suit la caméra (parallaxe d'un mur placé 3 m derrière le patient) : en regardant
+  les pieds (pesée), on voit le bas des étagères ; en s'approchant, la photo grandit.
+- Bouton « Prendre la tension » retiré : le tensiomètre se prend dans la réserve, comme les autres objets.
+- Plaie : seulement si le cas en décrit une (plaie, coupure, écorchure, morsure…, hors négations, « brûlures »
+  urinaires ou d'estomac, antécédents), peinte dans la peau à l'endroit décrit (avant-bras, poignet, coude, dos de la
+  main, genou, jambe ; gauche/droite), dès l'arrivée du patient. Le pansement vise ce point ; plaie au genou ou à la
+  jambe : il faut d'abord faire retirer le pantalon. Endroits non montrés (pied, visage, dos…) : pas de plaie peinte.
+- Stomie : il faut d'abord l'accord du patient pour découvrir le ventre ; il demande l'espace de confidentialité
+  (règle ajoutée au worker : à redéployer).
+- Culotte de la patiente de la couleur du soutien-gorge (bleue comme le pantalon, elle passait pour un reste).
+- Abaisse-langue à l'horizontale (bout appuyé sur la langue), bouche un peu moins ouverte (moins de déchirure).
+- Glycémie : autopiqueur seul contre le côté de la pulpe (lancette), puis lecteur et bandelette ; lancettes de
+  rechange posées sur la table.
+- Orthèse de pouce retournée (coque dorsale, pouce dans le fourreau) ; semelles et plaque du releveur posées sous
+  la plante réelle du pied (lancers de rayons), suivant l'inclinaison du pied.
+- « Expliquer au patient » : carte d'explication en début d'exercice (but, étapes, ce qui est analysé, conseils).
+- Voix : texte préparé avant la synthèse (unités, abréviations, sigles épelés, symboles et émojis retirés) et bruit
+  de synthèse réduit (moins de syllabes inventées, surtout avec les voix mls).
+
+v33 (25/11/2026)
+- Patient âgé : tête du scan fourni (homme âgé) posée sur le patient homme à corps complet, avec ses expressions et
+  le mouvement des lèvres. Choisi automatiquement pour un homme de 65 ans et plus (avatar/patient_homme_age.glb).
+  Chaîne : outils/homme_corps/ (tete.py, rlm.py, det_reperes.py).
+
+v34 (25/11/2026)
+- Visages peints par Tice recalés sur la disposition UV MetaHuman (outils/visages) : avatar/visages/v_*.jpg.
+  Patiente MetaHuman (Amanda, Crowd84) de 65 ans et plus : visage âgé et cheveux gris, automatiquement.
+
+v35 (25/11/2026)
+- Visages : nouvelles textures UV de Tice. Patiente : f_vieille (65 ans et plus, teinte corrigée et 20 % du visage
+  d'origine pour ne plus avoir un visage foncé ou rouge), f_jeune (une fois sur deux sinon).
+  Patient : la tête du scan (v33) est abandonnée ; les visages « homme âgé » et « homme jeune » sont posés sur
+  l'atlas du patient homme (barbe d'origine retirée, cheveux gris pour l'âgé) : avatar/visages/homme_*.jpg.
+  Outils : outils/visages (homme_visage.py, teinte.py). Le visage est posé avant les lésions de peau.
+- Hygiène : réserve « Solution hydroalcoolique et gants » (friction, puis gants). Un soin sans friction des mains,
+  ou un soin au contact du sang / d'une muqueuse / d'une plaie sans gants : le patient le remarque et c'est noté.
+- Stéthoscope (auscultation du thorax, torse découvert avec accord) et otoscope (oreille) : résultat tiré du cas
+  (sifflements, crépitants ; otite moyenne, externe, bouchon) et rappel d'orienter vers le médecin.
+- Pansement : ciseaux à bande (après la bande de gaze).
+- Fauteuil roulant : patient décrit en fauteuil (paraplégie, « ne marche plus »…) assis dans le fauteuil ; il sert
+  aussi de siège pour les gestes faits assis.
+- Objets montrés au patient (conseil) : tire-lait, culotte absorbante, poche à urine, sonde nasogastrique,
+  bracelet d'identification (cas hospitaliers). Bas de contention : vrai modèle dans la réserve.
+- Fichiers ajoutés dans avatar/equip : sha, gants_boite, gant, stethoscope, otoscope, ciseaux, fauteuil_roulant,
+  tire_lait, change_complet, poche_urine, sonde_ng, bracelet_id, bas_produit (.glb, Draco).
+- Crédits (CC-BY-4.0, Sketchfab) : Nitrile Glove Box V2 (johnny3D) ; Rubber Med Gloves (KOMODOZ) ; Manual breast
+  pump (lia._.alia) ; Tactical scissors (Medicz) ; Doctor's stethoscope (Vera4Art) ; otoscope (sinapashami) ;
+  Wheelchair (imnuts000). Fournis en OBJ par Tice, licence à vérifier avant diffusion : Purell Hand Sanitizer,
+  Urine Bag, Sonda nasogástrica de Levin, Pediatric Pullup, Infant Hospital Wristband, Achill Compression Socks.
+  Non utilisé : Test Tube (licence Sketchfab Standard, pas de redistribution).

@@ -1,0 +1,30 @@
+Cas cliniques HORS LIGNE (sans Internet, sur un PC)
+
+Principe : llama-server (llama.cpp) fait tout sur le PC — il sert le site (index_hors_ligne.html) et le modèle d'IA
+(Gemma 4). La page fait tourner le « worker » (cas-worker.js : consignes du patient et de l'évaluateur) dans le
+navigateur : mêmes consignes qu'en ligne. Voix (Piper) et dictée (Whisper) sont déjà locales.
+
+Installation (une fois, avec Internet), dans un dossier, par exemple C:\CasCliniques\ :
+  1. site\      : le contenu du paquet (index.html, index_hors_ligne.html, lib\, avatar\, voix\ AVEC les modèles
+                  Piper et Whisper, imagerie\, cas_cliniques_complet.xlsx…).
+  2. llama\     : llama.cpp pour Windows, https://github.com/ggml-org/llama.cpp/releases
+                  GTX 1080 : archive « bin-win-cuda-12.4-x64 » + « cudart-llama-bin-win-cuda-12.4-x64 » décompressées
+                  ensemble ; si la carte n'est pas reconnue, archive « bin-win-vulkan-x64 ».
+  3. modeles\   : powershell -ExecutionPolicy Bypass -File telecharger_modele.ps1 26b   (ou 12b)
+  4. lancer_hors_ligne.bat et telecharger_modele.ps1 à la racine (copiés depuis site\outils\hors_ligne\).
+
+Utilisation : double-clic sur lancer_hors_ligne.bat. Le navigateur s'ouvre quand le modèle est prêt.
+Autres PC de la salle : http://<adresse de ce PC>:8080/index_hors_ligne.html (autoriser le pare-feu Windows à
+la première ouverture). Un seul calcul à la fois (-np 1) : avec plusieurs étudiants, les réponses attendent leur tour.
+
+Quel modèle ?
+  - 26B-A4B (17 Go) : le même modèle que la version en ligne (Gemma 4 26B). Il faut 32 Go de mémoire vive ; les
+    « experts » restent en mémoire vive, la carte graphique fait le reste. Le plus fiable pour jouer et noter.
+  - 12B (6,4 Go) : plus léger, presque entièrement sur la carte. Si le PC a 16 Go de mémoire vive.
+  Première réponse d'un cas plus lente (lecture de la consigne, plusieurs milliers de mots) ; ensuite le début de
+  la conversation reste en mémoire (cache_prompt) et les réponses suivantes sont plus rapides.
+
+Limites hors ligne : RCP et notices (BDPM) indisponibles ; lames d'anatomopathologie en vue d'ensemble seulement
+(le zoom passe par un serveur en ligne) ; SCORM sans objet.
+Après une mise à jour d'index.html : python site\outils\hors_ligne\preparer_hors_ligne.py site
+(régénère index_hors_ligne.html ; le dossier lib\ est déjà fourni).

@@ -80,12 +80,18 @@
     }
     return prets.get(modele);
   }
+  const chauds = new Set();
+  function prechauffer(v) {                    // 1re synthèse d'un modèle plus lente (allocation, compilation) : faite d'avance, sans son
+    const k = v.modele; if (chauds.has(k)) return; chauds.add(k);
+    demarrer(k).then(() => synth('Bonjour.', v, 1)).catch(() => chauds.delete(k));
+  }
   const synth = (texte, v, vitesse) => envoyer({ type: 'dire', texte, modele: v.modele, sid: v.loc ? (locuteurs[v.modele] || {})[v.loc] ?? 0 : 0, vitesse });
   const phrases0 = (t) => (t.match(/[^.!?…;:]+[.!?…;:]*["»)]*\s*|[.!?…;:]+\s*/g) || [t]).reduce((a, p) => {   // regroupe les fragments trop courts
     if (a.length && (a[a.length - 1].length < 25 || p.trim().length < 6)) a[a.length - 1] += p; else a.push(p); return a; }, []);
-  const phrases = (t) => {                     // le premier morceau court part vite : on coupe la première phrase à la virgule
-    const P = phrases0(t), m = P.length && P[0].length > 45 ? /^(.{12,}?,\s+)(.{12,})$/s.exec(P[0]) : null;
-    return m ? [m[1], m[2], ...P.slice(1)] : P;
+  const phrases = (t) => {                     // le premier morceau court part vite : on coupe la première phrase à la virgule, sinon après quelques mots
+    const P = phrases0(t); if (!P.length || P[0].length <= 38) return P;
+    const m = /^(.{6,40}?,\s+)(.{12,})$/s.exec(P[0]) || /^((?:\S+\s+){4,6}?)(\S.{14,})$/s.exec(P[0]);
+    return m && m[1].length <= 42 ? [m[1], m[2], ...P.slice(1)] : P;
   };
 
   function enveloppe(pcm, sr) {               // volume par tranches de 20 ms, normalisé
@@ -95,6 +101,23 @@
     return env;
   }
 
+  /* texte -> forme lisible par le phonémiseur (espeak) : unités, abréviations, symboles ; évite les syllabes inventées */
+  const UNITES = [[/(\d)\s?mg\/kg\b/gi, '$1 milligrammes par kilo'], [/(\d)\s?g\/l\b/gi, '$1 grammes par litre'], [/(\d)\s?mmol\/l\b/gi, '$1 millimoles par litre'],
+    [/(\d)\s?mmhg\b/gi, '$1 millimètres de mercure'], [/(\d)\s?µg\b/gi, '$1 microgrammes'], [/(\d)\s?mg\b/gi, '$1 milligrammes'], [/(\d)\s?ml\b/gi, '$1 millilitres'],
+    [/(\d)\s?kg\b/gi, '$1 kilos'], [/(\d)\s?cm\b/gi, '$1 centimètres'], [/(\d)\s?mm\b/gi, '$1 millimètres'], [/(\d)\s?g\b/g, '$1 grammes'], [/(\d)\s?ui\b/gi, '$1 unités'],
+    [/(\d)\s?°\s?c\b/gi, '$1 degrés'], [/(\d)\s?°/g, '$1 degrés'], [/(\d)\s?%/g, '$1 pour cent'], [/(\d)\s?h\s?(\d\d)\b/g, '$1 heures $2'], [/(\d)\s?h\b/g, '$1 heures'],
+    [/\/\s?j(our)?\b/gi, ' par jour'], [/\/\s?sem(aine)?\b/gi, ' par semaine'], [/\bx\s?(\d)\b/gi, '$1 fois'], [/(\d)\s?x\b/gi, '$1 fois'], [/(\d)\s?(cp|cps)\b/gi, '$1 comprimés']];
+  const ABREV = [[/\bDr\.?\s/g, 'docteur '], [/\bPr\.?\s/g, 'professeur '], [/\bMme\b/g, 'madame'], [/\bMlle\b/g, 'mademoiselle'], [/\bM\.\s/g, 'monsieur '], [/\betc\.?/gi, 'et cetera'],
+    [/\bcf\.?/gi, 'voir'], [/\bvs\.?\b/gi, 'contre'], [/\bc-à-d\b|\bc\.-à-d\.?/gi, "c'est-à-dire"], [/\bRDV\b/g, 'rendez-vous'], [/\bOK\b/g, "d'accord"], [/\bAINS\b/g, 'anti-inflammatoires']];
+  function pourLire(t) {
+    let s = String(t || '').normalize('NFC').replace(/[\u2018\u2019\u02bc]/g, "'").replace(/[«»“”"]/g, '').replace(/…/g, '.').replace(/[–—]/g, ', ');
+    s = s.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, ' ').replace(/[*_#`~^|<>{}\[\]=+]/g, ' ').replace(/[()]/g, ', ');
+    for (const [r, v] of UNITES) s = s.replace(r, v);
+    for (const [r, v] of ABREV) s = s.replace(r, v);
+    s = s.replace(/(\d)\s*-\s*(\d)/g, '$1 à $2').replace(/(\d)\s*\/\s*(\d)/g, '$1 sur $2').replace(/(\d) (\d{3})\b/g, '$1$2').replace(/&/g, ' et ').replace(/@/g, ' arobase ');
+    s = s.replace(/\b([A-Z]{2,5})\b/g, (m) => (/^[AEIOUY]/.test(m) && m.length > 3 ? m.toLowerCase() : m.split('').join(' ')));   // sigles épelés (sauf ceux qui se lisent)
+    return s.replace(/\s+([,.!?;:])/g, '$1').replace(/([,.;:])(?=[^\s\d])/g, '$1 ').replace(/,\s*,/g, ',').replace(/,\s*([.!?])/g, '$1').replace(/\s{2,}/g, ' ').trim();
+  }
   function parler(texte, o = {}) {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
     if (ctx.state === 'suspended') ctx.resume();
@@ -103,7 +126,7 @@
     const P = phrases(texte), total = texte.length || 1;
     const segs = []; let off = 0, arret = false, fin0 = 0;
     P.forEach((p) => { segs.push({ off, len: p.length, debut: null, duree: 0, env: null, src: null }); off += p.length; });
-    const sons = P.map((p) => demarrer(v.modele).then(() => synth(p.trim(), v, o.vitesse || 1)));   // le worker les traite dans l'ordre
+    const sons = P.map((p) => demarrer(v.modele).then(() => synth(pourLire(p) || p.trim(), v, o.vitesse || 1)));   // le worker les traite dans l'ordre
     const fin = (async () => {
       let t = ctx.currentTime + 0.03;
       for (let i = 0; i < P.length; i++) {
@@ -135,7 +158,7 @@
     async pourCas(c) {
       const f = (c && c.fiche) || {}, P = await verifierModeles();
       courante = choisirDans(P, f.sexe, f.age, f.age_unite, c && c.id);
-      if (actif && courante) demarrer(courante.modele).catch(() => {});
+      if (actif && courante) prechauffer(courante);
       return courante;
     },
     courante: () => forcee || courante,

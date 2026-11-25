@@ -39,6 +39,15 @@ function plante(b, api, s, f) {                             // hauteur de la pla
     const h = rc.intersectObjects(skins, false)[0]; if (h) hs.push(h.point.dot(b.up)); }
   const solY = f.flat(f.ball, 0).dot(b.up); R[s] = hs.length ? Math.min(...hs) - solY : 0.021; return R[s];   // pas de pied sous la chaussure (patient homme) : dans la chaussure
 }
+function sole(b, api, s) {                                   // plante du pied nu par lancers de rayon (talon, avant-pied) : suit l'inclinaison réelle du pied
+  const f = foot(b, s), skins = (api._skin && api._skin.skins) || api.rig.meshes.filter((m) => /body|corps/i.test(m.name)), rc = new THREE.Raycaster();
+  const hit = (p, n) => { rc.set(p.clone().sub(n.clone().multiplyScalar(0.15)), n); rc.far = 0.2; const h = rc.intersectObjects(skins, false)[0]; return h ? h.point.clone() : null; };
+  const H0 = hit(f.ank.clone().sub(f.fw.clone().multiplyScalar(0.04)), b.up), T0 = hit(f.ball.clone().add(f.fw.clone().multiplyScalar(0.015)), b.up);
+  if (!H0 || !T0) return null;
+  const ax = T0.clone().sub(H0).normalize(), n = b.up.clone().sub(ax.clone().multiplyScalar(b.up.dot(ax))).normalize();
+  const H = hit(H0.clone().add(n.clone().multiplyScalar(0.01)), n) || H0, T = hit(T0.clone().add(n.clone().multiplyScalar(0.01)), n) || T0;
+  return { H, T, ax, n, f };
+}
 const forearm = (b, s, t, lift = 0.035, around = 0) => {     // point de l'avant-bras à la fraction t (0 = poignet, 1 = coude), face antérieure (paume) ou tournée de « around » rad
   const w = b.W(s + 'Hand'), e = b.W(s + 'ForeArm'), ax = e.clone().sub(w).normalize(), hq = b.rig.bones[s + 'Hand'].getWorldQuaternion(new THREE.Quaternion());
   let n = b.rig.palmL[s].clone().applyQuaternion(hq); n.sub(ax.clone().multiplyScalar(n.dot(ax))).normalize();   // normale côté paume (face antérieure)
@@ -72,6 +81,7 @@ const COLLARS = [   // source : 4 tailles du set (cm), centre de l'anneau, bas/h
   { c: [-513.2, -467.3], y: [-5.1, 11.1], a: 24, h: 13.3, nom: 'Taille 3 (orange)' },
   { c: [-488.7, -499.9], y: [-5.5, 11.4], a: 36, h: 13.6, nom: 'Taille 4 (vert)' },
 ];
+let POUCE_ROT = Math.PI; export function _pouceRot(a) { POUCE_ROT = a; }   // orthèse tournée d'un demi-tour autour de l'axe pouce–poignet : coque dorsale, pouce dans le fourreau (v32)
 export const ITEMS = {
   pouce: {
     label: 'Orthèse du pouce (gauche)', file: 'orthese_pouce.glb', consigne: "Placez l'orthèse de pouce sur la bonne main.",
@@ -81,7 +91,7 @@ export const ITEMS = {
       faux: { main_D: "Cette orthèse est moulée pour une main gauche : sur la main droite, le pouce ne rentre pas dans le fourreau." },
       obj: { A: V3(23.6, 82.1, 23.8), B: V3(-5.7, 2.2, -5.2), up: V3(5.8, 37.4, 7.0) }, axisUp: true, roll: 0,
       fit: (b) => { const ip = b.W('LeftHandThumb3'), wr = b.W('LeftHand').add(b.W('LeftHand').sub(b.W('LeftForeArm')).normalize().multiplyScalar(-0.015));
-        return { A: ip, B: wr, up: b.W('LeftHandThumb2').sub(b.W('LeftHandIndex1')) }; }, scale: 0.00112 }],
+        return { A: ip, B: wr, up: b.W('LeftHandThumb2').sub(b.W('LeftHandIndex1')).applyAxisAngle(ip.clone().sub(wr).normalize(), POUCE_ROT) }; }, scale: 0.00112 }],
   },
   releveur: {
     label: 'Orthèse cheville-pied (releveur)', file: 'releveur.glb', consigne: "Mettez le releveur sur la jambe atteinte (pied qui tombe, côté gauche).", shoesGhost: true,
@@ -91,8 +101,9 @@ export const ITEMS = {
     pieces: [{ id: 'releveur', node: 'releveur', label: 'Releveur', ok: ['jambe_G'],
       faux: { jambe_D: "Le déficit des releveurs est à gauche dans ce cas : l'orthèse se met du côté du pied qui tombe.", genou_G: "C'est une orthèse cheville-pied (releveur) : elle tient la cheville à angle droit, elle ne s'arrête pas au genou." },
       obj: { A: V3(0, -0.93, -0.66), B: V3(0, 0.9, -0.55), up: V3(0, 0, 1) },
-      fit: (b) => { const f = foot(b, 'Left'), k = b.W('LeftLeg'), top = k.clone().lerp(b.W('LeftFoot'), 0.13).sub(f.fw.clone().multiplyScalar(0.06));
-        return { A: f.heel.clone().add(f.fw.clone().multiplyScalar(0.02)), B: top, up: f.fw }; }, scale: { k: 1 } }],
+      fit: (b, z, api) => { const f = foot(b, 'Left'), k = b.W('LeftLeg'), top = k.clone().lerp(b.W('LeftFoot'), 0.13).sub(f.fw.clone().multiplyScalar(0.06)), S = api && sole(b, api, 'Left');
+        const A = S ? S.H.clone().sub(S.n.clone().multiplyScalar(0.006)).add(S.ax.clone().multiplyScalar(0.01)) : f.heel.clone().add(f.fw.clone().multiplyScalar(0.02));   // plaque sous la plante (talon)
+        return { A, B: top, up: S ? S.ax : f.fw }; }, scale: { k: 1 } }],
   },
   semelles: {
     label: 'Semelles orthopédiques', file: 'semelles.glb', consigne: "Placez chaque semelle sous le bon pied (gauche / droite) : talon calé, arche sous la voûte plantaire.", shoesGhost: true, hideFemme: ['Shoes'],
@@ -102,7 +113,9 @@ export const ITEMS = {
       return { id: 'semelle_' + c, node: 'semelle_' + c, label: 'Semelle ' + (c === 'G' ? 'gauche' : 'droite'), ok: ['pied_' + c],
         faux: { ['pied_' + (c === 'G' ? 'D' : 'G')]: "Mauvais pied : l'arche de la semelle (le soutien de la voûte plantaire) doit se trouver du côté interne du pied." },
         obj: { A: V3(x0, 0.0, -0.01), B: V3(x0 + 0.005, 0.0, -0.27), up: V3(0, 1, 0) },
-        fit: (b, z, api) => { const f = foot(b, s), h = plante(b, api, s, f) - 0.003; return { A: f.flat(f.heel.clone().add(f.fw.clone().multiplyScalar(0.005)), h), B: f.flat(f.tip.clone().sub(f.fw.clone().multiplyScalar(0.02)), h), up: b.up }; }, scale: { k: 1 } }; }),
+        fit: (b, z, api) => { const S = sole(b, api, s);
+          if (S) { const d = S.n.clone().multiplyScalar(-0.004); return { A: S.H.clone().add(d).sub(S.ax.clone().multiplyScalar(0.03)), B: S.T.clone().add(d).add(S.ax.clone().multiplyScalar(0.045)), up: S.n }; }   // talon à talon, bout sous les orteils, collée à la plante
+          const f = foot(b, s), h = plante(b, api, s, f) - 0.003; return { A: f.flat(f.heel.clone().add(f.fw.clone().multiplyScalar(0.005)), h), B: f.flat(f.tip.clone().sub(f.fw.clone().multiplyScalar(0.02)), h), up: b.up }; }, scale: { k: 1 } }; }),
   },
   collier: {
     label: 'Collier cervical', file: 'colliers.glb', consigne: "Choisissez la taille adaptée et placez le collier.", headLock: true, hide: ['hood'],
@@ -116,7 +129,7 @@ export const ITEMS = {
     single: true,
   },
   stomie: {
-    label: 'Poche de stomie', file: 'stomie.glb', consigne: "Colostomie gauche : placez l'appareillage sur la stomie.", hide: ['Sweatshirt'],
+    label: 'Poche de stomie', file: 'stomie.glb', consigne: "Colostomie gauche : placez l'appareillage sur la peau, sur la stomie.", hide: ['Sweatshirt'], need: 'buste',   // ventre découvert avec l'accord du patient (espace de confidentialité)
     stage: { seat: 0, arms: handsDown, cam: { pos: [0.18, 1.06, 0.95], look: [0, 0.98, 0.05] } },
     zones: {
       FIG: { label: 'Fosse iliaque gauche', at: (b) => surfW(b, b.D.hipsY + 0.03, 0.55, 'Left').c },
@@ -246,7 +259,7 @@ export function createEquip(api, opts = {}) {
     const ok = piece.ok.includes(z.id); emit({ type: 'depot', objet: cur.id, piece: piece.id, zone: z.id, ok, pieceLabel: piece.label, zoneLabel: z.label });
     if (!ok) { say((piece.faux && piece.faux[z.id]) || `Pas ici : ${piece.label.toLowerCase()} ne se place pas sur « ${z.label} ».`, false); return; }
     if (piece.repeat) { mesurer(piece, z); return; }                 // mètre ruban : plusieurs mesures, la carte reste disponible
-    if (piece.requiert && !piece.requiert.every((k) => cur.mesures && cur.mesures[k] != null)) {   // taille choisie sans avoir mesuré
+    if (piece.requiert && !piece.requiert.every((k) => (cur.mesures && cur.mesures[k] != null) || (cur.ctx && cur.ctx[k]))) {   // taille choisie sans avoir mesuré
       say(piece.requiertMsg || 'Prenez d\'abord les mesures.', false); emit({ type: 'sans_mesure', objet: cur.id, piece: piece.id, pieceLabel: piece.label }); return; }
     let ch = null;
     if (piece.choix) { const id0 = cur.id; ch = await choisir(piece.choix); if (!ch || !cur || cur.id !== id0) return; }
@@ -263,8 +276,15 @@ export function createEquip(api, opts = {}) {
       if (res) res.geste = (res.geste || piece.label) + ` (${ch.resume} ; ${ch.ok ? 'taille adaptée' : ch.sens === 'petit' ? 'trop petit pour ses mesures' : ch.sens === 'grand' ? 'trop grand pour ses mesures' : 'choix inadapté'})`; }
     if (res && res.badge) badge(res.badge, P);
     if (res && res.remove) res.remove.forEach(removeProp);
+    for (const q of placed) if (q !== P && !q.parti && (piece.remplace || []).includes(q.piece.id)) retirer(q);    // ex. la bande remplace le pansement
+    if (piece.ephemere) setTimeout(() => { if (placed.includes(P)) retirer(P); }, piece.ephemere);                // ex. antiseptique, compresse : utilisés puis jetés
     if (res && res.extra) (cur._extra = cur._extra || []).push(res.extra);
     emit({ type: 'geste', objet: cur.id, piece: piece.id, zone: z.id, texte: (res && res.geste) || `${piece.label} placé : ${z.label.toLowerCase()}` });
+  }
+  function retirer(P) {                                    // l'objet s'efface en 0,4 s ; il reste compté comme geste fait
+    P.parti = true; const mats = []; P.holder.traverse((o) => { if (o.isMesh) { o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone(); [].concat(o.material).forEach((m) => { m.transparent = true; mats.push([m, m.opacity]); }); } });
+    const t0 = performance.now(), pas = () => { const k = Math.min(1, (performance.now() - t0) / 400); mats.forEach(([m, o]) => { m.opacity = o * (1 - k); }); if (k < 1) requestAnimationFrame(pas); else scene.remove(P.holder); };
+    requestAnimationFrame(pas);
   }
   function mesurer(piece, z) {                              // une mesure au mètre ruban : valeur, anneau autour du membre, texte transmis au chat
     const v = piece.mesure(cur.ctx || {}, z.id), nom = piece.nom || z.label.split(' (')[0]; (cur.mesures = cur.mesures || {})[piece.cle || z.id] = v;
@@ -378,7 +398,8 @@ export function createEquip(api, opts = {}) {
   async function open(id, ctx = {}) {
     close(); const item = ITEMS[id]; if (!item) return false;
     if (item.femme && !api.femme) { emit({ type: 'indispo', objet: id, label: item.label }); return false; }
-    if (item.need && api.tenue && !api.tenue[item.need]) { emit({ type: 'besoin', objet: id, need: item.need, label: item.label }); return false; }
+    const need = (item.needFor && item.needFor(ctx)) || item.need;
+    if (need && api.tenue && !api.tenue[need]) { emit({ type: 'besoin', objet: id, need, label: item.label }); return false; }
     cur = { id, ...item, model: await loadItem(id, item), ctx };
     if (ctx.ok) cur.pieces = cur.pieces.map((p) => ctx.ok[p.id] ? { ...p, ok: ctx.ok[p.id] } : p);    // le cas peut changer la bonne zone (ex. iléostomie → FID)
     if (id === 'collier') {                                // taille : on compare la hauteur menton–épaule du patient à la hauteur de la mentonnière
@@ -387,14 +408,14 @@ export function createEquip(api, opts = {}) {
       cur.check = (p) => p === best ? { ok: true, txt: `${p.label} : bonne taille, le menton repose sur l'appui sans être relevé.` }
         : { ok: false, txt: `${p.label} : ${p.h > best.h ? 'trop haut, la tête part en extension' : 'trop bas, le cou n\'est pas maintenu'}. La taille adaptée ici est la ${best.taille}.` };
     }
-    const S = item.stage; api.furniture && api.furniture();
+    const S = (item.stageFor && item.stageFor(ctx)) || item.stage; api._ctx = ctx; api.furniture && api.furniture();   // stageFor : cadrage selon le cas (ex. plaie au genou)
     const D = api.D || {}, KY = [[0, 0], [1.001, D.hipsY ?? 1.001], [1.101, D.waistY ?? (D.hipsY ?? 1.001) + 0.1], [1.445, D.shoulderY ?? 1.445], [1.597, D.headY ?? 1.597], [2.4, (D.headY ?? 1.597) + 0.8]];
     const mapY = (y) => { for (let i = 1; i < KY.length; i++) if (y <= KY[i][0] || i === KY.length - 1) { const [a0, b0] = KY[i - 1], [a1, b1] = KY[i], t = (y - a0) / (a1 - a0); return b0 + (b1 - b0) * t; } return y; };
     const dr = S.seat ? (S.drop ?? 0.43) : 0, cy = (v) => V3(v[0], S.lie ? v[1] : mapY(v[1] + dr) - dr, v[2]);   // cadrages réglés sur le patient homme : recalés sur les repères du modèle chargé
     api.stage = { seat: S.seat, lie: S.lie, headPitch: S.headPitch, table: S.table, knee: S.knee, ankle: S.ankle, drop: S.drop, arms: S.arms, cam: { pos: cy(S.cam.pos), look: cy(S.cam.look) }, headLock: item.headLock || S.lie };
     cur.cam0 = { pos: cy(S.cam.pos), look: cy(S.cam.look) }; cur.zoom = 1; cur.t0 = performance.now();
     for (const [k, v] of Object.entries(S.morphs || {})) api.manual[k] = v;
-    for (const pr of item.props || []) addProp(pr);
+    for (const pr of item.props || []) if (!pr.si || pr.si(ctx)) addProp(pr);   // si : accessoire seulement si le cas le prévoit (plaie)
     if (item.pole && !api._pole) makePole(); if (api._pole) api._pole.g.visible = !!item.pole;
     if (S.lie && !api._floor) {                               // sol (le décor n'est qu'une image de fond) et tapis, pour la scène allongée
       const f = new THREE.Group(); f.add(new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshStandardMaterial({ color: 0xcfd3cc, roughness: 0.9 })));
@@ -423,7 +444,7 @@ export function createEquip(api, opts = {}) {
     }
     if (api.applyTenue) api.applyTenue();
   }
-  function reset() { for (const o of (cur && cur._extra) || []) o.parent && o.parent.remove(o); if (cur) { cur._extra = []; cur.mesures = {}; } if (ui) ui.querySelectorAll('.eq-choix').forEach((m) => m.remove()); for (const p of placed) { scene.remove(p.holder); if (p.wear && api.porter && !p.keep) api.porter(p.wear, false); } placed = []; if (line) line.visible = false; badges.forEach((b) => b.dom.remove()); badges = []; for (const p of props) scene.remove(p.holder); props = []; if (cur) for (const pr of cur.props || []) addProp(pr); if (ui) ui.querySelectorAll('.eq-card').forEach((c) => c.classList.remove('done', 'held')); }
+  function reset() { for (const o of (cur && cur._extra) || []) o.parent && o.parent.remove(o); if (cur) { cur._extra = []; cur.mesures = {}; } if (ui) ui.querySelectorAll('.eq-choix').forEach((m) => m.remove()); for (const p of placed) { scene.remove(p.holder); if (p.wear && api.porter && !p.keep) api.porter(p.wear, false); } placed = []; if (line) line.visible = false; badges.forEach((b) => b.dom.remove()); badges = []; for (const p of props) scene.remove(p.holder); props = []; if (cur) for (const pr of cur.props || []) if (!pr.si || pr.si(cur.ctx || {})) addProp(pr); if (ui) ui.querySelectorAll('.eq-card').forEach((c) => c.classList.remove('done', 'held')); }
   function close() {
     for (const p of placed) p.keep = true;                   // le matériel enfilé reste porté quand on termine le geste
     reset(); if (cur) { const i = api.extras.indexOf(update); if (i >= 0) api.extras.splice(i, 1); emit({ type: 'fermeture', objet: cur.id }); }

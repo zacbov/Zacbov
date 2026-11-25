@@ -11,7 +11,7 @@ TH = {r[0]: r[1] for r in wb['Cas_Cliniques'].iter_rows(min_row=2, max_col=3, va
 lib_theme = {}
 for r in wb['Cas_Cliniques'].iter_rows(min_row=2, values_only=True):
     if r[1]: lib_theme[r[1]] = r[2]
-POPLIB = {'officine': 'Officine', 'hospitalier': 'Hospitalier', 'medecine': 'Médecine'}
+POPLIB = {'officine': 'Officine', 'hospitalier': 'Hospitalier', 'medecine': 'Médecine', 'industrie_recherche': 'Industrie et recherche'}
 wc, wq, wd, wm = (wb[n] for n in ('Cas_Cliniques', 'Questions_Reponses', 'Documents_Examens', 'Medicaments_Interactions'))
 for ws in (wc, wq, wd, wm): purge(ws)
 H, HQ, HD, HM = hdr(wc), hdr(wq), hdr(wd), hdr(wm)
@@ -20,7 +20,7 @@ def put(ws, Hh, row, **kv):
         if v is not None and v != '' and v != []: ws.cell(row, Hh[k], v)
 for c in CAS:
     r = wc.max_row + 1; f = c['fiche']; p = c.get('patient') or {}; z = p.get('zone') or {}; k = c.get('constantes') or {}
-    put(wc, H, r, id=c['id'], theme_id=c['theme'], theme_libelle=lib_theme.get(c['theme'], c['theme']), pop_id=c['pop'], pop_libelle=POPLIB.get(c['pop'], c['pop']), pop_origine=c.get('pop_origine'),
+    put(wc, H, r, id=c['id'], theme_id=c['theme'], theme_libelle=c.get('theme_libelle') or lib_theme.get(c['theme'], c['theme']), pop_id=c['pop'], pop_libelle=POPLIB.get(c['pop'], c['pop']), pop_origine=c.get('pop_origine'),
         metier=c.get('metier'), a_valider=c.get('a_valider'), apercu=c['apercu'], enonce=c['enonce'], patient_sexe=f.get('sexe'), patient_age=f.get('age'), patient_age_unite=f.get('age_unite'),
         patient_poids_kg=f.get('poids_kg'), patient_taille_cm=f.get('taille_cm'), patient_allergies=f.get('allergies'), patient_traitements_fiche=' ; '.join(f.get('traitements') or []) or None,
         fiche_origine=f.get('origine'), avatar_plainte=p.get('plainte'), avatar_emotion=p.get('emotion'), avatar_profil=p.get('profil') or None, avatar_zone_partie=z.get('partie'), avatar_zone_cote=z.get('cote'),
@@ -44,6 +44,9 @@ for c in CAS:
             if d['type'] == 'bilan': put(wd, HD, rd, **base, echantillon=l['ech'], analyse_ou_medicament=l['analyse'], resultat_ou_posologie=l['resultat'], unite_ou_duree=l['unite'], valeurs_ref=l['ref'])
             elif d['type'] == 'compte_rendu':
                 if j == 1: put(wd, HD, rd, **base, texte_ou_details='texte: ' + d['texte'] + (' ; libre: oui' if d.get('libre') else ''))
+            elif d['type'] == 'tableau':
+                put(wd, HD, rd, **base, analyse_ou_medicament=d.get('sous_titre') if j == 1 else None, unite_ou_duree=('libre: oui' if d.get('libre') and j == 1 else None),
+                    texte_ou_details=' | '.join(f"{c}: {v}" for c, v in zip(d['colonnes'], l)))
             elif d['type'] == 'ordonnance':
                 put(wd, HD, rd, **base, analyse_ou_medicament=l['medicament'], resultat_ou_posologie=l['posologie'], unite_ou_duree=l['duree'],
                     texte_ou_details=(' ; '.join(f"{k}: {d[k]}" for k in ('medecin', 'patient', 'date') if d.get(k)) + (' ; libre: oui' if d.get('libre') else '')).strip(' ;') or None if j == 1 else None)

@@ -1,0 +1,28 @@
+Corps complet du patient homme (v31)
+Source : scan « fredi » fourni par Tice (corps entier, 2 M de faces, vêtements de compression).
+1. prep_scan.py <fredi.glb> fredi.blend 60000 : morceaux Sketchfab réunis, soudés, décimés à 60 000 faces ; textures extraites.
+2. corps.py <patient_homme_v30.glb> fredi.blend corps.blend : le squelette du patient est mis dans la pose du scan
+   (bras ≈ 62° sous l'horizontale, jambes), poids par chaleur des os (Blender) sur une copie du squelette dont cette pose
+   devient le repos, retour en pose T par inverses rigides mélangées (pas de bulle sous l'aisselle), tête et mains du scan
+   retirées, cou glissé sous la peau du patient, avant-bras posés par-dessus.
+3. tex_corps.py corps.blend fredi_Image_0.png corps_peau.jpg : t-shirt de compression repeint en peau (teinte des bras,
+   modelé du scan gardé), cuissard gris uni (logos retirés), teinte accordée au cou du patient.
+4. mat.py, fin.py : matériau ; corps coupé en CorpsHaut (z > 0,97) et CorpsBas ; avant-bras du patient retirés entre
+   0,33 et 0,52 m ; haut du pantalon coupé et glissé sous la peau.
+run_h.sh enchaîne tout et exporte avatar/patient_homme.glb (1,8 Mo).
+Dans avatar.js, CorpsHaut n'est montré que buste découvert, CorpsBas que jambes découvertes (sinon la peau
+traverserait les vêtements).
+
+Patient âgé (v33) : tête du scan fs1c sur le patient homme (corps complet)
+1. prep_scan.py fs1c_head_male_10036.glb tete.blend 200000 (texture tete_Image_0.png).
+2. tete.py ... apercu : recalage (sommet du crâne, bout du nez, puis similitude par ICP tronqué : écart 3 mm).
+3. rlm.py apercu_tete.blend : rendus de face de la tête du patient et du scan ; det_reperes.py : 478 repères MediaPipe
+   (modèle face_landmarker.task, Google, Apache 2.0) sur chacun.
+4. tete.py homme_corps.blend tete.blend tete_Image_0.png homme_age.blend :
+   - repères remontés en 3D par lancer de rayons, contour intérieur des lèvres et repères aberrants écartés ;
+   - déformation RBF (noyau r) de la tête vers le scan ; dents, langue et yeux (pièces détachées) déplacés d'un bloc ;
+   - affinage le long de la normale (≤ 12 mm), sauf bouche et nez ; rien ne dépasse du scan autour du nez ;
+   - formes du visage (50) conservées comme écarts ; atlas recuit depuis le scan (visage et crâne, pas le cou
+     ni les oreilles), teinte raccordée au cou ; cheveux d'origine retirés.
+5. export -> avatar/patient_homme_age.glb (2,2 Mo). La page le choisit pour un homme de 65 ans et plus.
+Restes : narines un peu sombres, petits plis autour des paupières, mains du patient d'origine.

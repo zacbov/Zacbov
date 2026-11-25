@@ -1,0 +1,7 @@
+Visages peints (textures UV) pour les patientes MetaHuman (v34)
+- det.py <images…> : 478 repères du visage (MediaPipe FaceLandmarker) -> <image>_lm.npy.
+- warp.py <image> <image>_lm.npy reperes_reference_metahuman.npy <sortie.png> : recalage en plaque mince (repères ->
+  ceux de la texture d'Amanda) et 2048 × 2048. Un visage un peu décalé (yeux, bouche, oreilles) est ainsi remis
+  exactement à sa place.
+- avatar/visages/v_*.jpg : les 5 visages de Tice recalés. Dans l'outil : A.visage(url) (null = visage d'origine),
+  A.cheveuxGris(true|false). Les patientes de 65 ans et plus prennent v_6a9ae3ef ou v_f6e18a94 et des cheveux gris.

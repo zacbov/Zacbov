@@ -1,12 +1,19 @@
 /* Worker « cas-cliniques ». Secrets : APP_SECRET, GEMINI_KEY, MISTRAL_KEY.
-   Variable optionnelle MODELS : "google:gemini-3.5-flash-lite,mistral:ministral-14b-latest,…" (remplace la chaîne). */
+   Variable optionnelle MODELS : "google:gemini-3.5-flash-lite,mistral:ministral-14b-latest,…" (remplace la chaîne).
+   Fournisseurs optionnels (rien ne change s'ils ne sont pas configurés) :
+   - cloudflare : Gemma 4 26B de Workers AI, gratuit dans la limite de 10 000 neurons/jour. Liaison Workers AI nommée AI.
+   - pc : modèle local (llama.cpp / Ollama, API compatible OpenAI) publié par un tunnel Cloudflare.
+     Variables LOCAL_URL (ex. https://ia.mondomaine.fr/v1/chat/completions), secret LOCAL_KEY (facultatif), LOCAL_MODEL.
+   La page choisit un fournisseur pour essai avec ?ia=cloudflare ou ?ia=pc : il passe en premier, la chaîne habituelle
+   reste derrière en secours. Sans choix : chaîne habituelle (Google), puis cloudflare et pc s'ils sont configurés. */
 const API = {
   google:  { url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', keys: ['GEMINI_KEY', 'GEMINI_API_KEY'] },
   mistral: { url: 'https://api.mistral.ai/v1/chat/completions', keys: ['MISTRAL_KEY', 'MISTRAL_API_KEY'] },
 };
-const CHAIN = [
-  ['google', 'gemini-3.5-flash-lite'], ['google', 'gemini-3.1-flash-lite'], ['mistral', 'ministral-14b-latest'],
-  ['google', 'gemma-4-31b-it'], ['google', 'gemma-4-26b-a4b-it'],
+const CF_GEMMA = '@cf/google/gemma-4-26b-a4b-it';
+const CHAIN = [                                                     // ministral en dernier recours (jugé moins bon)
+  ['google', 'gemini-3.5-flash-lite'], ['google', 'gemini-3.1-flash-lite'],
+  ['google', 'gemma-4-31b-it'], ['google', 'gemma-4-26b-a4b-it'], ['mistral', 'ministral-14b-latest'],
 ];
 const CORS = {
   'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -43,7 +50,7 @@ const LIGHT = (mode, cas, hist) => mode === 'checklist'
   : `POINTS :\n${(cas.points || []).map((p, i) => (i + 1) + '. ' + cut(p, 200)).join('\n')}\n\nCONVERSATION :\n${hist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? (cas.pop === 'medecine' ? 'Médecin : ' : 'Pharmacien : ') : (cas.pop && !['officine', 'medecine'].includes(cas.pop) ? 'Interlocuteur : ' : 'Patient : ')) + m.content).join('\n')}\n\nRéponds uniquement par un tableau JSON des numéros des points dont l'information a clairement été obtenue (question du pharmacien ou indice demandé).`;
 
 const AVATAR = "\n- Tu es aussi incarné par un avatar 3D. Termine CHAQUE réplique par la balise [EMO:x] où x décrit ton état à ce moment, parmi : neutre, douleur, anxieux, peur, tristesse, fatigue, gene, doute, surprise, colere, joie, presse. Si tu montres où tu as mal, ajoute aussi [ZONE:partie-côté] avec partie parmi front, gorge, poitrine, ventre, epaule, bras, reins, cuisse et côté gauche ou droite (ex. [ZONE:epaule-gauche]). Pas d'autre balise de ce type." +
-  "\n- Si le pharmacien te demande de te découvrir (retirer le pantalon, le haut, le soutien-gorge) : accepte seulement s'il t'a expliqué pourquoi et ce qu'il va faire, et s'il te demande ton accord. Pour la poitrine, tu peux être gênée et demander un endroit à l'abri des regards (espace de confidentialité) ; accepte s'il est respectueux. S'il ne t'a rien expliqué ou ne t'a pas demandé, tu hésites ou tu refuses et tu demandes pourquoi. Quand tu acceptes et te découvres, ajoute la balise [DECOUVRE:jambes] (pantalon), [DECOUVRE:buste] (haut, tu gardes le soutien-gorge) ou [DECOUVRE:poitrine] (haut et soutien-gorge) ; quand il te dit de te rhabiller, ajoute [DECOUVRE:rhabille]." +
+  "\n- Si le pharmacien te demande de te découvrir (retirer le pantalon, le haut, le soutien-gorge) : accepte seulement s'il t'a expliqué pourquoi et ce qu'il va faire, et s'il te demande ton accord. Pour la poitrine ou le ventre (stomie, poche), tu es gêné(e) au comptoir : tu demandes d'aller dans l'espace de confidentialité, et tu n'acceptes qu'une fois qu'il te l'a proposé ou accepté, avec respect. S'il ne t'a rien expliqué ou ne t'a pas demandé, tu hésites ou tu refuses et tu demandes pourquoi. Quand tu acceptes et te découvres, ajoute la balise [DECOUVRE:jambes] (pantalon), [DECOUVRE:buste] (haut, tu gardes le soutien-gorge) ou [DECOUVRE:poitrine] (haut et soutien-gorge) ; quand il te dit de te rhabiller, ajoute [DECOUVRE:rhabille]." +
   "\n- Si un geste est fait « sans avoir expliqué le geste » ou « sans avoir demandé », réagis : surprise, gêne, tu demandes ce qu'il fait.";
 const PATIENT = (enonce, hint, docs, profil, pop, fiche, avatar) => `Tu joues ${(CADRES[pop] || CADRES.officine).role}. L'étudiant s'entraîne : laisse-le mener l'entretien.
 Règles :
@@ -104,6 +111,32 @@ async function rcp(b, env) {
   return new Response(r.body, { headers: { ...CORS, 'Content-Type': 'application/json' } });
 }
 
+function reponse(r, model, errs, t0) {
+  return new Response(r.body, { headers: { ...CORS, 'Content-Type': r.headers.get('Content-Type') || 'text/event-stream', 'X-Model': model, 'X-Essais': (errs.length ? errs.join(' ; ') + ' ; ' : '') + `${model}: ok en ${Date.now() - t0} ms` } });
+}
+/* Workers AI (liaison env.AI) : réponse remise au format OpenAI attendu par la page (flux SSE ou JSON). */
+async function workersAI(env, model, messages, { light, evaluate, dernier }) {
+  const opts = { messages, stream: !light, temperature: light ? 0.1 : evaluate ? 0.3 : 0.8, max_tokens: light ? 700 : evaluate ? 1600 : 400 };
+  const appel = env.AI.run(model, opts);
+  const out = dernier ? await appel : await Promise.race([appel, new Promise((_, ko) => setTimeout(() => ko(new Error('délai dépassé')), light ? 15000 : 12000))]);
+  const texte = (j) => (j && (j.response ?? (j.choices && j.choices[0] && ((j.choices[0].delta && j.choices[0].delta.content) ?? (j.choices[0].message && j.choices[0].message.content))))) || '';
+  if (light) return new Response(JSON.stringify({ choices: [{ message: { content: texte(out) } }] }), { headers: { 'Content-Type': 'application/json' } });
+  const src = out instanceof ReadableStream ? out : out && out.body ? out.body : null;
+  if (!src) return new Response('data: ' + JSON.stringify({ choices: [{ delta: { content: texte(out) } }] }) + '\n\ndata: [DONE]\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+  const enc = new TextEncoder(), dec = new TextDecoder(); let buf = '', vide = true;
+  const ts = new TransformStream({
+    transform(chunk, ctl) {
+      buf += dec.decode(chunk, { stream: true }); const L = buf.split('\n'); buf = L.pop();
+      for (const l of L) {
+        if (!l.startsWith('data:')) continue; const d = l.slice(5).trim(); if (!d || d === '[DONE]') continue;
+        try { const t = texte(JSON.parse(d)); if (t) { vide = false; ctl.enqueue(enc.encode('data: ' + JSON.stringify({ choices: [{ delta: { content: t } }] }) + '\n\n')); } } catch {}
+      }
+    },
+    flush(ctl) { ctl.enqueue(enc.encode('data: [DONE]\n\n')); },
+  });
+  return new Response(src.pipeThrough(ts), { headers: { 'Content-Type': 'text/event-stream' } });
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -112,7 +145,7 @@ export default {
 
     let b;
     try { b = await request.json(); } catch { return json({ error: 'JSON invalide' }, 400); }
-    if (b.mode === 'rcp') return rcp(b, env);
+    if (b.mode === 'rcp') return typeof caches === 'undefined' || !caches.default ? json({ error: 'RCP et notice indisponibles hors ligne' }, 503) : rcp(b, env);
     const cas = b.cas || {}; cas.pop = b.pop;
     const hist = (Array.isArray(b.messages) ? b.messages : []).slice(-40)
       .map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: cut(m.content, 2000) }));
@@ -126,28 +159,41 @@ export default {
           plainHist.filter((m, i) => i > 0).map((m) => (m.role === 'user' ? (cas.pop === 'medecine' ? 'Médecin : ' : 'Pharmacien : ') : (cas.pop && !['officine', 'medecine'].includes(cas.pop) ? 'Interlocuteur : ' : 'Patient : ')) + m.content).join('\n')) }]
       : [{ role: 'system', content: PATIENT(cut(cas.enonce, 12000), hist[hist.length - 1].content === HINT ? hist.filter((m) => m.content === HINT).length : 0, Array.isArray(cas.docs) ? cas.docs.slice(0, 12).map((d) => cut(d, 60)) : [], b.profil, b.pop, cas.fiche, !!b.avatar) }, ...hist];
 
-    const chain = env.MODELS ? env.MODELS.split(',').map((s) => s.trim().split(/:(.+)/).slice(0, 2)) : light ? [CHAIN[4], CHAIN[3], CHAIN[1], CHAIN[2], CHAIN[0]] : CHAIN;   // gemma d'abord (quota séparé), puis repli sur les autres
+    const base = env.MODELS ? env.MODELS.split(',').map((s) => s.trim().split(/:(.+)/).slice(0, 2)) : light ? [CHAIN[3], CHAIN[2], CHAIN[1], CHAIN[0], CHAIN[4]] : CHAIN;   // gemma d'abord (quota séparé), puis repli sur les autres
+    const extra = { cloudflare: ['cloudflare', CF_GEMMA], pc: ['pc', env.LOCAL_MODEL || 'local'] };
+    const dispo = (p) => (p === 'cloudflare' ? !!env.AI : p === 'pc' ? !!env.LOCAL_URL : true);
+    let chain = base.slice();
+    if (!env.MODELS) { let i = chain.findIndex(([p]) => p === 'mistral'); for (const p of ['cloudflare', 'pc']) if (dispo(p)) chain.splice(i < 0 ? chain.length : i++, 0, extra[p]); }   // secours sans Google, avant ministral
+    if (extra[b.ia] && dispo(b.ia)) chain = [extra[b.ia], ...chain.filter(([p]) => p !== b.ia)];   // essai demandé par la page : en premier
     const errs = [], t0 = Date.now();
     for (const [p, model] of chain) {
-      const api = API[p]; const key = api && api.keys.map((k) => env[k]).find(Boolean);
+      const dernier = model === chain[chain.length - 1][1];
+      if (p === 'cloudflare') {
+        if (!env.AI) { errs.push(`${model}: liaison AI absente`); continue; }
+        try { const r = await workersAI(env, model, mergeSystem(messages), { light, evaluate, dernier }); return reponse(r, model, errs, t0); }
+        catch (e) { errs.push(`${model}: ${String(e.message || e).slice(0, 120)} après ${Date.now() - t0} ms`); continue; }
+      }
+      const api = p === 'pc' ? (env.LOCAL_URL ? { url: env.LOCAL_URL, keys: ['LOCAL_KEY'] } : null) : API[p];
+      const key = api && (api.keys.map((k) => env[k]).find(Boolean) || (p === 'pc' ? 'sans-cle' : null));
       if (!key) { errs.push(`${model}: pas de clé`); continue; }
       const body = {
         model, stream: !light, temperature: light ? 0.1 : evaluate ? 0.3 : 0.8,
         max_tokens: (light ? 700 : evaluate ? 1600 : 400) + (p === 'google' ? 2048 : 0),   // marge pour la réflexion des modèles Google
         messages: /gemma/i.test(model) ? mergeSystem(messages) : messages,
       };
-      if (/gemma-4/i.test(model)) body.reasoning_effort = 'none';
+      if (p === 'pc') { body.messages = mergeSystem(messages); body.cache_prompt = true; }   // llama.cpp : début de conversation gardé en mémoire d'une réplique à l'autre
+      else if (/gemma-4/i.test(model)) body.reasoning_effort = 'none';
       else if (p === 'google' && !evaluate && !light) body.reasoning_effort = 'low';   // comme avant la v14 (« minimal » ralentissait : refusé puis renvoyé)
-      const dernier = model === chain[chain.length - 1][1];
+      const delai = p === 'pc' ? 45000 : light ? 15000 : 12000;   // PC local : la 1re lecture d'un long cas prend du temps
       const send = async () => {                 // délai d'attente du premier octet : au-delà, on passe au modèle suivant (sauf le dernier)
-        const ac = new AbortController(), tm = dernier ? null : setTimeout(() => ac.abort(new Error('délai dépassé')), light ? 15000 : 12000);
+        const ac = new AbortController(), tm = dernier ? null : setTimeout(() => ac.abort(new Error('délai dépassé')), delai);
         try { return await fetch(api.url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key }, body: JSON.stringify(body), signal: ac.signal }); }
         finally { clearTimeout(tm); }
       };
       try {
         let r = await send();
         if (r.status === 400 && body.reasoning_effort) { errs.push(`${model}: 400 avec reasoning_effort, renvoi sans`); delete body.reasoning_effort; r = await send(); }
-        if (r.ok) return new Response(r.body, { headers: { ...CORS, 'Content-Type': r.headers.get('Content-Type') || 'text/event-stream', 'X-Model': model, 'X-Essais': (errs.length ? errs.join(' ; ') + ' ; ' : '') + `${model}: ok en ${Date.now() - t0} ms` } });
+        if (r.ok) return reponse(r, p === 'pc' ? 'PC : ' + model : model, errs, t0);
         errs.push(`${model}: ${r.status} après ${Date.now() - t0} ms`);
       } catch (e) { errs.push(`${model}: ${e.message} après ${Date.now() - t0} ms`); }
     }

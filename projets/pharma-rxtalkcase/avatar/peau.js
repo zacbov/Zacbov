@@ -14,6 +14,7 @@ export function ficheAtlas(key) { const e = CAT && CAT[key]; if (e && e.fiche) r
 const plain = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 /* reconnaît une maladie de peau du catalogue dans un texte (nom ou synonyme) */
+const DEVINE_NON = new Set(['allergie-medicamenteuse']);
 export function trouverMaladie(texte) {
   if (!CAT) return null; const t = ' ' + plain(texte).replace(/[^a-z0-9]+/g, ' ') + ' ';
   let best = null;
@@ -22,6 +23,8 @@ export function trouverMaladie(texte) {
     if (w.trim().length > 3 && t.includes(w) && (!best || w.length > best.len)) {
       const i = t.indexOf(w), ctx = t.slice(Math.max(0, i - 90), i + w.length + 90);
       if (/vaccin|rappel|serolog|antecedent|immunis|contage|eviction/.test(ctx)) continue;                    // maladie citée, pas présente sur la peau
+      if (DEVINE_NON.has(k)) continue;                                                                           // jamais deviné d'après le texte (allergie : antécédent, pas une lésion)
+      if (/\b(pas|aucun|aucune|sans|absence|ni|non|jamais|risque|prevention|prevenir|eviter|surveill|antecedents?|atcd)\b(\s+\S+){0,4}\s*$/.test(t.slice(Math.max(0, i - 45), i))) continue;   // « pas d'escarre », « aucune allergie… », « risque d'escarre »
       if (k === 'brulures' && !/(degre|soleil|eau bouillante|brule par|four|flamme|huile)/.test(ctx)) continue;   // brûlures mictionnelles, d'estomac…
       best = { k, len: w.length };
     }

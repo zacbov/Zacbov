@@ -57,7 +57,8 @@ export function createReserve(host, opts = {}) {
       const { g, h } = fit(o, big); g.position.set(sl.x, sl.y + h / 2 + 0.005, 0.02); g.rotation.y = -0.35; g.userData.id = sl.it.id; g.userData.it = sl.it; scene.add(g); picks.push(g);
     }));
   }
-  const ready = build();
+  let pret = null; const lancer = () => pret || (pret = build());   // objets chargés quelques secondes après la page (ou à la première ouverture)
+  setTimeout(() => (window.requestIdleCallback || ((f) => setTimeout(f, 1)))(lancer, { timeout: 4000 }), opts.delai ?? 6000);
   // --- interaction
   const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(); let hover = null, onPick = null, par = [0, 0];
   function hit(e) { const r = canvas.getBoundingClientRect(); mouse.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); par = [mouse.x, mouse.y]; ray.setFromCamera(mouse, camera);
@@ -76,7 +77,7 @@ export function createReserve(host, opts = {}) {
     for (const p of picks) { const k = p === hover ? 1.12 : 1; p.userData.k = (p.userData.k || 1) + (k - (p.userData.k || 1)) * 0.2; p.children[0] && (p.scale.setScalar(p.userData.k * (p.userData.s0 || (p.userData.s0 = p.scale.x)))); p.rotation.y = -0.35 + (p === hover ? Math.sin(t / 400) * 0.3 : 0); }
     camera.position.x += (par[0] * 0.08 - camera.position.x) * 0.05; camera.lookAt(0, H / 2, 0); renderer.render(scene, camera);
   });
-  function open(cb) { onPick = cb; on = true; wrap.style.display = 'block'; ask.style.display = 'none'; fitView(); return ready; }
+  function open(cb) { onPick = cb; on = true; wrap.style.display = 'block'; ask.style.display = 'none'; fitView(); return lancer(); }
   function close() { on = false; wrap.style.display = 'none'; tip.style.display = 'none'; }
   /* question du patient (« vous êtes sûr ? ») avec deux boutons ; renvoie true si l'étudiant confirme */
   function confirm(txt, yes = "Oui, j'en ai besoin", no = 'Non, je le repose') {
@@ -84,5 +85,5 @@ export function createReserve(host, opts = {}) {
       ok.onclick = () => { ask.style.display = 'none'; res(true); }; nb.onclick = () => { ask.style.display = 'none'; res(false); }; });
   }
   function where(id) { const g = picks.find((p) => p.userData.id === id); if (!g) return null; const v = g.getWorldPosition(new THREE.Vector3()).project(camera), r = canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }
-  return { open, close, confirm, ready, where, get isOpen() { return on; } };
+  return { open, close, confirm, get ready() { return lancer(); }, where, get isOpen() { return on; } };
 }

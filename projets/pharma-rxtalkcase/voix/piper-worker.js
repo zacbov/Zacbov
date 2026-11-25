@@ -39,15 +39,22 @@ function modele(nom) {
     })();
     p.catch(() => modeles.delete(nom));
     modeles.set(nom, p);
-    while (modeles.size > 2) {               // mémoire : deux voix chargées au plus (~80 Mo chacune), la plus ancienne est libérée
-      const [vieux, q] = modeles.entries().next().value; modeles.delete(vieux);
-      q.then((m) => m.sess.release && m.sess.release()).catch(() => {});
-    }
+    liberer(2, nom);                          // mémoire : mls (15 voix) toujours gardé + deux autres modèles au plus
   }
   return modeles.get(nom);
 }
+const GARDE = 'fr_FR-mls-medium';
+function liberer(max, sauf) {                 // libère les modèles les plus anciens (hors mls et hors celui demandé), après la fin de leurs synthèses
+  const autres = [...modeles.keys()].filter((k) => k !== GARDE && k !== sauf);
+  while (autres.length > max - 1 + (sauf === GARDE ? 1 : 0) && autres.length) {
+    const vieux = autres.shift(), q = modeles.get(vieux); modeles.delete(vieux);
+    q.then((m) => file.then(() => m.sess.release && m.sess.release())).catch(() => {});
+  }
+}
 
-self.onmessage = async ({ data: d }) => {
+let file = Promise.resolve();                 // les demandes sont traitées une à une (pas de libération pendant un calcul)
+self.onmessage = ({ data: d }) => { file = file.then(() => traiter(d)).catch(() => {}); };
+async function traiter(d, essai = 0) {
   try {
     if (d.type === 'init') {
       const { cfg } = await modele(d.modele); await phonemiseur();
@@ -59,11 +66,17 @@ self.onmessage = async ({ data: d }) => {
       const I = cfg.inference, entrees = {
         input: new ort.Tensor('int64', BigInt64Array.from(ids, BigInt), [1, ids.length]),
         input_lengths: new ort.Tensor('int64', BigInt64Array.from([BigInt(ids.length)]), [1]),
-        scales: new ort.Tensor('float32', Float32Array.from([I.noise_scale, I.length_scale / (d.vitesse || 1), I.noise_w]), [3]),
+        scales: new ort.Tensor('float32', Float32Array.from([Math.min(I.noise_scale, 0.5), I.length_scale / (d.vitesse || 1), Math.min(I.noise_w, 0.6)])   // bruit réduit : moins de syllabes inventées (voix mls surtout), [3]),
       };
       if (cfg.num_speakers > 1 || Object.keys(cfg.speaker_id_map || {}).length) entrees.sid = new ort.Tensor('int64', BigInt64Array.from([BigInt(d.sid || 0)]), [1]);
       const t0 = performance.now(), r = await sess.run(entrees), pcm = Float32Array.from(r.output.data);
       self.postMessage({ type: 'audio', id: d.id, pcm, sr: cfg.audio.sample_rate, ms: Math.round(performance.now() - t0) }, [pcm.buffer]);
     }
-  } catch (e) { self.postMessage({ type: 'erreur', id: d.id, message: String(e && e.message || e) }); }
-};
+  } catch (e) {
+    if (!essai && d.modele) {                 // échec (souvent la mémoire) : on libère tout sauf ce modèle, on le recharge, on réessaie une fois
+      for (const [k, q] of [...modeles.entries()]) { modeles.delete(k); q.then((m) => m.sess.release && m.sess.release()).catch(() => {}); }
+      return traiter(d, 1);
+    }
+    self.postMessage({ type: 'erreur', id: d.id, message: String(e && e.message || e) });
+  }
+}

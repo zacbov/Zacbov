@@ -103,6 +103,10 @@ K, R0 = 1.25, 0.14                                                      # iris :
 rs = np.where(r < R0 / K, r * K, R0 + (r - R0 / K) * (0.5 - R0) / (0.5 - R0 / K))
 mx, my = (cx + rs * n_ * np.cos(th)).astype(np.float32), (cx + rs * n_ * np.sin(th)).astype(np.float32)
 ey = cv2.remap(ey, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+if os.environ.get('MH_IRIS', 'noisette') == 'noisette':                 # iris très saturé (ambre) -> noisette naturel, motif conservé
+    lum = ey.mean(2, keepdims=True); m_ = np.clip(1 - (r - R0 / K * 0.9) / (R0 / K * 0.25), 0, 1)[..., None]
+    haz = lum / 110 * np.array([78, 52, 34], np.float32)   # brun foncé (les noisettes paraissaient jaunes)
+    ey = ey * (1 - 0.75 * m_) + haz * 0.75 * m_
 Image.fromarray(np.clip(ey, 0, 255).astype(np.uint8)).resize((512, 512), Image.LANCZOS).save(OUT + 'yeux.png')
 for a_, b_, s_ in (('Teeth_Color.png', 'bouche.png', 512), ('Eyelashes_Color.png', 'cils.png', 512)):
     im = Image.open(SRC + a_); im = im.convert('RGBA' if 'lash' in a_.lower() else 'RGB'); im.resize((s_, s_), Image.LANCZOS).save(OUT + b_)

@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z), clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const W = 'MouthWhistle_NarrowAdjust_', B2 = (n, v) => ({ [n + '_Left']: v, [n + '_Right']: v });
@@ -46,13 +47,16 @@ export function surf(D, y, ang, o = 1) {                         // point de la 
   return { c: V3(o * rx * Math.sin(ang), y, zc + rz * Math.cos(ang)), n: V3(o * Math.sin(ang) / rx, 0, Math.cos(ang) / rz).normalize() };
 }
 const hip = (D, o) => { const { c, n } = surf(D, D.hipsY + 0.085, 1.85, o); return { c, n, fing: V3(0, -0.5, 1), pole: P(o, 1, 0.05, -0.35), curl: 0.12 }; };   // main posée sur la hanche, doigts vers l'avant, coude écarté
+const aPortee = (D, o, p, f = 0.86) => {                       // cible ramenée vers l'épaule si le bras devrait être tendu (coude plié)
+  if (!D.armLen) return p; const S = V3(o * D.armX, D.shoulderY, D.armZ), d = p.clone().sub(S), L = d.length(), m = f * D.armLen;
+  return L > m ? S.add(d.multiplyScalar(m / L)) : p; };
 const hang = (D, o) => ({ w: P(o, D.hx(D.hipsY) + 0.045, D.hipsY + 0.03, D.zf(D.hipsY) * 0.35 + 0.035), pole: P(o, 0.35, 0, -1), fing: V3(0, -1, 0.12), palm: P(o, -1, 0, 0.1), curl: 0.32, thumb: 0.15, suit: 0.75 });   // bras ballant, paume contre la cuisse
 export const GESTURES = {
   repos: (D, s, o) => hang(D, o),                                                                           // bras détendus le long du corps, coudes à peine pliés (au comptoir)
   hanches: (D, s, o) => hip(D, o),                                                                          // mains sur les hanches
   explique: (D, s, o) => s === 'Right' ? { w: P(o, 0.19, D.chestY - 0.1, D.zf(D.chestY) + 0.2), pole: P(o, 0.6, -1, -0.3), fing: P(o, 0.1, 0.25, 1), palm: P(o, -0.55, 0.8, 0), curl: 0.25, thumb: 0.1, suit: 0.35 } : hang(D, o),
   surprise: (D, s, o) => ({ w: P(o, 0.15, D.chestY - 0.13, D.zf(D.chestY - 0.1) + 0.12), pole: P(o, 0.55, -1, -0.25), fing: P(o, 0.15, 0.75, 0.6), palm: P(o, -0.25, -0.15, 1), curl: 0.12, thumb: 0.1, suit: 0.55 }),   // mains un peu levées devant le ventre, paumes vers l'avant, poignets dans l'axe
-  jointes: (D, s, o) => ({ w: P(o, 0.05, D.hipsY + 0.01, D.zf(D.hipsY) + 0.1), pole: P(o, 1, -0.7, -0.15), fing: P(o, -0.75, -0.6, 0.15), palm: P(o, -0.25, 0.1, -1), curl: 0.4, thumb: 0.25, suit: 0.7 }),   // attente : mains jointes devant le bas-ventre
+  jointes: (D, s, o) => ({ w: aPortee(D, o, P(o, 0.05, D.hipsY + 0.01, D.zf(D.hipsY) + 0.1)), pole: P(o, 1, -0.7, -0.15), fing: P(o, -0.75, -0.6, 0.15), palm: P(o, -0.25, 0.1, -1), curl: 0.4, thumb: 0.25, suit: 0.7 }),   // attente : mains jointes devant le bas-ventre
   abattu: (D, s, o) => ({ ...hang(D, o), curl: 0.35, shrug: -0.2 }),                                       // bras ballants, épaules affaissées
   ouvert: (D, s, o) => ({ w: P(o, 0.22, D.hipsY + 0.14, D.zf(D.hipsY + 0.1) + 0.17), pole: P(o, 0.6, -1, -0.2), fing: P(o, 0.3, 0.1, 1), palm: V3(0, 1, 0.1), curl: 0.25, thumb: 0.05, suit: 0.5 }),   // paumes ouvertes vers le haut
   poings: (D, s, o) => ({ w: P(o, D.hx(D.hipsY) + 0.07, D.hipsY + 0.05, 0.07), pole: P(o, 0.5, 0, -1), fing: V3(0, -1, 0.25), palm: P(o, -1, 0, 0), curl: 0.9, thumb: 0.6, shrug: 0.2, suit: 0.8 }),   // poings serrés le long du corps, bras tendus
@@ -72,7 +76,7 @@ export const TOUCH = {
   ventre: (D, s, o, R) => { const { c, n } = surf(D, D.hipsY + 0.11, s === 'Left' ? 0.35 : -0.2, D.sideSign.Left); return { hand: 'Right', c, n, fing: V3(D.sideSign.Left, -0.3, 0), pole: P(D.sideSign.Right, 0.9, -0.6, -0.3), curl: 0.15 }; },
   epaule: (D, s, o, R) => ({ hand: s === 'Left' ? 'Right' : 'Left', c: V3(o * 0.175, D.shoulderY + 0.03, D.zf(D.shoulderY) - 0.02), n: V3(o * 0.3, 0.65, 0.7), fing: V3(o * 0.2, 0.45, -0.85), pole: P(-o, 0.15, -0.7, 0.75), curl: 0.4 }),
   bras: (D, s, o, R) => { const a = R.local(s + 'Arm'), e = R.local(s + 'ForeArm'), m = a.lerp(e, 0.5), ax = e.clone().sub(R.local(s + 'Arm')).normalize(), n = V3(o * 0.55, 0, 0.85); n.sub(ax.clone().multiplyScalar(n.dot(ax))).normalize();
-    return { hand: s === 'Left' ? 'Right' : 'Left', c: m.add(n.clone().multiplyScalar(0.055)), n, fing: V3(o * 0.6, 0, -0.8), pole: P(-o, 0.3, -1, 0.2), curl: 0.5, thumb: 0.4 }; },
+    return { hand: s === 'Left' ? 'Right' : 'Left', c: (() => { const c = m.add(n.clone().multiplyScalar(0.055)); c.z = Math.max(c.z + 0.02 + 1.5 * (D.bust || 0), D.zf(c.y) - 0.02); return c; })(), n, fing: V3(o * 0.6, 0, -0.8), pole: P(-o, 0.3, -1, 0.85), curl: 0.5, thumb: 0.4 }; },   // coude en avant : l'avant-bras passe devant la poitrine
   reins: (D, s, o, R) => { const { c, n } = surf(D, D.hipsY + 0.08, 2.5, o); return { hand: s, c, n, fing: P(o, -0.45, -1, 0), pole: P(o, 1, 0, -0.5), curl: 0.1 }; },
   cuisse: (D, s, o, R) => ({ hand: s, c: P(o, D.hx(D.hipsY) * 0.55, D.hipsY - 0.1, D.zf(D.hipsY - 0.1) + 0.005), n: P(o, 0.25, 0, 1), fing: P(o, -0.1, -1, 0), pole: P(o, 0.5, 0, -1), curl: 0.2 }),
 };
@@ -146,6 +150,7 @@ export class Rig {
     this.D = { hipsY: hips.y, chestY: (hips.y + A.y) / 2 + 0.03, shoulderY: A.y, neckY: neck.y, headY: head.y, neckFront, sideSign: { Left: this.out.Left, Right: this.out.Right },
       hx: (y) => at(y, 'hx', 0.17), zf: (y) => at(y, 'zf', 0.12), zb: (y) => at(y, 'zb', -0.1),
       chin: head.clone().add(V3(0, -0.06, 0.1)), forehead: head.clone().add(V3(0, 0.088, 0.112)) };
+    { const a = this.local('LeftArm'), e = this.local('LeftForeArm'), h = this.local('LeftHand'); this.D.armLen = a.distanceTo(e) + e.distanceTo(h); this.D.armX = Math.abs(a.x); this.D.armZ = a.z; }   // portée du bras (cibles atteignables)
     // visage lu sur le maillage, à partir des yeux : front, bouche, menton (chaque modèle a ses proportions)
     const eyes = ['LeftEye', 'RightEye'].filter((k) => this.bones[k]).map((k) => L(k));
     this.D.head0 = head.clone();
@@ -245,11 +250,18 @@ export async function createAvatar(el, opts = {}) {
   const canvas = document.createElement('canvas'); canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block' + (o.interactive ? '' : ';pointer-events:none'); el.prepend(canvas);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(28, 1, 0.05, 20);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x556677, 1.25)); const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(1, 2, 2.2); scene.add(key);
+  /* éclairage : modelé plutôt que lumière plate — ambiance réduite, plafonnier chaud de trois quarts, appoint froid, contre-jour, reflets d'une pièce */
+  scene.add(new THREE.HemisphereLight(0xfff4e8, 0x4a5058, 0.55));
+  const key = new THREE.DirectionalLight(0xfff1e0, 2.6); key.position.set(-1.2, 3.2, 2.2); scene.add(key);
+  const fill = new THREE.DirectionalLight(0xdfe8ff, 0.7); fill.position.set(2.2, 1.2, 1.6); scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xffffff, 1.3); rim.position.set(0.6, 2.4, -2.5); scene.add(rim);
+  try { const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); } catch (e) {}
+  const ENV_I = 0.35;   // reflets d'environnement discrets (peau, yeux, tissus)
   const controls = o.interactive ? new OrbitControls(camera, canvas) : null; if (controls) { controls.enablePan = false; controls.minDistance = 0.4; controls.maxDistance = 4; }   // en situation, le patient ne se manipule pas
   const fit = () => { const w = el.clientWidth || 300, h = el.clientHeight || 400; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
   const ro = new ResizeObserver(fit); ro.observe(el); fit();
   const gltf = await new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath(o.draco || 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/')).setMeshoptDecoder(MeshoptDecoder).loadAsync(o.glb); scene.add(gltf.scene);
+  gltf.scene.traverse((m) => { if (m.isMesh) for (const mt of [].concat(m.material)) if (mt && 'envMapIntensity' in mt) mt.envMapIntensity = ENV_I; });
   const rig = new Rig(gltf.scene), names = Object.keys(rig.dict || {}), D = rig.D, look = V3(0, 1.4, 0);
   {                                                                    // sol sous les pieds : carrelage clair qui se fond dans le décor + ombre de contact
     const tex = (dessin) => { const c = document.createElement('canvas'); c.width = c.height = 512; dessin(c.getContext('2d')); const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx; };
@@ -271,13 +283,30 @@ export async function createAvatar(el, opts = {}) {
     if (controls) { controls.target.copy(look); controls.update(); } else camera.lookAt(look);
   }
   view();
+  /* décor de la pharmacie : la photo de fond suit la caméra comme un mur situé 3 m derrière le patient
+     (parallaxe : regarder les pieds fait voir le bas de la photo, s'approcher l'agrandit) */
+  const DECOR = { a: 1.5, ok: false, x0: look.x, y0: look.y, cle: '' };
+  if (o.background) { const im = new Image(); im.onload = () => { DECOR.a = im.naturalWidth / im.naturalHeight; DECOR.ok = true; }; im.src = o.background; }
+  const _fv = V3(0, 0, 0), _fp = V3(0, 0, 0), RECUL = 3, TAN = Math.tan(camera.fov * Math.PI / 360);
+  function suivreFond() {
+    if (!DECOR.ok || API.base === 'lit') return;
+    const w = el.clientWidth, h = el.clientHeight; if (!w || !h) return;
+    const hz = rig.local('Head').z, d = Math.max(0.3, camera.position.z - hz);
+    camera.getWorldDirection(_fv); _fp.copy(camera.position).addScaledVector(_fv, d / Math.max(0.2, -_fv.z));   // point visé dans le plan du patient
+    const s = 1.5 * (2.1 + RECUL) / (d + RECUL);
+    let bw, bh; if (w / h > DECOR.a) { bw = w; bh = w / DECOR.a; } else { bh = h; bw = h * DECOR.a; } bw *= s; bh *= s;
+    const vis = 2 * (d + RECUL) * TAN, k = h / vis * (d / (d + RECUL)) * 1.6;   // décalage apparent du mur (plus lent que le patient)
+    const x = Math.min(0, Math.max(w - bw, (w - bw) / 2 - (_fp.x - DECOR.x0) * k)), y = Math.min(0, Math.max(h - bh, (h - bh) / 2 + (_fp.y - DECOR.y0) * k));
+    const cle = `${bw | 0} ${bh | 0} ${x | 0} ${y | 0}`;
+    if (cle !== DECOR.cle) { DECOR.cle = cle; el.style.backgroundSize = `${bw | 0}px ${bh | 0}px`; el.style.backgroundPosition = `${x | 0}px ${y | 0}px`; }
+  }
   // --- voix du navigateur (voix Windows) ---
   let voices = [], VQ = [], charPos = 0, cps = 14, lastB = null, ext = null;   // ext : lecture en cours par une voix locale (voix-locale.js)
   const hasTTS = typeof speechSynthesis !== 'undefined';
   const loadVoices = () => { if (!hasTTS) return; const all = speechSynthesis.getVoices(); voices = all.filter((v) => v.lang.toLowerCase().startsWith('fr')); if (!voices.length) voices = all; API.voices = voices; API.onvoices && API.onvoices(voices); };
   if (hasTTS) { speechSynthesis.onvoiceschanged = loadVoices; loadVoices(); }
   let touchState = null;
-  API.touch = (part, side = 'Right', sec = 5) => { touchState = TOUCH[part] ? { part, side, until: performance.now() / 1000 + sec } : null; };
+  API.touch = (part, side = 'Right', sec = 2.4) => { touchState = TOUCH[part] ? { part, side, dur: Math.min(sec, 2.6), t0: performance.now() / 1000, until: null } : null; };   // geste bref, au début de la parole
   API.say = (text, opt = {}) => new Promise((resolve) => {
     const brut = (text || '').trim(); if (!brut) return resolve();
     if (/touss|\btoux\b|\bkof\b|\*toux/i.test(brut)) API.tousser();
@@ -290,7 +319,7 @@ export async function createAvatar(el, opts = {}) {
     if (V && !API.muted && V.active()) {
       if (hasTTS) speechSynthesis.cancel(); if (ext) ext.stop();
       API.speaking = false; const e = ext = V.parler(txt, { sexe: API.voixSexe, vitesse: API.rate });   // bouche et gestes de parole : seulement quand le son part (voir boucle)
-      e.fin.then(() => { if (ext === e) { ext = null; end(); } }, (err) => { console.warn('Voix locale indisponible, repli sur la voix du navigateur', err); if (ext === e) ext = null; V.desactiver && V.desactiver(); API.speaking = false; API.say(txt).then(resolve); });
+      e.fin.then(() => { API._echecsVoix = 0; if (ext === e) { ext = null; end(); } }, (err) => { console.warn('Voix locale indisponible, repli sur la voix du navigateur', err); if (ext === e) ext = null; API._echecsVoix = (API._echecsVoix || 0) + 1; if (API._echecsVoix >= 3 && V.desactiver) V.desactiver(); /* repli ponctuel ; voix locale coupée après 3 échecs */ API.speaking = false; API.say(txt).then(resolve); });
       return;
     }
     if (API.muted || !hasTTS) { API.speaking = true; setTimeout(end, Math.min(20000, txt.length / cps * 1000)); return; }   // sans voix : l'avatar parle quand même
@@ -351,8 +380,23 @@ export async function createAvatar(el, opts = {}) {
     if (!sol) { sol = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshStandardMaterial({ color: 0xd7dcd9, roughness: 0.9 })); sol.rotation.x = -Math.PI / 2; sol.position.y = 0.001; scene.add(sol); }
     if (lit) lit.visible = on; sol.visible = on;
     if (bg0 === null) bg0 = el.style.background;
-    el.style.background = on ? 'linear-gradient(#eef2f1 0%, #e1e8e6 62%, #c9d1cf 62.2%, #d7dcd9 100%)' : bg0;   // mur et sol de chambre
+    el.style.background = on ? 'linear-gradient(#eef2f1 0%, #e1e8e6 62%, #c9d1cf 62.2%, #d7dcd9 100%)' : bg0; DECOR.cle = '';   // mur et sol de chambre
     API.base = on ? 'lit' : null; API.debout(); return true;
+  };
+  /* ---------- patient en fauteuil roulant (cas qui le décrivent) : assis dans le fauteuil au lieu de debout ---------- */
+  let fauteuil = null, fdrop = 0.43;
+  const surCuisses = (D_, s_, o_) => ({ w: P(o_, 0.14, D_.hipsY + 0.07, 0.28), pole: P(o_, 0.6, -0.4, -0.6), fing: V3(0, -0.3, 1), palm: V3(0, -1, 0), curl: 0.3 });   // mains posées sur les cuisses
+  API.fauteuil = async (on = true, url = 'avatar/equip/fauteuil_roulant.glb') => {
+    if (on && !fauteuil) {
+      try { const g = (await new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath(o.draco || 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/')).loadAsync(url)).scene;
+        g.updateMatrixWorld(true); const hit = new THREE.Raycaster(V3(0, 2, 0.04), V3(0, -1, 0)).intersectObject(g, true)[0], sy = hit ? hit.point.y : 0.5;   // dessus du siège
+        fauteuil = new THREE.Group(); fauteuil.add(g); fauteuil.position.set(0, 0, -0.06); fauteuil.userData.siege = sy; scene.add(fauteuil);
+        fauteuil.traverse((m) => { if (m.isMesh) m.frustumCulled = false; });
+      } catch (e) { console.warn('fauteuil', e); return false; }
+    }
+    if (fauteuil) { fauteuil.visible = false; fdrop = D.hipsY - 0.055 - fauteuil.userData.siege; }
+    if (on) API.base = 'fauteuil'; else if (API.base === 'fauteuil') API.base = null;
+    API.debout(); return true;
   };
   API.debout = () => {                                                  // retour debout : la caméra glisse vers le cadrage « buste » de la position debout
     if (API.base === 'lit' && lit) {                                     // ou retour au lit
@@ -360,6 +404,11 @@ export async function createAvatar(el, opts = {}) {
       API.stage = { seat: 0, lie: 1, bedY: y, headPitch: 0.3, headLock: true, arms: (D_, s_, o_) => ({ ...hang(D_, o_), w: P(o_, D_.hx(D_.hipsY) + 0.08, D_.hipsY + 0.02, D_.zb(D_.hipsY) + 0.06), pole: P(o_, 1, 0, 0.15), fing: V3(0, -1, 0), palm: V3(0, 0, -1), curl: 0.25 }),   // bras posés sur le matelas
         cam: { pos: V3(1.15, y + 0.85, -0.25), look: V3(0, y + 0.1, -1.2) } };
       API.posture = 'couche'; return;
+    }
+    if (API.base === 'fauteuil' && fauteuil) {                           // ou retour dans le fauteuil roulant
+      const h = rig.local('Head');
+      API.stage = { seat: 1, drop: fdrop, knee: 1.5, arms: surCuisses, table: false, cam: { pos: V3(h.x, h.y - fdrop - 0.12, h.z + 2.2), look: V3(h.x, h.y - fdrop - 0.38, h.z) } };
+      API.posture = 'fauteuil'; return;
     }
     const h = rig.local('Head'), face = o.view === 'visage';
     API.stage = { seat: 0, arms: null, table: false, cam: { pos: V3(h.x, h.y + (face ? 0.02 : -0.08), h.z + (face ? 0.8 : 2.1)), look: V3(h.x, h.y - (face ? 0.02 : 0.3), h.z) } };
@@ -383,7 +432,7 @@ export async function createAvatar(el, opts = {}) {
      Reciblage : rotation du patient = delta × sa rotation de repos (les deux squelettes sont en T au repos).
      La couche donne la pose de fond (attente, parole, réactions) ; les gestes précis (toucher une zone, objets,
      tension, assis, allongé) restent calculés par IK et prennent la main bras par bras. */
-  const MC = { clips: null, w: 0, amp: 0.5, bras: { Left: 0, Right: 0 }, cour: null, prec: null, fondu: 1, react: null, toux: null };
+  const MC = { clips: null, w: 0, amp: 0.3, bras: { Left: 0, Right: 0 }, cour: null, prec: null, fondu: 1, react: null, toux: null };
   {
     for (const k in rig.bones) rig.bones[k].quaternion.copy(rig.tpose[k]);
     gltf.scene.updateMatrixWorld(true);
@@ -480,14 +529,15 @@ export async function createAvatar(el, opts = {}) {
     let MP = null;
     {
       const SG0 = API.stage, debout = (SG0.seat || 0) < 0.05 && (SG0.lie || 0) < 0.05 && seat < 0.05 && lie < 0.05 && !SG0.arms && !SG0.noMocap && !API.mocapOff;
-      MC.w += ((MC.clips && debout ? 1 : 0) - MC.w) * (1 - Math.exp(-dt * (debout ? 2.5 : 6)));
+      MC.debout = debout; MC.w += ((MC.clips && debout ? 1 : 0) - MC.w) * (1 - Math.exp(-dt * (debout ? 2.5 : 6)));
       if (MC.clips && MC.w > 0.002) {
         if (t - eT0 < 0.05 && MC.relanceEmo !== eT0) { MC.relanceEmo = eT0; const r = REACTION[API.emotion]; if (r) jouer(r); }
         const fond = API.speaking ? (MC.parole && API._phrase === MC.phraseId ? MC.parole : (MC.phraseId = API._phrase, MC.parole = PAROLE[Math.floor(Math.random() * PAROLE.length)])) : (FOND[API.emotion] || 'Idle');
         if (!MC.cour || MC.cour.nom !== fond) { MC.prec = MC.cour; MC.cour = { nom: fond, t0: t }; MC.fondu = 0; }
         MC.fondu = Math.min(1, MC.fondu + dt / 0.6);
-        echantillon(MC.clips[MC.cour.nom], t - MC.cour.t0, true, poseA);
-        if (MC.prec && MC.fondu < 1) { echantillon(MC.clips[MC.prec.nom], t - MC.prec.t0, true, poseB); for (const k in poseA) if (poseB[k] && k[0] !== '_') poseA[k].slerp(poseB[k], 1 - MC.fondu); poseA._h.lerp(poseB._h, 1 - MC.fondu); }
+        const vit = (n) => (/Idle/.test(n) ? 0.6 : 1);                                   // attente : clip ralenti
+        echantillon(MC.clips[MC.cour.nom], (t - MC.cour.t0) * vit(MC.cour.nom), true, poseA);
+        if (MC.prec && MC.fondu < 1) { echantillon(MC.clips[MC.prec.nom], (t - MC.prec.t0) * vit(MC.prec.nom), true, poseB); for (const k in poseA) if (poseB[k] && k[0] !== '_') poseA[k].slerp(poseB[k], 1 - MC.fondu); poseA._h.lerp(poseB._h, 1 - MC.fondu); }
         if (API.speaking && API.emotion === 'colere') { echantillon(MC.clips.Standing_Arguing, t - MC.cour.t0, true, poseT); for (const k in poseA) if (poseT[k] && k[0] !== '_') poseA[k].slerp(poseT[k], 0.5); }   // colère : dispute atténuée de moitié
         let rw = 0;
         if (MC.react) {
@@ -507,9 +557,10 @@ export async function createAvatar(el, opts = {}) {
     rig.turn('Head', AX.x, HL * (Math.sin(t * 0.9) * 0.01 + (API.speaking ? Math.sin(t * 5.5) * 0.025 : 0)) + headS[0] * 0.5); rig.turn('Head', AX.y, headS[1] * 0.5, true); rig.turn('Head', AX.z, headS[2], true);
     if (API.stage.headPitch) { API._hp = (API._hp || 0) + (API.stage.headPitch - (API._hp || 0)) * k; } else API._hp = (API._hp || 0) * (1 - k);
     if (MP) {                                                                           // tronc et jambes : pose capturée ; les inclinaisons de tête de l'émotion s'ajoutent
-      MC.amp += ((API.speaking || MC.rw > 0.05 ? 1 : 0.5) - MC.amp) * (1 - Math.exp(-dt * 2));   // attente : balancement réduit de moitié
+      MC.amp += ((MC.rw > 0.05 ? 0.8 : API.speaking ? 0.5 : 0.3) - MC.amp) * (1 - Math.exp(-dt * 2));   // capture adoucie : attente 30 %, parole 50 % (v31 : le déhanché penchait trop)
+      if (MC.debout && rig.tpose.Hips) rig.bones.Hips.quaternion.copy(rig.tpose.Hips);   // le bassin n'a pas de réglage procédural debout : sans remise au repos, le mélange convergeait vers 100 % de la pose capturée
       for (const k of MC_TRONC.slice(0, 6)) if (MP[k] && rig.bones[k]) rig.bones[k].quaternion.slerp(MP[k], MC.w * MC.amp);
-      const hx = clamp(MP._h.x, -0.08, 0.08), hz = clamp(MP._h.z, -0.08, 0.08), hp_ = V3(0, 0, 0).applyMatrix4(MC.parInv), hv = V3(hx, MP._h.y, hz).applyMatrix4(MC.parInv).sub(hp_);
+      const hx = clamp(MP._h.x, -0.04, 0.04), hz = clamp(MP._h.z, -0.05, 0.05), hp_ = V3(0, 0, 0).applyMatrix4(MC.parInv), hv = V3(hx, MP._h.y, hz).applyMatrix4(MC.parInv).sub(hp_);
       rig.bones.Hips.position.copy(MC.hips0).addScaledVector(hv, MC.w * MC.amp);
       rig.turn('Head', AX.x, headS[0] * 0.5 * MC.w, true); rig.turn('Head', AX.y, headS[1] * 0.5 * MC.w, true); rig.turn('Head', AX.z, headS[2] * MC.w, true);
     } else if (rig.bones.Hips.position.distanceToSquared(MC.hips0) > 1e-12) rig.bones.Hips.position.copy(MC.hips0);
@@ -532,19 +583,21 @@ export async function createAvatar(el, opts = {}) {
     if (t > nextSacc) { sacc = [(Math.random() - 0.5) * 0.12, (Math.random() - 0.5) * 0.08]; nextSacc = t + 1.5 + Math.random() * 2.5; }
     for (const e of ['LeftEye', 'RightEye']) { rig.turn(e, AX.y, sacc[0]); rig.turn(e, AX.x, sacc[1], true); }
     const SG = API.stage; seat += ((SG.seat || 0) - seat) * (1 - Math.exp(-dt * 4)); lie += ((SG.lie || 0) - lie) * (1 - Math.exp(-dt * 3));
-    gltf.scene.position.y = -(SG.drop ?? 0.43) * seat + (SG.bedY ?? 0.15) * lie; gltf.scene.rotation.x = -Math.PI / 2 * lie;            // posture assise ; allongé sur le dos (réanimation)            // posture assise
+    const enF = API.base === 'fauteuil' && fauteuil; if (fauteuil) fauteuil.visible = !!enF && seat > 0.5;
+    gltf.scene.position.y = -(enF ? fdrop : SG.drop ?? 0.43) * seat + (SG.bedY ?? 0.15) * lie; gltf.scene.rotation.x = -Math.PI / 2 * lie;            // posture assise ; allongé sur le dos (réanimation)            // posture assise
     for (const s of ['Left', 'Right']) { rig.turn(s + 'UpLeg', AX.x, -1.45 * seat); rig.turn(s + 'Leg', AX.x, (SG.knee ?? 1.5) * seat); rig.turn(s + 'Foot', AX.x, (SG.ankle || 0) * seat); }
-    if (MP) for (const k of MC_TRONC.slice(6)) if (MP[k] && rig.bones[k]) rig.bones[k].quaternion.slerp(MP[k], MC.w);   // jambes capturées (debout seulement)
-    if (table) { table.visible = !!SG.table && seat > 0.5; stool.visible = seat > 0.5; }
+    if (MP) for (const k of MC_TRONC.slice(6)) if (MP[k] && rig.bones[k]) { if (MC.debout && rig.tpose[k]) rig.bones[k].quaternion.copy(rig.tpose[k]); rig.bones[k].quaternion.slerp(MP[k], MC.w * Math.min(1, MC.amp + 0.1)); }   // jambes capturées (debout seulement), même amplitude que le bassin
+    if (table) { table.visible = !!SG.table && seat > 0.5; stool.visible = seat > 0.5 && !enF; }
     if (SG.cam) {                                                                        // caméra de la scène, avec transition douce
       if (!camInit) { camPos.copy(camera.position); camLook.copy(look); camInit = true; }
       const kc = 1 - Math.exp(-dt * 3); camPos.lerp(SG.cam.pos, kc); camLook.lerp(SG.cam.look, kc); camera.position.copy(camPos); camera.lookAt(camLook);
     }
-    if (touchState && t > touchState.until && !API.speaking) touchState = null;          // bras et mains
+    if (touchState && touchState.until === null && (API.speaking || t - touchState.t0 > 3)) touchState.until = t + touchState.dur;   // montre l'endroit quand la voix part
+    if (touchState && touchState.until !== null && t > touchState.until) touchState = null;          // bras et mains
     rig.root.updateMatrixWorld(true); _sInv.copy(gltf.scene.matrixWorld).invert();
     _mH.copy(_sInv).multiply(rig.bones.Hips.matrixWorld).multiply(MC.M0i.Hips); _mS.copy(_sInv).multiply(rig.bones.Spine2.matrixWorld).multiply(MC.M0i.Spine2);
     _mH.decompose(_p1, _qH, _p2); _mS.decompose(_p1, _qS, _p2);
-    const G = GESTURES[gn] || GESTURES.repos, tch = touchState && TOUCH[touchState.part] ? touchState : null, th = tch ? TOUCH[tch.part](D, tch.side, rig.out[tch.side], rig).hand : null;
+    const G = GESTURES[gn] || GESTURES.repos, tch = touchState && touchState.until !== null && TOUCH[touchState.part] ? touchState : null, th = tch ? TOUCH[tch.part](D, tch.side, rig.out[tch.side], rig).hand : null;
     for (const s of th === 'Left' ? ['Right', 'Left'] : ['Left', 'Right']) {             // la main qui touche est placée en dernier (elle peut viser l'autre bras)
       const raw = SG.arms && SG.arms(D, s, rig.out[s]) ? SG.arms(D, s, rig.out[s]) : s === th ? { ...TOUCH[tch.part](D, tch.side, rig.out[tch.side], rig) } : G(D, s, rig.out[s]), spec = resolveSpec(raw);
       if (MP && !SG.arms && !(s === th && tch.part === 'bras')) suivreCorps(spec, D);   // 'bras' vise déjà l'os animé
@@ -573,23 +626,30 @@ export async function createAvatar(el, opts = {}) {
     if (Number.isNaN(rig.bones.Spine2.quaternion.w) || Number.isNaN(rig.bones.Hips.position.y)) { for (const k in rig.bones) rig.bones[k].quaternion.copy(rig.tpose[k]); rig.bones.Hips.position.copy(MC.hips0); for (const s in st) st[s] = null; console.warn('pose invalide : remise au repos'); }   // garde-fou
     if (T && T.cuff.visible) placeCuff();
     for (const fn of API.extras) fn(t, dt);
-    if (controls) controls.update(); renderer.render(scene, camera);
+    if (controls) controls.update(); if (API._camTest) { camera.position.copy(API._camTest.pos); camera.lookAt(API._camTest.look); }   // essais : caméra imposée
+    suivreFond(); renderer.render(scene, camera);
   });
   /* ---------- tenue, matériel porté, mastectomie, lésions de peau ---------- */
   renderer.localClippingEnabled = true;
   const byName = (n) => gltf.scene.getObjectByName(n);
   const MED = ['BasContention', 'CeintureLombaire', 'Corset', 'SoutienGorgeMastectomie', 'ProtheseMammaire_G', 'ProtheseMammaire_D'];
-  API.femme = !!byName('SoutienGorge');
+  API.femme = !!byName('SoutienGorge'); API.corps = !!byName('CorpsHaut');   // patient homme v31 : corps complet sous les vêtements
+  {                                                                      // culotte de la couleur du soutien-gorge (bleue comme le pantalon, elle passait pour un reste de pantalon)
+    const mats = (n) => { const r = []; const o_ = byName(n); if (o_) o_.traverse((m) => { if (m.isMesh) r.push(m); }); return r; };
+    const sg = mats('SoutienGorge')[0];
+    if (sg) for (const m of mats('Culotte')) { const mt = [].concat(m.material)[0]; if (mt && !mt.map) { m.material = mt.clone(); m.material.color.copy([].concat(sg.material)[0].color); } }
+  }
   API.tenue = { jambes: false, buste: false, poitrine: false }; API.porte = new Set();
   const show = (n, v) => { const o = byName(n); if (o) o.visible = v; };
   function applyTenue() {                                                // une seule source de vérité pour ce qui est visible
     const t = API.tenue, haut = t.buste || t.poitrine, eqHide = API._eqHide || [];
     for (const m of rig.meshes) m.visible = !eqHide.some((h) => m.name.toLowerCase().includes(h.toLowerCase()));
     const hide = (n) => { const o = byName(n); if (o) o.visible = false; }, unhide = (n) => { const o = byName(n); if (o) { o.visible = true; o.traverse((c) => { if (c.isMesh) c.visible = true; }); } };
-    if (API.femme) {
+    if (API.femme || API.corps) {
       if (t.jambes) { hide('Pants'); hide('Shoes'); }
       if (haut) hide('Shirt');
-      if (t.poitrine || API.porte.has('SoutienGorgeMastectomie')) hide('SoutienGorge');
+      if (API.femme && (t.poitrine || API.porte.has('SoutienGorgeMastectomie'))) hide('SoutienGorge');
+      if (API.corps) { if (!haut) hide('CorpsHaut'); if (!t.jambes) hide('CorpsBas'); }   // corps du patient : seulement la partie découverte (pas de peau qui traverse les vêtements)
     }
     if (haut) hide('Sweatshirt');                                            // patient homme : pas de peau sous le tee-shirt, seul le sweat se retire
     for (const n of MED) API.porte.has(n) ? unhide(n) : hide(n);
@@ -597,7 +657,7 @@ export async function createAvatar(el, opts = {}) {
   }
   /* patient homme : pas de peau sous le sweat ni sous le débardeur. On fabrique, une fois, des bras (depuis les manches du sweat) et un torse (depuis le débardeur),
      resserrés vers le corps et couleur peau, montrés quand le vêtement est retiré. */
-  const PEAU_H = API.femme ? null : (() => {
+  const PEAU_H = API.femme || API.corps ? null : (() => {
     const sweat = byName('Sweatshirt'), shirt = byName('Shirt'), body0 = rig.body || rig.meshes[0];
     const meshOf = (o) => { let m = null; if (o) o.traverse((c) => { if (!m && c.isSkinnedMesh) m = c; }); return m; };
     const sw = meshOf(sweat), sh = meshOf(shirt); if (!sw || !body0) return null;
@@ -765,9 +825,9 @@ export async function createAvatar(el, opts = {}) {
       for (let i = 0; i < P.count; i++) {
         p.fromBufferAttribute(P, i).applyMatrix4(Mm); const d = p.distanceTo(c); if (d > R) continue;
         if (N) { n.fromBufferAttribute(N, i).applyMatrix3(Nm).normalize(); if (n.dot(dir) < 0.15) continue; }
-        pts.push({ u: U.getX(i), v: U.getY(i), d: d / R, p: p.clone() });
+        pts.push({ u: U.getX(i), v: U.getY(i), d: d / R, p: p.clone(), i });
       }
-      if (pts.length > 8) out.push({ mat: m.material, pts });
+      if (pts.length > 8) out.push({ mat: m.material, pts, mesh: m });
     }
     return out;
   }
@@ -782,10 +842,18 @@ export async function createAvatar(el, opts = {}) {
   const DENS = { urticaire: 26, varicelle: 60, zona: 34, eczema: 40, psoriasis: 6, piqure: 1 };
   API.peindre = (type, zone, opt = {}) => {
     seed = opt.seed || 7 + type.length * 13 + zone.length;
-    for (const { mat, pts } of sample(zone)) {
+    for (const { mat, pts, mesh } of sample(zone)) {
       const { c, g, tx } = canvasOf(mat), W_ = c.width, H_ = c.height;
       const fr = (t) => t - Math.floor(t), px = (q) => [fr(q.u) * W_, (tx.flipY ? 1 - fr(q.v) : fr(q.v)) * H_], s = W_ / 2048;
-      if (type === 'erytheme_migrant' || type === 'cicatrice') {
+      if (type === 'plaie') {                                        // écorchure : au point le plus proche du centre visé, taille en mètres (pixels par mètre mesurés)
+        const ctr = pts.reduce((a, q) => (q.d < a.d ? q : a)), [cx, cy] = px(ctr); if (!API._plaieV || ctr.d < API._plaieV.d) API._plaieV = { mesh, i: ctr.i, d: ctr.d };   // sommet du centre : la zone « Plaie » du pansement le suit
+        let k = 0, n = 0; for (const q of pts) { const dp = q.p.distanceTo(ctr.p); if (dp > 0.006) { const [x, y] = px(q); k += Math.hypot(x - cx, y - cy) / dp; n++; } } const ppm = n ? k / n : 4000;
+        const tache = (x0, y0, rx, ry, col, a) => { const gr = g.createRadialGradient(0, 0, 0, 0, 0, 1); gr.addColorStop(0, `rgba(${col},${a})`); gr.addColorStop(1, `rgba(${col},0)`);
+          g.save(); g.translate(x0, y0); g.rotate(0.4); g.scale(rx, ry); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 1, 0, 7); g.fill(); g.restore(); };
+        tache(cx, cy, 0.024 * ppm, 0.013 * ppm, '205,105,95', 0.5);
+        for (let i = 0; i < 22; i++) tache(cx + (rnd() - 0.5) * 0.028 * ppm, cy + (rnd() - 0.5) * 0.012 * ppm, (0.003 + rnd() * 0.007) * ppm, (0.0012 + rnd() * 0.002) * ppm, '150,25,28', 0.8);
+        for (let i = 0; i < 7; i++) tache(cx + (rnd() - 0.5) * 0.022 * ppm, cy + (rnd() - 0.5) * 0.008 * ppm, (0.001 + rnd() * 0.0018) * ppm, (0.0008 + rnd() * 0.0012) * ppm, '85,20,14', 0.9);
+      } else if (type === 'erytheme_migrant' || type === 'cicatrice') {
         const ctr = type === 'cicatrice' ? pts.reduce((a, q) => (q.p.z > a.p.z ? q : a)) : pts.reduce((a, q) => (q.d < a.d ? q : a)); const [cx, cy] = px(ctr);
         let k = 0, n = 0; for (const q of pts) { const dp = q.p.distanceTo(ctr.p); if (dp > 0.01) { const [x, y] = px(q); k += Math.hypot(x - cx, y - cy) / dp; n++; } } const ppm = n ? k / n : 4000;
         g.save(); g.translate(cx, cy);
@@ -804,7 +872,50 @@ export async function createAvatar(el, opts = {}) {
       tx.needsUpdate = true;
     }
   };
-  API.effacerPeau = () => { for (const [mat, r] of canv) { r.g.drawImage(r.img, 0, 0); r.tx.needsUpdate = true; } };
+  /* plaie décrite par le cas (objets.js plaieDuCas) : peinte dans la peau, au même endroit que la zone « Plaie » du pansement */
+  const restQ = {}; for (const k in rig.bones) restQ[k] = rig.bones[k].getWorldQuaternion(new THREE.Quaternion()).premultiply(new THREE.Quaternion().setFromRotationMatrix(gltf.scene.matrixWorld).invert());
+  API.peindrePlaie = (pl, dirTest) => {
+    if (!pl) return; const S = pl.cote === 'Right' ? 'Right' : 'Left', T = { avantbras: 0.3, poignet: 0.12, coude: 0.88, main: -0.42 };
+    let c, dir;
+    if (pl.site === 'genou') { c = mid(S + 'Leg', S + 'UpLeg', 0.04); dir = V3(0, 0, 1); }
+    else if (pl.site === 'jambe') { c = mid(S + 'Leg', S + 'Foot', 0.4); dir = V3(0, 0, 1); }
+    else { const w = restB[S + 'Hand'], e = restB[S + 'ForeArm'], ax = e.clone().sub(w).normalize(); c = w.clone().lerp(e, T[pl.site] ?? 0.3);
+      dir = pl.site === 'main' ? rig.palmL[S].clone().applyQuaternion(restQ[S + 'Hand']).negate() : pl.site === 'coude' ? V3(0, 0, -1) : V3(0, 0.5, 1);   // face antérieure (pose T), dos de la main, pointe du coude
+      dir.sub(ax.clone().multiplyScalar(dir.dot(ax))).normalize(); }
+    if (dirTest) dir = V3(...dirTest).normalize();
+    if (!c) return; ZONES._plaie = () => [c, dir, 0.03, 0.04]; API._plaieV = null; API.peindre('plaie', '_plaie', { seed: 11 });
+  };
+  /* texture du visage remplacée (même disposition UV que celle du modèle : visage MetaHuman) — vieillissement, autres visages */
+  API.visage = (url) => new Promise((res) => {
+    const m = byName('Tete') || byName('Body'); if (!m) return res(false);  // patiente MetaHuman : maillage Tete ; patient homme : Body (atlas MikeAlger complet)
+    const poser = (t) => { m.traverse((x) => { if (x.isMesh) { const mt = [].concat(x.material)[0]; if (!mt || !mt.map) return;
+      const r = canv.get(mt);                                             // peau déjà repeinte (lésions) : on change l'image de fond du canevas
+      if (r) { if (!r.img0) r.img0 = r.img; r.img = t ? t.image : r.img0; r.g.drawImage(r.img, 0, 0, r.c.width, r.c.height); r.tx.needsUpdate = true; return; }
+      if (!x.userData.map0) x.userData.map0 = mt.map; mt.map = t || x.userData.map0; mt.needsUpdate = true; } }); };
+    if (!url) { poser(null); return res(true); }                        // visage d'origine
+    new THREE.TextureLoader().load(url, (t) => { t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; poser(t); res(true); }, undefined, () => res(false));
+  });
+  API.cheveuxGris = (on = true) => {                                     // cheveux blancs/gris : texture recalculée (luminance éclaircie, alpha gardé)
+    const h = byName('Hair'); if (!h) return;
+    h.traverse((x) => { if (!x.isMesh) return; const mt = [].concat(x.material)[0]; if (!mt || !mt.map) return;
+      if (!x.userData.map0) x.userData.map0 = mt.map;
+      if (!on) { mt.map = x.userData.map0; mt.needsUpdate = true; return; }
+      if (!x.userData.mapGris) { const im = x.userData.map0.image; if (!im || !im.width) return;
+        const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+        const d = g.getImageData(0, 0, c.width, c.height), p = d.data;
+        for (let i = 0; i < p.length; i += 4) { const l = (p[i] * 0.3 + p[i + 1] * 0.59 + p[i + 2] * 0.11) / 255, v = 105 + 150 * Math.pow(l, 0.7); p[i] = v; p[i + 1] = v * 0.985; p[i + 2] = v * 0.96; }
+        g.putImageData(d, 0, 0); const t = new THREE.CanvasTexture(c); t.flipY = x.userData.map0.flipY; t.colorSpace = THREE.SRGBColorSpace; x.userData.mapGris = t; }
+      mt.map = x.userData.mapGris; mt.needsUpdate = true; });
+  };
+  if (o.visage) API.visage(o.visage);
+  API.plaieMonde = () => {                                               // position actuelle (monde) du centre de la plaie peinte, et normale approchée
+    const P = API._plaieV; if (!P) return null; const m = P.mesh, p = V3(0, 0, 0).fromBufferAttribute(m.geometry.attributes.position, P.i);
+    if (m.isSkinnedMesh && m.applyBoneTransform) m.applyBoneTransform(P.i, p); p.applyMatrix4(m.matrixWorld);
+    const N = m.geometry.attributes.normal; let n = null;
+    if (N) { const p2 = V3(0, 0, 0).fromBufferAttribute(m.geometry.attributes.position, P.i).add(V3(0, 0, 0).fromBufferAttribute(N, P.i).multiplyScalar(0.01)); if (m.isSkinnedMesh && m.applyBoneTransform) m.applyBoneTransform(P.i, p2); p2.applyMatrix4(m.matrixWorld); n = p2.sub(p).normalize(); }
+    return { p, n };
+  };
+  API.effacerPeau = () => { API._plaieV = null; for (const [mat, r] of canv) { r.g.drawImage(r.img, 0, 0); r.tx.needsUpdate = true; } };
   /* ---------- voir l'intérieur : organes de CorpoAtlas (Visible Human ; calque Homme pour le patient), recalés et accrochés aux os ---------- */
   let inter = null, interOn = false;
   async function chargerInterieur(url) {

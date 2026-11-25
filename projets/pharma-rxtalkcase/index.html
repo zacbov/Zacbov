@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<script src="precharge.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cas cliniques : le patient arrive</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -93,7 +94,7 @@ dialog::backdrop{background:#000a}
 </header>
 <div id="gauge" hidden><div><i id="gbar"></i></div><span id="gtxt"></span></div>
 <div id="wrap">
-<section id="stage" aria-label="Patient en 3D"><div class="tools"><button id="mute" type="button" title="Voix du patient">🔊 Voix</button><button id="bp" class="pat" type="button" disabled>Prendre la tension</button><button id="bpm" class="pat" type="button" hidden>Mesurer</button><button id="bpx" class="pat" type="button" hidden>Fin de la mesure</button><button id="res" class="pat" type="button" disabled>Réserve</button><button id="eqx" class="pat" type="button" hidden>Terminer le geste</button><button id="obs" class="pat" type="button" hidden title="Approcher pour observer la lésion">Regarder de près</button><button id="j3" class="pat" type="button" hidden title="Le patient revient quelques jours plus tard">Revoir dans 3 jours</button><button id="expl" class="pat" type="button" hidden title="Expliquer la maladie ou le traitement à la patiente, avec le schéma du corps">Expliquer au patient</button><button id="int" class="pat" type="button" hidden title="Peau en transparence : organes de CorpoAtlas recalés sur le patient ou la patiente">Voir l'intérieur</button></div><div class="intg" id="intg" hidden></div><div class="phone"><div style="font-size:2.5rem">☎</div><div>Échange avec un professionnel : pas de patient en face.</div></div><div class="note" id="avnote">Chargement du patient…</div></section>
+<section id="stage" aria-label="Patient en 3D"><div class="tools"><button id="mute" type="button" title="Voix du patient">🔊 Voix</button><button id="bp" class="pat" type="button" disabled hidden style="display:none">Prendre la tension</button><button id="bpm" class="pat" type="button" hidden>Mesurer</button><button id="bpx" class="pat" type="button" hidden>Fin de la mesure</button><button id="res" class="pat" type="button" disabled>Réserve</button><button id="eqx" class="pat" type="button" hidden>Terminer le geste</button><button id="obs" class="pat" type="button" hidden title="Approcher pour observer la lésion">Regarder de près</button><button id="j3" class="pat" type="button" hidden title="Le patient revient quelques jours plus tard">Revoir dans 3 jours</button><button id="expl" class="pat" type="button" hidden title="Exercice : expliquer la maladie et le traitement avec des mots simples (organes affichés) ; le patient pose des questions puis reformule, et vous recevez une analyse">Expliquer au patient</button><button id="int" class="pat" type="button" hidden title="Peau en transparence : organes de CorpoAtlas recalés sur le patient ou la patiente">Voir l'intérieur</button></div><div class="intg" id="intg" hidden></div><div class="phone"><div style="font-size:2.5rem">☎</div><div>Échange avec un professionnel : pas de patient en face.</div></div><div class="note" id="avnote">Chargement du patient…</div></section>
 <div id="col">
 <main id="chat" aria-live="polite"><p class="vide">Choisissez un thème, puis appelez le premier patient.</p></main>
 <form id="f"><button type="button" id="hint" disabled aria-label="Demander un indice" title="Indice : le patient lâche une information utile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg><span id="hc"></span></button><textarea id="in" rows="1" placeholder="Votre réponse au patient" aria-label="Message" disabled></textarea><button type="button" id="micro" hidden title="Dicter (reconnaissance vocale locale)" aria-label="Dicter"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg></button><button id="send" class="main" disabled>Envoyer</button></form>
@@ -128,10 +129,18 @@ function lock(on) { busy = on; $('send').disabled = $('in').disabled = on || ove
   $('fichebtn').disabled = !cas; if (window.AV) AV.lock(on || over || !cas); const nd = unlocked.size; $('docbtn').disabled = !nd; $('dc').textContent = nd || ''; }
 
 let lastModel = '', lastFt = 0;
+/* Version hors ligne (index_hors_ligne.html, servie par llama-server) : le worker tourne dans la page, le modèle sur le PC. */
+let workerLocal = null;
+async function horsLigne(body) {
+  const H = window.HORS_LIGNE; workerLocal = workerLocal || (await import('./cas-worker.js')).default;
+  const env = { APP_SECRET: 'local', LOCAL_URL: new URL(H.api || '/v1/chat/completions', location.href).href, LOCAL_MODEL: H.modele || 'local', MODELS: 'pc:' + (H.modele || 'local') };
+  return workerLocal.fetch(new Request(location.href, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-App-Secret': 'local' }, body: JSON.stringify(body) }), env);
+}
+const IA = (() => { try { const q = new URLSearchParams(location.search).get('ia'); if (q) localStorage.setItem('ia', q); const k = q || localStorage.getItem('ia'); return ['cloudflare', 'pc'].includes(k) ? k : ''; } catch (e) { return ''; } })();   // essai d'un fournisseur : ?ia=cloudflare | pc ; ?ia=auto pour revenir
 async function ask(mode, el) {
   const t0 = performance.now();
-  const body = { mode, avatar: !!window.AV, pop: cas.pop || 'officine', cas: mode === 'chat' ? { enonce: cas.enonce, docs: (cas.documents || []).map(docTitle), fiche: cas.fiche || null } : { enonce: cas.enonce, questions: cas.questions, points: points || [], interactions: (cas.connaissances || {}).interactions || [], notes: Object.entries(notes).filter(([, v]) => v.trim()).map(([doc, texte]) => ({ doc, texte })), docs_etat: (cas.documents || []).map((d, i) => ({ titre: docTitle(d), ouvert: unlocked.has(i) })), fiche_saisie: fiche, fiche_ref: cas.fiche || null }, profil, messages: hist };
-  const r = await fetch(WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-App-Secret': SECRET }, body: JSON.stringify(body) });
+  const body = { mode, avatar: !!window.AV, pop: cas.pop || 'officine', cas: mode === 'chat' ? { enonce: cas.enonce, docs: (cas.documents || []).map(docTitle), fiche: cas.fiche || null } : { enonce: cas.enonce, questions: cas.questions, points: points || [], interactions: (cas.connaissances || {}).interactions || [], notes: Object.entries(notes).filter(([, v]) => v.trim()).map(([doc, texte]) => ({ doc, texte })), docs_etat: (cas.documents || []).map((d, i) => ({ titre: docTitle(d), ouvert: unlocked.has(i) })), fiche_saisie: fiche, fiche_ref: cas.fiche || null }, profil, messages: hist, ia: IA || undefined };
+  const r = window.HORS_LIGNE ? await horsLigne(body) : await fetch(WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-App-Secret': SECRET }, body: JSON.stringify(body) });
   if (mode === 'chat') { lastModel = r.headers.get('X-Model') || ''; lastFt = 0; const es = r.headers.get('X-Essais'); if (es) { console.info('Worker :', es); $('mdl').title = es; } }   // modèles essayés et temps (survol de la ligne du modèle)
   if (!r.ok) { let m = 'Erreur ' + r.status; try { const j = await r.json(); m = j.error + (j.details ? ' (' + j.details.join(', ') + ')' : ''); } catch {} throw new Error(m); }
   let out = '';
@@ -291,11 +300,14 @@ async function uiVoix(el) {                  // écoute des voix Piper déployé
       '<div style="display:flex;gap:.6rem;align-items:center;margin:.2rem 0"><button type="button" data-ecoute="' + v.cle + '" style="width:2.2rem;padding:.25rem 0;flex:none">▶</button><label style="display:flex;gap:.5rem;align-items:center;flex:1;margin:0;white-space:nowrap"><input type="radio" name="vforce" value="' + v.cle + '"' + (lsVoix() === v.cle ? ' checked' : '') + ' style="width:auto;margin:0;flex:none"> ' + v.nom + ' <small style="color:var(--doux)">(' + (v.sexe === 'H' ? TRH : TR)[v.age] + ' · ' + v.modele.replace('fr_FR-', '').replace('-medium', '') + (v.loc && !/^[a-z]/.test(v.loc) ? ' ' + v.loc : '') + ')</small></label></div>').join('')).join('')
     + '<p class="pied" style="color:var(--doux)">Première écoute d\'un modèle : téléchargement (60 à 77 Mo), puis cache du navigateur.</p>';
   let lect = null;
+  el.insertAdjacentHTML('beforeend', '<p id="vstat" style="min-height:1.3em;margin:.3rem 0 0;color:var(--doux)"></p>');
   el.onclick = (e) => {
     const b = e.target.closest('[data-ecoute]'); if (!b) return;
-    if (lect) lect.stop(); b.textContent = '…';
-    lect = VoixLocale.parler(PHRASE, { voix: b.dataset.ecoute });
-    lect.fin.then(() => { b.textContent = '▶'; }, (err) => { b.textContent = '✕'; console.warn(err); });
+    if (lect) lect.stop(); el.querySelectorAll('[data-ecoute]').forEach((x) => { if (x.textContent === '…') x.textContent = '▶'; }); b.textContent = '…';
+    const st = $('vstat'), nom = (VoixLocale.voix.find((v) => v.cle === b.dataset.ecoute) || {}).nom || '', t0 = performance.now();
+    const l = lect = VoixLocale.parler(PHRASE, { voix: b.dataset.ecoute });
+    const iv = setInterval(() => { if (lect !== l) return clearInterval(iv); if (l.demarre()) { st.textContent = nom + ' : lecture.'; clearInterval(iv); } else st.textContent = nom + ' : préparation de la voix… ' + Math.round((performance.now() - t0) / 1000) + ' s (premier usage d\'un modèle : téléchargement puis chargement)'; }, 250);
+    l.fin.then(() => { b.textContent = '▶'; if (lect === l) st.textContent = ''; }, (err) => { clearInterval(iv); b.textContent = '✕'; st.textContent = nom + ' : échec (' + (err && err.message || err) + ')'; console.warn(err); });
   };
   el.onchange = (e) => { if (e.target.name !== 'vforce') return; const v = VoixLocale.forcer(e.target.value || null); if (!v && cas) VoixLocale.pourCas(cas); const c = VoixLocale.courante(); $('vcour').textContent = c ? c.nom : '—'; };
 }
@@ -399,7 +411,7 @@ Promise.all([chargerCas(), fetch('cas_qcm_pharma.json').then((r) => (r.ok ? r.js
 /* Patient en 3D : il prononce les répliques de l'IA, avec l'émotion et la zone du corps indiquées par les balises [EMO:…] [ZONE:…] (ou devinées dans le texte) */
 import { createAvatar, guessEmotion, guessTouch, EMOTIONS, PROFIL_EMO } from './avatar/avatar.js';
 import { createEquip } from './avatar/equip.js';
-import { valeursDuCas, pertinent, ETONNEMENT, REACTIONS } from './avatar/objets.js';
+import { valeursDuCas, pertinent, ETONNEMENT, REACTIONS, plaieDuCas } from './avatar/objets.js';
 import { chargerPeau, createPeau, trouverMaladie, ficheAtlas, infoStades } from './avatar/peau.js';
 import { createReserve } from './avatar/reserve.js';
 const $ = (id) => document.getElementById(id), BASE = window.AVATAR_BASE || 'avatar/';
@@ -423,11 +435,12 @@ function setButtons() {
   const off = !A || locked || tel; $('bp').disabled = off; $('res').disabled = off;
 }
 const PATIENTE_GLB = (() => { try { const q = new URLSearchParams(location.search).get('patiente'); if (q) localStorage.setItem('patiente', q); const k = q || localStorage.getItem('patiente'); return ['amanda', 'crowd84'].includes(k) ? 'patient_' + k + '.glb' : 'patient_femme.glb'; } catch (e) { return 'patient_femme.glb'; } })();   // ?patiente=amanda | crowd84 (MetaHuman) ou ?patiente=v5
+const modeleDuCas = (c) => { const f = (c && c.fiche) || {}; return f.sexe === 'Femme' ? 'femme' : 'homme'; };   // l'âge se rend par la texture du visage (v35), plus par un autre modèle
 async function applyCase() {
   if (!A || !cas) return;
-  const sx0 = cas.fiche && cas.fiche.sexe, want = sx0 === 'Femme' ? 'femme' : 'homme';
+  const sx0 = cas.fiche && cas.fiche.sexe, want = modeleDuCas(cas);
   tel = !!(cas.pop && !['officine', 'medecine'].includes(cas.pop)) && !cas.peau && !cas.visage;
-  if (modele !== want && !tel) { if (!chargement || chargement.want !== want) { chargement = monter(want); chargement.want = want; } const c = chargement; await c; if (chargement === c) chargement = null; if (!A || (cas.fiche && cas.fiche.sexe === 'Femme' ? 'femme' : 'homme') !== modele) return; }
+  if (modele !== want && !tel) { if (!chargement || chargement.want !== want) { chargement = monter(want); chargement.want = want; } const c = chargement; await c; if (chargement === c) chargement = null; if (!A || modeleDuCas(cas) !== modele) return; }
   A.stop(); if (A.quitterTension) A.quitterTension(); if (EQ) EQ.close(); if (RS) RS.close(); $('eqx').hidden = true; A.debout && A.debout();
   $('bp').hidden = false; $('bpm').hidden = $('bpx').hidden = true;
   $('stage').classList.toggle('tel', tel);
@@ -440,10 +453,21 @@ async function applyCase() {
   $('int').hidden = !A.interieur || tel;
   explMode = null; window.bilanExpl = null; $('expl').hidden = tel; $('expl').textContent = 'Expliquer au patient';
   const T = texteCas(cas);
+  A._hyg = {}; A._hygVu = {};                                              // hygiène des mains et gants : à refaire pour chaque patient
   mast = A.femme && /mastectomie|ablation du sein|opération du sein|opérée du sein|cancer du sein opéré/.test(T) ? (/(mastectomie|sein)[^.]{0,40}droit|sein droit/.test(T) ? 'droite' : 'gauche') : null;
   if (A.mastectomie) A.mastectomie(mast);
   A.asym = cas.visage && cas.visage.side ? { side: cas.visage.side, central: !!cas.visage.central } : null;
   if (A.alite) await A.alite(!!(cas.pop && !['officine', 'medecine'].includes(cas.pop)) && !tel, BASE + 'lit_hopital.glb');   // cas hospitalier : patient couché sur le lit
+  if (A.fauteuil) { const hosp = !!(cas.pop && !['officine', 'medecine'].includes(cas.pop));   // patient en fauteuil roulant (décrit par le cas) : assis dans le fauteuil
+    const fr = !hosp && !tel && /fauteuil roulant|en fauteuil|parapl[ée]gi|t[ée]trapl[ée]gi|ne (?:peut|parvient) (?:plus |pas )?(?:à )?marcher|ne marche plus/i.test(T);
+    if (fr || A.base === 'fauteuil') await A.fauteuil(fr, BASE + 'equip/fauteuil_roulant.glb'); }
+  if (A.visage) {                                                       // 65 ans et plus : visage âgé (textures UV de Tice) et cheveux gris ; avant les lésions (même texture de peau)
+    const ag = parseFloat(cas.fiche && cas.fiche.age), vieux = ag >= 65 && !/mois|semaine|jour/i.test((cas.fiche && cas.fiche.age_unite) || '');
+    const h = [...String(cas.id)].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
+    const v = A.femme ? (vieux ? ['f_vieille', 'f_vieille', 'v_6a9ae3ef', 'v_f6e18a94'][h % 4] : ['f_jeune', null][h % 2])   // patiente âgée : surtout le nouveau visage ; jeune : une fois sur deux le visage réaliste
+      : (vieux ? 'homme_vieux' : ['homme_jeune', null][h % 2]);                                                               // patient : atlas complet (MikeAlger) avec le visage posé
+    await A.visage(v ? BASE + 'visages/' + v + '.jpg' : null); if (A.cheveuxGris) A.cheveuxGris(vieux);
+  }
   if (A._skin) {                                            // lésions de peau reprises de CorpoAtlas, d'après l'énoncé et la plainte
     try { await chargerPeau(BASE + 'peau.json'); } catch (e) { console.warn('peau.json', e); }
     A._peau = A._peau || createPeau(A); A._peau.effacer();
@@ -452,6 +476,7 @@ async function applyCase() {
     peauStade = cle ? (cas.peau && cas.peau.stade !== undefined ? cas.peau.stade : /étendu|sévère|généralis|chronique|lichénif/i.test(Tp) ? 2 : /début|débutant|léger|discret/i.test(Tp) ? 0 : 1) : 0;
     if (cle) A._peau.appliquer(cle, peauStade);
     else if (A.peindre) for (const [re, type, zones] of LESIONS) if (re.test(T)) for (const z of zones) A.peindre(type, z);
+    if (A.peindrePlaie) A.peindrePlaie(plaieDuCas(cas));                                  // plaie décrite par le cas, à l'endroit décrit (sinon aucune)
   }
 }
 const texteCas = (c) => [c.enonce, c.apercu, c.fiche_source && c.fiche_source.nom, c.patient && JSON.stringify(c.patient), (c.questions || []).map((q) => q.question + ' ' + q.reponse_modele).join(' ')].join(' ').toLowerCase();
@@ -515,6 +540,7 @@ $('expl').onclick = async () => {
     explMode.vue = $('int').textContent.startsWith('Masquer');
     window.situation(`Le pharmacien va maintenant t'expliquer ta maladie et ton traitement${explMode.vue ? ", en te montrant l'intérieur du corps sur un écran" : ''}. Tu ne connais pas le vocabulaire médical : chaque fois qu'il emploie un mot technique sans l'expliquer, demande ce que ça veut dire. Pose une ou deux questions naïves de patient (« et ça, c'est grave ? », « je le prends quand ? »). Réponds court. Commence par dire que tu l'écoutes.`,
       'Mode explication : expliquez la maladie et le traitement avec des mots simples' + (explMode.vue ? ', en montrant les organes' : '') + '. Cliquez sur « Fin de l\'explication » quand vous avez terminé.');
+    $('chat').append(carteGuideExpl(explMode.vue, A.femme)); $('chat').lastChild.scrollIntoView({ block: 'end' });
     if (window.envoyerSituation) window.envoyerSituation();
     return;
   }
@@ -529,7 +555,7 @@ $('expl').onclick = async () => {
 $('j3').onclick = () => {                                    // « revenez dans 3 jours » : la lésion passe au stade suivant
   if (!A || !A._peau || !peauCle) return; const info = infoStades(peauCle) || { L: [], T: [] }, max = Math.max(0, (info.L.length || 3) - 1);
   const avant = peauStade; peauStade = Math.min(max, peauStade + 1); jours += 3;
-  A.effacerPeau && A.effacerPeau(); A._peau.effacer(); if (mast && A.mastectomie) A.mastectomie(mast); A._peau.appliquer(peauCle, peauStade);
+  A.effacerPeau && A.effacerPeau(); A._peau.effacer(); if (mast && A.mastectomie) A.mastectomie(mast); A._peau.appliquer(peauCle, peauStade); if (A.peindrePlaie) A.peindrePlaie(plaieDuCas(cas));
   const st = info.L[peauStade] ? info.L[peauStade] + (info.T[peauStade] ? ' : ' + info.T[peauStade] : '') : 'lésion plus marquée';
   const txt = peauStade > avant ? `${jours} jours plus tard, le patient revient. La lésion a évolué (${st}). Joue ce retour : dis ce que tu as fait depuis la dernière visite (conseils suivis ou non), ce qui a changé, ce qui t'inquiète.`
     : `${jours} jours plus tard, le patient revient. Rien ne s'est amélioré (${st}). Tu t'inquiètes et tu insistes.`;
@@ -608,6 +634,17 @@ function analyserExplication(msgs, vue) {
   if (vue) forts.push('Vous avez montré l\'intérieur du corps pendant l\'explication.');
   return { note: Math.max(0, note), nMsg: msgs.length, jargon: [...jar.values()], nonExpl: nj, forts, amelio };
 }
+function carteGuideExpl(vue, femme) {                          // mode d'emploi affiché au début du mode « Expliquer au patient »
+  const d = document.createElement('details'); d.className = 'verif'; d.open = true; const p = femme ? 'la patiente' : 'le patient';
+  d.innerHTML = `<summary>Mode « Expliquer au patient » : comment faire</summary><p><b>But</b> : faire comprendre à ${p} sa maladie et son traitement, comme au comptoir, avec des mots simples.\n\n`
+    + `<b>1.</b> Écrivez votre explication dans le chat, en plusieurs messages courts : ce qu'est la maladie, à quoi sert le traitement, comment le prendre, ce qu'il faut surveiller.\n`
+    + `<b>2.</b> ${femme ? 'Elle' : 'Il'} vous interrompt quand un mot est technique ou flou : répondez simplement.\n`
+    + (vue ? `<b>3.</b> L'intérieur du corps est affiché : cochez les appareils à montrer (cœur, poumons, reins…) et dites ce que vous montrez.\n` : '')
+    + `<b>${vue ? 4 : 3}.</b> Vérifiez sa compréhension (« pouvez-vous me redire comment vous allez le prendre ? »).\n`
+    + `<b>${vue ? 5 : 4}.</b> Cliquez sur <b>« Fin de l'explication »</b> (sur la scène) : ${p} reformule ce qu'${femme ? 'elle' : 'il'} a retenu et vous recevez une analyse (mots techniques, phrases trop longues, vérification de la compréhension, consignes concrètes).</p>`
+    + '<p style="font-size:.8rem;color:var(--doux)">Conseils : une idée par phrase ; un mot technique ? expliquez-le aussitôt ; donnez des repères concrets (quand, combien, quoi faire si…).</p>';
+  return d;
+}
 function carteExplication(b) {
   const d = document.createElement('details'); d.className = 'verif'; d.open = true;
   d.innerHTML = `<summary>Votre explication au patient : ${b.note}/10</summary><p>${b.forts.map((x) => '✔ ' + esc(x)).join('\n')}${b.forts.length && b.amelio.length ? '\n\n' : ''}${b.amelio.map((x) => '→ ' + esc(x)).join('\n')}</p>` +
@@ -619,20 +656,26 @@ function reagir(r, side, force) {                         // réaction spontané
   if (!r || !A || tel) return; const now = performance.now(); if (!force && now - tReact < 2500) return; tReact = now;
   patientDit(r[0], r[1]); if (r[2] && A.touch) A.touch(r[2], side || 'Left', 3);
 }
+const SOINS = ['vaccin', 'trod_angine', 'trod_naso', 'glucometre', 'pansement', 'tique', 'injection_iv', 'perfusion', 'stomie', 'otoscope', 'auscultation'], GANTS = ['trod_angine', 'trod_naso', 'glucometre', 'pansement', 'tique', 'injection_iv', 'perfusion', 'stomie'];   // gestes de soin : hygiène des mains ; contact sang / muqueuse / plaie : gants
 function patientDit(line, emo) { if (!A) return; A.emotion = emo; A.say(line, { emotion: emo }); if (typeof add === 'function') add('m patient', esc(line)); if (typeof hist !== 'undefined') hist.push({ role: 'assistant', content: line }); }
 async function monter(want) {                               // patient homme ou patiente : un modèle à la fois, le module des objets suit
   if (EQ) EQ.close(); if (A) A.dispose(); A = null; EQ = null; document.querySelectorAll('#stage .eq-ui').forEach((e) => e.remove());
   $('avnote').textContent = want === 'femme' ? 'Arrivée de la patiente…' : 'Arrivée du patient…'; $('avnote').style.opacity = 1;
   A = await createAvatar($('stage'), { glb: BASE + (want === 'femme' ? PATIENTE_GLB : 'patient_homme.glb'), background: BASE + 'decor_pharmacie.webp', tensio: BASE + 'tensiometre-draco.glb', draco: window.AVATAR_DRACO });
   modele = want; window.A = A; appliquerVoix();
-  setTimeout(() => A.gestes && A.gestes(BASE + 'gestes'), 1500);   // mouvements capturés (Mixamo) : attente, parole, réactions, toux
+  { const a0 = A; setTimeout(() => a0 && a0 === A && a0.gestes && a0.gestes(BASE + 'gestes'), 1500); }   // mouvements capturés (Mixamo) : attente, parole, réactions, toux
   A.onvoices = () => { if (cas) pickVoice(cas.fiche && cas.fiche.sexe); };
   EQ = createEquip(A, { base: BASE + 'equip/', draco: window.AVATAR_DRACO }); window.EQ = EQ;
   EQ.on((e) => {
     const muet = REACTIONS.muets.includes(e.objet), R = REACTIONS;
-    if (e.type === 'depot' && e.ok && !sansExpl && !(window.msgsEleve || []).slice(eleveA).some((m) => EXPL.test(m))) {   // geste sans explication préalable
+    if (e.type === 'depot' && e.ok && e.objet !== 'hygiene' && !sansExpl && !(window.msgsEleve || []).slice(eleveA).some((m) => EXPL.test(m))) {   // geste sans explication préalable
       sansExpl = true; patientDit("Euh… vous pouvez m'expliquer ce que vous faites ?", 'surprise'); tReact = performance.now();
       window.geste(`pose « ${e.pieceLabel} » sans avoir expliqué le geste au patient`);
+    }
+    if (e.type === 'depot' && e.ok && !muet && SOINS.includes(e.objet) && A) {   // soin sans hygiène des mains / sans gants : le patient le remarque (une fois par patient)
+      const H = A._hyg || {}, vu = (A._hygVu = A._hygVu || {});
+      if (!H.mains && !vu.mains) { vu.mains = true; patientDit("Vous ne vous lavez pas les mains avant ?", 'doute'); window.geste(`commence un soin (« ${e.pieceLabel} ») sans friction hydroalcoolique des mains`); }
+      else if (GANTS.includes(e.objet) && !H.gants && !vu.gants) { vu.gants = true; patientDit('Vous ne mettez pas de gants ?', 'doute'); window.geste(`fait un soin à risque de contact avec le sang ou une muqueuse (« ${e.pieceLabel} ») sans gants`); }
     }
     if (e.type === 'geste') { window.geste(e.texte); const k = e.objet + '.' + e.piece;
       if (!muet && !(k.endsWith('.metre') && unefois.has(k))) { unefois.add(k); nFaux = 0; reagir(R.ok[k], /_D$/.test(e.zone || '') ? 'Right' : 'Left'); } }
@@ -642,7 +685,7 @@ async function monter(want) {                               // patient homme ou 
     if (e.type === 'taille' && !e.ok) { const T = R.taille;
       reagir(e.sens ? (T[e.sens][e.objet] || T[e.sens].defaut) : /sur mesure/i.test(e.choix || '') ? T.surmesure : T.classe, null, true); }
     if (e.type === 'fermeture') { eleveA = (window.msgsEleve || []).length; sansExpl = false; nFaux = 0; unefois.clear(); }
-    if (e.type === 'besoin') { patientDit(BESOIN[e.need] || 'Vous ne m\'avez rien demandé…', 'gene'); window.geste(`veut poser « ${e.label} » sans avoir demandé au patient de se découvrir`); }
+    if (e.type === 'besoin') { patientDit(e.objet === 'stomie' ? "Vous voulez voir ma poche… ici, devant tout le monde ? On ne pourrait pas aller dans l'espace de confidentialité ? Et dites-moi ce que vous allez faire." : (BESOIN[e.need] || 'Vous ne m\'avez rien demandé…'), 'gene'); window.geste(`veut poser « ${e.label} » sans avoir demandé au patient de se découvrir`); }
     if (e.type === 'indispo') { $('avnote').textContent = `« ${e.label} » : geste prévu avec la patiente 3D.`; $('avnote').style.opacity = 1; }
   });
   $('avnote').textContent = '';
@@ -662,7 +705,7 @@ try {
         if (!go) return;
       } else window.geste(`prend « ${it.nom} » dans la réserve`);
       RS.close(); const v = valeursDuCas(cas || {});
-      const opened = await EQ.open(id, { ...v, pouls: (cas && cas.constantes && cas.constantes.pouls) || v.pouls, mast: mast || 'gauche', ...(id === 'prothese_mammaire' && mast === 'droite' ? { ok: { prothese: ['sein_D'] } } : {}) });
+      const opened = await EQ.open(id, { ...v, plaie: plaieDuCas(cas), plaiePeinte: !!(A && A.peindrePlaie && A._skin), pouls: (cas && cas.constantes && cas.constantes.pouls) || v.pouls, mast: mast || 'gauche', ...(id === 'prothese_mammaire' && mast === 'droite' ? { ok: { prothese: ['sein_D'] } } : {}) });
       $('eqx').hidden = !opened;
     });
   };

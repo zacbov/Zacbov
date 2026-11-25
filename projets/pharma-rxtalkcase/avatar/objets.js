@@ -64,8 +64,16 @@ export const PROC = {
     g.add(mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.03, 12), M(0xeeeeee), [0, 0.06, 0])); g.add(mesh(new THREE.BoxGeometry(0.012, 0.02, 0.022), M(0xd65a31), [0, 0.08, 0])); return g; },
   compresse: () => { const g = new THREE.Group(); const m = mesh(new THREE.BoxGeometry(0.075, 0.003, 0.075), M(0xffffff, { roughness: 1 })); g.add(m);   // compresse pliée, épaisseur en y
     const lines = new THREE.Mesh(new THREE.PlaneGeometry(0.075, 0.075, 12, 12), new THREE.MeshBasicMaterial({ color: 0xe0e0e0, wireframe: true })); lines.rotation.x = -Math.PI / 2; lines.position.y = 0.0016; g.add(lines); return g; },
-  plaie: () => { const g = new THREE.Group(); const m = mesh(new THREE.CircleGeometry(0.014, 24), M(0x9b1b1b, { roughness: 0.4 })); m.scale.set(1.6, 0.6, 1); g.add(m);   // écorchure, à plat (normale +z)
-    const r = mesh(new THREE.CircleGeometry(0.02, 24), M(0xd88a7a, { transparent: true, opacity: 0.5 }), [0, 0, -0.0005]); r.scale.set(1.5, 0.8, 1); g.add(r); return g; },
+  plaie: () => {                                                       // écorchure peinte (texture à bords fondus, à plat contre la peau : normale +z, grand axe en x le long du membre)
+    const c = document.createElement('canvas'); c.width = 256; c.height = 128; const x = c.getContext('2d'), rnd = (() => { let k = 7; return () => (k = (k * 16807) % 2147483647) / 2147483647; })();
+    const tache = (cx, cy, rx, ry, col, a) => { const gr = x.createRadialGradient(cx, cy, 0, cx, cy, 1); gr.addColorStop(0, col.replace('A', a)); gr.addColorStop(1, col.replace('A', 0));
+      x.save(); x.translate(cx, cy); x.scale(rx, ry); x.translate(-cx, -cy); x.fillStyle = gr; x.beginPath(); x.arc(cx, cy, 1, 0, 7); x.fill(); x.restore(); };
+    tache(128, 64, 118, 56, 'rgba(205,110,100,A)', 0.55);                                      // peau irritée autour
+    for (let i = 0; i < 26; i++) tache(60 + rnd() * 136, 44 + rnd() * 40, 10 + rnd() * 26, 4 + rnd() * 9, 'rgba(160,28,30,A)', 0.75);   // stries à vif
+    for (let i = 0; i < 9; i++) tache(70 + rnd() * 116, 50 + rnd() * 28, 3 + rnd() * 7, 2 + rnd() * 4, 'rgba(90,18,14,A)', 0.85);       // petites croûtes
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    const m = mesh(new THREE.PlaneGeometry(0.036, 0.018), new THREE.MeshStandardMaterial({ map: t, transparent: true, depthWrite: false, roughness: 0.45, polygonOffset: true, polygonOffsetFactor: -2 }));
+    const g = new THREE.Group(); g.add(m); return g; },
   tique: () => { const g = new THREE.Group(); const bd = mesh(new THREE.SphereGeometry(0.0028, 12, 10), M(0x3b2416, { roughness: 0.3 })); bd.scale.set(1, 1.35, 0.7); g.add(bd); g.scale.setScalar(1.8);   // tique gorgée, pattes (un peu agrandie pour être visible)
     g.add(mesh(new THREE.SphereGeometry(0.0012, 8, 6), M(0x1a0f08), [0, 0.0036, 0.0003]));
     for (let i = 0; i < 4; i++) for (const s of [-1, 1]) g.add(mesh(new THREE.CylinderGeometry(0.0002, 0.0002, 0.004, 4), M(0x1a0f08), [s * 0.003, 0.002 - i * 0.0012, 0], [0, 0, s * (1.2 + i * 0.15)])); return g; },
@@ -88,7 +96,9 @@ export function valeursDuCas(cas = {}) {
   const mol = m(/mollet[^.\d]{0,20}(\d{2}(?:[,.]\d)?)\s*cm/i) ?? demi(chev * 1.5 + (r(11) - 0.5) * 3 + (lym ? 6 : oed ? 2 : 0));
   const cuisse = m(/cuisse[^.\d]{0,20}(\d{2}(?:[,.]\d)?)\s*cm/i) ?? demi(mol * 1.48 + (r(19) - 0.5) * 4);
   const cl = /classe\s*(IV|III|II|I|[1-4])\b/i.exec(t), classe = cl ? ({ I: 1, II: 2, III: 3, IV: 4 }[cl[1].toUpperCase()] || +cl[1]) : 2;
-  return { temp: temp || 36.8, spo2: spo2 || 97, pouls: k.pouls || 76, poids: poids || 74, glyc: glyc || (glycMmol ? +(glycMmol * 0.18).toFixed(2) : 1.02), taille: tt || Math.round(70 + (poids || 74) * 0.35), trod: trodPos ? 'positif' : 'negatif',
+  const ausc = /pneumo(?:nie|pathie)|crépitant|foyer pulmonaire/i.test(t) ? 'crepitants' : /asthme|bpco|bronchite|bronchiolite|sifflement|wheezing|dyspnée sifflante/i.test(t) ? 'sibilants' : 'normal';
+  const tympan = /otite (?:moyenne|aiguë|séro)|tympan (?:rouge|bombé|inflammatoire)|otalgie fébrile/i.test(t) ? 'otite' : /otite externe|conduit (?:rouge|inflammatoire)|baignade/i.test(t) && /otite|oreille/i.test(t) ? 'externe' : /bouchon|cérumen/i.test(t) ? 'bouchon' : 'normal';
+  return { ausc, tympan, temp: temp || 36.8, spo2: spo2 || 97, pouls: k.pouls || 76, poids: poids || 74, glyc: glyc || (glycMmol ? +(glycMmol * 0.18).toFixed(2) : 1.02), taille: tt || Math.round(70 + (poids || 74) * 0.35), trod: trodPos ? 'positif' : 'negatif',
     cheville: chev, mollet: mol, cuisse, classe };
 }
 const fr = (x, d = 1) => Number(x).toFixed(d).replace('.', ',');
@@ -106,7 +116,45 @@ const ARM_L_UP = armOnTable(true);
 const faceZone = (key, label) => ({ label, at: (b) => headPt(b, faceFor(b)[key]) });
 const faceAt = (key, tilt = 0) => (b) => { const p = headPt(b, faceFor(b)[key]), n = headDir(b, V3(0, Math.sin(tilt), Math.cos(tilt))); return { p, n, up: headDir(b, V3(0, 1, 0)) }; };
 const boucheOuverte = (tilt, bas) => (b) => { const p = headPt(b, faceFor(b).bouche.clone().add(V3(0, -bas, -0.004))), n = headDir(b, V3(0, Math.sin(tilt), Math.cos(tilt))); return { p, n, up: headDir(b, V3(0, 1, 0)) }; };   // centre de la bouche ouverte (sous la ligne des lèvres) ; n vers l'avant et un peu vers le haut : l'objet entre en appuyant vers le bas
-const woundAt = (lift = 0.03) => (b) => { const F = forearm(b, 'Left', WOUND, lift); return { p: F.p, n: F.n, up: F.ax }; };
+/* plaie : seulement si le cas en décrit une, à l'endroit décrit (avant-bras, poignet, coude, main, genou, jambe ; gauche/droite) */
+const SITE_T = { avantbras: WOUND, poignet: 0.12, coude: 0.88, main: -0.42 };
+export function plaieDuCas(cas) {
+  if (!cas) return null;
+  const t = [cas.enonce, cas.apercu, cas.titre].filter(Boolean).join(' ').toLowerCase();
+  const re = /\b(plaies?|coupures?|s'est coupée?|écorchures?|écorchée?s?|égratignures?|éraflures?|entailles?|morsures?|blessures?|s'est brûlée?|brûlures? (?:thermique|superficielle|du (?:1er|premier|2e|second) degré|par|avec|à l'eau|au fer|au four))\b/g;   // « brûlure » seule = sensation : non
+  let m;
+  while ((m = re.exec(t))) {
+    const av = t.slice(Math.max(0, m.index - 30), m.index), w = t.slice(Math.max(0, m.index - 60), m.index + 70);
+    if (/\b(ni|pas de|sans|aucune?|absence de|ni de)\s+(\w+\s+)?$/.test(av)) continue;                                // « ni plaie », « pas de blessure »
+    if (/brûlures?\s+(d'estomac|gastriques?|rétrostern|mictionn|urinaires?|à la miction|en urinant|pharyng|oculaires?|vaginales?)|plaies?\s+(gastriques?|duodéna|ulcér|opératoire|chirurgicale)|ulcère|antécédent|atcd/.test(w)) continue;
+    if (/coups et blessures/.test(w)) continue;
+    if (/\b(cuisse|orteil|métatars|pied|talon|plante|cuir chevelu|paupière|canthus|œil|oeil|crâne|visage|front|arcade|lèvre|joue|nez|dos|thorax|abdomen|ventre|fesse|sacr|escarre)/.test(w)) continue;   // endroit non montré : pas de plaie peinte au hasard
+    const site = /\b(main|doigt|paume|pouce|phalange)/.test(w) ? 'main' : /poignet/.test(w) ? 'poignet' : /coude/.test(w) ? 'coude' : /avant-bras|\bbras\b/.test(w) ? 'avantbras'
+      : /genou/.test(w) ? 'genou' : /\b(jambe|tibia|mollet|cheville)/.test(w) ? 'jambe' : 'avantbras';
+    return { site, cote: /\bdroite?\b/.test(w) && !/\bgauche\b/.test(w) ? 'Right' : 'Left' };
+  }
+  return null;
+}
+const legSkin = (b, api, s, site, extra = 0) => {             // face antérieure du genou ou du tibia, posée sur la peau (lancer de rayon)
+  const k = b.W(s + 'Leg'), a = b.W(s + 'Foot'), hp = b.W(s + 'UpLeg'), p0 = site === 'genou' ? k.clone().lerp(hp, 0.04) : k.clone().lerp(a, 0.4);
+  const ax = (site === 'genou' ? hp.clone().sub(k) : k.clone().sub(a)).normalize(), n = b.fwd.clone(); n.sub(ax.clone().multiplyScalar(n.dot(ax))).normalize();
+  const key = s + ':' + site, R = (api._rayLeg = api._rayLeg || {});
+  if (R[key] == null) { const rc = new THREE.Raycaster(), skins = (api._skin && api._skin.skins) || api.rig.meshes.filter((m) => /body|corps/i.test(m.name));
+    rc.set(p0.clone().add(n.clone().multiplyScalar(0.15)), n.clone().negate()); rc.far = 0.15; const h = rc.intersectObjects(skins, false)[0]; R[key] = h ? 0.15 - h.distance : 0.05; }
+  return { p: p0.clone().add(n.clone().multiplyScalar(R[key] + extra)), n, ax };
+};
+const plaieF = (b, api, ctx, extra) => {
+  const W = (ctx && ctx.plaie) || (api && api._ctx && api._ctx.plaie) || { site: 'avantbras', cote: 'Left' };
+  const PM = api && api.plaieMonde && api.plaieMonde();                 // plaie peinte dans la peau : on vise son centre réel
+  if (PM && PM.n) { const leg = /genou|jambe/.test(W.site), ax = (leg ? b.W(W.cote + 'Leg').sub(b.W(W.cote + 'Foot')) : b.W(W.cote + 'ForeArm').sub(b.W(W.cote + 'Hand'))).normalize();
+    return { p: PM.p.clone().add(PM.n.clone().multiplyScalar(extra)), n: PM.n, ax }; }
+  if (W.site === 'genou' || W.site === 'jambe') return legSkin(b, api, W.cote, W.site, extra);
+  if (W.site === 'main') return forearm(b, W.cote, SITE_T.main, 0.016 + extra, Math.PI);          // dos de la main
+  if (W.site === 'coude') return forearm(b, W.cote, SITE_T.coude, 0.036 + extra, Math.PI);         // pointe du coude
+  return forearmSkin(b, api, W.cote, SITE_T[W.site] ?? WOUND, extra);
+};
+const tiqueAt = (extra = 0) => (b, z, api) => { const F = forearmSkin(b, api, 'Left', WOUND, extra); return { p: F.p, n: F.n, up: F.ax }; };
+const woundAt = (extra = 0) => (b, z, api, ctx) => { const F = plaieF(b, api, ctx, extra); return { p: F.p, n: F.n, up: F.ax }; };
 const wristZone = (s, t = 0.1) => ({ label: s === 'Left' ? 'Poignet gauche' : 'Poignet droit', at: (b) => b.W(s + 'Hand').lerp(b.W(s + 'ForeArm'), t) });
 
 const NEW = {
@@ -117,7 +165,7 @@ const NEW = {
     zones: { deltoide_G: { label: 'Deltoïde gauche', at: (b) => deltoid(b, 'Left').p }, deltoide_D: { label: 'Deltoïde droit', at: (b) => deltoid(b, 'Right').p },
       avantbras_G: { label: 'Avant-bras gauche', at: (b) => b.W('LeftForeArm').lerp(b.W('LeftHand'), 0.4) }, fesse: { label: 'Fesse (quadrant supéro-externe)', at: (b) => b.toW(V3(0.1, b.D.hipsY - 0.02, b.D.zb(b.D.hipsY) - 0.02)) } },
     pieces: [
-      { id: 'seringue', node: 'seringue', label: 'Seringue (vaccin)', ok: ['deltoide_G', 'deltoide_D'], pose: { axis: '+y', up: '+z', gap: -0.012 },
+      { id: 'seringue', node: 'seringue', label: 'Seringue (vaccin)', ephemere: 2600, ok: ['deltoide_G', 'deltoide_D'], pose: { axis: '+y', up: '+z', gap: -0.012 },
         at: (b, z) => deltoid(b, z === 'deltoide_D' ? 'Right' : 'Left'),
         faux: { avantbras_G: "L'avant-bras n'est pas un site d'injection intramusculaire : chez l'adulte, on pique dans le deltoïde.", fesse: "La fesse n'est plus recommandée pour les vaccins chez l'adulte (tissu graisseux épais, nerf sciatique) : préférez le deltoïde." },
         after: (ctx) => ({ geste: 'injection intramusculaire du vaccin dans le deltoïde', msg: "Injection dans le deltoïde, aiguille perpendiculaire à la peau." }) },
@@ -129,10 +177,10 @@ const NEW = {
   },
   trod_angine: {
     label: 'TROD angine (prélèvement de gorge)', consigne: "Abaissez la langue, puis prélevez au niveau des amygdales.", procs: { abaisse: PROC.abaisse, ecouvillon: PROC.ecouvillon },
-    stage: STAND({ pos: [0.18, 1.62, 0.6], look: [0, 1.56, 0.05] }, { morphs: { MouthOpen: 1, Jaw_Down: 0.8, BoucheOuverte: 1 } }), headLock: true,
+    stage: STAND({ pos: [0.18, 1.62, 0.6], look: [0, 1.56, 0.05] }, { morphs: { MouthOpen: 1, Jaw_Down: 0.8, BoucheOuverte: 0.75 } }), headLock: true,
     zones: { bouche: faceZone('bouche', 'Bouche'), nez: faceZone('narine', 'Narine') },
     pieces: [
-      { id: 'abaisse', node: 'abaisse', label: 'Abaisse-langue', ok: ['bouche'], pose: { axis: '-y', up: '+z', gap: -0.055 }, at: boucheOuverte(0.12, 0.016),
+      { id: 'abaisse', node: 'abaisse', label: 'Abaisse-langue', ok: ['bouche'], pose: { axis: '-y', up: '+z', gap: -0.055 }, at: (b) => { const B = boucheOuverte(0, 0.016)(b), n = b.fwd.clone().multiplyScalar(Math.cos(0.1)).add(b.up.clone().multiplyScalar(Math.sin(0.1))); return { p: B.p, n, up: b.up }; },   // à l'horizontale (même tête basculée), bout vers le bas sur la langue
         faux: { nez: "L'abaisse-langue se pose sur la langue pour dégager la gorge." }, after: () => ({ geste: 'abaisse la langue avec un abaisse-langue' }) },
       { id: 'ecouvillon', node: 'ecouvillon', label: 'Écouvillon de gorge', ok: ['bouche'], pose: { axis: '-y', up: '+z', gap: -0.075 }, at: boucheOuverte(-0.05, 0.006), spin: { dur: 2, f: 14, a: 0.6 },
         faux: { nez: "Pour une angine, le prélèvement est pharyngé : on frotte les amygdales et le fond de gorge, pas le nez." },
@@ -189,10 +237,17 @@ const NEW = {
     label: 'Lecteur de glycémie', consigne: "Faites une glycémie capillaire.", file: 'glucometre.glb', fallback: { lecteur: () => PROC.boite(0xeeeeee) },
     stage: { seat: 1, table: true, arms: armOnTable(false), cam: { pos: [0.45, 0.98, 0.95], look: [0.17, 0.75, 0.45] } },
     zones: { doigt_G: { label: 'Bout du doigt (côté)', at: (b) => fingerTip(b, 'Left').p }, avantbras_G: { label: 'Avant-bras', at: (b) => forearm(b, 'Left', 0.5).p }, lobe: { label: 'Lobe de l\'oreille', at: (b) => headPt(b, faceFor(b).lobe) } },
-    pieces: [{ id: 'lecteur', nodes: ['lecteur', 'autopiqueur', 'lancettes', 'bandelettes'], label: 'Autopiqueur et lecteur', ok: ['doigt_G'], pose: { axis: '-y', up: '-z', gap: 0.0 },
-      at: (b) => { const f = fingerTip(b, 'Left'), fw = f.dir.clone().setY(0).normalize(), p = f.p.clone().add(fw.clone().multiplyScalar(0.08)).add(b.side('Right').multiplyScalar(0.04)); p.y = b.toW(V3(0, b.D.hipsY + 0.16, 0)).y; return { p, n: V3(0, 1, 0), up: fw }; },
-      faux: { avantbras_G: "La glycémie capillaire se prélève sur le côté de la pulpe du doigt (moins douloureux que le centre).", lobe: "On prélève au bout du doigt, sur le côté de la pulpe." },
-      after: (ctx) => ({ geste: `glycémie capillaire au doigt : ${fr(ctx.glyc, 2)} g/L`, badge: `Glycémie ${fr(ctx.glyc, 2)} g/L` }) }],
+    props: [{ id: 'lancettes', node: 'lancettes', pose: { axis: '-y', up: '-z', gap: 0 }, at: (b) => { const f = fingerTip(b, 'Left'), fw = f.dir.clone().setY(0).normalize(), p = f.p.clone().add(fw.clone().multiplyScalar(0.06)).add(b.side('Right').multiplyScalar(0.13)); p.y = b.toW(V3(0, b.D.hipsY + 0.16, 0)).y; return { p, n: V3(0, 1, 0), up: fw }; } }],   // lancettes de rechange posées sur la table
+    pieces: [
+      { id: 'autopiqueur', node: 'autopiqueur', label: 'Autopiqueur (lancette neuve)', ok: ['doigt_G'], ephemere: 2400, pose: { axis: '+z', up: '+y', gap: 0.002 },   // repère glTF : stylo couché selon z, embout en +z
+        at: (b) => { const f = fingerTip(b, 'Left'), n = b.side('Left'); n.sub(f.dir.clone().multiplyScalar(n.dot(f.dir))).normalize();   // contre le côté de la pulpe, l'embout vers le doigt
+          return { p: f.p.clone().sub(f.dir.clone().multiplyScalar(0.007)).add(n.clone().multiplyScalar(0.007)), n, up: b.up }; },
+        faux: { avantbras_G: "La glycémie capillaire se prélève sur le côté de la pulpe du doigt (moins douloureux que le centre).", lobe: "On prélève au bout du doigt, sur le côté de la pulpe." },
+        after: (ctx) => { ctx.pique = true; return { geste: 'pique le côté de la pulpe du doigt avec l\'autopiqueur (lancette neuve)', msg: 'Lancette neuve à usage unique, côté de la pulpe (pas le centre ni le pouce), mains lavées et séchées.' }; } },
+      { id: 'lecteur', nodes: ['lecteur', 'bandelettes'], label: 'Lecteur et bandelette', ok: ['doigt_G'], requiert: ['pique'], requiertMsg: "Piquez d'abord le côté du doigt avec l'autopiqueur.", pose: { axis: '-y', up: '-z', gap: 0.0 },
+        at: (b) => { const f = fingerTip(b, 'Left'), fw = f.dir.clone().setY(0).normalize(), p = f.p.clone().add(fw.clone().multiplyScalar(0.08)).add(b.side('Right').multiplyScalar(0.04)); p.y = b.toW(V3(0, b.D.hipsY + 0.16, 0)).y; return { p, n: V3(0, 1, 0), up: fw }; },
+        faux: { avantbras_G: "On dépose la goutte du doigt sur la bandelette.", lobe: "On dépose la goutte du doigt sur la bandelette." },
+        after: (ctx) => ({ geste: `glycémie capillaire au doigt : ${fr(ctx.glyc, 2)} g/L`, badge: `Glycémie ${fr(ctx.glyc, 2)} g/L` }) }],
   },
   chambre: {
     label: "Chambre d'inhalation", consigne: "Montrez comment utiliser la chambre d'inhalation avec l'aérosol doseur.", file: 'chambre_inhalation.glb', fallback: { chambre: PROC.chambre },
@@ -220,34 +275,42 @@ const NEW = {
   },
   pansement: {
     label: 'Désinfection et pansement simple', consigne: "Nettoyez et désinfectez la plaie, puis protégez-la.", files: ['pansement.glb', 'bande.glb'],
-    multi: { pansement: 'pansement.glb', bande: 'bande.glb' }, procs: { antiseptique: PROC.antiseptique, compresse: PROC.compresse, plaie: PROC.plaie },
+    multi: { pansement: 'pansement.glb', bande: 'bande.glb', ciseaux: 'ciseaux.glb' }, procs: { antiseptique: PROC.antiseptique, compresse: PROC.compresse, plaie: PROC.plaie },
     prep: (g) => { const b = g.getObjectByName('bande'); if (b) b.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.map = null; o.material.color.set(0xf4f4ef); } }); },
     stage: { seat: 1, table: true, arms: ARM_L_UP, cam: { pos: [0.5, 1.05, 0.95], look: [0.2, 0.76, 0.32] } },
-    props: [{ id: 'plaie', node: 'plaie', pose: { axis: '-z', up: '+x', gap: -0.001 }, at: woundAt(0.031) }],
-    zones: { plaie: { label: 'Plaie', at: (b) => forearm(b, 'Left', WOUND, 0.031).p }, main: { label: 'Main', at: (b) => b.W('LeftHandMiddle1') } },
+    needFor: (ctx) => (ctx.plaie && /genou|jambe/.test(ctx.plaie.site) ? 'jambes' : null),
+    stageFor: (ctx) => { const W = ctx.plaie; if (!W) return null; const m = W.cote === 'Right' ? -1 : 1;
+      if (W.site === 'genou' || W.site === 'jambe') return { seat: 1, table: false, arms: handsOnThighs, knee: 1.45, drop: 0.36, cam: { pos: [0.7 * m, W.site === 'genou' ? 0.8 : 0.62, 1.25], look: [0.1 * m, W.site === 'genou' ? 0.48 : 0.3, 0.42] } };
+      const bras = armOnTable(W.site !== 'main'), arms = m > 0 ? bras : (D, s, o) => bras(D, s === 'Right' ? 'Left' : 'Right', o);
+      return { seat: 1, table: true, arms, cam: { pos: [0.5 * m, 1.05, 0.95], look: [0.2 * m, 0.76, 0.32] } }; },
+    props: [{ id: 'plaie', node: 'plaie', si: (c) => !!c.plaie && !c.plaiePeinte, pose: { axis: '-z', up: '+x', gap: 0 }, at: woundAt(0.0008) }],
+    zones: { plaie: { label: 'Plaie', at: (b, api) => plaieF(b, api, null, 0.002).p }, main: { label: 'Main', at: (b) => b.W('LeftHandMiddle1') } },
     pieces: [
-      { id: 'antiseptique', node: 'antiseptique', label: 'Antiseptique', ok: ['plaie'], pose: { axis: '+y', up: '+z', gap: 0.07 }, at: woundAt(0.031),
+      { id: 'antiseptique', node: 'antiseptique', label: 'Antiseptique', ephemere: 2200, ok: ['plaie'], pose: { axis: '+y', up: '+z', gap: 0.07 }, at: woundAt(0),
         faux: { main: "On désinfecte la plaie elle-même (après l'avoir nettoyée à l'eau et au savon)." }, after: () => ({ geste: 'nettoie puis désinfecte la plaie avec un antiseptique', msg: "Nettoyer à l'eau et au savon, rincer, puis antiseptique du centre vers l'extérieur." }) },
-      { id: 'compresse', node: 'compresse', label: 'Compresse stérile', ok: ['plaie'], pose: { axis: '-y', up: '+x', gap: -0.001 }, at: woundAt(0.031),
+      { id: 'compresse', node: 'compresse', label: 'Compresse stérile', ephemere: 2200, ok: ['plaie'], pose: { axis: '-y', up: '+x', gap: 0 }, at: woundAt(0.001),
         faux: { main: "La compresse se pose sur la plaie." }, after: () => ({ geste: 'sèche la plaie avec une compresse stérile' }) },
-      { id: 'pansement', node: 'pansement', label: 'Pansement', ok: ['plaie'], pose: { axis: '+z', up: '+x', gap: -0.001 }, at: woundAt(0.03),
+      { id: 'pansement', node: 'pansement', label: 'Pansement', remplace: ['bande'], ok: ['plaie'], pose: { axis: '+z', up: '+x', gap: 0 }, at: woundAt(0.0015),
         faux: { main: "Le pansement couvre la plaie, compresse centrée sur la lésion." }, after: () => ({ geste: 'pose un pansement adhésif sur la plaie' }) },
-      { id: 'bande', node: 'bande', label: 'Bande de gaze', ok: ['plaie'], pose: { axis: '-x', up: '+y', gap: 0.0 }, at: woundAt(0.035),
+      { id: 'bande', node: 'bande', label: 'Bande de gaze', remplace: ['pansement'], ok: ['plaie'], pose: { axis: '-x', up: '+y', gap: 0.0 }, at: woundAt(0.004),
         faux: { main: "La bande se déroule autour de l'avant-bras, sur le pansement, sans serrer." },
-        after: (ctx, api) => { const r = bandageRing(api); api.scene.add(r); return { geste: "maintient le pansement avec une bande de gaze, sans serrer", extra: r }; } },
+        after: (ctx, api) => { ctx.bande = true; const r = bandageRing(api); api.scene.add(r); return { geste: "maintient le pansement avec une bande de gaze, sans serrer", extra: r }; } },
+      { id: 'ciseaux', node: 'ciseaux', label: 'Ciseaux à bande', ephemere: 2200, ok: ['plaie'], requiert: ['bande'], requiertMsg: "Déroulez d'abord la bande : les ciseaux servent à la couper.", pose: { axis: '-y', up: '+z', gap: 0.012 }, at: woundAt(0.03),
+        faux: { main: "On coupe la bande une fois enroulée, sur l'avant-bras, sans toucher la peau (lame mousse côté peau)." },
+        after: () => ({ geste: 'coupe la bande avec les ciseaux à bout mousse et fixe l\'extrémité', msg: "Couper la bande (bout mousse côté peau), fixer l'extrémité avec un sparadrap, sans serrer." }) },
     ],
   },
   tique: {
     label: 'Retrait de tique', consigne: "Retirez la tique.", file: 'tire_tique.glb', fallback: { tire_tique: () => mesh(new THREE.CylinderGeometry(0.004, 0.006, 0.055, 10), M(0xd0d0d0)) },
     procs: { tique: PROC.tique, antiseptique: PROC.antiseptique },
     stage: { seat: 1, table: true, arms: ARM_L_UP, cam: { pos: [0.45, 1.0, 0.7], look: [0.19, 0.77, 0.24] } },
-    props: [{ id: 'tique', node: 'tique', pose: { axis: '-z', up: '+y', gap: 0.0 }, at: woundAt(0.031) }],
+    props: [{ id: 'tique', node: 'tique', pose: { axis: '-z', up: '+y', gap: 0.0 }, at: tiqueAt(0.001) }],
     zones: { tique: { label: 'Tique', at: (b) => forearm(b, 'Left', WOUND, 0.033).p }, main: { label: 'Main', at: (b) => b.W('LeftHandMiddle1') } },
     pieces: [
-      { id: 'tire_tique', node: 'tire_tique', label: 'Tire-tique', ok: ['tique'], pose: { axis: '-y', up: '+z', gap: -0.004 }, at: woundAt(0.031), spin: { dur: 2.2, f: 6, a: 1.4 },
+      { id: 'tire_tique', node: 'tire_tique', label: 'Tire-tique', ephemere: 2800, ok: ['tique'], pose: { axis: '-y', up: '+z', gap: -0.004 }, at: tiqueAt(0.001), spin: { dur: 2.2, f: 6, a: 1.4 },
         faux: { main: "Le crochet se glisse sous la tique, au ras de la peau." },
         after: () => ({ geste: "retire la tique au tire-tique, en tournant sans tirer", msg: "Glisser le crochet sous la tique, tourner doucement sans tirer, puis vérifier que la tête est retirée.", remove: ['tique'] }) },
-      { id: 'antiseptique', node: 'antiseptique', label: 'Antiseptique', ok: ['tique'], pose: { axis: '+y', up: '+z', gap: 0.07 }, at: woundAt(0.031),
+      { id: 'antiseptique', node: 'antiseptique', label: 'Antiseptique', ephemere: 2200, ok: ['tique'], pose: { axis: '+y', up: '+z', gap: 0.07 }, at: tiqueAt(0),
         faux: { main: "On désinfecte le point de morsure." }, after: () => ({ geste: 'désinfecte le point de morsure', msg: "Désinfecter, puis surveiller la zone pendant un mois (érythème migrant ?)." }) },
     ],
   },
@@ -291,6 +354,60 @@ const NEW = {
     ],
   },
 };
+/* ---------- hygiène des mains et gants (avant les soins), stéthoscope, otoscope, objets montrés au comptoir ---------- */
+const TABLE = (dx, dz) => (b) => { const p = b.toW(V3(dx, b.D.hipsY + 0.16, dz)); return { p, n: V3(0, 1, 0), up: b.fwd.clone().setY(0).normalize() }; };   // dessus de la table (patient assis)
+const ASSIS_TABLE = (cam) => ({ seat: 1, table: true, arms: handsOnThighsT, cam });
+function handsOnThighsT(D, s, o) { return { w: P(o, 0.13, D.hipsY + 0.06, 0.3), pole: P(o, 0.6, -0.4, -0.6), fing: V3(0, -0.3, 1), palm: V3(0, -1, 0), curl: 0.3 }; }
+const CAM_TABLE = { pos: [0.4, 1.3, 1.6], look: [0.08, 0.85, 0.35] };
+Object.assign(NEW, {
+  hygiene: {
+    label: 'Hygiène des mains et gants', consigne: "Avant un soin : friction hydroalcoolique, puis gants si vous touchez du sang, une muqueuse ou une plaie.", multi: { sha: 'sha.glb', gants: 'gants_boite.glb' },
+    stage: ASSIS_TABLE(CAM_TABLE),
+    zones: { mains: { label: 'Vos mains (pharmacien)', at: (b) => TABLE(0.22, 0.66)(b).p }, patient: { label: 'Mains du patient', at: (b) => TABLE(0.05, 0.36)(b).p } },
+    pieces: [
+      { id: 'sha', node: 'sha', label: 'Solution hydroalcoolique', ephemere: 2600, ok: ['mains'], pose: { axis: '-y', up: '-z', gap: 0 }, at: TABLE(0.3, 0.62),
+        faux: { patient: "C'est d'abord le soignant qui se frictionne les mains, juste avant le soin." },
+        after: (ctx, api) => { ctx.mainsFaites = true; (api._hyg = api._hyg || {}).mains = true; return { geste: 'friction hydroalcoolique des mains (30 secondes, jusqu\'à séchage)', msg: "Une dose dans le creux de la main, frictionner paumes, dos, entre les doigts, pouces, ongles et poignets, jusqu'à séchage (20 à 30 s)." }; } },
+      { id: 'gants', node: 'gants', label: 'Gants à usage unique', ok: ['mains'], requiert: ['mainsFaites'], requiertMsg: "Frictionnez-vous d'abord les mains : les gants se mettent sur des mains propres et sèches.", pose: { axis: '-y', up: '-z', gap: 0 }, at: TABLE(0.36, 0.48),
+        faux: { patient: "Les gants protègent le soignant et le patient : c'est vous qui les enfilez." },
+        after: (ctx, api) => { (api._hyg = api._hyg || {}).gants = true; return { geste: 'enfile des gants à usage unique', msg: "Gants non stériles à usage unique : un patient, un soin. Retirez-les et frictionnez-vous les mains après." }; } },
+    ],
+  },
+  auscultation: {
+    label: 'Stéthoscope (auscultation pulmonaire)', consigne: "Écoutez la respiration : pavillon sur la peau du thorax, de chaque côté.", multi: { stethoscope: 'stethoscope.glb' }, hide: ['Sweatshirt'], need: 'buste',
+    stage: STAND({ pos: [0.3, 1.28, 1.05], look: [0, 1.2, 0.05] }),
+    zones: { poumon_D: { label: 'Thorax droit', at: (b) => surfW(b, b.D.chestY + 0.02, 0.55, 'Right').c }, poumon_G: { label: 'Thorax gauche', at: (b) => surfW(b, b.D.chestY + 0.02, 0.55, 'Left').c },
+      ventre: { label: 'Ventre', at: (b) => surfW(b, b.D.waistY ?? b.D.hipsY + 0.12, 0, 'Left').c }, cou: { label: 'Cou', at: (b) => b.W('Neck').add(b.fwd.clone().multiplyScalar(0.05)) } },
+    pieces: [{ id: 'stethoscope', node: 'stethoscope', label: 'Stéthoscope', ok: ['poumon_D', 'poumon_G'], pose: { axis: '-y', up: '+z', gap: 0.004, c: [0.048, 0.012, 0.087] },   // pavillon contre la peau, embouts vers le haut
+      at: (b, z) => { const S = surfW(b, b.D.chestY + 0.02, 0.55, z === 'poumon_D' ? 'Right' : 'Left'); return { p: S.c, n: S.n, up: b.up }; },
+      faux: { ventre: "Pour les poumons, on ausculte le thorax (devant, sur les côtés et dans le dos), pas le ventre.", cou: "Le cou ne renseigne pas sur la respiration pulmonaire : posez le pavillon sur le thorax." },
+      after: (ctx) => { const R = { normal: 'murmure vésiculaire normal, symétrique', sibilants: 'sifflements à l\'expiration (sibilants)', crepitants: 'crépitants en fin d\'inspiration' }[ctx.ausc || 'normal'];
+        return { geste: `ausculte le thorax : ${R}`, badge: R[0].toUpperCase() + R.slice(1), msg: (ctx.ausc || 'normal') === 'normal' ? "Respiration calme par la bouche ; comparer droite et gauche." : "Bruit anormal : le patient doit être orienté vers un médecin." }; } }],
+  },
+  otoscope: {
+    label: 'Otoscope (examen du tympan)', consigne: "Regardez le conduit et le tympan : spéculum à usage unique, pavillon de l'oreille tiré en haut et en arrière.", multi: { otoscope: 'otoscope.glb' }, headLock: true,
+    stage: STAND({ pos: [0.62, 1.63, 0.62], look: [0.1, 1.57, 0.0] }),
+    zones: { oreille: { label: 'Oreille', at: (b) => headPt(b, faceFor(b).lobe.clone().add(V3(0.004, 0.03, 0.012))) }, nez: faceZone('narine', 'Narine'), oeil: { label: 'Œil', at: (b) => headPt(b, faceFor(b).oeil) } },
+    pieces: [{ id: 'otoscope', node: 'otoscope', label: 'Otoscope', ok: ['oreille'], pose: { axis: '+y', up: '-z', gap: -0.006, c: [0, 0.15, 0] },
+      at: (b) => { const L = faceFor(b).lobe.clone().add(V3(0.004, 0.03, 0.012)), p = headPt(b, L), n = p.clone().sub(headPt(b, V3(0, L.y, L.z))).normalize(); return { p, n, up: headDir(b, V3(0, 1, 0)) }; },   // dans l'axe du conduit, vers l'extérieur de la tête
+      faux: { nez: "L'otoscope examine le conduit auditif et le tympan : on le place dans l'oreille.", oeil: "Pas l'œil ! L'otoscope s'introduit doucement à l'entrée du conduit auditif." },
+      after: (ctx) => { const R = { normal: 'tympan gris nacré, translucide : normal', otite: 'tympan rouge et bombé : otite moyenne aiguë probable', externe: 'conduit rouge et gonflé, douloureux : otite externe probable', bouchon: 'conduit obstrué par un bouchon de cérumen' }[ctx.tympan || 'normal'];
+        return { geste: `examine l'oreille à l'otoscope : ${R}`, badge: R.split(' : ')[0].replace(/^./, (c) => c.toUpperCase()), msg: (ctx.tympan || 'normal') === 'normal' ? 'Rien d\'anormal au tympan.' : ctx.tympan === 'bouchon' ? 'Bouchon : pas de coton-tige ; un soluté céruménolytique si le tympan est sain, sinon médecin.' : 'Orientez vers un médecin : le pharmacien ne pose pas le diagnostic.' }; } }],
+  },
+});
+/* objets montrés au patient sur la table, pour expliquer leur usage (pas de geste sur le corps) */
+const mat = (g) => g.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) if (m.metalness > 0.4 && !m.map) { m.metalness = 0.05; m.roughness = Math.max(m.roughness, 0.45); } });   // modèles sans texture exportés « métal » : plastique
+const MONTRER = (id, label, fichier, conseil, geste) => {
+  NEW[id] = { prep: mat, label, consigne: 'Posez-le devant le patient et expliquez son utilisation.', multi: { [id]: fichier }, stage: ASSIS_TABLE(CAM_TABLE),
+    zones: { table: { label: 'Devant le patient', at: (b) => TABLE(0.0, 0.42)(b).p } },
+    pieces: [{ id, node: id, label, ok: ['table'], pose: { axis: '-y', up: '-z', gap: 0 }, at: TABLE(0.0, 0.42), after: () => ({ geste, msg: conseil }) }] };
+};
+MONTRER('tire_lait', 'Tire-lait manuel', 'tire_lait.glb', "Mains lavées, matériel propre ; téterelle centrée sur le mamelon ; lait conservé 4 h à température ambiante, 48 h au réfrigérateur (au fond, pas dans la porte).", 'présente le tire-lait manuel et explique son utilisation et la conservation du lait');
+MONTRER('change_complet', 'Culotte absorbante', 'change_complet.glb', "Taille selon le tour de taille ; absorption adaptée à la quantité de fuites ; changer dès qu'elle est mouillée et protéger la peau (toilette douce, crème barrière).", 'présente une culotte absorbante et explique le choix de la taille et de l\'absorption');
+MONTRER('poche_urine', 'Poche à urine', 'poche_urine.glb', "Toujours sous le niveau de la vessie, sans couder le tuyau ; vider avant qu'elle soit pleine aux deux tiers ; système clos, robinet nettoyé.", 'présente la poche à urine et explique sa position et sa vidange');
+MONTRER('sonde_ng', 'Sonde nasogastrique', 'sonde_ng.glb', "Vérifier le repère de longueur avant chaque utilisation ; rincer à l'eau avant et après la nutrition ou les médicaments ; patient demi-assis pendant et après.", 'présente la sonde nasogastrique et explique son entretien');
+MONTRER('bracelet_id', "Bracelet d'identification", 'bracelet_id.glb', "Identitovigilance : vérifier nom, prénom, date de naissance sur le bracelet avant chaque soin ou délivrance.", "vérifie l'identité du patient sur son bracelet");
+
 /* anneaux procéduraux : ruban autour de la taille, bande autour de l'avant-bras */
 function tapeRing(api) {
   const D = api.D, y = D.waistY ?? D.hipsY + 0.1, rx = D.hx(y) + 0.004, zf = D.zf(y) + 0.004, zb = D.zb(y) - 0.004, zc = (zf + zb) / 2, rz = (zf - zb) / 2, pts = [];
@@ -456,10 +573,18 @@ Object.assign(NEW, {
   },
 });
 RESERVE.push(
-  { id: 'bas_contention', nom: 'Bas de contention', famille: 'Contention', proc: 'bas', pert: /contention|varice|insuffisance veineuse|phl[ée]bite|thrombose|lymph[oœ]d[eè]me|jambes lourdes|chevilles gonfl/i },
+  { id: 'bas_contention', nom: 'Bas de contention', famille: 'Contention', fichier: 'bas_produit.glb', proc: 'bas', pert: /contention|varice|insuffisance veineuse|phl[ée]bite|thrombose|lymph[oœ]d[eè]me|jambes lourdes|chevilles gonfl/i },
   { id: 'ceinture_lombaire', nom: 'Ceinture lombaire', famille: 'Orthèses', proc: 'ceinture', pert: /lombalgie|lumbago|lombaire|hernie discale|sciatique|mal de dos|mal au dos/i },
   { id: 'corset', nom: "Corset d'immobilisation", famille: 'Orthèses', proc: 'corset', pert: /tassement|fracture vert[ée]bral|ost[ée]oporose|corset|dorsalgie|scoliose/i },
   { id: 'prothese_mammaire', nom: 'Prothèse mammaire', famille: 'Orthèses', proc: 'prothese', pert: /mastectomie|cancer du sein|tumorectomie|prothèse mammaire|sein/i },
+  { id: 'hygiene', nom: 'Solution hydroalcoolique et gants', famille: 'Hygiène', fichier: 'sha.glb', pert: /./ },
+  { id: 'auscultation', nom: 'Stéthoscope', famille: 'Examen', fichier: 'stethoscope.glb', pert: /toux|essouffl|dyspnée|asthme|bpco|bronch|pneumo|respir|sifflement|poumon/i },
+  { id: 'otoscope', nom: 'Otoscope', famille: 'Examen', fichier: 'otoscope.glb', pert: /oreille|otite|otalgie|tympan|bouchon|cérumen|audition|acouphène/i },
+  { id: 'tire_lait', nom: 'Tire-lait', famille: 'Conseil', fichier: 'tire_lait.glb', pert: /allaite|allaitement|tire-lait|lait maternel|engorgement|crevasse|mamelon/i },
+  { id: 'change_complet', nom: 'Culotte absorbante', famille: 'Conseil', fichier: 'change_complet.glb', pert: /incontinence|fuites urinaires|énurésie|pipi au lit|protection|couche/i },
+  { id: 'poche_urine', nom: 'Poche à urine', famille: 'Hôpital', fichier: 'poche_urine.glb', pert: /sonde urinaire|sondage|poche à urine|rétention urinaire|prostate|vessie/i },
+  { id: 'sonde_ng', nom: 'Sonde nasogastrique', famille: 'Hôpital', fichier: 'sonde_ng.glb', pert: /nasogastrique|nutrition entérale|sonde gastrique|gastrostomie|dénutrition|troubles de la déglutition/i },
+  { id: 'bracelet_id', nom: "Bracelet d'identification", famille: 'Hôpital', fichier: 'bracelet_id.glb', pert: /./, pop: 'hospitalier' },
 );
 
 /* enregistrement : chaque scène reçoit un modèle composé de plusieurs fichiers (multi) ; equip.js charge item.file, on gère ici les fichiers multiples */
@@ -479,7 +604,7 @@ export const REACTIONS = {
     'trod_angine.ecouvillon': ["Kof ! C'est vraiment désagréable…", 'degout', 'gorge'],
     'trod_naso.ecouvillon': ["Ouh ! Ça pique, j'en ai les larmes aux yeux.", 'douleur', 'front'],
     'thermometre.thermometre': ["C'est déjà fini ? Je n'ai rien senti.", 'surprise'],
-    'glucometre.lecteur': ['Aïe, ça pique un peu.', 'douleur'],
+    'glucometre.autopiqueur': ['Aïe, ça pique un peu.', 'douleur'], 'glucometre.lecteur': ['Alors, c\'est bon ?', 'doute'],
     'metre_ruban.metre_ruban': ["Ah, c'est froid !", 'surprise', 'ventre'],
     'pansement.antiseptique': ['Ça pique !', 'douleur', 'bras'],
     'tique.tire_tique': ["Elle est partie entière ? Je n'ai rien senti.", 'doute'],
@@ -489,11 +614,15 @@ export const REACTIONS = {
     'bas_contention.bas': ['Ça serre, mais c\'est supportable. Je dois les mettre tous les jours ?', 'doute', 'cuisse'],
     'ceinture_lombaire.ceinture': ['Ah, je me sens maintenue. Je peux la garder la nuit ?', 'doute', 'reins'],
     'corset.corset': ["C'est rigide… je ne vais plus pouvoir me pencher.", 'anxieux', 'ventre'],
+    'auscultation.stethoscope': ["C'est froid ! Je respire fort par la bouche ?", 'surprise', 'poitrine'],
+    'otoscope.otoscope': ["Ouh, ça chatouille… vous voyez quelque chose ?", 'doute'],
+    'pansement.ciseaux': ["Attention avec les ciseaux…", 'anxieux'],
     'prothese_mammaire.prothese': ["C'est… étrange. Ça fait du bien de se revoir comme avant.", 'tristesse', 'poitrine'],
   },
   faux: {                                                    // par zone (puis par objet.zone si besoin)
     oeil: ["Hé ! Pas dans l'œil !", 'peur'], fesse: ['Dans la fesse ?! Je dois baisser mon pantalon ?', 'surprise'],
     'thermometre.bouche': ["Dans la bouche ? Je croyais qu'il était sans contact…", 'doute'], 'thermometre.aisselle': ["Sous le bras ? Il ne faut pas le viser sur le front ?", 'doute'],
+    'auscultation.ventre': ["Sur le ventre ? Je croyais que c'était pour les poumons…", 'doute'], 'otoscope.nez': ['Dans le nez ? Mais c\'est l\'oreille qui me fait mal…', 'doute'],
     'trod_angine.nez': ["Dans le nez ? Mais c'est la gorge qui me fait mal…", 'doute'], 'trod_naso.bouche': ["Dans la bouche ? Pour la grippe, on m'avait fait le nez…", 'doute'],
     'ceinture_lombaire.poitrine': ["Si haut ? J'ai mal en bas du dos, pourtant.", 'doute'], 'corset.cou': ["Autour du cou ? C'est pour le dos, non ?", 'doute'],
     'prothese_mammaire.sein_D': ["Ce n'est pas de ce côté-là qu'on m'a opérée…", 'tristesse'], 'prothese_mammaire.sein_G': ["Ce n'est pas de ce côté-là qu'on m'a opérée…", 'tristesse'],
@@ -509,3 +638,4 @@ export const REACTIONS = {
   sans_mesure: { bas_contention: ["Vous ne prenez pas mes mesures ? À ma voisine, on lui avait mesuré les jambes.", 'doute'], defaut: ['Vous ne mesurez pas mon tour de taille avant ?', 'doute'] },
   muets: ['reanimation'],                                    // patient inconscient : pas de réaction
 };
+export const _plaieF = plaieF;

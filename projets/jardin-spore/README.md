@@ -28,6 +28,8 @@ bassin à étang, 10 plantes générées (Fabrique : achillée, aconits, actée,
 
 - **Chargement stable** : `loading.js` affiche un écran de progression (étape en cours, pourcentage, suivi des textures et modèles chargés par le réseau, attente maximale de 20 s) ; les étapes lourdes (`createHerbs`, `createSpeciesMushrooms`, `createGarden`) rendent la main au navigateur entre deux blocs ; les shaders sont compilés avant l'affichage (`compileAsync`) ; l'écran se fond quand tout est prêt. `bootstrap.js` utilise un import dynamique : si un CDN est inaccessible ou si WebGPU manque, un message d'erreur lisible avec « Réessayer » remplace la page blanche. Perte du pilote graphique : même écran d'erreur.
 
+- **Habitat compact (version actuelle)** : tout tient dans ~14 unités autour du bosquet. `PARTERRES` (garden.js) place chaque espèce dans un massif ordonné vu depuis la caméra par défaut : plantes hautes au fond, prairie fleurie à gauche, bordure basse à droite, petites plantes sur les côtés, couloir central dégagé. Bassin en (9,5 ; −5,5). La mousse est la même petite mousse que sous le bosquet, sur tout l’habitat (`MOSS_QUALITY` dans `forest.js`), avec petites plantes violettes et feuilles tombées étendues. L’eau est une surface opaque (le matériau transparent ne s’affichait pas ; les rides animées sont retirées). Le bouton « Encre » est en haut à droite.
+
 Lancer : `npm start` puis http://localhost:8016/ dans un navigateur WebGPU.
 
 ---

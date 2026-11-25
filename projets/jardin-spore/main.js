@@ -27,7 +27,7 @@ export async function startExperiment(){
   const scene=new THREE.Scene();scene.background=new THREE.Color('#010302');scene.fog=new THREE.FogExp2('#010302',.036);
   const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.025,200);
   const controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.dampingFactor=.07;
-  controls.minDistance=2.2;controls.maxDistance=70;controls.maxPolarAngle=Math.PI*.53;
+  controls.minDistance=2.2;controls.maxDistance=40;controls.maxPolarAngle=Math.PI*.53;
   controls.autoRotate=true;controls.autoRotateSpeed=.32;controls.zoomSpeed=.65;
   function resetView(){controls.target.set(1.2,1.3,.6);camera.position.set(.6,3.2,9.8);camera.position.sub(controls.target).multiplyScalar(Math.max(1,.95/camera.aspect)).add(controls.target);controls.update();}
   resetView();
@@ -50,7 +50,7 @@ export async function startExperiment(){
   await loader.report(.84,'Post-traitement');
   const inkButton=document.getElementById('ink');inkButton.addEventListener('click',()=>{const on=post.ink.value<.5;post.ink.value=on?1:0;inkButton.setAttribute('aria-pressed',String(on))});
   const goTo=(t,p)=>{controls.target.set(...t);camera.position.set(...p);controls.update()};
-  document.getElementById('v-grove').onclick=()=>goTo([1.2,1.3,.6],[.6,3.2,9.8]);document.getElementById('v-pond').onclick=()=>goTo([POND.x,.6,POND.z],[POND.x-4,4,POND.z+15]);
+  document.getElementById('v-grove').onclick=()=>goTo([1.2,1.3,.6],[.6,3.2,9.8]);document.getElementById('v-pond').onclick=()=>goTo([POND.x,.6,POND.z],[POND.x-3,3.4,POND.z+12]);
   const timeline=createTimeline({scene,renderer,materials,spores,post,lights:{back,blue},garden,target:controls.target});
   const settings={paused:matchMedia('(prefers-reduced-motion: reduce)').matches,adaptive:true,orbit:true,resolution:1.5};
   const metrics={frames:0,fps:0,frameMs:0,particleCount:spores.count,adjustments:[],device:renderer.backend.device.adapterInfo??null};

@@ -27,3 +27,15 @@ Dans la page : ?patiente=amanda (mémorisé), ?patiente=v5 pour revenir à la pa
 Autre personnage (ex. MHC_Crowd84) : mêmes étapes dans un dossier à part, avec
   export MH_SRC=<dossier DCC Export> MH_HAIR=96,50,28     (couleur des cheveux et du cuir chevelu, R,G,B)
 puis ajouter son nom à la liste de PATIENTE_GLB dans index.html (?patiente=<nom>).
+
+Étape 3 (v30) : vêtements et coiffure fournis par Tice
+- textures_vet.py <r,g,b> <nom> : textures générées (denim, jersey) et cartes du ponytail teintées (tex/pony_<nom>.png).
+- vet.py -- in=<s2.blend> out=<s3.blend> haut=tshirt|top coul_haut=r,g,b cheveux=pony|pack:00N coul_chev=r,g,b tex_pony=<png>
+  * jean (denim_mom_jean.glb, mannequin retiré, décimé à 42 %) : hauteurs recalées (taille, entrejambe, ourlet), centres
+    par tranche lissés, aisance 1 à 3 cm le long de la normale du corps, poids copiés du corps.
+  * t-shirt (t_shirt_basic.glb) : mis à l'échelle sur le cou ; le corps est posé bras abaissés comme le vêtement (≈ 45°),
+    ajustement, poids interpolés depuis le corps posé, puis skinning inverse -> pose T. Couleur cuite dans la texture.
+  * coiffure : ponytail (cartes LOD1 + tête de référence) ou un style du hair pack (matériaux Hair.00N/Scalp.00N),
+    orienté par le bas du cuir chevelu (nuque), recalé sur le crâne, poussé hors de la tête, poids = tête.
+  Amanda : t-shirt bleu-gris, ponytail noir. Crowd84 : t-shirt vert sauge, style 005 (carré dégradé) auburn.
+  Le « streetwear top » (brassière à fines bretelles) est possible (haut=top) mais laisse voir le soutien-gorge.

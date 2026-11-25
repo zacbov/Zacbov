@@ -58,7 +58,7 @@ function placeLeafClearOfStems(leaf){
 export async function createForest(materials) {
   await mossLODReady;
   const group=new THREE.Group();group.name='Forest floor';
-  const geo=new THREE.PlaneGeometry(110,110,480,480);geo.rotateX(-Math.PI/2);
+  const geo=new THREE.PlaneGeometry(70,70,360,360);geo.rotateX(-Math.PI/2);
   const p=geo.attributes.position;
   for(let i=0;i<p.count;i++)p.setY(i,groundHeight(p.getX(i),p.getZ(i)));
   geo.computeVertexNormals();const floor=new THREE.Mesh(geo,materials.ground);group.add(floor);
@@ -82,12 +82,16 @@ export async function createForest(materials) {
   }
   // La mousse couvre tout le sol du jardin (touffes plus grosses et plus espacées au-delà du bosquet),
   // pour que les plantes poussent dans un tapis et pas sur de la terre nue. Réglages : MOSS_EXTRA, MOSS_R.
-  const scatterMoss=(n,r0,r1,s0,s1)=>{for(let i=0;i<n;i++){
+  // Même petite mousse que sous le bosquet, étendue à tout l'habitat (plus espacée en s'éloignant).
+  // MOSS_QUALITY multiplie le nombre de touffes hors bosquet : baisse-le (0.5) si ça rame.
+  const MOSS_QUALITY=1;
+  const scatterMoss=(n,r0,r1,s0,s1,cell)=>{for(let i=0;i<n;i++){
     const a=random()*Math.PI*2,r=r0+(r1-r0)*Math.sqrt(random()),x=Math.cos(a)*r,z=Math.sin(a)*r;
     if(pondField(x,z)<.25||groundHeight(x,z)<-.05)continue;
-    addTuft(x,z,s0+random()*(s1-s0),i%5,2);}};
-  scatterMoss(7000,2.7,9,1.7,2.5);     // autour du bosquet : touffes petites et serrées
-  scatterMoss(4000,9,18,3,4.2);        // plus loin : touffes plus grosses et espacées (réglages : nombre, rayons, tailles)
+    addTuft(x,z,s0+random()*(s1-s0),i%5,cell);}};
+  scatterMoss(Math.round(4000*MOSS_QUALITY),2.7,5,1.2,1.85,.8);
+  scatterMoss(Math.round(5000*MOSS_QUALITY),5,9,1.3,1.95,1.2);
+  scatterMoss(Math.round(3500*MOSS_QUALITY),9,14.5,1.5,2.2,1.6);
   // Small uneven patches grow right against each stipe, hiding the straight
   // soil intersection without making a continuous artificial ring.
   for(const m of MUSHROOMS){
@@ -120,8 +124,9 @@ export async function createForest(materials) {
   }
   group.add(moss);
   const accents=[];
-  for(let i=0;i<155;i++){
-    const a=random()*Math.PI*2,r=.25+Math.sqrt(random())*2.05,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  for(let i=0;i<155+650;i++){
+    const far=i>=155,a=random()*Math.PI*2,r=far?2.4+Math.sqrt(random())*10.5:.25+Math.sqrt(random())*2.05,x=Math.cos(a)*r,z=Math.sin(a)*r;
+    if(far&&(pondField(x,z)<.4||groundHeight(x,z)<-.05))continue;
     const geometry=createAccentGeometry(4200+i,i%2===0?0:1);
     object.position.set(x,groundHeight(x,z)+.012,z);object.rotation.set(0,random()*Math.PI*2,0);
     object.scale.setScalar(.65+random()*.55);object.updateMatrix();accents.push(geometry.applyMatrix4(object.matrix));
@@ -136,8 +141,9 @@ export async function createForest(materials) {
     group.add(twig);
   }
   const litter=[];
-  for(let i=0;i<45;i++){
-    const a=random()*Math.PI*2,r=.75+random()*2.2,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  for(let i=0;i<45+120;i++){
+    const far=i>=45,a=random()*Math.PI*2,r=far?3+random()*9:.75+random()*2.2,x=Math.cos(a)*r,z=Math.sin(a)*r;
+    if(far&&(pondField(x,z)<.4||groundHeight(x,z)<-.05))continue;
     const leaf=new THREE.Mesh(leafGeometry(i+931),materials.leaf);
     leaf.position.set(x,groundHeight(x,z)+.06,z);leaf.rotation.set((random()-.5)*.6,random()*Math.PI*2,(random()-.5)*.8);
     leaf.scale.setScalar(.16+random()*.20);

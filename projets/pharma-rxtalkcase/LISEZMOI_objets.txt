@@ -413,6 +413,39 @@ v35 (25/11/2026)
   tire_lait, change_complet, poche_urine, sonde_ng, bracelet_id, bas_produit (.glb, Draco).
 - Crédits (CC-BY-4.0, Sketchfab) : Nitrile Glove Box V2 (johnny3D) ; Rubber Med Gloves (KOMODOZ) ; Manual breast
   pump (lia._.alia) ; Tactical scissors (Medicz) ; Doctor's stethoscope (Vera4Art) ; otoscope (sinapashami) ;
-  Wheelchair (imnuts000). Fournis en OBJ par Tice, licence à vérifier avant diffusion : Purell Hand Sanitizer,
-  Urine Bag, Sonda nasogástrica de Levin, Pediatric Pullup, Infant Hospital Wristband, Achill Compression Socks.
+  Wheelchair (imnuts000). Achetés par Tice : Purell Hand Sanitizer, Urine Bag, Sonda nasogástrica de Levin,
+  Pediatric Pullup, Infant Hospital Wristband, Achill Compression Socks (tous les objets fournis sont achetés).
   Non utilisé : Test Tube (licence Sketchfab Standard, pas de redistribution).
+
+v36 (25/11/2026)
+- Voix Piper : le travailleur ne se chargeait plus (parenthèse avalée par un commentaire dans piper-worker.js, v32).
+- Visage UV : seulement sur les patientes MetaHuman (Amanda, Crowd84) et le patient homme ; la patiente v5 garde son
+  visage (son dépliage UV est différent) et ses cheveux (texture partagée avec la peau : la main devenait grise).
+- Sous-vêtements cachés sous un jean / un t-shirt visibles (la culotte traversait le jean). Patient homme : peau
+  rendue des deux côtés (bord coupé de l'avant-bras sous la manche : plus de dents sombres).
+- Caméra : le fond ne suit plus le balancement du patient (impression de caméra qui tremble).
+- Réserve : meuble recalculé (5 rangées, 8 colonnes) ; familles Hygiène, Examen, Conseil.
+- Gestes posés sur le patient : bracelet d'identification au poignet (ajusté par lancer de rayons), sonde
+  nasogastrique en place (narine, sparadrap sur la joue, embout sur la poitrine ; vérification et fixation), tire-lait
+  sur le sein (par-dessus le vêtement, pour l'explication), poche à urine au mollet (jamais au-dessus de la vessie),
+  culotte absorbante présentée au bassin (taille). Mains du patient sur la table pour les scènes assises.
+- Tire-lait moins compressé (90 000 faces, tétine de rechange retirée).
+- Objets dessinés (oxymètre, chambre, nébuliseur, PPC) : plus de requête vers des fichiers absents (404).
+- cas-worker.js : plus de reasoning_effort pour Gemma chez Google (400 puis renvoi : temps perdu). À redéployer.
+
+v37 (25/11/2026)
+- Bas de contention porté : le vrai modèle (Achill) ajusté sur les jambes des trois patientes (v5, Amanda, Crowd84) :
+  repère jambe et repère pied transportés du bas vers la patiente, rayons lancés depuis l'axe de la jambe et du pied,
+  tissu à 3 mm de la peau, poids de peau repris du corps. Talon bouché et sous-couche unie dessous (pas de peau visible
+  par les trous du modèle). Il se déroule toujours du pied vers le genou. Script : outils/bas_contention/fit_bas.py.
+- Bouche de la patiente v5 refaite : poche buccale d'origine retirée (elle s'étirait en voiles roses), cavité sombre,
+  ouverture recalculée (lèvre supérieure retroussée = haut, d'après la distance le long de la peau), ponts de peau
+  entre les lèvres retirés. La parole ouvre vraiment la bouche (dents, langue). Scripts : outils/bouche_v5/.
+- Cas PARHAF hospitaliers (PH…) : le pharmacien parle au patient dans sa chambre : patient couché sur le lit et
+  interlocuteur = le patient (cadre « hospitalier_lit » du worker). Les appels d'un service restent sans patient
+  (le modèle est maintenant vraiment caché). cas-worker.js à redéployer.
+
+v38 (26/11/2026) — objets achetés par Tice (droits acquis) :
+- lunettes_o2.glb (canule nasale à oxygène) : scène « Lunettes à oxygène » (réserve, famille Hôpital).
+- picc.glb (PICC) : scène « PICC » (réserve, famille Hôpital, cas hospitaliers).
+- catheter_court.glb (cathéter veineux périphérique court) et catheter_ombilical.glb (connecteur seul) : convertis, pas encore utilisés.

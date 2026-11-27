@@ -291,7 +291,7 @@ export async function createAvatar(el, opts = {}) {
   function suivreFond() {
     if (!DECOR.ok || API.base === 'lit') return;
     const w = el.clientWidth, h = el.clientHeight; if (!w || !h) return;
-    const hz = rig.local('Head').z, d = Math.max(0.3, camera.position.z - hz);
+    const hz = DECOR.hz ?? (DECOR.hz = rig.local('Head').z), d = Math.max(0.3, camera.position.z - hz);   // profondeur du patient figée : le fond ne suit plus le balancement (impression de caméra qui tremble)
     camera.getWorldDirection(_fv); _fp.copy(camera.position).addScaledVector(_fv, d / Math.max(0.2, -_fv.z));   // point visé dans le plan du patient
     const s = 1.5 * (2.1 + RECUL) / (d + RECUL);
     let bw, bh; if (w / h > DECOR.a) { bw = w; bh = w / DECOR.a; } else { bh = h; bw = h * DECOR.a; } bw *= s; bh *= s;
@@ -514,6 +514,7 @@ export async function createAvatar(el, opts = {}) {
       } else if (API.speaking) { charPos += cps * dt; const i = Math.floor(charPos), f = charPos - i; add(VIS[VQ[i] || '_'], 1 - f); add(VIS[VQ[i + 1] || '_'], f); if (i > VQ.length + 2) API.speaking = false; }
       for (const n of new Set([...Object.keys(E.face), ...Object.keys(emoW)])) emoW[n] = (emoW[n] || 0) + ((E.face[n] || 0) - (emoW[n] || 0)) * (1 - Math.exp(-dt * 6));
       for (const n in emoW) tw[n] = (tw[n] || 0) + emoW[n] * fI * (API.speaking && MOUTH.test(n) ? 0.45 : 1);
+      if (API.boucheJaw && tw.Jaw_Down) { tw.BoucheOuverte = (tw.BoucheOuverte || 0) + tw.Jaw_Down * API.boucheJaw; tw.Jaw_Down *= 0.3; if (tw.MouthOpen) tw.MouthOpen *= 0.5; }   // patiente v5 : la vraie ouverture (lèvres, dents, langue) remplace le menton seul
       if (t > nextBlink) { blinkT = t; nextBlink = t + (2.5 + Math.random() * 3) / (E.blink || 1); }
       const x = (t - blinkT) / 0.18, bw = x >= 0 && x < 1 ? Math.sin(x * Math.PI) : 0;
       for (const n of names) {
@@ -633,7 +634,11 @@ export async function createAvatar(el, opts = {}) {
   renderer.localClippingEnabled = true;
   const byName = (n) => gltf.scene.getObjectByName(n);
   const MED = ['BasContention', 'CeintureLombaire', 'Corset', 'SoutienGorgeMastectomie', 'ProtheseMammaire_G', 'ProtheseMammaire_D'];
-  API.femme = !!byName('SoutienGorge'); API.corps = !!byName('CorpsHaut');   // patient homme v31 : corps complet sous les vêtements
+  API.femme = !!byName('SoutienGorge'); API.corps = !!byName('CorpsHaut');
+  API.boucheJaw = names.includes('BoucheOuverte') && !byName('Tete') ? 0.6 : 0;
+  gltf.scene.traverse((m) => { if (m.isMesh) for (const mt of [].concat(m.material)) if (/^Tissu_Bas/.test(mt.name)) { mt.roughness = 1; mt.metalness = 0; if ('specularIntensity' in mt) mt.specularIntensity = 0.15; } });   // bas en tricot : mat
+  if (API.boucheJaw) gltf.scene.traverse((m) => { if (m.isMesh) for (const mt of [].concat(m.material)) if (mt.name === 'Bouche') mt.color.setScalar(0.82); });   // dents un peu moins blanches   // v37 : intérieur de bouche refait (cavité sombre), la parole ouvre vraiment la bouche
+  if (API.corps) for (const n of ['Body', 'CorpsHaut']) { const o = byName(n); if (o) o.traverse((m) => { if (m.isMesh) for (const mt of [].concat(m.material)) mt.side = THREE.DoubleSide; }); }   // bord coupé de l'avant-bras sous la manche : l'intérieur rend couleur peau (plus de dents sombres)   // patient homme v31 : corps complet sous les vêtements
   {                                                                      // culotte de la couleur du soutien-gorge (bleue comme le pantalon, elle passait pour un reste de pantalon)
     const mats = (n) => { const r = []; const o_ = byName(n); if (o_) o_.traverse((m) => { if (m.isMesh) r.push(m); }); return r; };
     const sg = mats('SoutienGorge')[0];
@@ -649,7 +654,9 @@ export async function createAvatar(el, opts = {}) {
       if (t.jambes) { hide('Pants'); hide('Shoes'); }
       if (haut) hide('Shirt');
       if (API.femme && (t.poitrine || API.porte.has('SoutienGorgeMastectomie'))) hide('SoutienGorge');
-      if (API.corps) { if (!haut) hide('CorpsHaut'); if (!t.jambes) hide('CorpsBas'); }   // corps du patient : seulement la partie découverte (pas de peau qui traverse les vêtements)
+      if (API.corps) { if (!haut) hide('CorpsHaut'); if (!t.jambes) hide('CorpsBas'); }
+      if (API.femme) { const vu = (n) => { const o = byName(n); return !!o && o.visible; };   // sous-vêtements cachés sous un vêtement opaque (ils traversaient le jean / le t-shirt par endroits)
+        if (vu('Pants')) hide('Culotte'); if (vu('Shirt') && !API.manches) hide('SoutienGorge'); }   // corps du patient : seulement la partie découverte (pas de peau qui traverse les vêtements)
     }
     if (haut) hide('Sweatshirt');                                            // patient homme : pas de peau sous le tee-shirt, seul le sweat se retire
     for (const n of MED) API.porte.has(n) ? unhide(n) : hide(n);
@@ -887,7 +894,7 @@ export async function createAvatar(el, opts = {}) {
   };
   /* texture du visage remplacée (même disposition UV que celle du modèle : visage MetaHuman) — vieillissement, autres visages */
   API.visage = (url) => new Promise((res) => {
-    const m = byName('Tete') || byName('Body'); if (!m) return res(false);  // patiente MetaHuman : maillage Tete ; patient homme : Body (atlas MikeAlger complet)
+    const m = byName('Tete') || (!API.femme && byName('Body')); if (!m) return res(false);   // patiente v5 (pas de Tete, UV différent) : rien  // patiente MetaHuman : maillage Tete ; patient homme : Body (atlas MikeAlger complet)
     const poser = (t) => { m.traverse((x) => { if (x.isMesh) { const mt = [].concat(x.material)[0]; if (!mt || !mt.map) return;
       const r = canv.get(mt);                                             // peau déjà repeinte (lésions) : on change l'image de fond du canevas
       if (r) { if (!r.img0) r.img0 = r.img; r.img = t ? t.image : r.img0; r.g.drawImage(r.img, 0, 0, r.c.width, r.c.height); r.tx.needsUpdate = true; return; }
@@ -896,7 +903,7 @@ export async function createAvatar(el, opts = {}) {
     new THREE.TextureLoader().load(url, (t) => { t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; poser(t); res(true); }, undefined, () => res(false));
   });
   API.cheveuxGris = (on = true) => {                                     // cheveux blancs/gris : texture recalculée (luminance éclaircie, alpha gardé)
-    const h = byName('Hair'); if (!h) return;
+    const h = byName('Hair'); if (!h || (API.femme && !byName('Tete'))) return;   // patiente v5 : texture des cheveux partagée avec la peau
     h.traverse((x) => { if (!x.isMesh) return; const mt = [].concat(x.material)[0]; if (!mt || !mt.map) return;
       if (!x.userData.map0) x.userData.map0 = mt.map;
       if (!on) { mt.map = x.userData.map0; mt.needsUpdate = true; return; }

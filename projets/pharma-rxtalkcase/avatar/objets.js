@@ -197,7 +197,7 @@ const NEW = {
       after: (ctx) => ({ geste: `prélèvement nasal et TROD Covid/grippe : résultat ${ctx.trod === 'positif' ? 'POSITIF' : 'NÉGATIF'}`, badge: `TROD : ${ctx.trod === 'positif' ? 'positif' : 'négatif'}` }) }],
   },
   oxymetre: {
-    label: 'Oxymètre de pouls', consigne: "Mesurez la saturation en oxygène.", file: 'oxymetre.glb', fallback: { oxymetre: PROC.oxymetre },
+    label: 'Oxymètre de pouls', consigne: "Mesurez la saturation en oxygène.", fallback: { oxymetre: PROC.oxymetre },
     stage: { seat: 1, table: true, arms: armOnTable(false), cam: { pos: [0.45, 0.98, 0.95], look: [0.17, 0.75, 0.45] } },
     zones: { doigt_G: { label: 'Index gauche', at: (b) => fingerTip(b, 'Left').p }, poignet_G: wristZone('Left'), oreille: { label: 'Lobe de l\'oreille', at: (b) => headPt(b, faceFor(b).lobe) } },
     pieces: [{ id: 'oxymetre', node: 'oxymetre', label: 'Oxymètre', ok: ['doigt_G'], pose: { axis: '-y', up: '-z', gap: -0.02 },
@@ -250,7 +250,7 @@ const NEW = {
         after: (ctx) => ({ geste: `glycémie capillaire au doigt : ${fr(ctx.glyc, 2)} g/L`, badge: `Glycémie ${fr(ctx.glyc, 2)} g/L` }) }],
   },
   chambre: {
-    label: "Chambre d'inhalation", consigne: "Montrez comment utiliser la chambre d'inhalation avec l'aérosol doseur.", file: 'chambre_inhalation.glb', fallback: { chambre: PROC.chambre },
+    label: "Chambre d'inhalation", consigne: "Montrez comment utiliser la chambre d'inhalation avec l'aérosol doseur.", fallback: { chambre: PROC.chambre },
     stage: STAND({ pos: [0.32, 1.6, 0.85], look: [0.02, 1.54, 0.1] }),
     zones: { bouche: faceZone('bouche', 'Bouche'), nez: faceZone('nez', 'Nez') },
     pieces: [{ id: 'chambre', node: 'chambre', label: "Chambre d'inhalation", ok: ['bouche'], pose: { axis: '-z', up: '+y', gap: -0.006, c: [0, 0, -0.122] }, at: faceAt('bouche'),
@@ -258,7 +258,7 @@ const NEW = {
       after: () => ({ geste: "montre l'utilisation de la chambre d'inhalation : une bouffée dans la chambre, puis respirations lentes par l'embout", msg: "Agiter, une bouffée dans la chambre, puis 5 à 6 respirations calmes, ou une inspiration lente et 10 secondes d'apnée." }) }],
   },
   nebuliseur: {
-    label: 'Nébuliseur (masque)', consigne: "Placez le masque du nébuliseur.", file: 'nebuliseur.glb', fallback: { nebuliseur: PROC.nebuliseur },
+    label: 'Nébuliseur (masque)', consigne: "Placez le masque du nébuliseur.", fallback: { nebuliseur: PROC.nebuliseur },
     stage: STAND({ pos: [0.32, 1.6, 0.85], look: [0.02, 1.54, 0.1] }),
     zones: { visage: faceZone('nez', 'Nez et bouche'), menton: faceZone('menton', 'Menton') },
     pieces: [{ id: 'nebuliseur', node: 'nebuliseur', label: 'Masque de nébulisation', ok: ['visage'], pose: { axis: '-z', up: '+y', gap: 0.012, c: [0, 0, 0] },
@@ -266,7 +266,7 @@ const NEW = {
       faux: { menton: "Le masque couvre le nez et la bouche, l'élastique derrière la tête." }, after: () => ({ geste: 'pose le masque du nébuliseur sur le nez et la bouche' }) }],
   },
   ppc: {
-    label: 'Masque de PPC (apnée du sommeil)', consigne: "Placez le masque nasal de PPC.", file: 'masque_ppc.glb', fallback: { ppc: PROC.ppc },
+    label: 'Masque de PPC (apnée du sommeil)', consigne: "Placez le masque nasal de PPC.", fallback: { ppc: PROC.ppc },
     stage: STAND({ pos: [0.32, 1.6, 0.85], look: [0.02, 1.54, 0.1] }),
     zones: { nez: faceZone('nez', 'Nez'), bouche: faceZone('bouche', 'Bouche'), front: faceZone('front', 'Front') },
     pieces: [{ id: 'ppc', node: 'ppc', label: 'Masque nasal', ok: ['nez'], pose: { axis: '-z', up: '+y', gap: 0.006, c: [0, 0, 0] }, at: faceAt('nez'),
@@ -356,7 +356,7 @@ const NEW = {
 };
 /* ---------- hygiène des mains et gants (avant les soins), stéthoscope, otoscope, objets montrés au comptoir ---------- */
 const TABLE = (dx, dz) => (b) => { const p = b.toW(V3(dx, b.D.hipsY + 0.16, dz)); return { p, n: V3(0, 1, 0), up: b.fwd.clone().setY(0).normalize() }; };   // dessus de la table (patient assis)
-const ASSIS_TABLE = (cam) => ({ seat: 1, table: true, arms: handsOnThighsT, cam });
+const ASSIS_TABLE = (cam) => ({ seat: 1, table: true, arms: armOnTable(false), cam });   // mains posées sur la table
 function handsOnThighsT(D, s, o) { return { w: P(o, 0.13, D.hipsY + 0.06, 0.3), pole: P(o, 0.6, -0.4, -0.6), fing: V3(0, -0.3, 1), palm: V3(0, -1, 0), curl: 0.3 }; }
 const CAM_TABLE = { pos: [0.4, 1.3, 1.6], look: [0.08, 0.85, 0.35] };
 Object.assign(NEW, {
@@ -395,18 +395,152 @@ Object.assign(NEW, {
         return { geste: `examine l'oreille à l'otoscope : ${R}`, badge: R.split(' : ')[0].replace(/^./, (c) => c.toUpperCase()), msg: (ctx.tympan || 'normal') === 'normal' ? 'Rien d\'anormal au tympan.' : ctx.tympan === 'bouchon' ? 'Bouchon : pas de coton-tige ; un soluté céruménolytique si le tympan est sain, sinon médecin.' : 'Orientez vers un médecin : le pharmacien ne pose pas le diagnostic.' }; } }],
   },
 });
-/* objets montrés au patient sur la table, pour expliquer leur usage (pas de geste sur le corps) */
-const mat = (g) => g.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) if (m.metalness > 0.4 && !m.map) { m.metalness = 0.05; m.roughness = Math.max(m.roughness, 0.45); } });   // modèles sans texture exportés « métal » : plastique
-const MONTRER = (id, label, fichier, conseil, geste) => {
-  NEW[id] = { prep: mat, label, consigne: 'Posez-le devant le patient et expliquez son utilisation.', multi: { [id]: fichier }, stage: ASSIS_TABLE(CAM_TABLE),
-    zones: { table: { label: 'Devant le patient', at: (b) => TABLE(0.0, 0.42)(b).p } },
-    pieces: [{ id, node: id, label, ok: ['table'], pose: { axis: '-y', up: '-z', gap: 0 }, at: TABLE(0.0, 0.42), after: () => ({ geste, msg: conseil }) }] };
+/* ---------- objets posés là où le soin les met (logique du geste du pharmacien) ---------- */
+const surfaceVue = (b, api, p0, d) => {                     // premier point de peau ou de vêtement visible le long de -d (lancer de rayon depuis l'extérieur)
+  const rc = new THREE.Raycaster(p0.clone().add(d.clone().multiplyScalar(0.3)), d.clone().negate(), 0, 0.3), ms = api.rig.meshes.filter((m) => m.visible);
+  for (const m of ms) m.traverse((k) => { if (k.isSkinnedMesh) k.computeBoundingSphere(); });
+  const h = rc.intersectObjects(ms, true).find((x) => x.object.visible); return h ? h.point : p0;
 };
-MONTRER('tire_lait', 'Tire-lait manuel', 'tire_lait.glb', "Mains lavées, matériel propre ; téterelle centrée sur le mamelon ; lait conservé 4 h à température ambiante, 48 h au réfrigérateur (au fond, pas dans la porte).", 'présente le tire-lait manuel et explique son utilisation et la conservation du lait');
-MONTRER('change_complet', 'Culotte absorbante', 'change_complet.glb', "Taille selon le tour de taille ; absorption adaptée à la quantité de fuites ; changer dès qu'elle est mouillée et protéger la peau (toilette douce, crème barrière).", 'présente une culotte absorbante et explique le choix de la taille et de l\'absorption');
-MONTRER('poche_urine', 'Poche à urine', 'poche_urine.glb', "Toujours sous le niveau de la vessie, sans couder le tuyau ; vider avant qu'elle soit pleine aux deux tiers ; système clos, robinet nettoyé.", 'présente la poche à urine et explique sa position et sa vidange');
-MONTRER('sonde_ng', 'Sonde nasogastrique', 'sonde_ng.glb', "Vérifier le repère de longueur avant chaque utilisation ; rincer à l'eau avant et après la nutrition ou les médicaments ; patient demi-assis pendant et après.", 'présente la sonde nasogastrique et explique son entretien');
-MONTRER('bracelet_id', "Bracelet d'identification", 'bracelet_id.glb', "Identitovigilance : vérifier nom, prénom, date de naissance sur le bracelet avant chaque soin ou délivrance.", "vérifie l'identité du patient sur son bracelet");
+const sein = (s) => (b) => { const S = surfW(b, b.D.bustY ?? b.D.chestY - 0.03, 0.45, s); return { p: S.c, n: S.n, up: b.up }; };
+const mollet = (b, api) => { const k = b.W('RightLeg'), a = b.W('RightFoot'), d = b.side('Right'); const p = surfaceVue(b, api, k.clone().lerp(a, 0.38), d); return { p, n: d, up: k.clone().sub(a).normalize() }; };
+const bassin = (b, api) => { const p0 = b.W('Hips').add(b.up.clone().multiplyScalar(-0.04)); return { p: surfaceVue(b, api, p0, b.fwd.clone()), n: b.fwd.clone(), up: b.up }; };
+Object.assign(NEW, {
+  tire_lait: {
+    label: 'Tire-lait manuel', femme: true, consigne: "Montrez la mise en place : téterelle centrée sur le mamelon, à faire sur la peau, ici par-dessus le vêtement pour l'explication.", multi: { tire_lait: 'tire_lait.glb' },
+    stage: STAND({ pos: [0.45, 1.3, 1.0], look: [0.02, 1.2, 0.1] }),
+    zones: { sein_G: { label: 'Sein gauche', at: (b) => sein('Left')(b).p }, sein_D: { label: 'Sein droit', at: (b) => sein('Right')(b).p }, ventre: { label: 'Ventre', at: (b) => surfW(b, b.D.waistY ?? b.D.hipsY + 0.1, 0, 'Left').c } },
+    pieces: [{ id: 'tire_lait', node: 'tire_lait', label: 'Tire-lait', ok: ['sein_G', 'sein_D'], pose: { axis: '+z', up: '+y', gap: 0.012, c: [0, 0.16, 0.04] },   // téterelle (ouverture vers +z) contre le sein, biberon vers le bas
+      at: (b, z) => sein(z === 'sein_D' ? 'Right' : 'Left')(b), faux: { ventre: "La téterelle se centre sur le mamelon." },
+      after: () => ({ geste: 'montre la mise en place du tire-lait (téterelle centrée sur le mamelon)', msg: "Mains lavées, matériel propre ; téterelle centrée, aspiration douce et sans douleur ; lait : 4 h à température ambiante, 48 h au réfrigérateur (au fond, pas dans la porte)." }) }],
+  },
+  poche_urine: {
+    label: 'Poche à urine (de jambe)', consigne: "Fixez la poche de jambe sur le mollet, sous le niveau de la vessie.", multi: { poche_urine: 'poche_urine.glb' },
+    stage: STAND({ pos: [0.75, 0.6, 1.0], look: [0.05, 0.42, 0.05] }),
+    zones: { mollet: { label: 'Mollet (côté)', at: (b) => mollet(b, { rig: b.rig }).p }, cuisse: { label: 'Cuisse (côté)', at: (b) => b.W('RightUpLeg').lerp(b.W('RightLeg'), 0.5).add(b.side('Right').multiplyScalar(0.09)) }, ventre: { label: 'Ventre', at: (b) => surfW(b, b.D.waistY ?? b.D.hipsY + 0.1, 0, 'Left').c } },
+    pieces: [{ id: 'poche_urine', node: 'poche_urine', label: 'Poche à urine', ok: ['mollet', 'cuisse'], pose: { axis: '-y', up: '-x', gap: 0.008 },
+      at: (b, z) => z === 'cuisse' ? { p: b.W('RightUpLeg').lerp(b.W('RightLeg'), 0.5).add(b.side('Right').multiplyScalar(0.09)), n: b.side('Right'), up: b.up } : mollet(b, { rig: b.rig }),
+      faux: { ventre: "Jamais au-dessus de la vessie : l'urine refluerait. La poche se porte sur la jambe, plus bas." },
+      after: () => ({ geste: 'fixe la poche à urine de jambe au mollet, sous le niveau de la vessie', msg: "Poche toujours sous la vessie, tuyau sans coude ; vider aux deux tiers ; système clos, robinet nettoyé ; poche de nuit raccordée sans ouvrir le système." }) }],
+  },
+  change_complet: {
+    label: 'Culotte absorbante', consigne: "Choisissez la taille : présentez la culotte à hauteur du bassin (tour de taille).", multi: { change_complet: 'change_complet.glb' },
+    stage: STAND({ pos: [0.4, 1.0, 1.25], look: [0.02, 0.92, 0.1] }),
+    zones: { bassin: { label: 'Bassin (taille)', at: (b) => b.W('Hips').add(b.fwd.clone().multiplyScalar(0.14)) }, ventre: { label: 'Poitrine', at: (b) => surfW(b, b.D.chestY, 0, 'Left').c } },
+    pieces: [{ id: 'change_complet', node: 'change_complet', label: 'Culotte absorbante', ok: ['bassin'], pose: { axis: '-z', up: '+y', gap: 0.03 }, at: (b) => bassin(b, { rig: b.rig }),
+      faux: { ventre: "La taille se choisit au tour de taille et des hanches." },
+      after: () => ({ geste: 'présente la culotte absorbante au niveau du bassin pour choisir la taille', msg: "Taille selon le tour de taille ; absorption selon les fuites ; changer dès qu'elle est mouillée ; toilette douce et crème barrière." }) }],
+  },
+  sonde_ng: {
+    label: 'Sonde nasogastrique (vérification, fixation)', consigne: "Vérifiez la sonde du patient : repère de longueur à la narine, fixation sur le nez et la joue.", multi: { sonde_ng: 'sonde_ng.glb' }, headLock: true,
+    stage: STAND({ pos: [-0.4, 1.6, 0.7], look: [-0.03, 1.52, 0.05] }),   // côté droit du visage (sonde fixée sur la joue droite)
+    zones: { narine: faceZone('narine', 'Narine'), bouche: faceZone('bouche', 'Bouche'), oreille: { label: 'Oreille', at: (b) => headPt(b, faceFor(b).lobe) } },
+    pieces: [{ id: 'sonde', node: 'sonde_ng', label: 'Sonde', ephemere: 300, ok: ['narine'], pose: { axis: '-y', up: '-z', gap: 0 }, at: (b) => ({ p: headPt(b, faceFor(b).narine), n: b.fwd, up: b.up }),
+      faux: { bouche: "Une sonde nasogastrique passe par la narine.", oreille: "La sonde passe par la narine ; elle est fixée sur le nez puis la joue." },
+      after: (ctx, api) => ({ geste: 'vérifie la sonde nasogastrique (repère de longueur à la narine, fixation sur le nez et la joue)', msg: "Repère inchangé avant chaque utilisation ; rincer à l'eau avant et après nutrition ou médicaments (formes broyables seulement) ; patient demi-assis pendant et 1 h après.", extra: (() => { const g = sondeTube(api); api.scene.add(g); return g; })() }) }],
+  },
+  bracelet_id: {
+    label: "Bracelet d'identification", consigne: "Posez le bracelet au poignet, puis vérifiez l'identité avec le patient.", multi: { bracelet_id: 'bracelet_id.glb' },
+    stage: { seat: 1, table: true, arms: armOnTable(false), cam: { pos: [0.4, 1.0, 0.95], look: [0.17, 0.77, 0.4] } },
+    zones: { poignet: { label: 'Poignet', at: (b) => forearm(b, 'Left', 0.07, 0.03).p }, cheville: { label: 'Cheville', at: (b) => b.W('LeftFoot').add(b.up.clone().multiplyScalar(0.06)) } },
+    pieces: [{ id: 'bracelet', node: 'bracelet_id', label: 'Bracelet', ephemere: 300, ok: ['poignet', 'cheville'], pose: { axis: '-y', up: '-z', gap: 0 }, at: (b) => ({ p: forearm(b, 'Left', 0.07, 0.03).p, n: V3(0, 1, 0), up: b.fwd }),
+      after: (ctx, api, z) => ({ geste: "pose le bracelet d'identification au poignet et fait dire au patient ses nom, prénom et date de naissance", msg: "Identitovigilance : faire énoncer nom, prénom, date de naissance et comparer au bracelet avant chaque soin ou délivrance.", extra: (() => { const g = braceletRing(api); api.scene.add(g); return g; })() }) }],
+  },
+});
+/* ---------- oxygénothérapie (lunettes nasales) et PICC : modèle montré, puis version portée dessinée sur le patient ---------- */
+const brasAnt = (b, api, s = 'Left', t = 0.62) => {           // face antérieure du bras, tiers inférieur (point d'émergence d'un PICC)
+  const a = b.W(s + 'Arm'), e = b.W(s + 'ForeArm'), ax = e.clone().sub(a).normalize(); const n = b.fwd.clone().sub(ax.clone().multiplyScalar(b.fwd.dot(ax))).normalize();
+  const p0 = a.clone().lerp(e, t); return { p: surfaceVue(b, api, p0, n), n, ax };
+};
+Object.assign(NEW, {
+  oxygene: {
+    label: 'Lunettes à oxygène (pose)', consigne: "Posez les lunettes : embouts dans les narines, tubulure passée sur les oreilles, coulisseau sous le menton.", multi: { lunettes_o2: 'lunettes_o2.glb' }, headLock: true,
+    stage: STAND({ pos: [0.3, 1.6, 0.66], look: [0.02, 1.52, 0.05] }),
+    zones: { narine: faceZone('narine', 'Narines'), bouche: faceZone('bouche', 'Bouche'), oreille: { label: 'Oreille', at: (b) => headPt(b, faceFor(b).lobe) } },
+    pieces: [{ id: 'lunettes', node: 'lunettes_o2', label: 'Lunettes à oxygène', ephemere: 400, ok: ['narine'], pose: { axis: '+z', up: '+y', gap: 0.04 }, at: (b) => ({ p: headPt(b, faceFor(b).narine), n: b.fwd, up: b.up }),
+      faux: { bouche: "Les lunettes délivrent l'oxygène par le nez : les deux embouts vont dans les narines.", oreille: "Commencez par les embouts dans les narines, puis passez la tubulure sur les oreilles." },
+      after: (ctx, api) => ({ geste: "pose les lunettes à oxygène (embouts dans les narines, tubulure sur les oreilles, coulisseau sous le menton) et rappelle le débit prescrit",
+        msg: "Débit prescrit, sans le modifier soi-même ; ni flamme ni tabac ou cigarette électronique ; pas de crème grasse, huile ou pommade sur le visage ni dans le nez (produits à base d'eau) ; aérer la pièce ; protéger le dessus des oreilles si la tubulure irrite.",
+        extra: (() => { const g = lunettesO2(api); api.scene.add(g); return g; })() }) }],
+  },
+  picc: {
+    label: 'PICC (surveillance du point d\'émergence)', consigne: "Montrez le PICC du patient : point d'émergence sur le bras, sous un pansement transparent, lumières clampées et bouchées.", hide: ['Sweatshirt'], manches: true, multi: { picc: 'picc.glb' },
+    stage: STAND({ pos: [0.62, 1.32, 0.62], look: [0.2, 1.18, 0.02] }),
+    zones: { bras_G: { label: 'Bras gauche (face antérieure)', at: (b) => brasAnt(b, { rig: b.rig }).p }, pli_coude: { label: 'Pli du coude', at: (b) => b.W('LeftForeArm').add(b.fwd.clone().multiplyScalar(0.04)) }, cou: { label: 'Cou', at: (b) => b.W('Neck').add(b.fwd.clone().multiplyScalar(0.06)) } },
+    pieces: [{ id: 'picc', node: 'picc', label: 'PICC', ephemere: 400, ok: ['bras_G'], pose: { axis: '+z', up: '+y', gap: 0.03 }, at: (b, z, api) => { const F = brasAnt(b, api); return { p: F.p, n: F.n, up: F.ax.clone().negate() }; },
+      faux: { pli_coude: "Un PICC est posé au-dessus du pli du coude, sur le bras (veine basilique ou brachiale, sous échographie).", cou: "Au cou, c'est un cathéter veineux central classique (jugulaire) ; le PICC sort sur le bras." },
+      after: (ctx, api) => ({ geste: "vérifie le PICC : point d'émergence sous un pansement occlusif, longueur externe notée, lumières clampées et bouchées",
+        msg: "Pansement occlusif vérifié chaque jour, refait une fois par semaine avec la valve ; longueur externe notée à chaque réfection ; rinçage pulsé de 10 mL de NaCl 0,9 % avant et après chaque médicament, au moins une fois par semaine s'il ne sert pas ; alerter en cas de fièvre, rougeur, douleur, œdème, fuite ou essoufflement.",
+        extra: (() => { const g = piccLigne(api); api.scene.add(g); return g; })() }) }],
+  },
+});
+function suitOs(api, g, os) {                                   // le groupe suit l'os depuis sa pose au moment de la création
+  const B = api.rig.bones[os]; B.updateMatrixWorld(true); const inv = B.matrixWorld.clone().invert();
+  g.matrixAutoUpdate = false; g.userData.follow = true; api.extras.push(() => { g.matrix.copy(B.matrixWorld).multiply(inv); g.matrixWorldNeedsUpdate = true; }); return g;
+}
+function lunettesO2(api) {
+  const b = body(api), F = faceFor(b), N0 = F.narine.clone().setX(0), Lb = F.lobe.clone(), Mn = F.menton.clone(), lx = Math.abs(Lb.x);
+  const P = (v) => headPt(b, v); const g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: 0xd6efe2, transparent: true, opacity: 0.88, roughness: 0.3 });
+  const tube = (pts, r = 0.0021) => g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(P)), Math.max(24, pts.length * 14), r, 8), mat));
+  const bras = (s) => [N0.clone().add(V3(s * 0.009, -0.009, 0.004)), N0.clone().add(V3(s * 0.024, -0.013, -0.004)), N0.clone().add(V3(s * 0.045, -0.016, -0.022)),
+    V3(s * lx * 0.8, F.nez.y - 0.03, (N0.z + Lb.z) * 0.5 + 0.006), V3(s * (lx - 0.002), Lb.y + 0.022, Lb.z + 0.014), V3(s * (lx - 0.004), Lb.y + 0.034, Lb.z - 0.002),
+    V3(s * (lx - 0.006), Lb.y + 0.016, Lb.z - 0.022), V3(s * (lx - 0.008), Lb.y - 0.02, Lb.z - 0.02), V3(s * (lx - 0.02), Mn.y - 0.035, Lb.z + 0.006), Mn.clone().add(V3(s * 0.012, -0.05, -0.045)), Mn.clone().add(V3(0, -0.058, -0.05))];
+  tube([N0.clone().add(V3(-0.009, -0.009, 0.004)), N0.clone().add(V3(0, -0.01, 0.006)), N0.clone().add(V3(0.009, -0.009, 0.004))], 0.0025);   // pièce faciale sous le nez
+  for (const s of [1, -1]) {
+    tube(bras(s));
+    tube([N0.clone().add(V3(s * 0.006, -0.008, 0.005)), N0.clone().add(V3(s * 0.0065, -0.001, 0.0)), N0.clone().add(V3(s * 0.0062, 0.004, -0.008))], 0.0016);   // embout dans la narine
+  }
+  const coul = new THREE.Mesh(new THREE.CylinderGeometry(0.0042, 0.0042, 0.012, 12), mat); coul.position.copy(P(Mn.clone().add(V3(0, -0.058, -0.05)))); g.add(coul);
+  tube([Mn.clone().add(V3(0, -0.064, -0.05)), Mn.clone().add(V3(0.004, -0.14, -0.04)), Mn.clone().add(V3(0.02, -0.3, 0.0))], 0.0024);       // tubulure vers la source
+  return suitOs(api, g, 'Head');
+}
+function piccLigne(api) {
+  const b = body(api), F = brasAnt(b, api), x = F.ax.clone().cross(F.n).normalize(), g = new THREE.Group();
+  const at = (u, v, w = 0.004) => F.p.clone().add(F.ax.clone().multiplyScalar(u)).add(x.clone().multiplyScalar(v)).add(F.n.clone().multiplyScalar(w));
+  const pans = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.085), new THREE.MeshStandardMaterial({ color: 0xe8f1f6, transparent: true, opacity: 0.22, roughness: 0.15, side: THREE.DoubleSide, depthWrite: false }));
+  pans.position.copy(at(0.01, 0, 0.0035)); pans.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, F.ax, F.n)); g.add(pans);
+  const blanc = new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.5 }), violet = new THREE.MeshStandardMaterial({ color: 0x6b3fa0, roughness: 0.4 }), bleu = new THREE.MeshStandardMaterial({ color: 0x3f7fd0, roughness: 0.4 });
+  const fix = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.014, 0.004), blanc); fix.position.copy(at(0.016, 0, 0.005)); fix.quaternion.copy(pans.quaternion); g.add(fix);
+  const ligne = (pts, r, m) => g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, r, 8), m));
+  ligne([at(-0.004, 0, 0.002), at(0.012, 0, 0.005), at(0.03, 0.002, 0.006)], 0.0013, violet);
+  for (const s of [1, -1]) {
+    ligne([at(0.03, 0.002, 0.006), at(0.05, s * 0.01, 0.008), at(0.085, s * 0.016, 0.01), at(0.11, s * 0.018, 0.012)], 0.0016, violet);
+    const cl = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.006, 0.006), s > 0 ? blanc : violet); cl.position.copy(at(0.07, s * 0.0145, 0.012)); cl.quaternion.copy(pans.quaternion); g.add(cl);
+    const bo = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.014, 12), s > 0 ? bleu : blanc); bo.position.copy(at(0.117, s * 0.018, 0.012)); bo.quaternion.setFromUnitVectors(V3(0, 1, 0), F.ax); g.add(bo);
+  }
+  return suitOs(api, g, 'LeftArm');
+}
+
+/* bracelet : bande ajustée au poignet (épaisseur mesurée par lancer de rayon, poignet ovale), étiquette d'identité */
+function braceletRing(api) {
+  const b = body(api), F0 = forearm(b, 'Left', 0.07, 0), x0 = F0.ax.clone().cross(F0.n).normalize(), skins = api.rig.meshes.filter((m) => /body|corps|tete/i.test(m.name));
+  for (const m of skins) m.traverse((k) => { if (k.isSkinnedMesh) { k.computeBoundingSphere(); k.computeBoundingBox(); } });   // enveloppes du maillage posé (sinon les rayons manquent le bras ramené devant)
+  const bord = (d) => { const rc = new THREE.Raycaster(F0.p.clone().add(d.clone().multiplyScalar(0.12)), d.clone().negate(), 0, 0.12); const h = rc.intersectObjects(skins, true)[0]; return h ? 0.12 - h.distance : 0.025; };
+  const np = bord(F0.n), nm = bord(F0.n.clone().negate()), xp = bord(x0), xm = bord(x0.clone().negate());
+  const cn = (np - nm) / 2, cx = (xp - xm) / 2, rn = (np + nm) / 2 + 0.003, rx = (xp + xm) / 2 + 0.003;
+  const c = document.createElement('canvas'); c.width = 512; c.height = 64; const g = c.getContext('2d');
+  g.fillStyle = '#f4f8fb'; g.fillRect(0, 0, 512, 64); g.fillStyle = '#9cc7e8'; g.fillRect(150, 6, 210, 52); g.fillStyle = '#1d2a35'; g.font = 'bold 15px sans-serif'; g.fillText('NOM Prénom', 160, 26); g.font = '13px sans-serif'; g.fillText('né(e) le --/--/----', 160, 46);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.016, 40, 1, true), new THREE.MeshStandardMaterial({ map: t, side: THREE.DoubleSide, roughness: 0.55 }));
+  m.scale.set(rx, 1, rn); m.userData.follow = true;
+  api.extras.push(() => { const F = forearm(b, 'Left', 0.07, 0), x = F.ax.clone().cross(F.n).normalize();   // repère direct (x, axe, normale)
+    m.position.copy(F.p).add(F.n.clone().multiplyScalar(cn)).add(x.clone().multiplyScalar(cx)); m.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, F.ax, F.n)); });
+  return m;
+}
+/* sonde nasogastrique : tuyau de la narine droite vers la joue (sparadrap), l'oreille puis le cou ; suit la tête */
+function sondeTube(api) {
+  const b = body(api), N = faceFor(b).narine.clone(); N.x = -Math.abs(N.x); const L = (x, y, z) => headPt(b, N.clone().add(V3(x, y, z)));
+  const pts = [L(0, 0.012, -0.04), L(0, 0, 0), L(-0.008, -0.006, 0.007), L(-0.032, -0.014, 0), L(-0.06, -0.02, -0.035), L(-0.075, -0.05, -0.075), L(-0.07, -0.11, -0.065), L(-0.05, -0.19, -0.02)];
+  const g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: 0xd9ecf2, transparent: true, opacity: 0.85, roughness: 0.3 });
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 90, 0.0022, 8), mat));
+  const tape = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.014, 0.0015), new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.9 }));
+  tape.position.copy(L(-0.034, -0.014, 0.002)); tape.lookAt(tape.position.clone().add(b.fwd)); g.add(tape);
+  const bout = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.005, 0.03, 12), new THREE.MeshStandardMaterial({ color: 0x3aa7a0, roughness: 0.4 }));
+  bout.position.copy(pts[pts.length - 1]).add(V3(0, -0.015, 0)); g.add(bout);
+  const H = api.rig.bones.Head; H.updateMatrixWorld(true); const Linv = H.matrixWorld.clone().invert();
+  g.matrixAutoUpdate = false; g.userData.follow = true;
+  api.extras.push(() => { g.matrix.copy(H.matrixWorld).multiply(Linv); g.matrixWorldNeedsUpdate = true; });
+  return g;
+}
 
 /* anneaux procéduraux : ruban autour de la taille, bande autour de l'avant-bras */
 function tapeRing(api) {
@@ -429,14 +563,14 @@ export const RESERVE = [
   { id: 'trod_angine', nom: 'TROD angine', famille: 'TROD', fichier: 'abaisse_langue.glb', pert: /angine|gorge|amygdal|pharyng|streptoc/i },
   { id: 'trod_naso', nom: 'TROD Covid / grippe', famille: 'TROD', proc: 'ecouvillon', pert: /covid|grippe|syndrome grippal|nez qui coule|rhinite|fièvre/i },
   { id: 'thermometre', nom: 'Thermomètre', famille: 'Constantes', fichier: 'thermometre.glb', pert: /fièvre|fébrile|température|°C|frisson|infection|grippe|angine|cystite|pyélo/i },
-  { id: 'oxymetre', nom: 'Oxymètre', famille: 'Constantes', fichier: 'oxymetre.glb', proc: 'oxymetre', pert: /essouffl|dyspnée|souffle|bpco|asthme|covid|saturation|spo2|respir/i },
+  { id: 'oxymetre', nom: 'Oxymètre', famille: 'Constantes', proc: 'oxymetre', pert: /essouffl|dyspnée|souffle|bpco|asthme|covid|saturation|spo2|respir/i },
   { id: 'tension', nom: 'Tensiomètre', famille: 'Constantes', fichier: '../tensiometre-draco.glb', pert: /tension|hta|hypertens|cœur|coeur|cardiaque|vertige|céphal|malaise|palpitation|pouls|ains|ibuprofène|diabète/i },
   { id: 'balance', nom: 'Pèse-personne', famille: 'Constantes', fichier: 'balance.glb', pert: /poids|kg|obésit|imc|maigr|dénutrition|nourrisson|œdème|oedème|insuffisance cardiaque|diabète/i },
   { id: 'metre_ruban', nom: 'Mètre ruban', famille: 'Constantes', fichier: 'metre_ruban.glb', pert: /tour de taille|obésit|surpoids|syndrome métabolique|diabète|imc|poids/i },
   { id: 'glucometre', nom: 'Lecteur de glycémie', famille: 'Constantes', fichier: 'glucometre.glb', pert: /diabèt|glyc|insuline|hypoglyc|sucre|metformine/i },
-  { id: 'chambre', nom: "Chambre d'inhalation", famille: 'Inhalation', fichier: 'chambre_inhalation.glb', proc: 'chambre', pert: /asthme|bpco|inhal|ventoline|salbutamol|aérosol|bronch/i },
-  { id: 'nebuliseur', nom: 'Nébuliseur', famille: 'Inhalation', fichier: 'nebuliseur.glb', proc: 'nebuliseur', pert: /nébulis|aérosol|bronchiolite|bpco|mucovisc|asthme/i },
-  { id: 'ppc', nom: 'Masque de PPC', famille: 'Inhalation', fichier: 'masque_ppc.glb', proc: 'ppc', pert: /apnée|ronfl|ppc|cpap|somnolence/i },
+  { id: 'chambre', nom: "Chambre d'inhalation", famille: 'Inhalation', proc: 'chambre', pert: /asthme|bpco|inhal|ventoline|salbutamol|aérosol|bronch/i },
+  { id: 'nebuliseur', nom: 'Nébuliseur', famille: 'Inhalation', proc: 'nebuliseur', pert: /nébulis|aérosol|bronchiolite|bpco|mucovisc|asthme/i },
+  { id: 'ppc', nom: 'Masque de PPC', famille: 'Inhalation', proc: 'ppc', pert: /apnée|ronfl|ppc|cpap|somnolence/i },
   { id: 'pansement', nom: 'Antiseptique et pansements', famille: 'Plaies', fichier: 'pansement.glb', pert: /plaie|coupure|écorch|brûlure|égratign|blessure|saign|chute/i },
   { id: 'tique', nom: 'Tire-tique', famille: 'Plaies', fichier: 'tire_tique.glb', pert: /tique|lyme|morsure|forêt|randonnée/i },
   { id: 'reanimation', nom: 'DAE et BAVU', famille: 'Réanimation', fichier: 'dae.glb', pert: /arrêt cardiaque|inconscient|ne respire|malaise grave|réanimation|massage cardiaque|défibrill/i },
@@ -584,6 +718,8 @@ RESERVE.push(
   { id: 'change_complet', nom: 'Culotte absorbante', famille: 'Conseil', fichier: 'change_complet.glb', pert: /incontinence|fuites urinaires|énurésie|pipi au lit|protection|couche/i },
   { id: 'poche_urine', nom: 'Poche à urine', famille: 'Hôpital', fichier: 'poche_urine.glb', pert: /sonde urinaire|sondage|poche à urine|rétention urinaire|prostate|vessie/i },
   { id: 'sonde_ng', nom: 'Sonde nasogastrique', famille: 'Hôpital', fichier: 'sonde_ng.glb', pert: /nasogastrique|nutrition entérale|sonde gastrique|gastrostomie|dénutrition|troubles de la déglutition/i },
+  { id: 'oxygene', nom: 'Lunettes à oxygène', famille: 'Hôpital', fichier: 'lunettes_o2.glb', pert: /oxyg[èe]n|O2\b|bpco|insuffisance respiratoire|hypox|d[ée]saturation|lunettes nasales|concentrateur/i },
+  { id: 'picc', nom: 'PICC', famille: 'Hôpital', fichier: 'picc.glb', pert: /picc|midline|chimioth[ée]rapie|nutrition parent[ée]rale|antibioth[ée]rapie (intraveineuse|IV|prolong)|voie veineuse centrale/i, pop: 'hospitalier' },
   { id: 'bracelet_id', nom: "Bracelet d'identification", famille: 'Hôpital', fichier: 'bracelet_id.glb', pert: /./, pop: 'hospitalier' },
 );
 

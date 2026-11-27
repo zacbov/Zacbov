@@ -195,7 +195,7 @@ export function createEquip(api, opts = {}) {
   const emit = (e) => { e.t = performance.now(); listeners.forEach((f) => f(e)); };
   async function loadItem(id, item) {                     // fichier .glb (à côté de la page) et/ou objets dessinés ; si le fichier manque, on dessine une version simple
     if (cache[id]) return cache[id];
-    const g = new THREE.Group(); let ok = !item.file;
+    const g = new THREE.Group(); let ok = !item.file && !item.fallback;   // sans fichier : la version dessinée (fallback) sert directement
     if (item.file) { try { g.add((await loader.loadAsync(base + item.file)).scene); ok = true; } catch (e) { console.warn('Objet 3D absent :', base + item.file); } }
     for (const [n, f] of Object.entries(item.multi || {})) {                       // scènes à plusieurs fichiers : chaque fichier sous un nœud nommé
       const w = new THREE.Group(); w.name = n;

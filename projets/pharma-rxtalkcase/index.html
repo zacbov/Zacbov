@@ -69,7 +69,7 @@ dialog::backdrop{background:#000a}
 #stage .tools button{background:#0d1613cc;color:var(--texte);font-size:.85rem;padding:.35rem .6rem;backdrop-filter:blur(4px)}
 #stage .note{position:absolute;left:.6rem;top:.7rem;right:7.5rem;color:#dfe9e3;font-size:.8rem;pointer-events:none;text-shadow:0 1px 2px #000;transition:opacity .6s}
 #stage .phone{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:.6rem;color:var(--doux);text-align:center;padding:2rem}
-#stage.tel .phone{display:flex}#stage.tel canvas,#stage.tel .tools .pat{display:none}
+#stage.tel .phone{display:flex}#stage.tel canvas,#stage.tel .tools .pat{display:none!important}#stage.tel{background:#1c2622!important}#stage.tel .decor,#stage.tel img.fond{display:none!important}
 .geste{align-self:center;font-size:.85rem;color:var(--doux);border:1px dashed var(--trait);border-radius:20px;padding:.2rem .8rem}
 #avbtn.on{border-color:var(--vert);color:var(--vert)}
 @media (max-width:900px){#wrap{flex-direction:column}#stage{flex:0 0 38vh;max-width:none;border-right:0;border-bottom:1px solid var(--trait)}}
@@ -120,7 +120,9 @@ const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>':
 const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\n]{1,300})\*(?!\*)/g, '$1<i class="didasc">$2</i>');   // *soupire* : didascalie en italique
 let pending = [];   // gestes du pharmacien (tension, objets) transmis avec le prochain message
 let db, cas, hist = [], busy = false, over = false, profil = '', points = null, got = new Set(), cv = 0, unlocked = new Set(), notes = {}, fiche = {};
-const POPS = { officine: { ticket: "Un patient entre à l'officine", open: "(Le patient entre à l'officine et prend la parole : dis ta première phrase.)" }, hospitalier: { ticket: "Appel d'un service à la pharmacie hospitalière", open: "(Le téléphone de la pharmacie hospitalière sonne : le soignant prend la parole et expose sa demande en une ou deux phrases.)" }, medecine: { ticket: "Un patient entre dans le cabinet de consultation", open: "(Le patient entre dans le cabinet et prend la parole : dis ta première phrase.)" }, industrie_recherche: { ticket: 'Sollicitation au laboratoire', open: "(Un collègue vous sollicite : il prend la parole et expose sa demande en une ou deux phrases.)" } };
+var auLit = (c) => !!c && c.pop === 'hospitalier' && /vous échangez avec (?:la patiente|le patient)|visite au lit|au lit du patient/i.test(c.enonce || '');   // cas PARHAF hospitaliers : le pharmacien parle au patient dans sa chambre
+var popDe = (c) => (auLit(c) ? 'hospitalier_lit' : (c && c.pop) || 'officine');
+const POPS = { officine: { ticket: "Un patient entre à l'officine", open: "(Le patient entre à l'officine et prend la parole : dis ta première phrase.)" }, hospitalier_lit: { ticket: "Visite au lit d'un patient hospitalisé", open: "(Le pharmacien hospitalier entre dans la chambre ; le patient, couché dans son lit, prend la parole : dis ta première phrase.)" }, hospitalier: { ticket: "Appel d'un service à la pharmacie hospitalière", open: "(Le téléphone de la pharmacie hospitalière sonne : le soignant prend la parole et expose sa demande en une ou deux phrases.)" }, medecine: { ticket: "Un patient entre dans le cabinet de consultation", open: "(Le patient entre dans le cabinet et prend la parole : dis ta première phrase.)" }, industrie_recherche: { ticket: 'Sollicitation au laboratoire', open: "(Un collègue vous sollicite : il prend la parole et expose sa demande en une ou deux phrases.)" } };
 const PL = { presse: 'pressé', bavard: 'bavard', anxieux: 'anxieux', observance: 'suit mal son traitement' };
 
 function add(cls, html) { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; $('chat').append(d); d.scrollIntoView({ block: 'end' }); return d; }
@@ -139,7 +141,7 @@ async function horsLigne(body) {
 const IA = (() => { try { const q = new URLSearchParams(location.search).get('ia'); if (q) localStorage.setItem('ia', q); const k = q || localStorage.getItem('ia'); return ['cloudflare', 'pc'].includes(k) ? k : ''; } catch (e) { return ''; } })();   // essai d'un fournisseur : ?ia=cloudflare | pc ; ?ia=auto pour revenir
 async function ask(mode, el) {
   const t0 = performance.now();
-  const body = { mode, avatar: !!window.AV, pop: cas.pop || 'officine', cas: mode === 'chat' ? { enonce: cas.enonce, docs: (cas.documents || []).map(docTitle), fiche: cas.fiche || null } : { enonce: cas.enonce, questions: cas.questions, points: points || [], interactions: (cas.connaissances || {}).interactions || [], notes: Object.entries(notes).filter(([, v]) => v.trim()).map(([doc, texte]) => ({ doc, texte })), docs_etat: (cas.documents || []).map((d, i) => ({ titre: docTitle(d), ouvert: unlocked.has(i) })), fiche_saisie: fiche, fiche_ref: cas.fiche || null }, profil, messages: hist, ia: IA || undefined };
+  const body = { mode, avatar: !!window.AV, pop: popDe(cas), cas: mode === 'chat' ? { enonce: cas.enonce, docs: (cas.documents || []).map(docTitle), fiche: cas.fiche || null } : { enonce: cas.enonce, questions: cas.questions, points: points || [], interactions: (cas.connaissances || {}).interactions || [], notes: Object.entries(notes).filter(([, v]) => v.trim()).map(([doc, texte]) => ({ doc, texte })), docs_etat: (cas.documents || []).map((d, i) => ({ titre: docTitle(d), ouvert: unlocked.has(i) })), fiche_saisie: fiche, fiche_ref: cas.fiche || null }, profil, messages: hist, ia: IA || undefined };
   const r = window.HORS_LIGNE ? await horsLigne(body) : await fetch(WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-App-Secret': SECRET }, body: JSON.stringify(body) });
   if (mode === 'chat') { lastModel = r.headers.get('X-Model') || ''; lastFt = 0; const es = r.headers.get('X-Essais'); if (es) { console.info('Worker :', es); $('mdl').title = es; } }   // modèles essayés et temps (survol de la ligne du modèle)
   if (!r.ok) { let m = 'Erreur ' + r.status; try { const j = await r.json(); m = j.error + (j.details ? ' (' + j.details.join(', ') + ')' : ''); } catch {} throw new Error(m); }
@@ -179,8 +181,8 @@ function newPatient() {
   points = null; got = new Set(); unlocked = new Set(); notes = {}; fiche = {}; (cas.documents || []).forEach((d, i) => { if (d.libre) unlocked.add(i); }); setTimeout(() => lock(busy), 0); $('docbtn').classList.remove('ping'); const k = ++cv; gauge();
   setTimeout(() => ask('checklist', document.createElement('div')).then((t) => { const a = arr(t); if (a && k === cv) { points = a.map(String).slice(0, 10); gauge(); } }).catch(() => {}), 0);
   const lib = (db.meta.themes.find((x) => x.id === cas.theme) || {}).libelle || '';
-  $('chat').innerHTML = ''; add('ticket', POPS[cas.pop || 'officine'].ticket + '<b>' + cas.id + '</b>' + esc(lib));
-  hist = [{ role: 'user', content: POPS[cas.pop || 'officine'].open }];
+  $('chat').innerHTML = ''; add('ticket', POPS[popDe(cas)].ticket + '<b>' + cas.id + '</b>' + esc(lib));
+  hist = [{ role: 'user', content: POPS[popDe(cas)].open }];
   if (window.AV) AV.newCase(cas, profil);
   pending = [];
   turn('chat', 'm patient');
@@ -439,7 +441,7 @@ const modeleDuCas = (c) => { const f = (c && c.fiche) || {}; return f.sexe === '
 async function applyCase() {
   if (!A || !cas) return;
   const sx0 = cas.fiche && cas.fiche.sexe, want = modeleDuCas(cas);
-  tel = !!(cas.pop && !['officine', 'medecine'].includes(cas.pop)) && !cas.peau && !cas.visage;
+  tel = !!(cas.pop && !['officine', 'medecine'].includes(cas.pop)) && !cas.peau && !cas.visage && !auLit(cas);   // appel d'un service : pas de patient visible ; visite au lit : patient couché
   if (modele !== want && !tel) { if (!chargement || chargement.want !== want) { chargement = monter(want); chargement.want = want; } const c = chargement; await c; if (chargement === c) chargement = null; if (!A || modeleDuCas(cas) !== modele) return; }
   A.stop(); if (A.quitterTension) A.quitterTension(); if (EQ) EQ.close(); if (RS) RS.close(); $('eqx').hidden = true; A.debout && A.debout();
   $('bp').hidden = false; $('bpm').hidden = $('bpx').hidden = true;
@@ -656,7 +658,7 @@ function reagir(r, side, force) {                         // réaction spontané
   if (!r || !A || tel) return; const now = performance.now(); if (!force && now - tReact < 2500) return; tReact = now;
   patientDit(r[0], r[1]); if (r[2] && A.touch) A.touch(r[2], side || 'Left', 3);
 }
-const SOINS = ['vaccin', 'trod_angine', 'trod_naso', 'glucometre', 'pansement', 'tique', 'injection_iv', 'perfusion', 'stomie', 'otoscope', 'auscultation'], GANTS = ['trod_angine', 'trod_naso', 'glucometre', 'pansement', 'tique', 'injection_iv', 'perfusion', 'stomie'];   // gestes de soin : hygiène des mains ; contact sang / muqueuse / plaie : gants
+const SOINS = ['vaccin', 'trod_angine', 'trod_naso', 'glucometre', 'pansement', 'tique', 'injection_iv', 'perfusion', 'stomie', 'otoscope', 'auscultation', 'oxygene', 'picc'], GANTS = ['trod_angine', 'trod_naso', 'glucometre', 'pansement', 'tique', 'injection_iv', 'perfusion', 'stomie', 'picc'];   // gestes de soin : hygiène des mains ; contact sang / muqueuse / plaie : gants
 function patientDit(line, emo) { if (!A) return; A.emotion = emo; A.say(line, { emotion: emo }); if (typeof add === 'function') add('m patient', esc(line)); if (typeof hist !== 'undefined') hist.push({ role: 'assistant', content: line }); }
 async function monter(want) {                               // patient homme ou patiente : un modèle à la fois, le module des objets suit
   if (EQ) EQ.close(); if (A) A.dispose(); A = null; EQ = null; document.querySelectorAll('#stage .eq-ui').forEach((e) => e.remove());

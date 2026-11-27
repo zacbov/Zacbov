@@ -66,7 +66,7 @@ async function traiter(d, essai = 0) {
       const I = cfg.inference, entrees = {
         input: new ort.Tensor('int64', BigInt64Array.from(ids, BigInt), [1, ids.length]),
         input_lengths: new ort.Tensor('int64', BigInt64Array.from([BigInt(ids.length)]), [1]),
-        scales: new ort.Tensor('float32', Float32Array.from([Math.min(I.noise_scale, 0.5), I.length_scale / (d.vitesse || 1), Math.min(I.noise_w, 0.6)])   // bruit réduit : moins de syllabes inventées (voix mls surtout), [3]),
+        scales: new ort.Tensor('float32', Float32Array.from([Math.min(I.noise_scale, 0.5), I.length_scale / (d.vitesse || 1), Math.min(I.noise_w, 0.6)]), [3]),   // bruit réduit : moins de syllabes inventées (voix mls surtout)
       };
       if (cfg.num_speakers > 1 || Object.keys(cfg.speaker_id_map || {}).length) entrees.sid = new ort.Tensor('int64', BigInt64Array.from([BigInt(d.sid || 0)]), [1]);
       const t0 = performance.now(), r = await sess.run(entrees), pcm = Float32Array.from(r.output.data);

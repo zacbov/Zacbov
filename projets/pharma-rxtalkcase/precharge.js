@@ -5,7 +5,7 @@
    - « Entrer sans attendre » laisse continuer en arrière-plan.
    À inclure en tout premier dans <head> (script classique). */
 (function () {
-  const VERSION = 'rxtalk-essentiel-v35';                 // à changer quand les modèles 3D changent
+  const VERSION = 'rxtalk-essentiel-v38';                 // à changer quand les modèles 3D changent
   const BASE = window.AVATAR_BASE || 'avatar/';
   const DRACO = window.AVATAR_DRACO || 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/';
   const pat = (() => { try { const q = new URLSearchParams(location.search).get('patiente'), k = q || localStorage.getItem('patiente'); return ['amanda', 'crowd84'].includes(k) ? 'patient_' + k + '.glb' : 'patient_femme.glb'; } catch (e) { return 'patient_femme.glb'; } })();

@@ -26,14 +26,16 @@ export function createReserve(host, opts = {}) {
   const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 20);
   scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8170, 1.6)); const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(1.5, 3, 4); scene.add(key);
   // --- meuble : fond, montants, 4 étagères
-  const COLS = 7, ROWS = 4, CW = 0.3, RH = 0.32, W = COLS * CW, H = ROWS * RH, wood = new THREE.MeshStandardMaterial({ color: 0xb08a5c, roughness: 0.7 });
+  const ROWFAM = [['Hygiène', 'Vaccination', 'TROD', 'Plaies', 'Réanimation'], ['Constantes', 'Examen'], ['Inhalation', 'Hôpital', 'Contention'], ['Orthèses'], ['Dispositifs', 'Conseil']];   // une rangée par groupe de familles
+  const nFam = (f) => RESERVE.filter((r) => r.famille === f).length;
+  const COLS = Math.max(...ROWFAM.map((r) => r.reduce((a, f) => a + nFam(f), 0))), ROWS = ROWFAM.length, CW = 0.3, RH = 0.32, W = COLS * CW, H = ROWS * RH, wood = new THREE.MeshStandardMaterial({ color: 0xb08a5c, roughness: 0.7 });
   const back = new THREE.Mesh(new THREE.PlaneGeometry(W + 0.2, H + 0.25), new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 0.9 })); back.position.set(0, H / 2, -0.17); scene.add(back);
   for (let r = 0; r <= ROWS; r++) { const sh = new THREE.Mesh(new THREE.BoxGeometry(W + 0.06, 0.025, 0.34), wood); sh.position.set(0, r * RH, 0); scene.add(sh); }
   for (const x of [-W / 2 - 0.03, W / 2 + 0.03]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.03, H + 0.025, 0.34), wood); s.position.set(x, H / 2, 0); scene.add(s); }
   const label = (txt, w = 0.5) => { const c = document.createElement('canvas'); c.width = Math.round(512 * w / 0.5); c.height = 64; const g = c.getContext('2d'); g.fillStyle = '#16201b'; g.fillRect(0, 0, c.width, 64); g.fillStyle = '#f4f1ea'; g.font = '600 30px Georgia,serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, c.width / 2, 33);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return new THREE.Mesh(new THREE.PlaneGeometry(w, 0.0625), new THREE.MeshBasicMaterial({ map: t })); };
   // --- rangement : une famille par rangée quand c'est possible
-  const ROWFAM = [['Vaccination', 'TROD', 'Plaies', 'Réanimation'], ['Constantes'], ['Inhalation', 'Hôpital', 'Dispositifs', 'Contention'], ['Orthèses']], slots = [], picks = [];
+  const slots = [], picks = [];
   const placedFam = new Set();
   ROWFAM.forEach((fams, k) => {                                 // une rangée par groupe de familles, de haut en bas
     const row = ROWS - 1 - k; let col = 0;

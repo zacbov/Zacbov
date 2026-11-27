@@ -1,0 +1,35 @@
+/* TP 3 — réactions de base (complète chimio.css et magistrales.css) */
+.pastille-prune { background: var(--prune, #7a3b8f); }
+.missions { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .6rem; }
+.mission { text-align: left; border: 1.5px solid var(--encre); background: #fffaf0; border-radius: 4px; padding: .7rem .75rem; cursor: pointer; display: flex; flex-direction: column; gap: .3rem; transition: transform .12s, box-shadow .12s; font: inherit; color: inherit; }
+.mission:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--encre); }
+.mission .ic { font-size: 1.4rem; }
+.mission b { font-size: 1.02rem; }
+.mission span { font-size: .84rem; color: var(--doux); line-height: 1.35; }
+.mission.fait { border-left: 6px solid var(--vert); }
+.mission .note { font-family: var(--mono); font-size: .78rem; color: var(--sarcelle); }
+.etapes-rx { display: flex; flex-direction: column; gap: .55rem; margin: .6rem 0 1rem; }
+.etape { border: 1.5px solid var(--encre); border-radius: 4px; background: #fffdf7; padding: .6rem .7rem; }
+.etape.attente { opacity: .45; pointer-events: none; }
+.etape.faite { border-left: 6px solid var(--vert); background: var(--papier2); }
+.etape.faite .actions { display: none; }
+.etape h4 { margin: 0 0 .3rem; font-size: .95rem; display: flex; justify-content: space-between; gap: .5rem; }
+.etape h4 small { font-family: var(--mono); font-size: .72rem; color: var(--doux); font-weight: 400; }
+.etape p { margin: .15rem 0 .45rem; font-size: .85rem; color: var(--doux); line-height: 1.4; }
+.etape .actions { display: flex; flex-wrap: wrap; gap: .35rem; }
+.etape .actions button, .etape .actions select, .etape .actions input { border: 1.5px solid var(--encre); background: #fffaf0; border-radius: 3px; padding: .32rem .6rem; cursor: pointer; font-size: .84rem; font-family: inherit; }
+.etape .actions button.choisi { background: var(--encre); color: var(--papier); }
+.etape .actions button.moins { background: var(--papier2); }
+.etape .actions input { width: 6.5rem; font-family: var(--mono); cursor: text; }
+.etape .resultat { font-size: .84rem; margin-top: .35rem; }
+.robinet { display: grid; grid-template-columns: repeat(4, 1fr); gap: .3rem; margin: .3rem 0; }
+.robinet button { padding: .45rem .3rem !important; font-size: .8rem !important; }
+.robinet button.actif { background: var(--corail) !important; color: #fff; border-color: var(--corail) !important; }
+.lecture { display: flex; justify-content: space-between; align-items: baseline; background: #0d1512; color: #9ff0c8; font-family: var(--mono); padding: .45rem .7rem; border-radius: 4px; margin: .35rem 0; }
+.lecture b { font-size: 1.5rem; }
+.courbe { width: 100%; height: 190px; background: #fffdf7; border: 1.5px solid var(--encre); border-radius: 3px; display: block; margin: .4rem 0; }
+.tableau-tubes { width: 100%; border-collapse: collapse; font-size: .82rem; margin: .4rem 0; }
+.tableau-tubes th, .tableau-tubes td { border-bottom: 1px dotted var(--trait); padding: .25rem .2rem; text-align: left; vertical-align: top; }
+.tableau-tubes th { font-family: var(--mono); font-size: .68rem; text-transform: uppercase; color: var(--doux); }
+.pastille-coul { display: inline-block; width: .9rem; height: .9rem; border-radius: 50%; border: 1px solid #0003; vertical-align: -2px; margin-right: .25rem; }
+.qcm label { display: flex; gap: .4rem; align-items: flex-start; font-size: .86rem; margin: .2rem 0; cursor: pointer; }

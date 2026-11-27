@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Réactions de base — TP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="chimio/chimio.css">
+<link rel="stylesheet" href="magistrales/magistrales.css">
+<link rel="stylesheet" href="reactions/reactions.css">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header class="bandeau">
+  <div class="marque"><span class="pastille pastille-prune">CHIM</span><div><h1>Réactions de base</h1><p>Travaux pratiques · acides et bases, indicateurs, caractérisations en tubes</p></div></div>
+  <nav class="onglets" role="tablist">
+    <button role="tab" data-ong="missions" class="actif"><b>1</b> Missions</button>
+    <button role="tab" data-ong="paillasse" disabled><b>2</b> Manipulation</button>
+    <button role="tab" data-ong="bilan" disabled><b>3</b> Bilan</button>
+  </nav>
+  <div class="aide-bouton"><label class="interrupteur"><input type="checkbox" id="guide"><span>Mode guidé</span></label></div>
+</header>
+
+<main>
+  <section class="scene" id="scene">
+    <div class="vignette" id="vignette"><span class="zone-nom" id="vignetteNom">Paillasse</span><span class="zone-sous" id="vignetteSous">laboratoire de chimie</span></div>
+    <div class="outils-scene">
+      <button data-vue="ensemble">Paillasse</button>
+      <button data-vue="titrage">Dosage</button>
+      <button data-vue="becher">Bécher</button>
+      <button data-vue="tubes">Tubes</button>
+      <button data-vue="bainmarie">Bain-marie</button>
+    </div>
+    <div class="chargement" id="chargement"><div class="sablier"></div><p>Chargement du laboratoire…</p></div>
+    <div class="annonce" id="annonce" hidden></div>
+  </section>
+
+  <aside class="panneau">
+    <div class="volet actif" data-volet="missions">
+      <div class="consigne"><span class="numero">01</span><div><h2>Choisissez une manipulation</h2>
+        <p>Les réactions du laboratoire virtuel d'origine, faites avec la verrerie du labo : burette, pipette, tubes à essai, compte-gouttes, bain-marie, pH-mètre.</p></div></div>
+      <div class="missions" id="listeMissions"></div>
+    </div>
+    <div class="volet" data-volet="paillasse">
+      <div class="consigne"><span class="numero">02</span><div><h2 id="mTitre">Manipulation</h2><p id="mResume"></p></div></div>
+      <div class="rappel" id="mRappel"></div>
+      <div id="mEtapes" class="etapes-rx"></div>
+      <div class="journal"><h3>Journal</h3><ol id="journal"></ol></div>
+    </div>
+    <div class="volet" data-volet="bilan">
+      <div class="consigne"><span class="numero">03</span><div><h2>Bilan</h2><p>Résultat, erreurs commentées et rappel de chimie.</p></div></div>
+      <div id="bilan" class="bilan"></div>
+    </div>
+  </aside>
+</main>
+<script type="module" src="reactions/app.js"></script>
+</body>
+</html>

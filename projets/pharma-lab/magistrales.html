@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Préparations magistrales — TP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="chimio/chimio.css">
+<link rel="stylesheet" href="magistrales/magistrales.css">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header class="bandeau">
+  <div class="marque"><span class="pastille pastille-sarcelle">PRÉP</span><div><h1>Préparations magistrales</h1><p>Travaux pratiques · préparatoire de l'officine</p></div></div>
+  <nav class="onglets" role="tablist">
+    <button role="tab" data-ong="ordonnance" class="actif"><b>1</b> Ordonnance</button>
+    <button role="tab" data-ong="pesees" disabled><b>2</b> Pesées</button>
+    <button role="tab" data-ong="preparation" disabled><b>3</b> Préparation</button>
+    <button role="tab" data-ong="controles" disabled><b>4</b> Contrôles et étiquette</button>
+    <button role="tab" data-ong="bilan" disabled><b>5</b> Bilan</button>
+  </nav>
+  <div class="aide-bouton"><label class="interrupteur"><input type="checkbox" id="guide"><span>Mode guidé</span></label></div>
+</header>
+
+<main>
+  <section class="scene" id="scene">
+    <div class="vignette" id="vignette"><span class="zone-nom" id="vignetteNom">Paillasse</span><span class="zone-sous" id="vignetteSous">préparatoire</span></div>
+    <div class="outils-scene">
+      <button data-vue="ensemble">Paillasse</button>
+      <button data-vue="balance">Balance</button>
+      <button data-vue="mortier">Mortier</button>
+      <button data-vue="ph">Agitateur · pH</button>
+      <button data-vue="bainmarie">Bain-marie</button>
+    </div>
+    <div class="chargement" id="chargement"><div class="sablier"></div><p>Chargement du préparatoire…</p></div>
+    <div class="annonce" id="annonce" hidden></div>
+  </section>
+
+  <aside class="panneau">
+    <!-- 1. ORDONNANCE -->
+    <div class="volet actif" data-volet="ordonnance">
+      <div class="consigne"><span class="numero">01</span><div><h2>Analysez l'ordonnance, calculez</h2>
+        <p>Choisissez une préparation. Décidez si elle peut être faite, puis calculez les quantités pour la quantité prescrite, à partir de la formule de référence.</p></div></div>
+      <div class="choix-cas"><label>Préparation <select id="choixFormule"></select></label><button id="formuleHasard" class="discret">Au hasard</button></div>
+      <article class="ordonnance" id="ordonnance"></article>
+      <div class="decision" id="decision"></div>
+      <form class="calculs-mag" id="calculs" autocomplete="off" hidden></form>
+      <div class="retour" id="retourCalc"></div>
+    </div>
+
+    <!-- 2. PESÉES -->
+    <div class="volet" data-volet="pesees">
+      <div class="consigne"><span class="numero">02</span><div><h2>Pesez et mesurez</h2>
+        <p>Pour chaque matière première : choisissez la balance ou la verrerie adaptée, posez le contenant, tarez, puis ajoutez jusqu'à la quantité calculée.</p></div></div>
+      <div class="rappel" id="reglesPesee"></div>
+      <div class="liste-pesees" id="pesees"></div>
+      <div class="retour" id="retourPesee"></div>
+    </div>
+
+    <!-- 3. PRÉPARATION -->
+    <div class="volet" data-volet="preparation">
+      <div class="consigne"><span class="numero">03</span><div><h2>Préparez</h2>
+        <p>Enchaînez les étapes du mode opératoire dans l'ordre. Certaines cartes sont des erreurs classiques.</p></div></div>
+      <div class="rappel" id="rappelPrep"></div>
+      <div class="chariot" id="etapes"></div>
+      <div class="journal"><h3>Journal</h3><ol id="journalPrep"></ol></div>
+    </div>
+
+    <!-- 4. CONTRÔLES ET ÉTIQUETTE -->
+    <div class="volet" data-volet="controles">
+      <div class="consigne"><span class="numero">04</span><div><h2>Contrôlez, étiquetez</h2>
+        <p>Contrôles de la préparation terminée, puis étiquette conforme et enregistrement à l'ordonnancier.</p></div></div>
+      <form id="controles" class="controles" autocomplete="off"></form>
+    </div>
+
+    <!-- 5. BILAN -->
+    <div class="volet" data-volet="bilan">
+      <div class="consigne"><span class="numero">05</span><div><h2>Bilan</h2><p>Ce qui est juste, ce qu'il faut revoir, et la source de la formule.</p></div></div>
+      <div id="bilan" class="bilan"></div>
+    </div>
+  </aside>
+</main>
+
+<dialog id="dlgPesee" class="fenetre large">
+  <form method="dialog">
+    <h3 id="peseeTitre">Pesée</h3>
+    <p id="peseeCible" class="cible"></p>
+    <div class="choix-ligne"><span>Balance</span><div id="peseeBalances" class="pastilles"></div></div>
+    <div class="choix-ligne"><span>Contenant</span><div id="peseeContenants" class="pastilles"></div></div>
+    <div class="afficheur"><span id="peseeLecture">0.00</span><small>g</small></div>
+    <div class="boutons-balance">
+      <button type="button" id="peseePoser" class="discret">Poser le contenant</button>
+      <button type="button" id="peseeTare" class="discret">Tarer</button>
+      <button type="button" id="peseeVider" class="discret">Tout retirer</button>
+    </div>
+    <div class="spatule"><span>Spatule</span><div id="peseePas"></div></div>
+    <menu><button value="annuler" class="discret">Annuler</button><button value="ok" class="principal" id="peseeOk">Noter la pesée</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgVolume" class="fenetre large">
+  <form method="dialog">
+    <h3 id="volTitre">Mesure de volume</h3>
+    <p id="volCible" class="cible"></p>
+    <div class="choix-ligne"><span>Verrerie</span><div id="volVerrerie" class="pastilles"></div></div>
+    <div class="verre"><div class="verre-tube"><div class="verre-liquide" id="volLiquide"></div><div class="verre-grad" id="volGrad"></div></div>
+      <label class="curseur">Niveau lu : <b id="volVal">0</b> mL<input type="range" id="volCurseur" min="0" max="10" step="0.1" value="0"></label></div>
+    <menu><button value="annuler" class="discret">Annuler</button><button value="ok" class="principal">Noter le volume</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgBain" class="fenetre">
+  <form method="dialog">
+    <h3>Bain-marie</h3>
+    <p id="bainTexte"></p>
+    <div class="afficheur ambre"><span id="bainLecture">20.0</span><small>°C</small></div>
+    <label class="curseur">Consigne : <b id="bainVal">20</b> °C<input type="range" id="bainCurseur" min="20" max="95" step="1" value="20"></label>
+    <menu><button value="annuler" class="discret">Annuler</button><button value="ok" class="principal">Lancer le chauffage</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgQsp" class="fenetre">
+  <form method="dialog">
+    <h3>Compléter (qsp)</h3>
+    <p id="qspTexte"></p>
+    <div id="qspChoix" class="choix-ligne"></div>
+    <div class="afficheur"><span id="qspLecture">0</span><small id="qspUnite">g</small></div>
+    <div class="spatule"><span id="qspPasNom">Ajouter</span><div id="qspPas"></div></div>
+    <menu><button value="annuler" class="discret">Annuler</button><button value="ok" class="principal">C'est au trait</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgEprouvette" class="fenetre">
+  <form method="dialog">
+    <h3>Méthode de l'éprouvette</h3>
+    <p id="eprTexte"></p>
+    <div class="verre"><div class="verre-tube etroit"><div class="verre-liquide poudre" id="eprActif"></div><div class="verre-liquide poudre2" id="eprExc"></div><div class="verre-grad" id="eprGrad"></div></div>
+      <label class="curseur">Lactose versé jusqu'à : <b id="eprVal">0</b> mL<input type="range" id="eprCurseur" min="0" max="10" step="0.05" value="0"></label></div>
+    <menu><button value="annuler" class="discret">Annuler</button><button value="ok" class="principal">Volume atteint</button></menu>
+  </form>
+</dialog>
+
+<script type="module" src="magistrales/app.js"></script>
+</body>
+</html>

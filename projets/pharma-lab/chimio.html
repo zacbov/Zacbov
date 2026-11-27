@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Préparation des chimiothérapies — TP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="chimio/chimio.css">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header class="bandeau">
+  <div class="marque"><span class="pastille">UPC</span><div><h1>Préparation des chimiothérapies</h1><p>Travaux pratiques · unité de préparation centralisée des cytotoxiques</p></div></div>
+  <nav class="onglets" role="tablist">
+    <button role="tab" data-ong="habillage" class="actif"><b>1</b> Habillage</button>
+    <button role="tab" data-ong="ordonnance"><b>2</b> Ordonnance</button>
+    <button role="tab" data-ong="psm"><b>3</b> Sous le PSM</button>
+    <button role="tab" data-ong="bilan"><b>4</b> Bilan</button>
+  </nav>
+  <div class="aide-bouton"><label class="interrupteur"><input type="checkbox" id="guide"><span>Mode guidé</span></label></div>
+</header>
+
+<main>
+  <section class="scene" id="scene">
+    <div class="cadre-miroir" id="cadreMiroir"><div class="reflet"></div></div>
+    <div class="zone" id="zoneEtiquette"><span class="zone-nom">Vestiaire</span><span class="zone-sous">zone non classée · côté « sale »</span></div>
+    <div class="outils-scene">
+      <button id="pivoter" title="Voir de dos">↻ Se retourner</button>
+      <button id="recommencer" title="Tout reprendre depuis le début">Recommencer</button>
+    </div>
+    <div class="chargement" id="chargement"><div class="sablier"></div><p>Chargement du vestiaire…</p></div>
+    <div class="annonce" id="annonce" hidden></div>
+  </section>
+
+  <aside class="panneau">
+    <!-- 1. HABILLAGE -->
+    <div class="volet actif" data-volet="habillage">
+      <div class="consigne"><span class="numero">01</span><div><h2>Habillez-vous devant le miroir</h2>
+        <p>Choisissez chaque geste dans l'ordre qui vous semble juste, du vestiaire jusqu'à l'entrée dans la ZAC. Tout est noté : oublis, inversions, gestes à éviter.</p></div></div>
+      <div class="chariot" id="chariot"></div>
+      <div class="journal"><h3>Journal</h3><ol id="journalHab"></ol></div>
+    </div>
+
+    <!-- 2. ORDONNANCE -->
+    <div class="volet" data-volet="ordonnance">
+      <div class="consigne"><span class="numero">02</span><div><h2>Validez l'ordonnance</h2>
+        <p>Calculez et décidez avant de préparer. Créatinine en µmol/l, surface corporelle de Mosteller, clairance de Cockcroft-Gault.</p></div></div>
+      <div class="choix-cas"><label>Ordonnance <select id="choixCas"></select></label><button id="casHasard" class="discret">Au hasard</button></div>
+      <article class="ordonnance" id="ordonnance"></article>
+      <form class="calculs" id="calculs" autocomplete="off">
+        <div class="ligne"><label for="c_sc">Surface corporelle <small>m²</small></label><input id="c_sc" inputmode="decimal"></div>
+        <div class="ligne"><label for="c_cl">Clairance de la créatinine <small>ml/min</small></label><input id="c_cl" inputmode="decimal"></div>
+        <div class="ligne"><label for="c_dose">Dose à préparer <small>mg</small></label><input id="c_dose" inputmode="decimal"></div>
+        <div class="ligne"><label for="c_vol">Volume à prélever <small>ml</small></label><input id="c_vol" inputmode="decimal"></div>
+        <div class="ligne"><label for="c_solv">Solvant</label><select id="c_solv"><option value="">—</option><option value="G5">Glucose 5 %</option><option value="NaCl">Chlorure de sodium 0,9 %</option></select></div>
+        <div class="ligne"><label for="c_poche">Poche</label><select id="c_poche"><option value="">—</option><option>50</option><option>100</option><option>250</option><option>500</option><option>1000</option></select></div>
+        <div class="ligne large"><label for="c_verdict">Décision</label><select id="c_verdict"></select></div>
+        <button type="submit" class="principal">Valider mes calculs</button>
+      </form>
+      <div class="retour" id="retourOrd"></div>
+    </div>
+
+    <!-- 3. PSM -->
+    <div class="volet" data-volet="psm">
+      <div class="consigne"><span class="numero">03</span><div><h2>Préparez sous le PSM</h2>
+        <p>Enchaînez les gestes dans l'ordre. Faites tourner la vue à la souris pour regarder dans l'enceinte.</p></div></div>
+      <div class="rappel" id="rappelPrep"></div>
+      <div class="chariot" id="gestes"></div>
+      <div class="journal"><h3>Journal</h3><ol id="journalPsm"></ol></div>
+    </div>
+
+    <!-- 4. BILAN -->
+    <div class="volet" data-volet="bilan">
+      <div class="consigne"><span class="numero">04</span><div><h2>Bilan</h2><p>Ce que vous avez bien fait, ce qu'il faut revoir, et pourquoi.</p></div></div>
+      <div id="bilan"></div>
+    </div>
+  </aside>
+</main>
+
+<dialog id="prelevement" class="fenetre">
+  <form method="dialog">
+    <h3>Prélèvement</h3>
+    <p id="prelTexte"></p>
+    <div class="seringues" id="seringues"></div>
+    <label class="curseur">Volume prélevé : <b id="prelVal">0,0</b> ml<input type="range" id="prelCurseur" min="0" max="60" step="0.1" value="0"></label>
+    <div class="graduation" id="graduation"></div>
+    <menu><button value="annuler" class="discret">Annuler</button><button value="ok" class="principal" id="prelOk">Prélever</button></menu>
+  </form>
+</dialog>
+
+<dialog id="etiquetage" class="fenetre">
+  <form method="dialog">
+    <h3>Étiquette de la poche</h3>
+    <p>Cochez les mentions à faire figurer sur l'étiquette.</p>
+    <div class="mentions" id="mentions"></div>
+    <menu><button value="annuler" class="discret">Annuler</button><button value="ok" class="principal">Imprimer l'étiquette</button></menu>
+  </form>
+</dialog>
+
+<script type="module" src="chimio/app.js"></script>
+</body>
+</html>
